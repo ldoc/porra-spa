@@ -1,0 +1,42 @@
+[
+  {
+    "id": "p-1",
+    "name": "Carlos Porrero",
+    "avatar": "⚽",
+    "points": 42,
+    "hits": 14,
+    "rank": 1
+  },
+  {
+    "id": "p-2",
+    "name": "Lucía Champions",
+    "avatar": "🏆",
+    "points": 39,
+    "hits": 13,
+    "rank": 2
+  },
+  {
+    "id": "p-3",
+    "name": "Adrián MÁXIMO",
+    "avatar": "⚡",
+    "points": 36,
+    "hits": 12,
+    "rank": 3
+  },
+  {
+    "id": "p-4",
+    "name": "David Tactico",
+    "avatar": "🎯",
+    "points": 31,
+    "hits": 10,
+    "rank": 4
+  },
+  {
+    "id": "p-5",
+    "name": "Elena Mágica",
+    "avatar": "🌟",
+    "points": 28,
+    "hits": 9,
+    "rank": 5
+  }
+]
