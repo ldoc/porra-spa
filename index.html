@@ -6,67 +6,66 @@
   <meta name="theme-color" content="#050B18">
   <meta name="description" content="Porra UEFA Champions League 2026/2027 - Pronósticos y Clasificación entre amigos">
   <title>Porra Champions League 2026/2027</title>
-
-  <!-- Google Fonts: Outfit e Inter -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800;900&display=swap" rel="stylesheet">
-
-  <!-- Estilos Centralizados UCL -->
   <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
 
-  <!-- Mensaje de Orientación para Pantallas apaisadas (Landscape) -->
+  <!-- Aviso de orientación horizontal -->
   <div class="orientation-warning">
     <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
     </svg>
-    <h2>Por favor, coloca tu pantalla en vertical</h2>
-    <p>La Porra de la Champions League está diseñada exclusivamente para vista móvil vertical.</p>
+    <h2>Gira tu dispositivo a posición vertical</h2>
+    <p>La Porra UCL está diseñada exclusivamente para vista vertical.</p>
   </div>
 
-  <!-- Viewport Principal de la Aplicación Móvil -->
+  <!-- Viewport Principal -->
   <div id="app-viewport">
-    
-    <!-- Modal / Pantalla de Registro y Autenticación por Código Único -->
+
+    <!-- ======================================================
+         OVERLAY DE AUTENTICACIÓN Y ONBOARDING (4 pasos)
+         ====================================================== -->
     <div id="auth-overlay" class="auth-overlay">
       <div class="auth-card">
-        <div class="auth-star-logo">⭐🏆⭐</div>
-        
-        <!-- Paso 1: Introducir Código -->
-        <div id="auth-step-1" style="display: flex; flex-direction: column; gap: 16px;">
-          <div>
-            <h2 class="auth-title">Porra Champions 26/27</h2>
-            <p class="auth-desc">Acceso exclusivo mediante código personal. Introduce el código que has recibido por WhatsApp o email:</p>
-          </div>
 
-          <div class="form-group">
-            <label class="form-label" for="input-access-code">Código de Invitación</label>
-            <input type="text" id="input-access-code" class="input-field" placeholder="Ej. UCL2026" autocomplete="off" spellcheck="false" style="text-transform: uppercase; text-align: center; letter-spacing: 2px; font-weight: 800;">
-          </div>
-
-          <div id="auth-error-msg" class="error-alert"></div>
-
-          <button id="btn-validate-code" class="btn-primary">Validar Código</button>
-
-          <p style="font-size: 11px; color: var(--text-muted);">¿No tienes código? Solicítalo al administrador de la porra.</p>
+        <!-- Indicadores de paso -->
+        <div class="auth-step-indicator">
+          <div class="step-dot active"></div>
+          <div class="step-dot"></div>
+          <div class="step-dot"></div>
+          <div class="step-dot"></div>
         </div>
 
-        <!-- Paso 2: Configurar Perfil (Nombre + Avatar) -->
-        <div id="auth-step-2" style="display: none; flex-direction: column; gap: 16px;">
-          <div>
-            <h2 class="auth-title">Configura tu Jugador</h2>
-            <p class="auth-desc">¡Código aceptado! Elige tu nombre y avatar para aparecer en la clasificación general:</p>
-          </div>
-
+        <!-- PASO 1: Código de Invitación -->
+        <div id="auth-step-1" class="auth-step" style="display: flex; flex-direction: column; gap: 14px;">
+          <div class="auth-star-logo">⭐🏆⭐</div>
+          <h2 class="auth-title">Porra Champions 26/27</h2>
+          <p class="auth-desc">Acceso exclusivo por código personal. Introduce el que has recibido por WhatsApp o email:</p>
           <div class="form-group">
-            <label class="form-label" for="input-player-name">Tu Nombre o Apodo</label>
-            <input type="text" id="input-player-name" class="input-field" placeholder="Ej. Carlos Porrero" maxlength="20">
+            <label class="form-label" for="input-access-code">Código de Invitación</label>
+            <input type="text" id="input-access-code" class="input-field"
+              placeholder="Ej. UCL2026" autocomplete="off" spellcheck="false"
+              style="text-transform: uppercase; text-align: center; letter-spacing: 3px; font-weight: 800;">
           </div>
+          <div id="auth-error-msg" class="error-alert"></div>
+          <button id="btn-validate-code" class="btn-primary">Validar Código →</button>
+          <p style="font-size: 11px; color: var(--text-muted); text-align: center;">¿Sin código? Solicítalo al administrador.</p>
+        </div>
 
+        <!-- PASO 2: Nombre + Avatar -->
+        <div id="auth-step-2" class="auth-step" style="display: none; flex-direction: column; gap: 14px;">
+          <div class="auth-star-logo">👤</div>
+          <h2 class="auth-title">Crea tu Jugador</h2>
+          <p class="auth-desc">¡Código aceptado! Elige tu nombre y avatar para la clasificación:</p>
           <div class="form-group">
-            <label class="form-label">Selecciona tu Avatar</label>
+            <label class="form-label" for="input-player-name">Nombre o Apodo</label>
+            <input type="text" id="input-player-name" class="input-field" placeholder="Ej. Carlos Campeón" maxlength="20">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Elige tu Avatar</label>
             <div class="avatar-grid">
               <div class="avatar-option selected" data-avatar="⚽">⚽</div>
               <div class="avatar-option" data-avatar="🏆">🏆</div>
@@ -78,14 +77,31 @@
               <div class="avatar-option" data-avatar="🔥">🔥</div>
             </div>
           </div>
+          <button id="btn-complete-register" class="btn-primary">Siguiente: Pronósticos →</button>
+        </div>
 
-          <button id="btn-complete-register" class="btn-primary">Entrar a la Porra 🚀</button>
+        <!-- PASO 3: Wizard Predicción de Partidos -->
+        <div id="auth-step-3" class="auth-step" style="display: none; flex-direction: column; gap: 14px;">
+          <h2 class="auth-title" style="font-size: 1.1rem;">⚽ Pronóstica los Partidos</h2>
+          <p class="auth-desc">Indica el marcador exacto para cada partido. Puedes volver atrás para corregir.</p>
+          <!-- Contenedor dinámico del wizard partido a partido -->
+          <div id="wizard-match-container"></div>
+        </div>
+
+        <!-- PASO 4: Plantilla Ideal -->
+        <div id="auth-step-4" class="auth-step" style="display: none; flex-direction: column; gap: 14px;">
+          <h2 class="auth-title" style="font-size: 1.1rem;">🌟 Plantilla Ideal UCL</h2>
+          <p class="auth-desc">Selecciona el mejor Portero, Defensa, Centrocampista y Delantero de la Champions:</p>
+          <!-- Contenedor dinámico de selección de plantilla -->
+          <div id="squad-picker-container"></div>
         </div>
 
       </div>
     </div>
 
-    <!-- Encabezado Superior (Header) -->
+    <!-- ======================================================
+         HEADER
+         ====================================================== -->
     <header class="app-header">
       <div class="brand">
         <div class="brand-icon">⭐</div>
@@ -94,64 +110,62 @@
           <span class="brand-subtitle">Champions 2026/27</span>
         </div>
       </div>
-
-      <!-- Pill Estado de Usuario Autenticado -->
-      <div id="user-status-pill" class="user-status-pill">
+      <div id="user-status-pill" class="user-status-pill" style="display: none;">
         <span id="user-header-avatar" class="user-status-avatar">⚽</span>
         <span id="user-header-name" class="user-status-name">Jugador</span>
       </div>
     </header>
 
-    <!-- Contenido Scrollable Principal (Tabs) -->
+    <!-- ======================================================
+         CONTENIDO PRINCIPAL (Tabs)
+         ====================================================== -->
     <main class="app-content">
-      
-      <!-- Tab 1: Inicio y Partidos -->
+
+      <!-- Tab: Inicio -->
       <section id="tab-inicio" class="tab-page active">
         <div class="ucl-banner">
-          <span class="ucl-tag">Fase de Liga • Jornada 1</span>
+          <span class="ucl-tag">Fase de Liga · 8 Jornadas</span>
           <h1 class="ucl-title">UEFA Champions League</h1>
-          <p class="ucl-subtitle">Envía tus apuestas 1-X-2 antes del comienzo de cada encuentro.</p>
+          <p class="ucl-subtitle">Tus predicciones de marcador exacto para cada partido están guardadas. Consulta tus datos en Estadísticas.</p>
         </div>
 
         <div class="section-header">
-          <h2 class="section-title">⚽ Partidos de la Jornada</h2>
+          <h2 class="section-title">📅 Partidos de la Fase de Grupos</h2>
         </div>
 
-        <!-- Contenedor dinámico de tarjetas de partidos -->
-        <div id="matches-container" style="display: flex; flex-direction: column; gap: 14px;"></div>
+        <!-- Lista estática de partidos (solo lectura) generada por JS -->
+        <div id="matches-list" style="display: flex; flex-direction: column; gap: 12px;"></div>
       </section>
 
-      <!-- Tab 2: Clasificación General -->
+      <!-- Tab: Clasificación -->
       <section id="tab-clasificacion" class="tab-page">
         <div class="section-header">
           <h2 class="section-title">🏆 Clasificación General</h2>
         </div>
-
-        <!-- Tabla de clasificación general -->
         <div id="leaderboard-container" class="leaderboard-card"></div>
       </section>
 
-      <!-- Tab 3: Estadísticas -->
+      <!-- Tab: Estadísticas -->
       <section id="tab-estadisticas" class="tab-page">
         <div class="section-header">
-          <h2 class="section-title">📊 Estadísticas de la Porra</h2>
+          <h2 class="section-title">📊 Mis Estadísticas</h2>
         </div>
-
-        <div id="stats-container"></div>
+        <div id="stats-container" style="display: flex; flex-direction: column; gap: 14px;"></div>
       </section>
 
-      <!-- Tab 4: Mi Perfil -->
+      <!-- Tab: Perfil -->
       <section id="tab-perfil" class="tab-page">
         <div class="section-header">
-          <h2 class="section-title">👤 Mi Perfil de Participante</h2>
+          <h2 class="section-title">👤 Mi Perfil</h2>
         </div>
-
         <div id="profile-content"></div>
       </section>
 
     </main>
 
-    <!-- Navegación Inferior (Bottom Navigation Bar) -->
+    <!-- ======================================================
+         BOTTOM NAVIGATION BAR
+         ====================================================== -->
     <nav class="bottom-nav">
       <a href="#" class="nav-item active" data-tab="inicio">
         <svg viewBox="0 0 24 24"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
@@ -173,7 +187,6 @@
 
   </div>
 
-  <!-- JS Principal -->
   <script src="js/main.js"></script>
 </body>
 </html>

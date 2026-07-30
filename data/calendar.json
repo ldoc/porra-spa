@@ -1,0 +1,1874 @@
+[
+  {
+    "ronda": 1,
+    "id": 14566909,
+    "fecha": 1758041100,
+    "equipoLocal": {
+      "id": 2825,
+      "name": "Athletic Club"
+    },
+    "equipoVisitante": {
+      "id": 42,
+      "name": "Arsenal"
+    }
+  },
+  {
+    "ronda": 1,
+    "id": 14566894,
+    "fecha": 1758041100,
+    "equipoLocal": {
+      "id": 2952,
+      "name": "PSV Eindhoven"
+    },
+    "equipoVisitante": {
+      "id": 4860,
+      "name": "Royale Union Saint-Gilloise"
+    }
+  },
+  {
+    "ronda": 1,
+    "id": 14566738,
+    "fecha": 1758049200,
+    "equipoLocal": {
+      "id": 3006,
+      "name": "Benfica"
+    },
+    "equipoVisitante": {
+      "id": 5962,
+      "name": "Qarabağ FK"
+    }
+  },
+  {
+    "ronda": 1,
+    "id": 14566764,
+    "fecha": 1758049200,
+    "equipoLocal": {
+      "id": 2687,
+      "name": "Juventus"
+    },
+    "equipoVisitante": {
+      "id": 2673,
+      "name": "Borussia Dortmund"
+    }
+  },
+  {
+    "ronda": 1,
+    "id": 14566597,
+    "fecha": 1758049200,
+    "equipoLocal": {
+      "id": 2829,
+      "name": "Real Madrid"
+    },
+    "equipoVisitante": {
+      "id": 1641,
+      "name": "Olympique de Marseille"
+    }
+  },
+  {
+    "ronda": 1,
+    "id": 14566827,
+    "fecha": 1758049200,
+    "equipoLocal": {
+      "id": 33,
+      "name": "Tottenham Hotspur"
+    },
+    "equipoVisitante": {
+      "id": 2819,
+      "name": "Villarreal"
+    }
+  },
+  {
+    "ronda": 1,
+    "id": 14566868,
+    "fecha": 1758127500,
+    "equipoLocal": {
+      "id": 3245,
+      "name": "Olympiacos FC"
+    },
+    "equipoVisitante": {
+      "id": 171626,
+      "name": "Pafos FC"
+    }
+  },
+  {
+    "ronda": 1,
+    "id": 14566884,
+    "fecha": 1758127500,
+    "equipoLocal": {
+      "id": 2216,
+      "name": "SK Slavia Praha"
+    },
+    "equipoVisitante": {
+      "id": 656,
+      "name": "Bodø/Glimt"
+    }
+  },
+  {
+    "ronda": 1,
+    "id": 14566873,
+    "fecha": 1758135600,
+    "equipoLocal": {
+      "id": 2953,
+      "name": "AFC Ajax"
+    },
+    "equipoVisitante": {
+      "id": 2697,
+      "name": "Inter"
+    }
+  },
+  {
+    "ronda": 1,
+    "id": 14566570,
+    "fecha": 1758135600,
+    "equipoLocal": {
+      "id": 2672,
+      "name": "FC Bayern München"
+    },
+    "equipoVisitante": {
+      "id": 38,
+      "name": "Chelsea"
+    }
+  },
+  {
+    "ronda": 1,
+    "id": 14566637,
+    "fecha": 1758135600,
+    "equipoLocal": {
+      "id": 44,
+      "name": "Liverpool FC"
+    },
+    "equipoVisitante": {
+      "id": 2836,
+      "name": "Atlético Madrid"
+    }
+  },
+  {
+    "ronda": 1,
+    "id": 14566657,
+    "fecha": 1758135600,
+    "equipoLocal": {
+      "id": 1644,
+      "name": "Paris Saint-Germain"
+    },
+    "equipoVisitante": {
+      "id": 2686,
+      "name": "Atalanta"
+    }
+  },
+  {
+    "ronda": 1,
+    "id": 14566748,
+    "fecha": 1758213900,
+    "equipoLocal": {
+      "id": 2888,
+      "name": "Club Brugge KV"
+    },
+    "equipoVisitante": {
+      "id": 1653,
+      "name": "AS Monaco"
+    }
+  },
+  {
+    "ronda": 1,
+    "id": 14566972,
+    "fecha": 1758213900,
+    "equipoLocal": {
+      "id": 1284,
+      "name": "FC København"
+    },
+    "equipoVisitante": {
+      "id": 2681,
+      "name": "Bayer 04 Leverkusen"
+    }
+  },
+  {
+    "ronda": 1,
+    "id": 14566757,
+    "fecha": 1758222000,
+    "equipoLocal": {
+      "id": 2674,
+      "name": "Eintracht Frankfurt"
+    },
+    "equipoVisitante": {
+      "id": 3061,
+      "name": "Galatasaray"
+    }
+  },
+  {
+    "ronda": 1,
+    "id": 14566664,
+    "fecha": 1758222000,
+    "equipoLocal": {
+      "id": 17,
+      "name": "Manchester City"
+    },
+    "equipoVisitante": {
+      "id": 2714,
+      "name": "SSC Napoli"
+    }
+  },
+  {
+    "ronda": 1,
+    "id": 14566955,
+    "fecha": 1758222000,
+    "equipoLocal": {
+      "id": 39,
+      "name": "Newcastle United"
+    },
+    "equipoVisitante": {
+      "id": 2817,
+      "name": "FC Barcelona"
+    }
+  },
+  {
+    "ronda": 1,
+    "id": 14566857,
+    "fecha": 1758222000,
+    "equipoLocal": {
+      "id": 3001,
+      "name": "Sporting CP"
+    },
+    "equipoVisitante": {
+      "id": 5172,
+      "name": "Kairat Almaty"
+    }
+  },
+  {
+    "ronda": 2,
+    "id": 14566727,
+    "fecha": 1759250700,
+    "equipoLocal": {
+      "id": 2686,
+      "name": "Atalanta"
+    },
+    "equipoVisitante": {
+      "id": 2888,
+      "name": "Club Brugge KV"
+    }
+  },
+  {
+    "ronda": 2,
+    "id": 14566983,
+    "fecha": 1759250700,
+    "equipoLocal": {
+      "id": 5172,
+      "name": "Kairat Almaty"
+    },
+    "equipoVisitante": {
+      "id": 2829,
+      "name": "Real Madrid"
+    }
+  },
+  {
+    "ronda": 2,
+    "id": 14566775,
+    "fecha": 1759258800,
+    "equipoLocal": {
+      "id": 2836,
+      "name": "Atlético Madrid"
+    },
+    "equipoVisitante": {
+      "id": 2674,
+      "name": "Eintracht Frankfurt"
+    }
+  },
+  {
+    "ronda": 2,
+    "id": 14566843,
+    "fecha": 1759258800,
+    "equipoLocal": {
+      "id": 656,
+      "name": "Bodø/Glimt"
+    },
+    "equipoVisitante": {
+      "id": 33,
+      "name": "Tottenham Hotspur"
+    }
+  },
+  {
+    "ronda": 2,
+    "id": 14566581,
+    "fecha": 1759258800,
+    "equipoLocal": {
+      "id": 38,
+      "name": "Chelsea"
+    },
+    "equipoVisitante": {
+      "id": 3006,
+      "name": "Benfica"
+    }
+  },
+  {
+    "ronda": 2,
+    "id": 14566934,
+    "fecha": 1759258800,
+    "equipoLocal": {
+      "id": 3061,
+      "name": "Galatasaray"
+    },
+    "equipoVisitante": {
+      "id": 44,
+      "name": "Liverpool FC"
+    }
+  },
+  {
+    "ronda": 2,
+    "id": 14566613,
+    "fecha": 1759258800,
+    "equipoLocal": {
+      "id": 2697,
+      "name": "Inter"
+    },
+    "equipoVisitante": {
+      "id": 2216,
+      "name": "SK Slavia Praha"
+    }
+  },
+  {
+    "ronda": 2,
+    "id": 14566823,
+    "fecha": 1759258800,
+    "equipoLocal": {
+      "id": 1641,
+      "name": "Olympique de Marseille"
+    },
+    "equipoVisitante": {
+      "id": 2953,
+      "name": "AFC Ajax"
+    }
+  },
+  {
+    "ronda": 2,
+    "id": 14566965,
+    "fecha": 1759258800,
+    "equipoLocal": {
+      "id": 171626,
+      "name": "Pafos FC"
+    },
+    "equipoVisitante": {
+      "id": 2672,
+      "name": "FC Bayern München"
+    }
+  },
+  {
+    "ronda": 2,
+    "id": 14566922,
+    "fecha": 1759337100,
+    "equipoLocal": {
+      "id": 5962,
+      "name": "Qarabağ FK"
+    },
+    "equipoVisitante": {
+      "id": 1284,
+      "name": "FC København"
+    }
+  },
+  {
+    "ronda": 2,
+    "id": 14566952,
+    "fecha": 1759337100,
+    "equipoLocal": {
+      "id": 4860,
+      "name": "Royale Union Saint-Gilloise"
+    },
+    "equipoVisitante": {
+      "id": 39,
+      "name": "Newcastle United"
+    }
+  },
+  {
+    "ronda": 2,
+    "id": 14566925,
+    "fecha": 1759345200,
+    "equipoLocal": {
+      "id": 1653,
+      "name": "AS Monaco"
+    },
+    "equipoVisitante": {
+      "id": 17,
+      "name": "Manchester City"
+    }
+  },
+  {
+    "ronda": 2,
+    "id": 14566719,
+    "fecha": 1759345200,
+    "equipoLocal": {
+      "id": 42,
+      "name": "Arsenal"
+    },
+    "equipoVisitante": {
+      "id": 3245,
+      "name": "Olympiacos FC"
+    }
+  },
+  {
+    "ronda": 2,
+    "id": 14566706,
+    "fecha": 1759345200,
+    "equipoLocal": {
+      "id": 2681,
+      "name": "Bayer 04 Leverkusen"
+    },
+    "equipoVisitante": {
+      "id": 2952,
+      "name": "PSV Eindhoven"
+    }
+  },
+  {
+    "ronda": 2,
+    "id": 14566622,
+    "fecha": 1759345200,
+    "equipoLocal": {
+      "id": 2673,
+      "name": "Borussia Dortmund"
+    },
+    "equipoVisitante": {
+      "id": 2825,
+      "name": "Athletic Club"
+    }
+  },
+  {
+    "ronda": 2,
+    "id": 14566650,
+    "fecha": 1759345200,
+    "equipoLocal": {
+      "id": 2817,
+      "name": "FC Barcelona"
+    },
+    "equipoVisitante": {
+      "id": 1644,
+      "name": "Paris Saint-Germain"
+    }
+  },
+  {
+    "ronda": 2,
+    "id": 14566901,
+    "fecha": 1759345200,
+    "equipoLocal": {
+      "id": 2714,
+      "name": "SSC Napoli"
+    },
+    "equipoVisitante": {
+      "id": 3001,
+      "name": "Sporting CP"
+    }
+  },
+  {
+    "ronda": 2,
+    "id": 14566782,
+    "fecha": 1759345200,
+    "equipoLocal": {
+      "id": 2819,
+      "name": "Villarreal"
+    },
+    "equipoVisitante": {
+      "id": 2687,
+      "name": "Juventus"
+    }
+  },
+  {
+    "ronda": 3,
+    "id": 14566652,
+    "fecha": 1761065100,
+    "equipoLocal": {
+      "id": 2817,
+      "name": "FC Barcelona"
+    },
+    "equipoVisitante": {
+      "id": 3245,
+      "name": "Olympiacos FC"
+    }
+  },
+  {
+    "ronda": 3,
+    "id": 14566986,
+    "fecha": 1761065100,
+    "equipoLocal": {
+      "id": 5172,
+      "name": "Kairat Almaty"
+    },
+    "equipoVisitante": {
+      "id": 171626,
+      "name": "Pafos FC"
+    }
+  },
+  {
+    "ronda": 3,
+    "id": 14566718,
+    "fecha": 1761073200,
+    "equipoLocal": {
+      "id": 42,
+      "name": "Arsenal"
+    },
+    "equipoVisitante": {
+      "id": 2836,
+      "name": "Atlético Madrid"
+    }
+  },
+  {
+    "ronda": 3,
+    "id": 14566704,
+    "fecha": 1761073200,
+    "equipoLocal": {
+      "id": 2681,
+      "name": "Bayer 04 Leverkusen"
+    },
+    "equipoVisitante": {
+      "id": 1644,
+      "name": "Paris Saint-Germain"
+    }
+  },
+  {
+    "ronda": 3,
+    "id": 14566971,
+    "fecha": 1761073200,
+    "equipoLocal": {
+      "id": 1284,
+      "name": "FC København"
+    },
+    "equipoVisitante": {
+      "id": 2673,
+      "name": "Borussia Dortmund"
+    }
+  },
+  {
+    "ronda": 3,
+    "id": 14566956,
+    "fecha": 1761073200,
+    "equipoLocal": {
+      "id": 39,
+      "name": "Newcastle United"
+    },
+    "equipoVisitante": {
+      "id": 3006,
+      "name": "Benfica"
+    }
+  },
+  {
+    "ronda": 3,
+    "id": 14566893,
+    "fecha": 1761073200,
+    "equipoLocal": {
+      "id": 2952,
+      "name": "PSV Eindhoven"
+    },
+    "equipoVisitante": {
+      "id": 2714,
+      "name": "SSC Napoli"
+    }
+  },
+  {
+    "ronda": 3,
+    "id": 14566949,
+    "fecha": 1761073200,
+    "equipoLocal": {
+      "id": 4860,
+      "name": "Royale Union Saint-Gilloise"
+    },
+    "equipoVisitante": {
+      "id": 2697,
+      "name": "Inter"
+    }
+  },
+  {
+    "ronda": 3,
+    "id": 14566781,
+    "fecha": 1761073200,
+    "equipoLocal": {
+      "id": 2819,
+      "name": "Villarreal"
+    },
+    "equipoVisitante": {
+      "id": 17,
+      "name": "Manchester City"
+    }
+  },
+  {
+    "ronda": 3,
+    "id": 14566911,
+    "fecha": 1761151500,
+    "equipoLocal": {
+      "id": 2825,
+      "name": "Athletic Club"
+    },
+    "equipoVisitante": {
+      "id": 5962,
+      "name": "Qarabağ FK"
+    }
+  },
+  {
+    "ronda": 3,
+    "id": 14566936,
+    "fecha": 1761151500,
+    "equipoLocal": {
+      "id": 3061,
+      "name": "Galatasaray"
+    },
+    "equipoVisitante": {
+      "id": 656,
+      "name": "Bodø/Glimt"
+    }
+  },
+  {
+    "ronda": 3,
+    "id": 14566927,
+    "fecha": 1761159600,
+    "equipoLocal": {
+      "id": 1653,
+      "name": "AS Monaco"
+    },
+    "equipoVisitante": {
+      "id": 33,
+      "name": "Tottenham Hotspur"
+    }
+  },
+  {
+    "ronda": 3,
+    "id": 14566728,
+    "fecha": 1761159600,
+    "equipoLocal": {
+      "id": 2686,
+      "name": "Atalanta"
+    },
+    "equipoVisitante": {
+      "id": 2216,
+      "name": "SK Slavia Praha"
+    }
+  },
+  {
+    "ronda": 3,
+    "id": 14566582,
+    "fecha": 1761159600,
+    "equipoLocal": {
+      "id": 38,
+      "name": "Chelsea"
+    },
+    "equipoVisitante": {
+      "id": 2953,
+      "name": "AFC Ajax"
+    }
+  },
+  {
+    "ronda": 3,
+    "id": 14566754,
+    "fecha": 1761159600,
+    "equipoLocal": {
+      "id": 2674,
+      "name": "Eintracht Frankfurt"
+    },
+    "equipoVisitante": {
+      "id": 44,
+      "name": "Liverpool FC"
+    }
+  },
+  {
+    "ronda": 3,
+    "id": 14566571,
+    "fecha": 1761159600,
+    "equipoLocal": {
+      "id": 2672,
+      "name": "FC Bayern München"
+    },
+    "equipoVisitante": {
+      "id": 2888,
+      "name": "Club Brugge KV"
+    }
+  },
+  {
+    "ronda": 3,
+    "id": 14566596,
+    "fecha": 1761159600,
+    "equipoLocal": {
+      "id": 2829,
+      "name": "Real Madrid"
+    },
+    "equipoVisitante": {
+      "id": 2687,
+      "name": "Juventus"
+    }
+  },
+  {
+    "ronda": 3,
+    "id": 14566856,
+    "fecha": 1761159600,
+    "equipoLocal": {
+      "id": 3001,
+      "name": "Sporting CP"
+    },
+    "equipoVisitante": {
+      "id": 1641,
+      "name": "Olympique de Marseille"
+    }
+  },
+  {
+    "ronda": 4,
+    "id": 14566883,
+    "fecha": 1762278300,
+    "equipoLocal": {
+      "id": 2216,
+      "name": "SK Slavia Praha"
+    },
+    "equipoVisitante": {
+      "id": 42,
+      "name": "Arsenal"
+    }
+  },
+  {
+    "ronda": 4,
+    "id": 14566900,
+    "fecha": 1762278300,
+    "equipoLocal": {
+      "id": 2714,
+      "name": "SSC Napoli"
+    },
+    "equipoVisitante": {
+      "id": 2674,
+      "name": "Eintracht Frankfurt"
+    }
+  },
+  {
+    "ronda": 4,
+    "id": 14566777,
+    "fecha": 1762286400,
+    "equipoLocal": {
+      "id": 2836,
+      "name": "Atlético Madrid"
+    },
+    "equipoVisitante": {
+      "id": 4860,
+      "name": "Royale Union Saint-Gilloise"
+    }
+  },
+  {
+    "ronda": 4,
+    "id": 14566844,
+    "fecha": 1762286400,
+    "equipoLocal": {
+      "id": 656,
+      "name": "Bodø/Glimt"
+    },
+    "equipoVisitante": {
+      "id": 1653,
+      "name": "AS Monaco"
+    }
+  },
+  {
+    "ronda": 4,
+    "id": 14566766,
+    "fecha": 1762286400,
+    "equipoLocal": {
+      "id": 2687,
+      "name": "Juventus"
+    },
+    "equipoVisitante": {
+      "id": 3001,
+      "name": "Sporting CP"
+    }
+  },
+  {
+    "ronda": 4,
+    "id": 14566636,
+    "fecha": 1762286400,
+    "equipoLocal": {
+      "id": 44,
+      "name": "Liverpool FC"
+    },
+    "equipoVisitante": {
+      "id": 2829,
+      "name": "Real Madrid"
+    }
+  },
+  {
+    "ronda": 4,
+    "id": 14566867,
+    "fecha": 1762286400,
+    "equipoLocal": {
+      "id": 3245,
+      "name": "Olympiacos FC"
+    },
+    "equipoVisitante": {
+      "id": 2952,
+      "name": "PSV Eindhoven"
+    }
+  },
+  {
+    "ronda": 4,
+    "id": 14566656,
+    "fecha": 1762286400,
+    "equipoLocal": {
+      "id": 1644,
+      "name": "Paris Saint-Germain"
+    },
+    "equipoVisitante": {
+      "id": 2672,
+      "name": "FC Bayern München"
+    }
+  },
+  {
+    "ronda": 4,
+    "id": 14566829,
+    "fecha": 1762286400,
+    "equipoLocal": {
+      "id": 33,
+      "name": "Tottenham Hotspur"
+    },
+    "equipoVisitante": {
+      "id": 1284,
+      "name": "FC København"
+    }
+  },
+  {
+    "ronda": 4,
+    "id": 14566966,
+    "fecha": 1762364700,
+    "equipoLocal": {
+      "id": 171626,
+      "name": "Pafos FC"
+    },
+    "equipoVisitante": {
+      "id": 2819,
+      "name": "Villarreal"
+    }
+  },
+  {
+    "ronda": 4,
+    "id": 14566919,
+    "fecha": 1762364700,
+    "equipoLocal": {
+      "id": 5962,
+      "name": "Qarabağ FK"
+    },
+    "equipoVisitante": {
+      "id": 38,
+      "name": "Chelsea"
+    }
+  },
+  {
+    "ronda": 4,
+    "id": 14566876,
+    "fecha": 1762372800,
+    "equipoLocal": {
+      "id": 2953,
+      "name": "AFC Ajax"
+    },
+    "equipoVisitante": {
+      "id": 3061,
+      "name": "Galatasaray"
+    }
+  },
+  {
+    "ronda": 4,
+    "id": 14566736,
+    "fecha": 1762372800,
+    "equipoLocal": {
+      "id": 3006,
+      "name": "Benfica"
+    },
+    "equipoVisitante": {
+      "id": 2681,
+      "name": "Bayer 04 Leverkusen"
+    }
+  },
+  {
+    "ronda": 4,
+    "id": 14566745,
+    "fecha": 1762372800,
+    "equipoLocal": {
+      "id": 2888,
+      "name": "Club Brugge KV"
+    },
+    "equipoVisitante": {
+      "id": 2817,
+      "name": "FC Barcelona"
+    }
+  },
+  {
+    "ronda": 4,
+    "id": 14566614,
+    "fecha": 1762372800,
+    "equipoLocal": {
+      "id": 2697,
+      "name": "Inter"
+    },
+    "equipoVisitante": {
+      "id": 5172,
+      "name": "Kairat Almaty"
+    }
+  },
+  {
+    "ronda": 4,
+    "id": 14566662,
+    "fecha": 1762372800,
+    "equipoLocal": {
+      "id": 17,
+      "name": "Manchester City"
+    },
+    "equipoVisitante": {
+      "id": 2673,
+      "name": "Borussia Dortmund"
+    }
+  },
+  {
+    "ronda": 4,
+    "id": 14566958,
+    "fecha": 1762372800,
+    "equipoLocal": {
+      "id": 39,
+      "name": "Newcastle United"
+    },
+    "equipoVisitante": {
+      "id": 2825,
+      "name": "Athletic Club"
+    }
+  },
+  {
+    "ronda": 4,
+    "id": 14566822,
+    "fecha": 1762372800,
+    "equipoLocal": {
+      "id": 1641,
+      "name": "Olympique de Marseille"
+    },
+    "equipoVisitante": {
+      "id": 2686,
+      "name": "Atalanta"
+    }
+  },
+  {
+    "ronda": 5,
+    "id": 14566874,
+    "fecha": 1764092700,
+    "equipoLocal": {
+      "id": 2953,
+      "name": "AFC Ajax"
+    },
+    "equipoVisitante": {
+      "id": 3006,
+      "name": "Benfica"
+    }
+  },
+  {
+    "ronda": 5,
+    "id": 14566937,
+    "fecha": 1764092700,
+    "equipoLocal": {
+      "id": 3061,
+      "name": "Galatasaray"
+    },
+    "equipoVisitante": {
+      "id": 4860,
+      "name": "Royale Union Saint-Gilloise"
+    }
+  },
+  {
+    "ronda": 5,
+    "id": 14566842,
+    "fecha": 1764100800,
+    "equipoLocal": {
+      "id": 656,
+      "name": "Bodø/Glimt"
+    },
+    "equipoVisitante": {
+      "id": 2687,
+      "name": "Juventus"
+    }
+  },
+  {
+    "ronda": 5,
+    "id": 14566620,
+    "fecha": 1764100800,
+    "equipoLocal": {
+      "id": 2673,
+      "name": "Borussia Dortmund"
+    },
+    "equipoVisitante": {
+      "id": 2819,
+      "name": "Villarreal"
+    }
+  },
+  {
+    "ronda": 5,
+    "id": 14566580,
+    "fecha": 1764100800,
+    "equipoLocal": {
+      "id": 38,
+      "name": "Chelsea"
+    },
+    "equipoVisitante": {
+      "id": 2817,
+      "name": "FC Barcelona"
+    }
+  },
+  {
+    "ronda": 5,
+    "id": 14566663,
+    "fecha": 1764100800,
+    "equipoLocal": {
+      "id": 17,
+      "name": "Manchester City"
+    },
+    "equipoVisitante": {
+      "id": 2681,
+      "name": "Bayer 04 Leverkusen"
+    }
+  },
+  {
+    "ronda": 5,
+    "id": 14566835,
+    "fecha": 1764100800,
+    "equipoLocal": {
+      "id": 1641,
+      "name": "Olympique de Marseille"
+    },
+    "equipoVisitante": {
+      "id": 39,
+      "name": "Newcastle United"
+    }
+  },
+  {
+    "ronda": 5,
+    "id": 14566885,
+    "fecha": 1764100800,
+    "equipoLocal": {
+      "id": 2216,
+      "name": "SK Slavia Praha"
+    },
+    "equipoVisitante": {
+      "id": 2825,
+      "name": "Athletic Club"
+    }
+  },
+  {
+    "ronda": 5,
+    "id": 14566902,
+    "fecha": 1764100800,
+    "equipoLocal": {
+      "id": 2714,
+      "name": "SSC Napoli"
+    },
+    "equipoVisitante": {
+      "id": 5962,
+      "name": "Qarabağ FK"
+    }
+  },
+  {
+    "ronda": 5,
+    "id": 14566974,
+    "fecha": 1764179100,
+    "equipoLocal": {
+      "id": 1284,
+      "name": "FC København"
+    },
+    "equipoVisitante": {
+      "id": 5172,
+      "name": "Kairat Almaty"
+    }
+  },
+  {
+    "ronda": 5,
+    "id": 14566968,
+    "fecha": 1764179100,
+    "equipoLocal": {
+      "id": 171626,
+      "name": "Pafos FC"
+    },
+    "equipoVisitante": {
+      "id": 1653,
+      "name": "AS Monaco"
+    }
+  },
+  {
+    "ronda": 5,
+    "id": 14566717,
+    "fecha": 1764187200,
+    "equipoLocal": {
+      "id": 42,
+      "name": "Arsenal"
+    },
+    "equipoVisitante": {
+      "id": 2672,
+      "name": "FC Bayern München"
+    }
+  },
+  {
+    "ronda": 5,
+    "id": 14566774,
+    "fecha": 1764187200,
+    "equipoLocal": {
+      "id": 2836,
+      "name": "Atlético Madrid"
+    },
+    "equipoVisitante": {
+      "id": 2697,
+      "name": "Inter"
+    }
+  },
+  {
+    "ronda": 5,
+    "id": 14566755,
+    "fecha": 1764187200,
+    "equipoLocal": {
+      "id": 2674,
+      "name": "Eintracht Frankfurt"
+    },
+    "equipoVisitante": {
+      "id": 2686,
+      "name": "Atalanta"
+    }
+  },
+  {
+    "ronda": 5,
+    "id": 14566638,
+    "fecha": 1764187200,
+    "equipoLocal": {
+      "id": 44,
+      "name": "Liverpool FC"
+    },
+    "equipoVisitante": {
+      "id": 2952,
+      "name": "PSV Eindhoven"
+    }
+  },
+  {
+    "ronda": 5,
+    "id": 14566865,
+    "fecha": 1764187200,
+    "equipoLocal": {
+      "id": 3245,
+      "name": "Olympiacos FC"
+    },
+    "equipoVisitante": {
+      "id": 2829,
+      "name": "Real Madrid"
+    }
+  },
+  {
+    "ronda": 5,
+    "id": 14566658,
+    "fecha": 1764187200,
+    "equipoLocal": {
+      "id": 1644,
+      "name": "Paris Saint-Germain"
+    },
+    "equipoVisitante": {
+      "id": 33,
+      "name": "Tottenham Hotspur"
+    }
+  },
+  {
+    "ronda": 5,
+    "id": 14566855,
+    "fecha": 1764187200,
+    "equipoLocal": {
+      "id": 3001,
+      "name": "Sporting CP"
+    },
+    "equipoVisitante": {
+      "id": 2888,
+      "name": "Club Brugge KV"
+    }
+  },
+  {
+    "ronda": 6,
+    "id": 14566985,
+    "fecha": 1765294200,
+    "equipoLocal": {
+      "id": 5172,
+      "name": "Kairat Almaty"
+    },
+    "equipoVisitante": {
+      "id": 3245,
+      "name": "Olympiacos FC"
+    }
+  },
+  {
+    "ronda": 6,
+    "id": 14566572,
+    "fecha": 1765302300,
+    "equipoLocal": {
+      "id": 2672,
+      "name": "FC Bayern München"
+    },
+    "equipoVisitante": {
+      "id": 3001,
+      "name": "Sporting CP"
+    }
+  },
+  {
+    "ronda": 6,
+    "id": 14566928,
+    "fecha": 1765310400,
+    "equipoLocal": {
+      "id": 1653,
+      "name": "AS Monaco"
+    },
+    "equipoVisitante": {
+      "id": 3061,
+      "name": "Galatasaray"
+    }
+  },
+  {
+    "ronda": 6,
+    "id": 14566726,
+    "fecha": 1765310400,
+    "equipoLocal": {
+      "id": 2686,
+      "name": "Atalanta"
+    },
+    "equipoVisitante": {
+      "id": 38,
+      "name": "Chelsea"
+    }
+  },
+  {
+    "ronda": 6,
+    "id": 14566651,
+    "fecha": 1765310400,
+    "equipoLocal": {
+      "id": 2817,
+      "name": "FC Barcelona"
+    },
+    "equipoVisitante": {
+      "id": 2674,
+      "name": "Eintracht Frankfurt"
+    }
+  },
+  {
+    "ronda": 6,
+    "id": 14566611,
+    "fecha": 1765310400,
+    "equipoLocal": {
+      "id": 2697,
+      "name": "Inter"
+    },
+    "equipoVisitante": {
+      "id": 44,
+      "name": "Liverpool FC"
+    }
+  },
+  {
+    "ronda": 6,
+    "id": 14566892,
+    "fecha": 1765310400,
+    "equipoLocal": {
+      "id": 2952,
+      "name": "PSV Eindhoven"
+    },
+    "equipoVisitante": {
+      "id": 2836,
+      "name": "Atlético Madrid"
+    }
+  },
+  {
+    "ronda": 6,
+    "id": 14566951,
+    "fecha": 1765310400,
+    "equipoLocal": {
+      "id": 4860,
+      "name": "Royale Union Saint-Gilloise"
+    },
+    "equipoVisitante": {
+      "id": 1641,
+      "name": "Olympique de Marseille"
+    }
+  },
+  {
+    "ronda": 6,
+    "id": 14566828,
+    "fecha": 1765310400,
+    "equipoLocal": {
+      "id": 33,
+      "name": "Tottenham Hotspur"
+    },
+    "equipoVisitante": {
+      "id": 2216,
+      "name": "SK Slavia Praha"
+    }
+  },
+  {
+    "ronda": 6,
+    "id": 14566921,
+    "fecha": 1765388700,
+    "equipoLocal": {
+      "id": 5962,
+      "name": "Qarabağ FK"
+    },
+    "equipoVisitante": {
+      "id": 2953,
+      "name": "AFC Ajax"
+    }
+  },
+  {
+    "ronda": 6,
+    "id": 14566784,
+    "fecha": 1765388700,
+    "equipoLocal": {
+      "id": 2819,
+      "name": "Villarreal"
+    },
+    "equipoVisitante": {
+      "id": 1284,
+      "name": "FC København"
+    }
+  },
+  {
+    "ronda": 6,
+    "id": 14566908,
+    "fecha": 1765396800,
+    "equipoLocal": {
+      "id": 2825,
+      "name": "Athletic Club"
+    },
+    "equipoVisitante": {
+      "id": 1644,
+      "name": "Paris Saint-Germain"
+    }
+  },
+  {
+    "ronda": 6,
+    "id": 14566707,
+    "fecha": 1765396800,
+    "equipoLocal": {
+      "id": 2681,
+      "name": "Bayer 04 Leverkusen"
+    },
+    "equipoVisitante": {
+      "id": 39,
+      "name": "Newcastle United"
+    }
+  },
+  {
+    "ronda": 6,
+    "id": 14566737,
+    "fecha": 1765396800,
+    "equipoLocal": {
+      "id": 3006,
+      "name": "Benfica"
+    },
+    "equipoVisitante": {
+      "id": 2714,
+      "name": "SSC Napoli"
+    }
+  },
+  {
+    "ronda": 6,
+    "id": 14566621,
+    "fecha": 1765396800,
+    "equipoLocal": {
+      "id": 2673,
+      "name": "Borussia Dortmund"
+    },
+    "equipoVisitante": {
+      "id": 656,
+      "name": "Bodø/Glimt"
+    }
+  },
+  {
+    "ronda": 6,
+    "id": 14566746,
+    "fecha": 1765396800,
+    "equipoLocal": {
+      "id": 2888,
+      "name": "Club Brugge KV"
+    },
+    "equipoVisitante": {
+      "id": 42,
+      "name": "Arsenal"
+    }
+  },
+  {
+    "ronda": 6,
+    "id": 14566767,
+    "fecha": 1765396800,
+    "equipoLocal": {
+      "id": 2687,
+      "name": "Juventus"
+    },
+    "equipoVisitante": {
+      "id": 171626,
+      "name": "Pafos FC"
+    }
+  },
+  {
+    "ronda": 6,
+    "id": 14566595,
+    "fecha": 1765396800,
+    "equipoLocal": {
+      "id": 2829,
+      "name": "Real Madrid"
+    },
+    "equipoVisitante": {
+      "id": 17,
+      "name": "Manchester City"
+    }
+  },
+  {
+    "ronda": 7,
+    "id": 14566984,
+    "fecha": 1768923000,
+    "equipoLocal": {
+      "id": 5172,
+      "name": "Kairat Almaty"
+    },
+    "equipoVisitante": {
+      "id": 2888,
+      "name": "Club Brugge KV"
+    }
+  },
+  {
+    "ronda": 7,
+    "id": 14566841,
+    "fecha": 1768931100,
+    "equipoLocal": {
+      "id": 656,
+      "name": "Bodø/Glimt"
+    },
+    "equipoVisitante": {
+      "id": 17,
+      "name": "Manchester City"
+    }
+  },
+  {
+    "ronda": 7,
+    "id": 14566973,
+    "fecha": 1768939200,
+    "equipoLocal": {
+      "id": 1284,
+      "name": "FC København"
+    },
+    "equipoVisitante": {
+      "id": 2714,
+      "name": "SSC Napoli"
+    }
+  },
+  {
+    "ronda": 7,
+    "id": 14566612,
+    "fecha": 1768939200,
+    "equipoLocal": {
+      "id": 2697,
+      "name": "Inter"
+    },
+    "equipoVisitante": {
+      "id": 42,
+      "name": "Arsenal"
+    }
+  },
+  {
+    "ronda": 7,
+    "id": 14566866,
+    "fecha": 1768939200,
+    "equipoLocal": {
+      "id": 3245,
+      "name": "Olympiacos FC"
+    },
+    "equipoVisitante": {
+      "id": 2681,
+      "name": "Bayer 04 Leverkusen"
+    }
+  },
+  {
+    "ronda": 7,
+    "id": 14566598,
+    "fecha": 1768939200,
+    "equipoLocal": {
+      "id": 2829,
+      "name": "Real Madrid"
+    },
+    "equipoVisitante": {
+      "id": 1653,
+      "name": "AS Monaco"
+    }
+  },
+  {
+    "ronda": 7,
+    "id": 14566854,
+    "fecha": 1768939200,
+    "equipoLocal": {
+      "id": 3001,
+      "name": "Sporting CP"
+    },
+    "equipoVisitante": {
+      "id": 1644,
+      "name": "Paris Saint-Germain"
+    }
+  },
+  {
+    "ronda": 7,
+    "id": 14566826,
+    "fecha": 1768939200,
+    "equipoLocal": {
+      "id": 33,
+      "name": "Tottenham Hotspur"
+    },
+    "equipoVisitante": {
+      "id": 2673,
+      "name": "Borussia Dortmund"
+    }
+  },
+  {
+    "ronda": 7,
+    "id": 14566783,
+    "fecha": 1768939200,
+    "equipoLocal": {
+      "id": 2819,
+      "name": "Villarreal"
+    },
+    "equipoVisitante": {
+      "id": 2953,
+      "name": "AFC Ajax"
+    }
+  },
+  {
+    "ronda": 7,
+    "id": 14566935,
+    "fecha": 1769017500,
+    "equipoLocal": {
+      "id": 3061,
+      "name": "Galatasaray"
+    },
+    "equipoVisitante": {
+      "id": 2836,
+      "name": "Atlético Madrid"
+    }
+  },
+  {
+    "ronda": 7,
+    "id": 14566920,
+    "fecha": 1769017500,
+    "equipoLocal": {
+      "id": 5962,
+      "name": "Qarabağ FK"
+    },
+    "equipoVisitante": {
+      "id": 2674,
+      "name": "Eintracht Frankfurt"
+    }
+  },
+  {
+    "ronda": 7,
+    "id": 14566729,
+    "fecha": 1769025600,
+    "equipoLocal": {
+      "id": 2686,
+      "name": "Atalanta"
+    },
+    "equipoVisitante": {
+      "id": 2825,
+      "name": "Athletic Club"
+    }
+  },
+  {
+    "ronda": 7,
+    "id": 14566583,
+    "fecha": 1769025600,
+    "equipoLocal": {
+      "id": 38,
+      "name": "Chelsea"
+    },
+    "equipoVisitante": {
+      "id": 171626,
+      "name": "Pafos FC"
+    }
+  },
+  {
+    "ronda": 7,
+    "id": 14566573,
+    "fecha": 1769025600,
+    "equipoLocal": {
+      "id": 2672,
+      "name": "FC Bayern München"
+    },
+    "equipoVisitante": {
+      "id": 4860,
+      "name": "Royale Union Saint-Gilloise"
+    }
+  },
+  {
+    "ronda": 7,
+    "id": 14566765,
+    "fecha": 1769025600,
+    "equipoLocal": {
+      "id": 2687,
+      "name": "Juventus"
+    },
+    "equipoVisitante": {
+      "id": 3006,
+      "name": "Benfica"
+    }
+  },
+  {
+    "ronda": 7,
+    "id": 14566957,
+    "fecha": 1769025600,
+    "equipoLocal": {
+      "id": 39,
+      "name": "Newcastle United"
+    },
+    "equipoVisitante": {
+      "id": 2952,
+      "name": "PSV Eindhoven"
+    }
+  },
+  {
+    "ronda": 7,
+    "id": 14566821,
+    "fecha": 1769025600,
+    "equipoLocal": {
+      "id": 1641,
+      "name": "Olympique de Marseille"
+    },
+    "equipoVisitante": {
+      "id": 44,
+      "name": "Liverpool FC"
+    }
+  },
+  {
+    "ronda": 7,
+    "id": 14566882,
+    "fecha": 1769025600,
+    "equipoLocal": {
+      "id": 2216,
+      "name": "SK Slavia Praha"
+    },
+    "equipoVisitante": {
+      "id": 2817,
+      "name": "FC Barcelona"
+    }
+  },
+  {
+    "ronda": 8,
+    "id": 14566875,
+    "fecha": 1769630400,
+    "equipoLocal": {
+      "id": 2953,
+      "name": "AFC Ajax"
+    },
+    "equipoVisitante": {
+      "id": 3245,
+      "name": "Olympiacos FC"
+    }
+  },
+  {
+    "ronda": 8,
+    "id": 14566926,
+    "fecha": 1769630400,
+    "equipoLocal": {
+      "id": 1653,
+      "name": "AS Monaco"
+    },
+    "equipoVisitante": {
+      "id": 2687,
+      "name": "Juventus"
+    }
+  },
+  {
+    "ronda": 8,
+    "id": 14566720,
+    "fecha": 1769630400,
+    "equipoLocal": {
+      "id": 42,
+      "name": "Arsenal"
+    },
+    "equipoVisitante": {
+      "id": 5172,
+      "name": "Kairat Almaty"
+    }
+  },
+  {
+    "ronda": 8,
+    "id": 14566910,
+    "fecha": 1769630400,
+    "equipoLocal": {
+      "id": 2825,
+      "name": "Athletic Club"
+    },
+    "equipoVisitante": {
+      "id": 3001,
+      "name": "Sporting CP"
+    }
+  },
+  {
+    "ronda": 8,
+    "id": 14566776,
+    "fecha": 1769630400,
+    "equipoLocal": {
+      "id": 2836,
+      "name": "Atlético Madrid"
+    },
+    "equipoVisitante": {
+      "id": 656,
+      "name": "Bodø/Glimt"
+    }
+  },
+  {
+    "ronda": 8,
+    "id": 14566705,
+    "fecha": 1769630400,
+    "equipoLocal": {
+      "id": 2681,
+      "name": "Bayer 04 Leverkusen"
+    },
+    "equipoVisitante": {
+      "id": 2819,
+      "name": "Villarreal"
+    }
+  },
+  {
+    "ronda": 8,
+    "id": 14566735,
+    "fecha": 1769630400,
+    "equipoLocal": {
+      "id": 3006,
+      "name": "Benfica"
+    },
+    "equipoVisitante": {
+      "id": 2829,
+      "name": "Real Madrid"
+    }
+  },
+  {
+    "ronda": 8,
+    "id": 14566619,
+    "fecha": 1769630400,
+    "equipoLocal": {
+      "id": 2673,
+      "name": "Borussia Dortmund"
+    },
+    "equipoVisitante": {
+      "id": 2697,
+      "name": "Inter"
+    }
+  },
+  {
+    "ronda": 8,
+    "id": 14566747,
+    "fecha": 1769630400,
+    "equipoLocal": {
+      "id": 2888,
+      "name": "Club Brugge KV"
+    },
+    "equipoVisitante": {
+      "id": 1641,
+      "name": "Olympique de Marseille"
+    }
+  },
+  {
+    "ronda": 8,
+    "id": 14566756,
+    "fecha": 1769630400,
+    "equipoLocal": {
+      "id": 2674,
+      "name": "Eintracht Frankfurt"
+    },
+    "equipoVisitante": {
+      "id": 33,
+      "name": "Tottenham Hotspur"
+    }
+  },
+  {
+    "ronda": 8,
+    "id": 14566653,
+    "fecha": 1769630400,
+    "equipoLocal": {
+      "id": 2817,
+      "name": "FC Barcelona"
+    },
+    "equipoVisitante": {
+      "id": 1284,
+      "name": "FC København"
+    }
+  },
+  {
+    "ronda": 8,
+    "id": 14566639,
+    "fecha": 1769630400,
+    "equipoLocal": {
+      "id": 44,
+      "name": "Liverpool FC"
+    },
+    "equipoVisitante": {
+      "id": 5962,
+      "name": "Qarabağ FK"
+    }
+  },
+  {
+    "ronda": 8,
+    "id": 14566665,
+    "fecha": 1769630400,
+    "equipoLocal": {
+      "id": 17,
+      "name": "Manchester City"
+    },
+    "equipoVisitante": {
+      "id": 3061,
+      "name": "Galatasaray"
+    }
+  },
+  {
+    "ronda": 8,
+    "id": 14566891,
+    "fecha": 1769630400,
+    "equipoLocal": {
+      "id": 2952,
+      "name": "PSV Eindhoven"
+    },
+    "equipoVisitante": {
+      "id": 2672,
+      "name": "FC Bayern München"
+    }
+  },
+  {
+    "ronda": 8,
+    "id": 14566967,
+    "fecha": 1769630400,
+    "equipoLocal": {
+      "id": 171626,
+      "name": "Pafos FC"
+    },
+    "equipoVisitante": {
+      "id": 2216,
+      "name": "SK Slavia Praha"
+    }
+  },
+  {
+    "ronda": 8,
+    "id": 14566659,
+    "fecha": 1769630400,
+    "equipoLocal": {
+      "id": 1644,
+      "name": "Paris Saint-Germain"
+    },
+    "equipoVisitante": {
+      "id": 39,
+      "name": "Newcastle United"
+    }
+  },
+  {
+    "ronda": 8,
+    "id": 14566950,
+    "fecha": 1769630400,
+    "equipoLocal": {
+      "id": 4860,
+      "name": "Royale Union Saint-Gilloise"
+    },
+    "equipoVisitante": {
+      "id": 2686,
+      "name": "Atalanta"
+    }
+  },
+  {
+    "ronda": 8,
+    "id": 14566899,
+    "fecha": 1769630400,
+    "equipoLocal": {
+      "id": 2714,
+      "name": "SSC Napoli"
+    },
+    "equipoVisitante": {
+      "id": 38,
+      "name": "Chelsea"
+    }
+  }
+]

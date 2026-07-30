@@ -6,7 +6,10 @@ Consulta las directrices completas y especificaciones del producto en el archivo
 - **Tecnología**: HTML5, Vanilla CSS3 y JavaScript ES6+.
 - **Diseño**: Mobile-first, orientada a pantalla **vertical (portrait)**.
 - **Ámbito**: Porra para la UEFA Champions League 2026/2027.
-- **Acceso por Código**: Usuarios autenticados mediante código de uso único (vía WhatsApp/Email) + Selección de Nombre de Jugador y Avatar.
-- **Estilos**: Usar variables CSS centralizadas en `css/styles.css`. Evitar frameworks masivos sin previa confirmación.
-- **Layout**: Max-width ~480px en pantallas de escritorio con apariencia de smartphone; 100% de alto dinámico (`100dvh`) en móvil.
+- **Flujo de Acceso**:
+  1. Código de invitación único (vía WhatsApp/Email).
+  2. Perfil de Jugador (Nombre + Avatar).
+  3. Asistente Paso a Paso (Wizard) partido a partido con marcadores exactos (goles local/visitante, contador de progreso y navegación adelante/atrás).
+  4. Selección de Plantilla Ideal (Portero, Defensa, Centrocampista, Delantero).
+- **Estilos**: Variables CSS centralizadas en `css/styles.css`.
 - **Despliegues**: La carpeta `extract/` (scripts de SofaScore) no debe incluirse en los despliegues de producción.
