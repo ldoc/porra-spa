@@ -448,14 +448,29 @@ function renderSquadPicker() {
   searchInput?.addEventListener('input', () => {
     const results = document.getElementById('squad-search-results');
     if (results) results.innerHTML = renderPlayerList(searchInput.value);
-    attachPlayerRowEvents();
   });
-
-  // Eventos de filas de jugadores
-  attachPlayerRowEvents();
 
   // Evento finalizar
   document.getElementById('btn-finish-squad')?.addEventListener('click', finishRegistration);
+
+  // Delegacion de eventos en el contenedor de resultados (anadir jugador)
+  document.getElementById('squad-search-results')?.addEventListener('click', (e) => {
+    const row = e.target.closest('.squad-player-row');
+    if (row) {
+      const playerId = parseInt(row.getAttribute('data-player-id'));
+      addPlayerToSquad(playerId);
+    }
+  });
+
+  // Delegacion de eventos en el contenedor de chips (quitar jugador)
+  document.getElementById('squad-chips')?.addEventListener('click', (e) => {
+    const btn = e.target.closest('.squad-chip-remove');
+    if (btn) {
+      e.stopPropagation();
+      const idx = parseInt(btn.getAttribute('data-remove-index'));
+      removePlayerFromSquad(idx);
+    }
+  });
 }
 
 function finishRegistration() {
@@ -534,34 +549,6 @@ function renderPlayerList(query) {
   }).join('');
 }
 
-function attachPlayerRowEvents() {
-  // Botones de anadir
-  document.querySelectorAll('.squad-add-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const playerId = parseInt(btn.getAttribute('data-player-id'));
-      addPlayerToSquad(playerId);
-    });
-  });
-
-  // Filas clickeables tambien anaden
-  document.querySelectorAll('.squad-player-row').forEach(row => {
-    row.addEventListener('click', () => {
-      const playerId = parseInt(row.getAttribute('data-player-id'));
-      addPlayerToSquad(playerId);
-    });
-  });
-
-  // Botones de quitar del chip
-  document.querySelectorAll('.squad-chip-remove').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const idx = parseInt(btn.getAttribute('data-remove-index'));
-      removePlayerFromSquad(idx);
-    });
-  });
-}
-
 function addPlayerToSquad(playerId) {
   if (AppState.squadPicks.length >= SQUAD_SIZE) return;
   if (AppState.squadPicks.some(p => p.id === playerId)) return;
@@ -613,16 +600,6 @@ function refreshSquadUI() {
   if (countEl) countEl.textContent = AppState.squadPicks.length;
   if (finishBtn) finishBtn.disabled = AppState.squadPicks.length !== SQUAD_SIZE;
   if (results) results.innerHTML = renderPlayerList(searchInput?.value || '');
-
-  // Re-attach events
-  document.querySelectorAll('.squad-chip-remove').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const idx = parseInt(btn.getAttribute('data-remove-index'));
-      removePlayerFromSquad(idx);
-    });
-  });
-  attachPlayerRowEvents();
 }
 
 // ============================================================
