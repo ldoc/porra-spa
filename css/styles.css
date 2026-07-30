@@ -295,16 +295,23 @@ html, body {
   width: 56px;
   height: 56px;
   background: var(--ucl-surface);
-  border-radius: var(--radius-full);
+  border-radius: var(--radius-md);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 1.7rem;
-  border: 1px solid var(--border-color);
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
 }
 
-.team-name { font-size: var(--font-size-sm); font-weight: 700; text-align: center; }
+.team-name {
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  text-align: center;
+  height: 2.4em;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
 
 .vs-pill {
   background: var(--ucl-surface);
@@ -389,13 +396,11 @@ html, body {
   width: 64px;
   height: 64px;
   background: var(--ucl-surface);
-  border-radius: var(--radius-full);
+  border-radius: var(--radius-md);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 2rem;
-  border: 2px solid var(--border-color);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
 }
 
 .wizard-team-name {
@@ -403,6 +408,11 @@ html, body {
   font-weight: 800;
   text-align: center;
   line-height: 1.2;
+  height: 2.4em;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
 }
 
 /* Control de goles + / - */
@@ -962,7 +972,6 @@ html, body {
   width: 100%;
   height: 100%;
   object-fit: contain;
-  border-radius: var(--radius-full);
 }
 
 /* ==========================================================================

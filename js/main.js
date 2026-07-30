@@ -53,7 +53,7 @@ async function loadInitialData() {
       const teamsArr = await teamsRes.json();
       AppState.teamsMap = {};
       teamsArr.forEach(t => {
-        AppState.teamsMap[t.id] = { name: t.name, image: `data/imgEquipos/${t.id}.png` };
+        AppState.teamsMap[t.id] = { name: t.name, ext: t.extension || 'png' };
       });
     }
 
@@ -100,8 +100,8 @@ async function loadInitialData() {
 function buildMatchFromCalendar(m) {
   const localId = m.equipoLocal.id;
   const visitId = m.equipoVisitante.id;
-  const localTeam = AppState.teamsMap[localId] || { name: m.equipoLocal.name, image: '' };
-  const visitTeam = AppState.teamsMap[visitId] || { name: m.equipoVisitante.name, image: '' };
+  const localTeam = AppState.teamsMap[localId] || { name: m.equipoLocal.name, ext: 'png' };
+  const visitTeam = AppState.teamsMap[visitId] || { name: m.equipoVisitante.name, ext: 'png' };
 
   return {
     id: m.id,
@@ -111,10 +111,10 @@ function buildMatchFromCalendar(m) {
     journey: `Jornada ${m.ronda}`,
     homeTeam: localTeam.name,
     homeTeamId: localId,
-    homeBadge: localTeam.image,
+    homeBadgeExt: localTeam.ext,
     awayTeam: visitTeam.name,
     awayTeamId: visitId,
-    awayBadge: visitTeam.image,
+    awayBadgeExt: visitTeam.ext,
   };
 }
 
@@ -130,32 +130,21 @@ function formatDate(ts) {
   return `${dia} ${mes} ${anio}, ${hora}:${min}`;
 }
 
-/** Devuelve la ruta de imagen de un equipo por su id */
-function teamImage(teamId) {
-  return AppState.teamsMap[teamId]?.image || '';
+/** Devuelve el nombre de un equipo por su id */
+function teamImgTag(teamId, ext, alt, className) {
+  const cls = className ? ` class="${className}"` : '';
+  return `<img src="data/imgEquipos/${teamId}.${ext}" alt="${alt}"${cls}>`;
 }
 
-/** Genera tag <img> para equipo con fallback png/webp */
-function teamImgTag(teamId, alt, className) {
-  const base = `data/imgEquipos/${teamId}`;
+/** Genera tag <img> para jugador con fallback a escudo del equipo */
+function playerImgTag(playerId, ext, teamId, teamExt, alt, className) {
   const cls = className ? ` class="${className}"` : '';
-  return `<img src="${base}.png" alt="${alt}"${cls} onerror="this.onerror=null;this.src='${base}.webp'">`;
-}
-
-/** Genera tag <img> para jugador con fallback a webp y luego escudo del equipo */
-function playerImgTag(playerId, teamId, alt, className) {
-  const cls = className ? ` class="${className}"` : '';
-  return `<img src="data/imgJugadores/${playerId}.png" alt="${alt}"${cls} onerror="this.onerror=function(){this.onerror=null;this.src='data/imgEquipos/${teamId}.png'};this.src='data/imgJugadores/${playerId}.webp'">`;
+  return `<img src="data/imgJugadores/${playerId}.${ext}" alt="${alt}"${cls} onerror="this.onerror=null;this.src='data/imgEquipos/${teamId}.${teamExt}'">`;
 }
 
 /** Devuelve el nombre de un equipo por su id */
 function teamName(teamId) {
   return AppState.teamsMap[teamId]?.name || 'Desconocido';
-}
-
-/** Devuelve la imagen de un jugador por su id */
-function playerImage(playerId) {
-  return `data/imgJugadores/${playerId}.png`;
 }
 
 /** Filtro de jugadores por texto y equipos bloqueados */
@@ -319,7 +308,7 @@ function renderWizardMatch() {
       <div class="wizard-teams">
         <div class="wizard-team">
           <div class="wizard-team-badge">
-            ${teamImgTag(match.homeTeamId, match.homeTeam, '')}
+            ${teamImgTag(match.homeTeamId, match.homeBadgeExt, match.homeTeam, '')}
           </div>
           <div class="wizard-team-name">${match.homeTeam}</div>
           <div class="goals-control">
@@ -339,7 +328,7 @@ function renderWizardMatch() {
 
         <div class="wizard-team">
           <div class="wizard-team-badge">
-            ${teamImgTag(match.awayTeamId, match.awayTeam, '')}
+            ${teamImgTag(match.awayTeamId, match.awayBadgeExt, match.awayTeam, '')}
           </div>
           <div class="wizard-team-name">${match.awayTeam}</div>
           <div class="goals-control">
@@ -469,6 +458,24 @@ function renderSquadPicker() {
   document.getElementById('btn-finish-squad')?.addEventListener('click', finishRegistration);
 }
 
+function finishRegistration() {
+  if (AppState.squadPicks.length !== SQUAD_SIZE) {
+    showToast(`Debes seleccionar ${SQUAD_SIZE} jugadores`);
+    return;
+  }
+
+  const overlay = document.getElementById('auth-overlay');
+  if (overlay) overlay.style.display = 'none';
+
+  updateUserHeader();
+  renderMatchesList();
+  renderLeaderboard();
+  renderStats();
+  setupProfilePage();
+
+  showToast(`Porra guardada, ${AppState.currentUser.name}!`);
+}
+
 function renderBlockedTeamsBar() {
   if (AppState.blockedTeams.size === 0) {
     return '<span class="blocked-teams-empty">Ningun equipo bloqueado aun</span>';
@@ -477,7 +484,7 @@ function renderBlockedTeamsBar() {
     const t = AppState.teamsMap[teamId];
     return `
       <span class="blocked-team-tag">
-        ${teamImgTag(teamId, t.name, 'blocked-team-img')}
+        ${teamImgTag(teamId, t.ext, t.name, 'blocked-team-img')}
         ${t?.name || 'Equipo'}
       </span>
     `;
@@ -492,7 +499,7 @@ function renderSquadChips() {
     const posLabel = { G: 'POR', D: 'DEF', M: 'MED', F: 'DEL' }[p.posicion] || p.posicion;
     return `
       <div class="squad-chip">
-        ${playerImgTag(p.id, p.equipo, p.nombre, 'squad-chip-img')}
+        ${playerImgTag(p.id, p.extension || 'png', p.equipo, AppState.teamsMap[p.equipo]?.ext || 'png', p.nombre, 'squad-chip-img')}
         <div class="squad-chip-info">
           <span class="squad-chip-name">${p.nombre}</span>
           <span class="squad-chip-team">${p.club} &middot; ${posLabel}</span>
@@ -515,7 +522,7 @@ function renderPlayerList(query) {
     const posLabel = { G: 'POR', D: 'DEF', M: 'MED', F: 'DEL' }[p.posicion] || p.posicion;
     return `
       <div class="squad-player-row" data-player-id="${p.id}">
-        ${playerImgTag(p.id, p.equipo, p.nombre, 'squad-player-img')}
+        ${playerImgTag(p.id, p.extension || 'png', p.equipo, AppState.teamsMap[p.equipo]?.ext || 'png', p.nombre, 'squad-player-img')}
         <div class="squad-player-info">
           <div class="squad-player-name">${p.nombre}</div>
           <div class="squad-player-team">${p.club}</div>
@@ -569,6 +576,7 @@ function addPlayerToSquad(playerId) {
     posicion: player.posicion,
     club: player.club,
     equipo: player.equipo,
+    extension: player.extension || 'png',
   });
 
   AppState.blockedTeams.add(player.equipo);
@@ -635,7 +643,7 @@ function renderMatchesList() {
         <div class="teams-container">
           <div class="team">
             <div class="team-badge">
-              ${teamImgTag(m.homeTeamId, m.homeTeam, '')}
+              ${teamImgTag(m.homeTeamId, m.homeBadgeExt, m.homeTeam, '')}
             </div>
             <span class="team-name">${m.homeTeam}</span>
           </div>
@@ -644,7 +652,7 @@ function renderMatchesList() {
           </div>
           <div class="team">
             <div class="team-badge">
-              ${teamImgTag(m.awayTeamId, m.awayTeam, '')}
+              ${teamImgTag(m.awayTeamId, m.awayBadgeExt, m.awayTeam, '')}
             </div>
             <span class="team-name">${m.awayTeam}</span>
           </div>
@@ -745,7 +753,7 @@ function renderStats() {
             const posLabel = { G: 'POR', D: 'DEF', M: 'MED', F: 'DEL' }[p.posicion] || p.posicion;
             return `
               <div style="display: flex; align-items: center; gap: 12px;">
-                ${playerImgTag(p.id, p.equipo, p.nombre, 'squad-chip-img')}
+        ${playerImgTag(p.id, p.extension || 'png', p.equipo, AppState.teamsMap[p.equipo]?.ext || 'png', p.nombre, 'squad-chip-img')}
                 <span style="font-size: 10px; font-weight: 800; color: var(--accent-cyan); width: 30px;">${posLabel}</span>
                 <div>
                   <div style="font-weight: 700; font-size: var(--font-size-sm);">${p.nombre}</div>
@@ -844,7 +852,7 @@ function setupProfilePage() {
           const posLabel = { G: 'POR', D: 'DEF', M: 'MED', F: 'DEL' }[p.posicion] || p.posicion;
           return `
             <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
-              ${playerImgTag(p.id, p.equipo, p.nombre, 'squad-chip-img')}
+              ${playerImgTag(p.id, p.extension || 'png', p.equipo, AppState.teamsMap[p.equipo]?.ext || 'png', p.nombre, 'squad-chip-img')}
               <span style="font-size: 10px; font-weight: 800; color: var(--accent-cyan); width: 28px;">${posLabel}</span>
               <div>
                 <span style="font-weight: 700; font-size: var(--font-size-sm);">${p.nombre}</span>

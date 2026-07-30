@@ -2,181 +2,217 @@
   {
     "idCompetition": 1917522,
     "name": "Arsenal",
-    "id": 42
+    "id": 42,
+    "extension": "png"
   },
   {
     "idCompetition": 1917521,
     "name": "FC Bayern München",
-    "id": 2672
+    "id": 2672,
+    "extension": "png"
   },
   {
     "idCompetition": 1917525,
     "name": "Liverpool FC",
-    "id": 44
+    "id": 44,
+    "extension": "png"
   },
   {
     "idCompetition": 1917527,
     "name": "Tottenham Hotspur",
-    "id": 33
+    "id": 33,
+    "extension": "png"
   },
   {
     "idCompetition": 1917538,
     "name": "FC Barcelona",
-    "id": 2817
+    "id": 2817,
+    "extension": "png"
   },
   {
     "idCompetition": 1917550,
     "name": "Chelsea",
-    "id": 38
+    "id": 38,
+    "extension": "webp"
   },
   {
     "idCompetition": 1917544,
     "name": "Sporting CP",
-    "id": 3001
+    "id": 3001,
+    "extension": "webp"
   },
   {
     "idCompetition": 1917542,
     "name": "Manchester City",
-    "id": 17
+    "id": 17,
+    "extension": "png"
   },
   {
     "idCompetition": 1917526,
     "name": "Real Madrid",
-    "id": 2829
+    "id": 2829,
+    "extension": "png"
   },
   {
     "idCompetition": 1917523,
     "name": "Inter",
-    "id": 2697
+    "id": 2697,
+    "extension": "png"
   },
   {
     "idCompetition": 1917519,
     "name": "Paris Saint-Germain",
-    "id": 1644
+    "id": 1644,
+    "extension": "webp"
   },
   {
     "idCompetition": 1917543,
     "name": "Newcastle United",
-    "id": 39
+    "id": 39,
+    "extension": "webp"
   },
   {
     "idCompetition": 1917529,
     "name": "Juventus",
-    "id": 2687
+    "id": 2687,
+    "extension": "png"
   },
   {
     "idCompetition": 1917546,
     "name": "Atlético Madrid",
-    "id": 2836
+    "id": 2836,
+    "extension": "png"
   },
   {
     "idCompetition": 1917554,
     "name": "Atalanta",
-    "id": 2686
+    "id": 2686,
+    "extension": "webp"
   },
   {
     "idCompetition": 1917535,
     "name": "Bayer 04 Leverkusen",
-    "id": 2681
+    "id": 2681,
+    "extension": "png"
   },
   {
     "idCompetition": 1917528,
     "name": "Borussia Dortmund",
-    "id": 2673
+    "id": 2673,
+    "extension": "png"
   },
   {
     "idCompetition": 1917532,
     "name": "Olympiacos FC",
-    "id": 3245
+    "id": 3245,
+    "extension": "webp"
   },
   {
     "idCompetition": 1917536,
     "name": "Club Brugge KV",
-    "id": 2888
+    "id": 2888,
+    "extension": "webp"
   },
   {
     "idCompetition": 1917540,
     "name": "Galatasaray",
-    "id": 3061
+    "id": 3061,
+    "extension": "webp"
   },
   {
     "idCompetition": 1917534,
     "name": "AS Monaco",
-    "id": 1653
+    "id": 1653,
+    "extension": "png"
   },
   {
     "idCompetition": 1917524,
     "name": "Qarabağ FK",
-    "id": 5962
+    "id": 5962,
+    "extension": "png"
   },
   {
     "idCompetition": 1917530,
     "name": "Bodø/Glimt",
-    "id": 656
+    "id": 656,
+    "extension": "png"
   },
   {
     "idCompetition": 1917547,
     "name": "Benfica",
-    "id": 3006
+    "id": 3006,
+    "extension": "png"
   },
   {
     "idCompetition": 1917548,
     "name": "Olympique de Marseille",
-    "id": 1641
+    "id": 1641,
+    "extension": "webp"
   },
   {
     "idCompetition": 1917533,
     "name": "Pafos FC",
-    "id": 171626
+    "id": 171626,
+    "extension": "png"
   },
   {
     "idCompetition": 1917520,
     "name": "Royale Union Saint-Gilloise",
-    "id": 4860
+    "id": 4860,
+    "extension": "png"
   },
   {
     "idCompetition": 1917551,
     "name": "PSV Eindhoven",
-    "id": 2952
+    "id": 2952,
+    "extension": "png"
   },
   {
     "idCompetition": 1917553,
     "name": "Athletic Club",
-    "id": 2825
+    "id": 2825,
+    "extension": "png"
   },
   {
     "idCompetition": 1917545,
     "name": "SSC Napoli",
-    "id": 2714
+    "id": 2714,
+    "extension": "webp"
   },
   {
     "idCompetition": 1917539,
     "name": "FC København",
-    "id": 1284
+    "id": 1284,
+    "extension": "png"
   },
   {
     "idCompetition": 1917552,
     "name": "AFC Ajax",
-    "id": 2953
+    "id": 2953,
+    "extension": "webp"
   },
   {
     "idCompetition": 1917537,
     "name": "Eintracht Frankfurt",
-    "id": 2674
+    "id": 2674,
+    "extension": "png"
   },
   {
     "idCompetition": 1917531,
     "name": "SK Slavia Praha",
-    "id": 2216
+    "id": 2216,
+    "extension": "png"
   },
   {
     "idCompetition": 1917549,
     "name": "Villarreal",
-    "id": 2819
+    "id": 2819,
+    "extension": "png"
   },
   {
     "idCompetition": 1917541,
     "name": "Kairat Almaty",
-    "id": 5172
+    "id": 5172,
+    "extension": "png"
   }
 ]
