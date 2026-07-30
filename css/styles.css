@@ -952,3 +952,293 @@ html, body {
 @media (max-width: 900px) and (orientation: landscape) {
   .orientation-warning { display: flex; }
 }
+
+/* ==========================================================================
+   IMAGENES DE EQUIPOS Y JUGADORES
+   ========================================================================== */
+
+.team-badge img,
+.wizard-team-badge img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: var(--radius-full);
+}
+
+/* ==========================================================================
+   PLANTILLA IDEAL - NUEVO SISTEMA DE BUSQUEDA Y SELECCION
+   ========================================================================== */
+
+.squad-picker-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* Barra de equipos bloqueados */
+.blocked-teams-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-height: 28px;
+  align-items: center;
+}
+
+.blocked-teams-empty {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.blocked-team-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #FCA5A5;
+  padding: 3px 10px;
+  border-radius: var(--radius-full);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.blocked-team-img {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  object-fit: contain;
+}
+
+/* Seleccion de jugadores */
+.squad-selected-section {
+  background: var(--ucl-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 12px;
+}
+
+.squad-selected-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.squad-chips-container {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.squad-chips-empty {
+  font-size: 12px;
+  color: var(--text-muted);
+  text-align: center;
+  padding: 8px;
+}
+
+.squad-chip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--ucl-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 8px 10px;
+  animation: fadeIn 0.2s ease;
+}
+
+.squad-chip-img {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid var(--border-color);
+  flex-shrink: 0;
+}
+
+.squad-chip-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.squad-chip-name {
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.squad-chip-team {
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.squad-chip-remove {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(239, 68, 68, 0.2);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  color: #FCA5A5;
+  font-size: 1.1rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.squad-chip-remove:active {
+  background: rgba(239, 68, 68, 0.5);
+  transform: scale(0.9);
+}
+
+/* Busqueda */
+.squad-search-wrapper {
+  position: relative;
+}
+
+.squad-search-input {
+  width: 100%;
+  background: var(--ucl-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 14px 14px 14px 40px;
+  color: var(--text-primary);
+  font-family: var(--font-family);
+  font-size: var(--font-size-base);
+  font-weight: 600;
+  outline: none;
+  transition: border-color var(--transition-fast);
+}
+
+.squad-search-input:focus {
+  border-color: var(--accent-cyan);
+  box-shadow: 0 0 12px var(--accent-glow);
+}
+
+.squad-search-wrapper::before {
+  content: '🔍';
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 1rem;
+  pointer-events: none;
+}
+
+/* Lista de resultados */
+.squad-players-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 300px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.squad-players-list::-webkit-scrollbar { width: 4px; }
+.squad-players-list::-webkit-scrollbar-track { background: transparent; }
+.squad-players-list::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 4px; }
+
+.squad-player-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--ucl-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.squad-player-row:active {
+  background: rgba(6, 182, 212, 0.1);
+  border-color: var(--accent-cyan);
+}
+
+.squad-player-img {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid var(--border-color);
+  flex-shrink: 0;
+}
+
+.squad-player-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.squad-player-name {
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.squad-player-team {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.squad-player-pos {
+  background: rgba(6, 182, 212, 0.2);
+  color: var(--accent-cyan);
+  border: 1px solid rgba(6, 182, 212, 0.4);
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  font-size: 10px;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+.squad-add-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-cyan) 100%);
+  border: none;
+  color: #021319;
+  font-size: 1.3rem;
+  font-weight: 900;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: transform var(--transition-fast);
+}
+
+.squad-add-btn:active {
+  transform: scale(0.9);
+}
+
+.squad-no-results {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+  padding: 16px;
+}
+
+/* Boton finalizar deshabilitado */
+.btn-primary:disabled {
+  opacity: 0.4;
+  cursor: default;
+  transform: none;
+  box-shadow: none;
+}
