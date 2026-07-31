@@ -828,6 +828,19 @@ html, body {
 }
 .btn-primary:active { transform: scale(0.97); }
 
+.btn-text {
+  background: none;
+  border: none;
+  color: var(--accent-cyan);
+  font-family: var(--font-family);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  cursor: pointer;
+  padding: 8px;
+  transition: opacity var(--transition-fast);
+}
+.btn-text:hover { opacity: 0.8; }
+
 .error-alert {
   background: rgba(239, 68, 68, 0.15);
   border: 1px solid rgba(239, 68, 68, 0.4);
@@ -889,6 +902,98 @@ html, body {
   width: 24px;
 }
 .step-dot.done { background: var(--accent-primary); }
+
+/* ==========================================================================
+   TAB: INICIO
+   ========================================================================== */
+
+.inicio-welcome {
+  text-align: center;
+  padding: 20px 0 8px;
+}
+
+.inicio-avatar {
+  font-size: 4rem;
+  margin-bottom: 8px;
+  animation: modalPop 0.4s ease-out;
+}
+
+.inicio-greeting {
+  font-size: 1.5rem;
+  font-weight: 800;
+  margin-bottom: 4px;
+}
+
+.inicio-subtitle {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+}
+
+.inicio-card {
+  background: var(--ucl-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  box-shadow: var(--shadow-card);
+  transition: all var(--transition-fast);
+}
+
+.inicio-card.inicio-pending {
+  cursor: pointer;
+}
+
+.inicio-card.inicio-pending:active {
+  transform: scale(0.98);
+  background: var(--ucl-card-hover);
+}
+
+.inicio-card.inicio-done {
+  border-color: rgba(16, 185, 129, 0.3);
+}
+
+.inicio-card.inicio-freeze {
+  border-color: rgba(245, 158, 11, 0.3);
+  background: linear-gradient(135deg, var(--ucl-card) 0%, rgba(245, 158, 11, 0.08) 100%);
+}
+
+.inicio-card.inicio-freeze.frozen {
+  border-color: rgba(239, 68, 68, 0.3);
+  background: linear-gradient(135deg, var(--ucl-card) 0%, rgba(239, 68, 68, 0.08) 100%);
+}
+
+.inicio-card-icon {
+  font-size: 1.8rem;
+  flex-shrink: 0;
+}
+
+.inicio-card-content {
+  flex: 1;
+}
+
+.inicio-card-title {
+  font-size: var(--font-size-sm);
+  font-weight: 800;
+  margin-bottom: 2px;
+}
+
+.inicio-card-desc {
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+.inicio-card-desc strong {
+  color: var(--accent-cyan);
+}
+
+.inicio-card-arrow {
+  font-size: 1.2rem;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
 
 /* ==========================================================================
    BOTTOM NAV
@@ -1250,4 +1355,61 @@ html, body {
   cursor: default;
   transform: none;
   box-shadow: none;
+}
+
+/* ============================================================
+   MODAL DE PERFIL
+   ============================================================ */
+.profile-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 99999;
+  animation: fadeIn 0.2s ease;
+  margin: 0;
+  padding: 0;
+}
+
+.profile-modal-content {
+  background: var(--ucl-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  width: 90%;
+  max-width: 340px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  position: relative;
+  box-shadow: var(--shadow-card);
+}
+
+.profile-modal-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 1.5rem;
+  cursor: pointer;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all var(--transition-fast);
+}
+
+.profile-modal-close:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
 }

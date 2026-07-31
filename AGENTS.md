@@ -45,6 +45,9 @@ Este documento establece las normas de desarrollo, la arquitectura de código y 
 - **JavaScript (Vanilla ES6+)**:
   - Código limpio, modular e impulsado por eventos.
   - Sin frameworks de JS pesados.
+- **Backend**: API REST en `https://api-porra.vercel.app` (repositorio separado `api-porra`)
+- **Persistencia**: GitHub como base de datos (via backend)
+- **Autenticación**: JWT en localStorage
 
 ### Estructura de Directorios
 ```text
@@ -53,7 +56,7 @@ Este documento establece las normas de desarrollo, la arquitectura de código y 
 ├── css/
 │   └── styles.css    # Sistema de diseño, variables y estilos globales
 ├── js/
-│   └── main.js       # Lógica principal y control de navegación
+│   └── main.js       # Lógica principal, control de navegación y autenticación
 ├── assets/           # Imágenes, iconos y recursos estáticos
 ├── data/             # Datos estáticos del torneo (ver data/README.md)
 │   ├── README.md     # Esquemas, relaciones y documentación de modelos
@@ -61,7 +64,7 @@ Este documento establece las normas de desarrollo, la arquitectura de código y 
 │   ├── jugadores.json # 1 273 jugadores para la plantilla ideal
 │   ├── calendar.json # 144 partidos de la fase de grupos (8 jornadas)
 │   └── imgJugadores/ # Fotos PNG de jugadores ({id}.png)
-├── api/              # Ficheros de acceso e integración con las diferentes APIs necesarias
+├── api/              # (Placeholder) Ficheros de integración con APIs
 ├── extract/          # Scripts para obtener información de SofaScore (NO subir en despliegues)
 ├── AGENTS.md         # Este fichero de directrices y especificaciones
 └── README.md         # Documentación de inicio y uso del proyecto
@@ -84,39 +87,113 @@ Cuando trabajes en este proyecto:
 ## 5. Especificaciones del Producto
 
 ### 5.1. Registro y Autenticación de Usuarios
-1. **Control de Acceso Bloqueado**:
-   - Si el usuario aún no está registrado/autenticado, la aplicación mantendrá deshabilitadas las opciones de realizar pronósticos, consultar clasificaciones y demás acciones.
-   - En su lugar, la pantalla principal mostrará una caja de entrada donde el usuario debe introducir el **código de acceso exclusivo** que se le enviará por WhatsApp o correo electrónico.
 
-2. **Validación del Código**:
-   - Al introducir el código, se verificará contra la base de datos (o archivo de datos del sistema).
-   - Si el código **no existe**, se mostrará un mensaje de error claro y se denegará el acceso.
+El sistema de autenticación utiliza **JWT (JSON Web Tokens)** almacenados en **localStorage** para persistir la sesión en la SPA sin necesidad de peticiones al servidor al recargar.
 
-3. **Uso Único de Código**:
-   - Cada código solo podrá ser utilizado una única vez por un usuario.
-   - Tras el uso correcto, se registrará en la base de datos que dicho código ha sido consumido y se vincularán los datos referentes al usuario (Nombre, Nickname, Avatar, Predicciones de partidos y Plantilla ideal).
+#### Flujo de Autenticación
 
-4. **Registro de Perfil (Nombre y Avatar)**:
-   - Tras validar el código correctamente, se solicitará al usuario que introduzca su **Nombre de Jugador** y seleccione un **Avatar** personalizado para distinguirse en las clasificaciones.
+1. **Paso 1 - Login/Registro**:
+   - **Login**: El usuario introduce usuario y contraseña. Se envía POST a `/api/auth/login`.
+   - **Registro**: El usuario introduce usuario, contraseña y código de invitación. Se envía POST a `/api/auth/register`.
+   - El código de invitación es un fichero JSON en GitHub (`data/users/{clave}.json`) creado con GET `/nuevoUsuario`.
+   - Si el código es válido y no ha sido usado, se guarda el JWT en `localStorage` como `session_token`.
+   - Si el login es exitoso y el usuario ya tiene avatar, se entra directamente a la app.
+   - Si el login es exitoso pero no tiene avatar, se muestra el paso 2 (selección de avatar).
 
-5. **Registro de Predicción de Porra**:
-   - Una vez introducidos el nombre/nickname y el avatar, se iniciará el asistente paso a paso (*wizard*) para completar las predicciones de los partidos de las 8 jornadas de la fase de grupos y la selección de la plantilla ideal.
+2. **Paso 2 - Selección de Avatar**:
+   - Se solicita al usuario que seleccione un **Avatar** de una cuadrícula dinámica (~50 opciones).
+   - Los avatares ya cogidos por otros usuarios se obtienen de `GET /api/avatars/taken` y se excluyen.
+   - Los datos se guardan en `localStorage` como `porra_ucl_user` y en el backend vía POST `/api/auth/profile`.
+   - Una vez seleccionado el avatar, el usuario entra directamente a la pestaña Inicio.
 
-6. **Predicción de Partidos (Wizard Paso a Paso)**:
-   - Los partidos se obtienen de `data/calendar.json` (144 encuentros, 8 jornadas de 18 partidos).
-   - Se mostrarán al usuario los partidos de la pantalla **de uno en uno**.
-   - El usuario podrá introducir de manera fácil y táctil el **número de goles** que marcará cada equipo (con controles `+` / `-`).
-   - Los equipos se mostrarán con su nombre y escudo (referenciados por `id` contra `data/teams.json`).
-   - Botón **Siguiente** para avanzar y botón **Anterior** para ir marcha atrás si desea revisar o corregir alguna predicción.
-   - En la parte superior se mostrará un **contador de progreso** con los partidos pronosticados y restantes.
-   - Cada cambio de marcador se guardará de manera local para no perder información en ningún momento.
+#### Persistencia de Sesión
 
-7. **Predicción de Plantilla Ideal**:
-   - Una vez terminada la predicción de partidos, se mostrará la interfaz para confeccionar la **Plantilla Ideal de la Champions League**.
-   - El usuario deberá seleccionar 4 posiciones clave: **un Portero (POR), un Defensa (DEF), un Centrocampista (MED) y un Delantero (DEL)**.
-   - Los jugadores disponibles provienen de `data/jugadores.json`, filtrados por código de posición: `G` → POR, `D` → DEF, `M` → MED, `F` → DEL.
-   - Cada jugador se muestra con su foto desde `data/imgJugadores/{id}.png`.
-   - Al completar la plantilla ideal, el usuario pulsará el botón para finalizar y guardar su porra completa.
+- El JWT se almacena en `localStorage` con clave `session_token`.
+- Al recargar la página, `checkAuthStatus()` verifica el JWT localmente decodificándolo y comprobando la fecha de expiración.
+- Si el token es válido, se muestra la app principal sin hacer llamada al servidor.
+- Si el token ha expirado o no existe, se muestra el overlay de autenticación.
+
+#### API del Backend
+
+La SPA se comunica con el backend en `https://api-porra.vercel.app`:
+
+```javascript
+const API_BASE = 'https://api-porra.vercel.app';
+
+// Login
+POST /api/auth/login
+Body: { username, password }
+Response: { ok, token, user: { username, avatar } }
+
+// Registro
+POST /api/auth/register
+Body: { username, password, invitationCode }
+Response: { ok, token, user: { username } }
+
+// Obtener perfil
+GET /api/auth/profile?username=nombreusuario
+Response: { ok, avatar }
+
+// Guardar perfil
+POST /api/auth/profile
+Body: { username, avatar }
+Response: { ok, avatar }
+
+// Configuración del torneo
+GET /api/config
+Response: { ok, config: { championsFreezeDate, championsFreezeLabel, totalMatches, squadSize } }
+
+// Avatares ya cogidos
+GET /api/avatars/taken
+Response: { ok, taken: ["⚽", "🏆", ...] }
+```
+
+#### Variables de Entorno Requeridas (Backend)
+
+| Variable         | Descripción                                    |
+|------------------|------------------------------------------------|
+| `GITHUB_TOKEN`   | Personal Access Token de GitHub                |
+| `JWT_SECRET`     | Secreto para firmar tokens JWT                 |
+| `FRONTEND_URL`   | URL del frontend para configurar CORS          |
+
+#### Modelo de Datos de Usuario (en Backend)
+
+```json
+{
+  "username": "nombreusuario",
+  "passwordHash": "salt:hash",
+  "avatar": "⚽",
+  "createdAt": "2026-07-31T00:00:00.000Z"
+}
+```
+
+#### Cierre de Sesión
+
+- El botón "Cerrar Sesión" en la pestaña Perfil elimina `session_token` y `porra_ucl_user` de localStorage.
+- Se muestra el overlay de autenticación.
+
+#### Navegación de la Aplicación
+
+La aplicación utiliza una estructura de navegación con:
+
+1. **Header Superior**: Muestra avatar y nombre del usuario. Al hacer clic, accede a la pestaña Perfil.
+2. **Menú Inferior (4 items)**:
+   - **Inicio**: Pantalla de bienvenida con avisos de pendientes y freeze de Champions
+   - **Clasificación**: Tabla de posiciones de todos los participantes
+   - **Pronósticos**: Wizard para introducir marcadores de los 144 partidos
+   - **Plantilla**: Selección de 11 jugadores para la plantilla ideal
+
+**Pestañas disponibles:**
+- `tab-inicio`: Pantalla de bienvenida con resumen de estado del usuario
+- `tab-clasificacion`: Tabla de clasificación general
+- `tab-pronosticos`: Wizard de predicciones de partidos
+- `tab-plantilla`: Selección de plantilla ideal (11 jugadores)
+
+**Flujo de usuario:**
+1. Tras registro/login → entra directamente a pestaña Inicio
+2. Los pronósticos y plantilla se guardan localmente en `localStorage`
+3. Los datos se persisten automáticamente al modificar marcadores o selección
+4. Desde Inicio se puede navegar a Pronósticos o Plantilla pulsando en las tarjetas de aviso
 
 ### 5.2. Datos y APIs (`data/`, `api/`, `extract/`)
 
@@ -155,3 +232,4 @@ Herramientas para obtener automáticamente datos y resultados actualizados de So
 1. **Pronósticos por Jornada**: Apuestas y marcadores exactos en los encuentros de la Champions League 2026/2027.
 2. **Clasificación General**: Tabla acumulada de puntos y aciertos por cada jugador registrado con su avatar y plantilla ideal.
 3. **Estadísticas de Porra**: Tendencias comunitarias y desglose de predicciones.
+4. **Pestaña Inicio**: Pantalla de bienvenida con avatar del usuario, avisos de partidos/pendientes y countdown de freeze de Champions.

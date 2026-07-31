@@ -6,8 +6,14 @@
 // ============================================================
 // ESTADO GLOBAL
 // ============================================================
+const API_BASE = window.location.hostname === 'localhost'
+  ? 'http://localhost:3000'
+  : 'https://api-porra.vercel.app';
+
 const AppState = {
   currentUser: null,
+  sessionToken: null,
+  isRegisterMode: false,
   validCodes: [],
   teamsMap: {},         // { teamId: { name, image } }
   matches: [],          // partidos transformados para la app
@@ -15,9 +21,9 @@ const AppState = {
   scorePredictions: {}, // { matchId: { home: 0, away: 0 } }
   squadPicks: [],       // array de 11 jugadores seleccionados
   selectedAvatar: '⚽',
-  validatedCode: null,
   wizardIndex: 0,
   blockedTeams: new Set(), // ids de equipos ya seleccionados
+  appConfig: null,      // configuración del torneo desde backend
 };
 
 const SQUAD_SIZE = 11;
@@ -68,6 +74,21 @@ async function loadInitialData() {
     // Jugadores
     if (jugadoresRes?.ok) {
       AppState.allPlayers = await jugadoresRes.json();
+    }
+
+    // Configuración del torneo desde backend
+    try {
+      const configRes = await fetch(`${API_BASE}/api/config`);
+      const configData = await configRes.json();
+      if (configData.ok) AppState.appConfig = configData.config;
+    } catch (e) {
+      // config por defecto si falla
+      AppState.appConfig = {
+        championsFreezeDate: '2026-09-15T21:00:00Z',
+        championsFreezeLabel: 'Fase de Grupos',
+        totalMatches: 144,
+        squadSize: 11,
+      };
     }
 
     // Recuperar predicciones guardadas localmente
@@ -161,92 +182,188 @@ function filterPlayers(query, selectedIds) {
 // ============================================================
 // AUTENTICACION Y FLUJO DE REGISTRO
 // ============================================================
+
 function checkAuthStatus() {
+  const token = localStorage.getItem('session_token');
   const savedUser = localStorage.getItem('porra_ucl_user');
   const authOverlay = document.getElementById('auth-overlay');
 
-  if (savedUser) {
-    AppState.currentUser = JSON.parse(savedUser);
-    if (authOverlay) authOverlay.style.display = 'none';
-    updateUserHeader();
-    renderMatchesList();
-    renderLeaderboard();
-    renderStats();
-    setupProfilePage();
-  } else {
-    AppState.currentUser = null;
-    if (authOverlay) {
-      authOverlay.style.display = 'flex';
-      setupAuthFlow();
+  if (token && savedUser) {
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      if (payload.exp * 1000 > Date.now()) {
+        AppState.currentUser = JSON.parse(savedUser);
+        AppState.sessionToken = token;
+        enterApp();
+        return;
+      }
+    } catch (e) {
+      localStorage.removeItem('session_token');
+      localStorage.removeItem('porra_ucl_user');
     }
+  }
+
+  AppState.currentUser = null;
+  AppState.sessionToken = null;
+  if (authOverlay) {
+    authOverlay.style.display = 'flex';
+    setupAuthFlow();
+    goToAuthStep(1);
   }
 }
 
 function setupAuthFlow() {
-  document.getElementById('btn-validate-code')?.addEventListener('click', validateCode);
+  const form = document.getElementById('auth-form');
+  const toggleBtn = document.getElementById('btn-toggle-auth');
+  const invitationGroup = document.getElementById('invitation-group');
+  const formTitle = document.getElementById('auth-form-title');
+  const submitBtn = document.getElementById('btn-auth-submit');
 
-  document.querySelectorAll('.avatar-option').forEach(opt => {
-    opt.addEventListener('click', () => {
-      document.querySelectorAll('.avatar-option').forEach(o => o.classList.remove('selected'));
-      opt.classList.add('selected');
-      AppState.selectedAvatar = opt.getAttribute('data-avatar');
-    });
+  form?.addEventListener('submit', handleAuthSubmit);
+
+  toggleBtn?.addEventListener('click', () => {
+    AppState.isRegisterMode = !AppState.isRegisterMode;
+    document.getElementById('auth-error-msg').classList.remove('show');
+
+    if (AppState.isRegisterMode) {
+      formTitle.textContent = 'Registrarse';
+      submitBtn.textContent = 'Registrarse';
+      invitationGroup.style.display = 'flex';
+      toggleBtn.textContent = '¿Ya tienes cuenta? Inicia sesión';
+    } else {
+      formTitle.textContent = 'Iniciar Sesión';
+      submitBtn.textContent = 'Entrar';
+      invitationGroup.style.display = 'none';
+      toggleBtn.textContent = '¿No tienes cuenta? Regístrate';
+    }
   });
 
   document.getElementById('btn-complete-register')?.addEventListener('click', completeProfile);
+
+  // Capturar código de invitación de URL
+  const urlParams = new URLSearchParams(window.location.search);
+  const codeFromUrl = urlParams.get('invitation');
+  if (codeFromUrl) {
+    const invInput = document.getElementById('input-invitation');
+    if (invInput) {
+      invInput.value = codeFromUrl;
+      AppState.isRegisterMode = true;
+      formTitle.textContent = 'Registrarse';
+      submitBtn.textContent = 'Registrarse';
+      invitationGroup.style.display = 'flex';
+      toggleBtn.textContent = '¿Ya tienes cuenta? Inicia sesión';
+    }
+  }
 }
 
-function validateCode() {
-  const input = document.getElementById('input-access-code');
+async function handleAuthSubmit(e) {
+  e.preventDefault();
   const errorEl = document.getElementById('auth-error-msg');
-  const code = input.value.trim().toUpperCase();
-
   errorEl.classList.remove('show');
 
-  if (!code) {
-    showAuthError('Por favor, introduce el codigo de invitacion.', errorEl);
+  const username = document.getElementById('input-username').value.trim();
+  const password = document.getElementById('input-password').value;
+  const invitationCode = document.getElementById('input-invitation').value.trim();
+
+  if (!username || !password) {
+    showAuthError('Introduce usuario y contraseña', errorEl);
     return;
   }
 
-  const found = AppState.validCodes.find(c => c.code.toUpperCase() === code);
-  if (!found) {
-    showAuthError('Codigo no valido. Comprueba el mensaje recibido.', errorEl);
-    return;
-  }
-  if (found.used) {
-    showAuthError('Este codigo ya ha sido utilizado por otro participante.', errorEl);
-    return;
-  }
+  if (AppState.isRegisterMode) {
+    if (!invitationCode) {
+      showAuthError('Introduce el código de invitación', errorEl);
+      return;
+    }
 
-  AppState.validatedCode = code;
-  goToAuthStep(2);
+    try {
+      const res = await fetch(`${API_BASE}/api/auth/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password, invitationCode })
+      });
+      const data = await res.json();
+
+      if (!data.ok) {
+        showAuthError(data.error, errorEl);
+        return;
+      }
+
+      localStorage.setItem('session_token', data.token);
+      AppState.sessionToken = data.token;
+      AppState.currentUser = data.user;
+
+      goToAuthStep(2);
+    } catch (err) {
+      showAuthError('Error de conexión con el servidor', errorEl);
+    }
+  } else {
+    try {
+      const res = await fetch(`${API_BASE}/api/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      });
+      const data = await res.json();
+
+      if (!data.ok) {
+        showAuthError(data.error, errorEl);
+        return;
+      }
+
+      localStorage.setItem('session_token', data.token);
+      AppState.sessionToken = data.token;
+
+      if (data.user && data.user.avatar) {
+        const user = {
+          username: data.user.username,
+          name: data.user.username,
+          avatar: data.user.avatar,
+          points: 0,
+          hits: 0,
+        };
+        localStorage.setItem('porra_ucl_user', JSON.stringify(user));
+        AppState.currentUser = user;
+
+        enterApp();
+        showToast(`Bienvenido de nuevo, ${user.name}!`);
+      } else {
+        AppState.currentUser = { username: data.user.username };
+        goToAuthStep(2);
+      }
+    } catch (err) {
+      showAuthError('Error de conexión con el servidor', errorEl);
+    }
+  }
 }
 
-function completeProfile() {
-  const nameInput = document.getElementById('input-player-name');
-  const name = nameInput?.value.trim();
-
-  if (!name) {
-    showToast('Introduce tu nombre de participante');
-    return;
-  }
-
+async function completeProfile() {
   const user = {
-    code: AppState.validatedCode,
-    name,
+    ...AppState.currentUser,
+    name: AppState.currentUser.username,
     avatar: AppState.selectedAvatar,
     points: 0,
     hits: 0,
   };
 
+  try {
+    await fetch(`${API_BASE}/api/auth/profile`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        username: AppState.currentUser.username,
+        avatar: AppState.selectedAvatar
+      })
+    });
+  } catch (err) {
+    console.error('Error guardando avatar en backend:', err);
+  }
+
   localStorage.setItem('porra_ucl_user', JSON.stringify(user));
   AppState.currentUser = user;
 
-  const codeObj = AppState.validCodes.find(c => c.code === user.code);
-  if (codeObj) codeObj.used = true;
-
-  goToAuthStep(3);
-  startWizard();
+  enterApp();
+  showToast(`¡Bienvenido, ${user.name}!`);
 }
 
 function goToAuthStep(step) {
@@ -262,6 +379,8 @@ function goToAuthStep(step) {
     if (i + 1 < step) dot.classList.add('done');
     if (i + 1 === step) dot.classList.add('active');
   });
+
+  if (step === 2) loadAvatars();
 }
 
 function showAuthError(msg, el) {
@@ -270,225 +389,197 @@ function showAuthError(msg, el) {
 }
 
 // ============================================================
-// WIZARD — PREDICCION PARTIDO A PARTIDO
+// ENTRAR A LA APP (tras login/registro)
 // ============================================================
-function startWizard() {
-  AppState.wizardIndex = 0;
-  renderWizardMatch();
-}
-
-function renderWizardMatch() {
-  const match = AppState.matches[AppState.wizardIndex];
-  if (!match) return;
-
-  const overlay = document.getElementById('auth-overlay');
-  if (overlay) overlay.scrollTop = 0;
-
-  const total = AppState.matches.length;
-  const current = AppState.wizardIndex + 1;
-  const savedPred = AppState.scorePredictions[match.id] || { home: 0, away: 0 };
-
-  const container = document.getElementById('wizard-match-container');
-  if (!container) return;
-
-  const pct = Math.round(((current - 1) / total) * 100);
-
-  container.innerHTML = `
-    <div class="wizard-progress-bar">
-      <div class="wizard-progress-fill" style="width: ${pct}%"></div>
-    </div>
-    <p class="wizard-progress-text">
-      Partido <strong>${current}</strong> de <strong>${total}</strong> &nbsp;&middot;&nbsp;
-      ${Object.keys(AppState.scorePredictions).length} guardados
-    </p>
-
-    <div class="wizard-match-card">
-      <p class="wizard-journey-label">${match.journey} &nbsp;&middot;&nbsp; ${match.fecha}</p>
-
-      <div class="wizard-teams">
-        <div class="wizard-team">
-          <div class="wizard-team-badge">
-            ${teamImgTag(match.homeTeamId, match.homeBadgeExt, match.homeTeam, '')}
-          </div>
-          <div class="wizard-team-name">${match.homeTeam}</div>
-          <div class="goals-control">
-            <span class="goals-label">Goles</span>
-            <div class="goals-counter">
-              <button class="goals-btn" id="home-minus" aria-label="Restar gol local">&minus;</button>
-              <div class="goals-value" id="home-goals">${savedPred.home}</div>
-              <button class="goals-btn" id="home-plus" aria-label="Anadir gol local">+</button>
-            </div>
-          </div>
-        </div>
-
-        <div class="wizard-score-divider">
-          <span class="wizard-score-sep">&ndash;</span>
-          <span class="wizard-date">VS</span>
-        </div>
-
-        <div class="wizard-team">
-          <div class="wizard-team-badge">
-            ${teamImgTag(match.awayTeamId, match.awayBadgeExt, match.awayTeam, '')}
-          </div>
-          <div class="wizard-team-name">${match.awayTeam}</div>
-          <div class="goals-control">
-            <span class="goals-label">Goles</span>
-            <div class="goals-counter">
-              <button class="goals-btn" id="away-minus" aria-label="Restar gol visitante">&minus;</button>
-              <div class="goals-value" id="away-goals">${savedPred.away}</div>
-              <button class="goals-btn" id="away-plus" aria-label="Anadir gol visitante">+</button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="wizard-nav">
-      <button class="btn-wizard-prev" id="btn-wizard-prev" ${AppState.wizardIndex === 0 ? 'disabled' : ''}>
-        &larr; Anterior
-      </button>
-      <button class="btn-wizard-next" id="btn-wizard-next">
-        ${current === total ? 'Plantilla Ideal &rarr;' : 'Siguiente &rarr;'}
-      </button>
-    </div>
-  `;
-
-  let homeGoals = savedPred.home;
-  let awayGoals = savedPred.away;
-
-  function updateGoalsDisplay() {
-    document.getElementById('home-goals').textContent = homeGoals;
-    document.getElementById('away-goals').textContent = awayGoals;
-    AppState.scorePredictions[match.id] = { home: homeGoals, away: awayGoals };
-    localStorage.setItem('porra_ucl_scores', JSON.stringify(AppState.scorePredictions));
-  }
-
-  document.getElementById('home-minus').addEventListener('click', () => {
-    if (homeGoals > 0) { homeGoals--; updateGoalsDisplay(); }
-  });
-  document.getElementById('home-plus').addEventListener('click', () => {
-    homeGoals++;
-    updateGoalsDisplay();
-  });
-  document.getElementById('away-minus').addEventListener('click', () => {
-    if (awayGoals > 0) { awayGoals--; updateGoalsDisplay(); }
-  });
-  document.getElementById('away-plus').addEventListener('click', () => {
-    awayGoals++;
-    updateGoalsDisplay();
-  });
-
-  document.getElementById('btn-wizard-prev')?.addEventListener('click', () => {
-    if (AppState.wizardIndex > 0) {
-      AppState.wizardIndex--;
-      renderWizardMatch();
-    }
-  });
-
-  document.getElementById('btn-wizard-next')?.addEventListener('click', () => {
-    AppState.scorePredictions[match.id] = { home: homeGoals, away: awayGoals };
-    localStorage.setItem('porra_ucl_scores', JSON.stringify(AppState.scorePredictions));
-
-    if (AppState.wizardIndex < AppState.matches.length - 1) {
-      AppState.wizardIndex++;
-      renderWizardMatch();
-    } else {
-      goToAuthStep(4);
-      renderSquadPicker();
-    }
-  });
-}
-
-// ============================================================
-// WIZARD — PLANTILLA IDEAL (11 jugadores, busqueda, sin repetir equipo)
-// ============================================================
-function renderSquadPicker() {
-  const container = document.getElementById('squad-picker-container');
-  if (!container) return;
-
-  const selectedIds = new Set(AppState.squadPicks.map(p => p.id));
-
-  container.innerHTML = `
-    <div class="squad-picker-wrapper">
-
-      <!-- Barra de equipos bloqueados -->
-      <div class="blocked-teams-bar" id="blocked-teams-bar">
-        ${renderBlockedTeamsBar()}
-      </div>
-
-      <!-- Jugadores seleccionados -->
-      <div class="squad-selected-section">
-        <p class="squad-selected-title">Tu Once (<span id="squad-count">${AppState.squadPicks.length}</span>/${SQUAD_SIZE})</p>
-        <div class="squad-chips-container" id="squad-chips">
-          ${renderSquadChips()}
-        </div>
-      </div>
-
-      <!-- Busqueda -->
-      <div class="squad-search-wrapper">
-        <input type="text" class="squad-search-input" id="squad-search-input"
-               placeholder="Buscar jugador por nombre..." autocomplete="off" spellcheck="false">
-      </div>
-
-      <!-- Resultados -->
-      <div class="squad-players-list" id="squad-search-results">
-        ${renderPlayerList('')}
-      </div>
-
-      <!-- Boton finalizar -->
-      <button class="btn-primary" id="btn-finish-squad"
-        ${AppState.squadPicks.length === SQUAD_SIZE ? '' : 'disabled'}>
-        Finalizar y Guardar Porra
-      </button>
-    </div>
-  `;
-
-  // Evento de busqueda
-  const searchInput = document.getElementById('squad-search-input');
-  searchInput?.addEventListener('input', () => {
-    const results = document.getElementById('squad-search-results');
-    if (results) results.innerHTML = renderPlayerList(searchInput.value);
-  });
-
-  // Evento finalizar
-  document.getElementById('btn-finish-squad')?.addEventListener('click', finishRegistration);
-
-  // Delegacion de eventos en el contenedor de resultados (anadir jugador)
-  document.getElementById('squad-search-results')?.addEventListener('click', (e) => {
-    const row = e.target.closest('.squad-player-row');
-    if (row) {
-      const playerId = parseInt(row.getAttribute('data-player-id'));
-      addPlayerToSquad(playerId);
-    }
-  });
-
-  // Delegacion de eventos en el contenedor de chips (quitar jugador)
-  document.getElementById('squad-chips')?.addEventListener('click', (e) => {
-    const btn = e.target.closest('.squad-chip-remove');
-    if (btn) {
-      e.stopPropagation();
-      const idx = parseInt(btn.getAttribute('data-remove-index'));
-      removePlayerFromSquad(idx);
-    }
-  });
-}
-
-function finishRegistration() {
-  if (AppState.squadPicks.length !== SQUAD_SIZE) {
-    showToast(`Debes seleccionar ${SQUAD_SIZE} jugadores`);
-    return;
-  }
-
+function enterApp() {
   const overlay = document.getElementById('auth-overlay');
   if (overlay) overlay.style.display = 'none';
 
   updateUserHeader();
-  renderMatchesList();
-  renderLeaderboard();
-  renderStats();
-  setupProfilePage();
+  navigateToTab('inicio');
+  setupHeaderClick();
+}
 
-  showToast(`Porra guardada, ${AppState.currentUser.name}!`);
+function navigateToTab(tabName) {
+  const navItems = document.querySelectorAll('.nav-item');
+  const pages = document.querySelectorAll('.tab-page');
+
+  navItems.forEach(n => n.classList.remove('active'));
+  pages.forEach(p => p.classList.remove('active'));
+
+  const activeNav = document.querySelector(`.nav-item[data-tab="${tabName}"]`);
+  const activePage = document.getElementById(`tab-${tabName}`);
+  if (activeNav) activeNav.classList.add('active');
+  if (activePage) activePage.classList.add('active');
+
+  if (tabName === 'inicio') renderInicioTab();
+  if (tabName === 'clasificacion') renderLeaderboard();
+  if (tabName === 'pronosticos') renderPronosticosTab();
+  if (tabName === 'plantilla') renderPlantillaTab();
+}
+
+// ============================================================
+// TAB: INICIO
+// ============================================================
+function renderInicioTab() {
+  const container = document.getElementById('inicio-container');
+  if (!container || !AppState.currentUser) return;
+
+  const user = AppState.currentUser;
+  const config = AppState.appConfig || {};
+  const totalMatches = config.totalMatches || AppState.matches.length || 144;
+  const squadSize = config.squadSize || 11;
+  const predicted = Object.keys(AppState.scorePredictions).length;
+  const pending = totalMatches - predicted;
+  const squadCount = AppState.squadPicks.length;
+  const squadPending = squadSize - squadCount;
+
+  // Calcular tiempo hasta freeze
+  const freezeDate = config.championsFreezeDate ? new Date(config.championsFreezeDate) : null;
+  const now = new Date();
+  const isFrozen = freezeDate && now >= freezeDate;
+  let freezeHtml = '';
+
+  if (freezeDate && !isFrozen) {
+    const diff = freezeDate - now;
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+
+    let timeStr = '';
+    if (days > 0) timeStr = `${days}d ${hours}h`;
+    else if (hours > 0) timeStr = `${hours}h ${mins}min`;
+    else timeStr = `${mins} minutos`;
+
+    freezeHtml = `
+      <div class="inicio-card inicio-freeze">
+        <div class="inicio-card-icon">🔒</div>
+        <div class="inicio-card-content">
+          <div class="inicio-card-title">${config.championsFreezeLabel || 'Champions League'}</div>
+          <div class="inicio-card-desc">
+            Comienza en <strong>${timeStr}</strong>.<br>
+            A partir de ese momento no podrás modificar pronósticos ni plantilla.
+          </div>
+        </div>
+      </div>
+    `;
+  } else if (isFrozen) {
+    freezeHtml = `
+      <div class="inicio-card inicio-freeze frozen">
+        <div class="inicio-card-icon">🔒</div>
+        <div class="inicio-card-content">
+          <div class="inicio-card-title">Ronda en curso</div>
+          <div class="inicio-card-desc">
+            La ${config.championsFreezeLabel || 'Champions League'} está en marcha. Los pronós y la plantilla están bloqueados.
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  container.innerHTML = `
+    <div class="inicio-welcome">
+      <div class="inicio-avatar">${user.avatar}</div>
+      <h2 class="inicio-greeting">Hola, ${user.name}! 👋</h2>
+      <p class="inicio-subtitle">Bienvenido a la Porra UCL 2026/27</p>
+    </div>
+
+    ${freezeHtml}
+
+    ${pending > 0 ? `
+      <div class="inicio-card inicio-pending" onclick="navigateToTab('pronosticos')">
+        <div class="inicio-card-icon">⚽</div>
+        <div class="inicio-card-content">
+          <div class="inicio-card-title">${pending} partidos pendientes</div>
+          <div class="inicio-card-desc">Te quedan ${pending} de ${totalMatches} partidos por pronosticar.</div>
+        </div>
+        <div class="inicio-card-arrow">→</div>
+      </div>
+    ` : `
+      <div class="inicio-card inicio-done">
+        <div class="inicio-card-icon">✅</div>
+        <div class="inicio-card-content">
+          <div class="inicio-card-title">Todos pronosticados</div>
+          <div class="inicio-card-desc">Ya has predicho los ${totalMatches} partidos. ¡Buena suerte!</div>
+        </div>
+      </div>
+    `}
+
+    ${squadPending > 0 ? `
+      <div class="inicio-card inicio-pending" onclick="navigateToTab('plantilla')">
+        <div class="inicio-card-icon">🌟</div>
+        <div class="inicio-card-content">
+          <div class="inicio-card-title">Plantilla incompleta</div>
+          <div class="inicio-card-desc">Te quedan ${squadPending} de ${squadSize} jugadores por elegir.</div>
+        </div>
+        <div class="inicio-card-arrow">→</div>
+      </div>
+    ` : `
+      <div class="inicio-card inicio-done">
+        <div class="inicio-card-icon">✅</div>
+        <div class="inicio-card-content">
+          <div class="inicio-card-title">Plantilla completa</div>
+          <div class="inicio-card-desc">Ya tienes los ${squadSize} jugadores seleccionados.</div>
+        </div>
+      </div>
+    `}
+  `;
+}
+
+// ============================================================
+// AVATARES DINÁMICOS
+// ============================================================
+const ALL_AVATARS = [
+  // Fútbol
+  '⚽', '🥅', '🧤', '🏟️', '🎯',
+  // Deportes
+  '🏆', '🥇', '🥈', '🥉', '🏅', '⚡', '🎽', '🏃', '🚴', '🏊',
+  // Animales
+  '🦁', '🐯', '🐺', '🦅', '🐙', '🐉', '🦄', '🐵', '🐶', '🐱', '🐼', '🦊', '🐮', '🐷',
+  // Gestos/Divertidos
+  '😎', '🤓', '🤡', '👽', '🤖', '😈', '🥳', '😤', '🤯', '💪', '🫡', '🫠', '🤌', '✌️', '🤘',
+  // Otros
+  '🔥', '⭐', '💎', '🎮', '🎸', '🌈',
+];
+
+async function loadAvatars() {
+  const grid = document.getElementById('avatar-grid');
+  if (!grid) return;
+
+  let taken = [];
+  try {
+    const res = await fetch(`${API_BASE}/api/avatars/taken`);
+    const data = await res.json();
+    if (data.ok) taken = data.taken || [];
+  } catch (e) {
+    // Si falla, mostramos todos
+  }
+
+  const takenSet = new Set(taken);
+  const available = ALL_AVATARS.filter(a => !takenSet.has(a));
+
+  if (available.length === 0) {
+    grid.innerHTML = '<p style="color: var(--text-muted); font-size: 12px;">Todos los avatares están ocupados. Contacta con el admin.</p>';
+    return;
+  }
+
+  // Si el avatar seleccionado ya no está disponible, resetear al primero
+  if (takenSet.has(AppState.selectedAvatar)) {
+    AppState.selectedAvatar = available[0];
+  }
+
+  grid.innerHTML = available.map((a, i) =>
+    `<div class="avatar-option${i === 0 ? ' selected' : ''}" data-avatar="${a}">${a}</div>`
+  ).join('');
+
+  // Re-asignar event listeners
+  grid.querySelectorAll('.avatar-option').forEach(opt => {
+    opt.addEventListener('click', () => {
+      grid.querySelectorAll('.avatar-option').forEach(o => o.classList.remove('selected'));
+      opt.classList.add('selected');
+      AppState.selectedAvatar = opt.getAttribute('data-avatar');
+    });
+  });
 }
 
 function renderBlockedTeamsBar() {
@@ -603,40 +694,69 @@ function refreshSquadUI() {
 }
 
 // ============================================================
-// LISTA DE PARTIDOS (pestana Inicio — solo lectura)
+// HEADER — Click para Perfil
 // ============================================================
-function renderMatchesList() {
-  const container = document.getElementById('matches-list');
-  if (!container || !AppState.matches.length) return;
+function setupHeaderClick() {
+  const pill = document.getElementById('user-status-pill');
+  if (pill) {
+    pill.addEventListener('click', () => {
+      showProfileModal();
+    });
+  }
+}
 
-  container.innerHTML = AppState.matches.map(m => {
-    const pred = AppState.scorePredictions[m.id];
-    return `
-      <div class="match-card">
-        <div class="match-header">
-          <span>${m.journey} &middot; ${m.fecha}</span>
-          ${pred ? '<span class="match-badge" style="background: rgba(16,185,129,0.15); color: var(--accent-primary);">Pronosticado</span>' : '<span class="match-badge">Pendiente</span>'}
+function showProfileModal() {
+  if (!AppState.currentUser) return;
+
+  const user = AppState.currentUser;
+  const squad = AppState.squadPicks;
+  const saved = Object.keys(AppState.scorePredictions).length;
+
+  const modal = document.createElement('div');
+  modal.className = 'profile-modal';
+  modal.innerHTML = `
+    <div class="profile-modal-content">
+      <button class="profile-modal-close" id="close-profile-modal">&times;</button>
+      <div style="font-size: 3.5rem;">${user.avatar}</div>
+      <h2 style="font-size: 1.4rem; font-weight: 800;">${user.name}</h2>
+      <span class="ucl-tag">Usuario: ${user.username}</span>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 16px; width: 100%;">
+        <div style="background: var(--ucl-surface); padding: 12px 8px; border-radius: var(--radius-md); text-align: center;">
+          <div style="font-size: 1.4rem; font-weight: 800; color: var(--accent-primary);">${saved}</div>
+          <div style="font-size: 10px; color: var(--text-muted); font-weight: 700;">PARTIDOS</div>
         </div>
-        <div class="teams-container">
-          <div class="team">
-            <div class="team-badge">
-              ${teamImgTag(m.homeTeamId, m.homeBadgeExt, m.homeTeam, '')}
-            </div>
-            <span class="team-name">${m.homeTeam}</span>
-          </div>
-          <div class="vs-pill" style="${pred ? 'color: var(--accent-cyan); font-size: 1.1rem;' : ''}">
-            ${pred ? `${pred.home} – ${pred.away}` : 'VS'}
-          </div>
-          <div class="team">
-            <div class="team-badge">
-              ${teamImgTag(m.awayTeamId, m.awayBadgeExt, m.awayTeam, '')}
-            </div>
-            <span class="team-name">${m.awayTeam}</span>
-          </div>
+        <div style="background: var(--ucl-surface); padding: 12px 8px; border-radius: var(--radius-md); text-align: center;">
+          <div style="font-size: 1.4rem; font-weight: 800; color: var(--accent-cyan);">${squad.length}/${SQUAD_SIZE}</div>
+          <div style="font-size: 10px; color: var(--text-muted); font-weight: 700;">PLANTILLA</div>
         </div>
       </div>
-    `;
-  }).join('');
+
+      <button id="btn-logout" class="btn-primary" style="background: rgba(239,68,68,0.8); color: #fff; margin-top: 16px; width: 100%;">
+        Cerrar Sesión
+      </button>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  const closeBtn = modal.querySelector('#close-profile-modal');
+  const logoutBtn = modal.querySelector('#btn-logout');
+
+  closeBtn.addEventListener('click', () => modal.remove());
+  logoutBtn.addEventListener('click', () => {
+    localStorage.removeItem('porra_ucl_user');
+    localStorage.removeItem('session_token');
+    AppState.currentUser = null;
+    AppState.sessionToken = null;
+    modal.remove();
+    checkAuthStatus();
+    showToast('Sesión cerrada correctamente');
+  });
+
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) modal.remove();
+  });
 }
 
 // ============================================================
@@ -654,6 +774,199 @@ function updateUserHeader() {
   } else {
     if (pill) pill.style.display = 'none';
   }
+}
+
+// ============================================================
+// TAB: PRONÓSTICOS
+// ============================================================
+function renderPronosticosTab() {
+  const container = document.getElementById('pronosticos-container');
+  if (!container || !AppState.matches.length) return;
+
+  container.innerHTML = `
+    <div class="wizard-progress-bar">
+      <div class="wizard-progress-fill" style="width: ${Math.round((Object.keys(AppState.scorePredictions).length / AppState.matches.length) * 100)}%"></div>
+    </div>
+    <p class="wizard-progress-text">
+      <strong>${Object.keys(AppState.scorePredictions).length}</strong> de <strong>${AppState.matches.length}</strong> partidos pronosticados
+    </p>
+    <div id="wizard-match-container"></div>
+  `;
+
+  AppState.wizardIndex = 0;
+  renderWizardMatchInTab();
+}
+
+function renderWizardMatchInTab() {
+  const match = AppState.matches[AppState.wizardIndex];
+  if (!match) return;
+
+  const total = AppState.matches.length;
+  const current = AppState.wizardIndex + 1;
+  const savedPred = AppState.scorePredictions[match.id] || { home: 0, away: 0 };
+
+  const container = document.getElementById('wizard-match-container');
+  if (!container) return;
+
+  container.innerHTML = `
+    <div class="wizard-match-card">
+      <p class="wizard-journey-label">${match.journey} &nbsp;&middot;&nbsp; ${match.fecha}</p>
+
+      <div class="wizard-teams">
+        <div class="wizard-team">
+          <div class="wizard-team-badge">
+            ${teamImgTag(match.homeTeamId, match.homeBadgeExt, match.homeTeam, '')}
+          </div>
+          <div class="wizard-team-name">${match.homeTeam}</div>
+          <div class="goals-control">
+            <span class="goals-label">Goles</span>
+            <div class="goals-counter">
+              <button class="goals-btn" id="home-minus" aria-label="Restar gol local">&minus;</button>
+              <div class="goals-value" id="home-goals">${savedPred.home}</div>
+              <button class="goals-btn" id="home-plus" aria-label="Anadir gol local">+</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="wizard-score-divider">
+          <span class="wizard-score-sep">&ndash;</span>
+          <span class="wizard-date">VS</span>
+        </div>
+
+        <div class="wizard-team">
+          <div class="wizard-team-badge">
+            ${teamImgTag(match.awayTeamId, match.awayBadgeExt, match.awayTeam, '')}
+          </div>
+          <div class="wizard-team-name">${match.awayTeam}</div>
+          <div class="goals-control">
+            <span class="goals-label">Goles</span>
+            <div class="goals-counter">
+              <button class="goals-btn" id="away-minus" aria-label="Restar gol visitante">&minus;</button>
+              <div class="goals-value" id="away-goals">${savedPred.away}</div>
+              <button class="goals-btn" id="away-plus" aria-label="Anadir gol visitante">+</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="wizard-nav">
+      <button class="btn-wizard-prev" id="btn-wizard-prev" ${AppState.wizardIndex === 0 ? 'disabled' : ''}>
+        &larr; Anterior
+      </button>
+      <p class="wizard-progress-text" style="margin: 0;">${current} / ${total}</p>
+      <button class="btn-wizard-next" id="btn-wizard-next">
+        ${current === total ? 'Último' : 'Siguiente →'}
+      </button>
+    </div>
+  `;
+
+  let homeGoals = savedPred.home;
+  let awayGoals = savedPred.away;
+
+  function updateGoalsDisplay() {
+    document.getElementById('home-goals').textContent = homeGoals;
+    document.getElementById('away-goals').textContent = awayGoals;
+    AppState.scorePredictions[match.id] = { home: homeGoals, away: awayGoals };
+    localStorage.setItem('porra_ucl_scores', JSON.stringify(AppState.scorePredictions));
+  }
+
+  document.getElementById('home-minus')?.addEventListener('click', () => {
+    if (homeGoals > 0) { homeGoals--; updateGoalsDisplay(); }
+  });
+  document.getElementById('home-plus')?.addEventListener('click', () => {
+    homeGoals++;
+    updateGoalsDisplay();
+  });
+  document.getElementById('away-minus')?.addEventListener('click', () => {
+    if (awayGoals > 0) { awayGoals--; updateGoalsDisplay(); }
+  });
+  document.getElementById('away-plus')?.addEventListener('click', () => {
+    awayGoals++;
+    updateGoalsDisplay();
+  });
+
+  document.getElementById('btn-wizard-prev')?.addEventListener('click', () => {
+    if (AppState.wizardIndex > 0) {
+      AppState.wizardIndex--;
+      renderWizardMatchInTab();
+    }
+  });
+
+  document.getElementById('btn-wizard-next')?.addEventListener('click', () => {
+    AppState.scorePredictions[match.id] = { home: homeGoals, away: awayGoals };
+    localStorage.setItem('porra_ucl_scores', JSON.stringify(AppState.scorePredictions));
+
+    if (AppState.wizardIndex < AppState.matches.length - 1) {
+      AppState.wizardIndex++;
+      renderWizardMatchInTab();
+    } else {
+      showToast('¡Todos los partidos pronosticados!');
+    }
+  });
+}
+
+// ============================================================
+// TAB: PLANTILLA IDEAL
+// ============================================================
+function renderPlantillaTab() {
+  const container = document.getElementById('plantilla-container');
+  if (!container) return;
+
+  container.innerHTML = `
+    <div class="squad-picker-wrapper">
+
+      <!-- Barra de equipos bloqueados -->
+      <div class="blocked-teams-bar" id="blocked-teams-bar">
+        ${renderBlockedTeamsBar()}
+      </div>
+
+      <!-- Jugadores seleccionados -->
+      <div class="squad-selected-section">
+        <p class="squad-selected-title">Tu Once (<span id="squad-count">${AppState.squadPicks.length}</span>/${SQUAD_SIZE})</p>
+        <div class="squad-chips-container" id="squad-chips">
+          ${renderSquadChips()}
+        </div>
+      </div>
+
+      <!-- Busqueda -->
+      <div class="squad-search-wrapper">
+        <input type="text" class="squad-search-input" id="squad-search-input"
+               placeholder="Buscar jugador por nombre..." autocomplete="off" spellcheck="false">
+      </div>
+
+      <!-- Resultados -->
+      <div class="squad-players-list" id="squad-search-results">
+        ${renderPlayerList('')}
+      </div>
+    </div>
+  `;
+
+  // Evento de busqueda
+  const searchInput = document.getElementById('squad-search-input');
+  searchInput?.addEventListener('input', () => {
+    const results = document.getElementById('squad-search-results');
+    if (results) results.innerHTML = renderPlayerList(searchInput.value);
+  });
+
+  // Delegacion de eventos en el contenedor de resultados (anadir jugador)
+  document.getElementById('squad-search-results')?.addEventListener('click', (e) => {
+    const row = e.target.closest('.squad-player-row');
+    if (row) {
+      const playerId = parseInt(row.getAttribute('data-player-id'));
+      addPlayerToSquad(playerId);
+    }
+  });
+
+  // Delegacion de eventos en el contenedor de chips (quitar jugador)
+  document.getElementById('squad-chips')?.addEventListener('click', (e) => {
+    const btn = e.target.closest('.squad-chip-remove');
+    if (btn) {
+      e.stopPropagation();
+      const idx = parseInt(btn.getAttribute('data-remove-index'));
+      removePlayerFromSquad(idx);
+    }
+  });
 }
 
 // ============================================================
@@ -702,161 +1015,6 @@ function renderLeaderboard() {
 }
 
 // ============================================================
-// ESTADISTICAS
-// ============================================================
-function renderStats() {
-  const container = document.getElementById('stats-container');
-  if (!container) return;
-
-  const total = AppState.matches.length;
-  const saved = Object.keys(AppState.scorePredictions).length;
-  const squad = AppState.squadPicks;
-  const squadComplete = squad.length === SQUAD_SIZE;
-
-  container.innerHTML = `
-    <div class="ucl-banner" style="background: linear-gradient(135deg, #1E1B4B 0%, #0F172A 100%);">
-      <span class="ucl-tag">Mis Predicciones</span>
-      <h2 class="ucl-title">Estado de tu Porra</h2>
-      <p class="ucl-subtitle">
-        Marcadores introducidos: <strong style="color: var(--accent-cyan)">${saved} de ${total} partidos</strong>
-      </p>
-    </div>
-
-    <div class="match-card">
-      <p style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Plantilla Ideal (${squad.length}/${SQUAD_SIZE})</p>
-      ${squadComplete ? `
-        <div style="display: flex; flex-direction: column; gap: 10px;">
-          ${squad.map((p, i) => {
-            const posLabel = { G: 'POR', D: 'DEF', M: 'MED', F: 'DEL' }[p.posicion] || p.posicion;
-            return `
-              <div style="display: flex; align-items: center; gap: 12px;">
-        ${playerImgTag(p.id, p.extension || 'png', p.equipo, AppState.teamsMap[p.equipo]?.ext || 'png', p.nombre, 'squad-chip-img')}
-                <span style="font-size: 10px; font-weight: 800; color: var(--accent-cyan); width: 30px;">${posLabel}</span>
-                <div>
-                  <div style="font-weight: 700; font-size: var(--font-size-sm);">${p.nombre}</div>
-                  <div style="font-size: 11px; color: var(--text-muted);">${p.club}</div>
-                </div>
-              </div>
-            `;
-          }).join('')}
-        </div>
-      ` : squad.length > 0 ? `
-        <div style="display: flex; flex-direction: column; gap: 6px;">
-          ${squad.map(p => {
-            const posLabel = { G: 'POR', D: 'DEF', M: 'MED', F: 'DEL' }[p.posicion] || p.posicion;
-            return `<span style="font-size: 12px; color: var(--text-secondary);">${posLabel} - ${p.nombre} (${p.club})</span>`;
-          }).join('')}
-          <p style="color: var(--accent-gold); font-size: 11px; font-weight: 700; margin-top: 4px;">Faltan ${SQUAD_SIZE - squad.length} jugadores</p>
-        </div>
-      ` : `
-        <p style="color: var(--text-muted); font-size: var(--font-size-xs);">Plantilla ideal no completada todavia.</p>
-      `}
-    </div>
-
-    ${AppState.currentUser ? `
-    <div class="match-card" style="gap: 10px;">
-      <p style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Ultimas Predicciones de Marcadores</p>
-      ${AppState.matches.slice(0, 5).map(m => {
-        const pred = AppState.scorePredictions[m.id];
-        return pred ? `
-          <div style="display: flex; justify-content: space-between; align-items: center; font-size: var(--font-size-sm);">
-            <span style="color: var(--text-secondary); flex: 1; font-size: 11px;">${m.homeTeam} vs ${m.awayTeam}</span>
-            <span style="font-weight: 800; color: var(--accent-cyan);">${pred.home} – ${pred.away}</span>
-          </div>
-        ` : '';
-      }).join('')}
-    </div>
-    ` : ''}
-  `;
-}
-
-// ============================================================
-// PERFIL
-// ============================================================
-function setupProfilePage() {
-  const container = document.getElementById('profile-content');
-  if (!container) return;
-
-  const user = AppState.currentUser;
-
-  if (!user) {
-    container.innerHTML = `
-      <div class="match-card" style="text-align: center; padding: 30px; gap: 16px;">
-        <div style="font-size: 3rem;">🔒</div>
-        <h3>No has iniciado sesion</h3>
-        <p style="color: var(--text-secondary); font-size: 0.85rem;">Introduce tu codigo de acceso exclusivo.</p>
-        <button id="btn-open-auth" class="btn-primary">Introducir Codigo</button>
-      </div>
-    `;
-    document.getElementById('btn-open-auth')?.addEventListener('click', () => {
-      const overlay = document.getElementById('auth-overlay');
-      if (overlay) {
-        overlay.style.display = 'flex';
-        setupAuthFlow();
-      }
-    });
-    return;
-  }
-
-  const squad = AppState.squadPicks;
-  const saved = Object.keys(AppState.scorePredictions).length;
-
-  container.innerHTML = `
-    <div class="match-card" style="text-align: center; padding: 24px; gap: 16px;">
-      <div style="font-size: 3.5rem;">${user.avatar}</div>
-      <h2 style="font-size: 1.4rem; font-weight: 800;">${user.name}</h2>
-      <span class="ucl-tag">Codigo: ${user.code}</span>
-
-      <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-top: 4px;">
-        <div style="background: var(--ucl-surface); padding: 12px 8px; border-radius: var(--radius-md);">
-          <div style="font-size: 1.4rem; font-weight: 800; color: var(--accent-primary);">${user.points || 0}</div>
-          <div style="font-size: 10px; color: var(--text-muted); font-weight: 700;">PUNTOS</div>
-        </div>
-        <div style="background: var(--ucl-surface); padding: 12px 8px; border-radius: var(--radius-md);">
-          <div style="font-size: 1.4rem; font-weight: 800; color: var(--accent-cyan);">${user.hits || 0}</div>
-          <div style="font-size: 10px; color: var(--text-muted); font-weight: 700;">ACIERTOS</div>
-        </div>
-        <div style="background: var(--ucl-surface); padding: 12px 8px; border-radius: var(--radius-md);">
-          <div style="font-size: 1.4rem; font-weight: 800; color: var(--accent-gold);">${saved}</div>
-          <div style="font-size: 10px; color: var(--text-muted); font-weight: 700;">PARTIDOS</div>
-        </div>
-      </div>
-
-      ${squad.length > 0 ? `
-      <div style="text-align: left; width: 100%;">
-        <p style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 10px;">Mi Plantilla Ideal (${squad.length}/${SQUAD_SIZE})</p>
-        ${squad.map(p => {
-          const posLabel = { G: 'POR', D: 'DEF', M: 'MED', F: 'DEL' }[p.posicion] || p.posicion;
-          return `
-            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
-              ${playerImgTag(p.id, p.extension || 'png', p.equipo, AppState.teamsMap[p.equipo]?.ext || 'png', p.nombre, 'squad-chip-img')}
-              <span style="font-size: 10px; font-weight: 800; color: var(--accent-cyan); width: 28px;">${posLabel}</span>
-              <div>
-                <span style="font-weight: 700; font-size: var(--font-size-sm);">${p.nombre}</span>
-                <span style="font-size: 11px; color: var(--text-muted);"> — ${p.club}</span>
-              </div>
-            </div>
-          `;
-        }).join('')}
-      </div>
-      ` : ''}
-
-      <button id="btn-logout" class="btn-primary" style="background: rgba(239,68,68,0.8); color: #fff; margin-top: 4px;">
-        Cerrar Sesion
-      </button>
-    </div>
-  `;
-
-  document.getElementById('btn-logout')?.addEventListener('click', () => {
-    localStorage.removeItem('porra_ucl_user');
-    AppState.currentUser = null;
-    checkAuthStatus();
-    setupProfilePage();
-    showToast('Sesion cerrada correctamente');
-  });
-}
-
-// ============================================================
 // NAVEGACION
 // ============================================================
 function setupNavigation() {
@@ -867,15 +1025,7 @@ function setupNavigation() {
     item.addEventListener('click', e => {
       e.preventDefault();
       const tab = item.getAttribute('data-tab');
-
-      navItems.forEach(n => n.classList.remove('active'));
-      item.classList.add('active');
-
-      pages.forEach(p => p.classList.toggle('active', p.id === `tab-${tab}`));
-
-      if (tab === 'perfil') setupProfilePage();
-      if (tab === 'estadisticas') renderStats();
-      if (tab === 'clasificacion') renderLeaderboard();
+      navigateToTab(tab);
     });
   });
 }

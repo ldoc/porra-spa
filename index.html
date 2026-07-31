@@ -41,68 +41,51 @@
         <div class="auth-step-indicator">
           <div class="step-dot active"></div>
           <div class="step-dot"></div>
-          <div class="step-dot"></div>
-          <div class="step-dot"></div>
         </div>
 
-        <!-- PASO 1: Código de Invitación -->
+        <!-- PASO 1: Login / Registro -->
         <div id="auth-step-1" class="auth-step" style="display: flex; flex-direction: column; gap: 14px;">
           <div class="auth-star-logo">⭐🏆⭐</div>
-          <h2 class="auth-title">Porra Champions 26/27</h2>
-          <p class="auth-desc">Acceso exclusivo por código personal. Introduce el que has recibido por WhatsApp o email:
-          </p>
-          <div class="form-group">
-            <label class="form-label" for="input-access-code">Código de Invitación</label>
-            <input type="text" id="input-access-code" class="input-field" placeholder="Ej. UCL2026" autocomplete="off"
-              spellcheck="false"
-              style="text-transform: uppercase; text-align: center; letter-spacing: 3px; font-weight: 800;">
-          </div>
-          <div id="auth-error-msg" class="error-alert"></div>
-          <button id="btn-validate-code" class="btn-primary">Validar Código →</button>
-          <p style="font-size: 11px; color: var(--text-muted); text-align: center;">¿Sin código? Solicítalo al
-            administrador.</p>
+          <h2 class="auth-title" id="auth-form-title">Iniciar Sesión</h2>
+          <p class="auth-desc">Introduce tus credenciales para acceder a la porra:</p>
+
+          <!-- Formulario de Login -->
+          <form id="auth-form" style="display: flex; flex-direction: column; gap: 14px;">
+            <div class="form-group">
+              <label class="form-label" for="input-username">Usuario</label>
+              <input type="text" id="input-username" class="input-field" placeholder="Tu nombre de usuario"
+                autocomplete="username" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="input-password">Contraseña</label>
+              <input type="password" id="input-password" class="input-field" placeholder="Mínimo 6 caracteres"
+                autocomplete="current-password" required>
+            </div>
+            <div id="invitation-group" class="form-group" style="display: none;">
+              <label class="form-label" for="input-invitation">Código de Invitación</label>
+              <input type="text" id="input-invitation" class="input-field" placeholder="Código de 4 dígitos"
+                autocomplete="off" spellcheck="false"
+                style="text-transform: uppercase; text-align: center; letter-spacing: 3px; font-weight: 800;">
+            </div>
+            <div id="auth-error-msg" class="error-alert"></div>
+            <button type="submit" id="btn-auth-submit" class="btn-primary">Entrar</button>
+          </form>
+
+          <button id="btn-toggle-auth" class="btn-text">¿No tienes cuenta? Regístrate</button>
         </div>
 
-        <!-- PASO 2: Nombre + Avatar -->
+        <!-- PASO 2: Avatar (solo para nuevos registros) -->
         <div id="auth-step-2" class="auth-step" style="display: none; flex-direction: column; gap: 14px;">
           <div class="auth-star-logo">👤</div>
-          <h2 class="auth-title">Crea tu Jugador</h2>
-          <p class="auth-desc">¡Código aceptado! Elige tu nombre y avatar para la clasificación:</p>
+          <h2 class="auth-title">Elige tu Avatar</h2>
+          <p class="auth-desc">Selecciona un avatar para la clasificación:</p>
           <div class="form-group">
-            <label class="form-label" for="input-player-name">Nombre o Apodo</label>
-            <input type="text" id="input-player-name" class="input-field" placeholder="Ej. Carlos Campeón"
-              maxlength="20">
-          </div>
-          <div class="form-group">
-            <label class="form-label">Elige tu Avatar</label>
-            <div class="avatar-grid">
-              <div class="avatar-option selected" data-avatar="⚽">⚽</div>
-              <div class="avatar-option" data-avatar="🏆">🏆</div>
-              <div class="avatar-option" data-avatar="👑">👑</div>
-              <div class="avatar-option" data-avatar="⚡">⚡</div>
-              <div class="avatar-option" data-avatar="🎯">🎯</div>
-              <div class="avatar-option" data-avatar="🌟">🌟</div>
-              <div class="avatar-option" data-avatar="🦁">🦁</div>
-              <div class="avatar-option" data-avatar="🔥">🔥</div>
+            <label class="form-label">Avatar</label>
+            <div class="avatar-grid" id="avatar-grid">
+              <!-- Se llena dinámicamente con loadAvatars() -->
             </div>
           </div>
-          <button id="btn-complete-register" class="btn-primary">Siguiente: Pronósticos →</button>
-        </div>
-
-        <!-- PASO 3: Wizard Predicción de Partidos -->
-        <div id="auth-step-3" class="auth-step" style="display: none; flex-direction: column; gap: 14px;">
-          <h2 class="auth-title" style="font-size: 1.1rem;">⚽ Pronóstica los Partidos</h2>
-          <p class="auth-desc">Indica el marcador exacto para cada partido. Puedes volver atrás para corregir.</p>
-          <!-- Contenedor dinámico del wizard partido a partido -->
-          <div id="wizard-match-container"></div>
-        </div>
-
-        <!-- PASO 4: Plantilla Ideal -->
-        <div id="auth-step-4" class="auth-step" style="display: none; flex-direction: column; gap: 14px;">
-          <h2 class="auth-title" style="font-size: 1.1rem;">🌟 Plantilla Ideal UCL</h2>
-          <p class="auth-desc">Selecciona tu plantilla ideal</p>
-          <!-- Contenedor dinámico de selección de plantilla -->
-          <div id="squad-picker-container"></div>
+          <button id="btn-complete-register" class="btn-primary">Completar Registro</button>
         </div>
 
       </div>
@@ -119,7 +102,7 @@
           <span class="brand-subtitle">Champions 2026/27</span>
         </div>
       </div>
-      <div id="user-status-pill" class="user-status-pill" style="display: none;">
+      <div id="user-status-pill" class="user-status-pill clickable" style="display: none;">
         <span id="user-header-avatar" class="user-status-avatar">⚽</span>
         <span id="user-header-name" class="user-status-name">Jugador</span>
       </div>
@@ -132,19 +115,7 @@
 
       <!-- Tab: Inicio -->
       <section id="tab-inicio" class="tab-page active">
-        <div class="ucl-banner">
-          <span class="ucl-tag">Fase de Liga · 8 Jornadas</span>
-          <h1 class="ucl-title">UEFA Champions League</h1>
-          <p class="ucl-subtitle">Tus predicciones de marcador exacto para cada partido están guardadas. Consulta tus
-            datos en Estadísticas.</p>
-        </div>
-
-        <div class="section-header">
-          <h2 class="section-title">📅 Partidos de la Fase de Grupos</h2>
-        </div>
-
-        <!-- Lista estática de partidos (solo lectura) generada por JS -->
-        <div id="matches-list" style="display: flex; flex-direction: column; gap: 12px;"></div>
+        <div id="inicio-container"></div>
       </section>
 
       <!-- Tab: Clasificación -->
@@ -155,20 +126,20 @@
         <div id="leaderboard-container" class="leaderboard-card"></div>
       </section>
 
-      <!-- Tab: Estadísticas -->
-      <section id="tab-estadisticas" class="tab-page">
+      <!-- Tab: Pronósticos -->
+      <section id="tab-pronosticos" class="tab-page">
         <div class="section-header">
-          <h2 class="section-title">📊 Mis Estadísticas</h2>
+          <h2 class="section-title">⚽ Pronósticos</h2>
         </div>
-        <div id="stats-container" style="display: flex; flex-direction: column; gap: 14px;"></div>
+        <div id="pronosticos-container" style="display: flex; flex-direction: column; gap: 12px;"></div>
       </section>
 
-      <!-- Tab: Perfil -->
-      <section id="tab-perfil" class="tab-page">
+      <!-- Tab: Plantilla -->
+      <section id="tab-plantilla" class="tab-page">
         <div class="section-header">
-          <h2 class="section-title">👤 Mi Perfil</h2>
+          <h2 class="section-title">🌟 Plantilla Ideal</h2>
         </div>
-        <div id="profile-content"></div>
+        <div id="plantilla-container" style="display: flex; flex-direction: column; gap: 12px;"></div>
       </section>
 
     </main>
@@ -191,18 +162,19 @@
         </svg>
         <span>Clasificación</span>
       </a>
-      <a href="#" class="nav-item" data-tab="estadisticas">
+      <a href="#" class="nav-item" data-tab="pronosticos">
         <svg viewBox="0 0 24 24">
-          <path d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" />
-          <path d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" />
+          <path
+            d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
-        <span>Estadísticas</span>
+        <span>Pronósticos</span>
       </a>
-      <a href="#" class="nav-item" data-tab="perfil">
+      <a href="#" class="nav-item" data-tab="plantilla">
         <svg viewBox="0 0 24 24">
-          <path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+          <path
+            d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
         </svg>
-        <span>Perfil</span>
+        <span>Plantilla</span>
       </a>
     </nav>
 
