@@ -24,6 +24,7 @@ const AppState = {
   wizardIndex: 0,
   blockedTeams: new Set(), // ids de equipos ya seleccionados
   appConfig: null,      // configuración del torneo desde backend
+  players: [],          // todos los jugadores registrados (para clasificación)
 };
 
 const SQUAD_SIZE = 11;
@@ -398,6 +399,7 @@ function enterApp() {
   updateUserHeader();
   navigateToTab('inicio');
   setupHeaderClick();
+  fetchPlayers();
 }
 
 function navigateToTab(tabName) {
@@ -413,7 +415,7 @@ function navigateToTab(tabName) {
   if (activePage) activePage.classList.add('active');
 
   if (tabName === 'inicio') renderInicioTab();
-  if (tabName === 'clasificacion') renderLeaderboard();
+  if (tabName === 'clasificacion') { fetchPlayers().then(() => renderLeaderboard()); }
   if (tabName === 'pronosticos') renderPronosticosTab();
   if (tabName === 'plantilla') renderPlantillaTab();
 }
@@ -580,6 +582,19 @@ async function loadAvatars() {
       AppState.selectedAvatar = opt.getAttribute('data-avatar');
     });
   });
+}
+
+// ============================================================
+// JUGADORES (para Clasificación)
+// ============================================================
+async function fetchPlayers() {
+  try {
+    const res = await fetch(`${API_BASE}/api/players`);
+    const data = await res.json();
+    if (data.ok) AppState.players = data.players || [];
+  } catch (e) {
+    AppState.players = [];
+  }
 }
 
 function renderBlockedTeamsBar() {

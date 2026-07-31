@@ -146,6 +146,10 @@ Response: { ok, config: { championsFreezeDate, championsFreezeLabel, totalMatche
 // Avatares ya cogidos
 GET /api/avatars/taken
 Response: { ok, taken: ["⚽", "🏆", ...] }
+
+// Todos los jugadores registrados (para clasificación)
+GET /api/players
+Response: { ok, players: [{ name, avatar, points, hits }, ...] }
 ```
 
 #### Variables de Entorno Requeridas (Backend)
@@ -179,7 +183,7 @@ La aplicación utiliza una estructura de navegación con:
 1. **Header Superior**: Muestra avatar y nombre del usuario. Al hacer clic, accede a la pestaña Perfil.
 2. **Menú Inferior (4 items)**:
    - **Inicio**: Pantalla de bienvenida con avisos de pendientes y freeze de Champions
-   - **Clasificación**: Tabla de posiciones de todos los participantes
+   - **Clasificación**: Tabla de posiciones de todos los participantes (obtenidos de `GET /api/players`)
    - **Pronósticos**: Wizard para introducir marcadores de los 144 partidos
    - **Plantilla**: Selección de 11 jugadores para la plantilla ideal
 
