@@ -19,15 +19,27 @@ const AppState = {
   matches: [],          // partidos transformados para la app
   allPlayers: [],       // array plano de jugadores desde jugadores.json
   scorePredictions: {}, // { matchId: { home: 0, away: 0 } }
-  squadPicks: [],       // array de 11 jugadores seleccionados
+  squadPicks: [],       // array de 25 jugadores seleccionados
   selectedAvatar: '⚽',
   wizardIndex: 0,
   blockedTeams: new Set(), // ids de equipos ya seleccionados
   appConfig: null,      // configuración del torneo desde backend
   players: [],          // todos los jugadores registrados (para clasificación)
+  currentRound: 1,      // ronda actual en vista de pronósticos (1-8)
+  hasUnsavedChanges: false, // flag de cambios sin guardar en predicciones
+  hasUnsavedSquadChanges: false, // flag de cambios sin guardar en plantilla
+  activeSlot: null,     // { position: 'G', index: 0 } - casilla activa para búsqueda
+  savedSquadSnapshot: [], // snapshot de plantilla al guardar para comparar
 };
 
-const SQUAD_SIZE = 11;
+const SQUAD_SIZE = 25;
+
+const SQUAD_FORMATION = {
+  G: { count: 3, label: 'Porteros' },
+  D: { count: 8, label: 'Defensas' },
+  M: { count: 8, label: 'Centrocampistas' },
+  F: { count: 6, label: 'Delanteros' }
+};
 
 // ============================================================
 // ARRANQUE
@@ -88,13 +100,18 @@ async function loadInitialData() {
         championsFreezeDate: '2026-09-15T21:00:00Z',
         championsFreezeLabel: 'Fase de Grupos',
         totalMatches: 144,
-        squadSize: 11,
+        squadSize: 25,
+        squadFormation: {
+          G: 3,
+          D: 8,
+          M: 8,
+          F: 6
+        }
       };
     }
 
-    // Recuperar predicciones guardadas localmente
-    const savedScores = localStorage.getItem('porra_ucl_scores');
-    if (savedScores) AppState.scorePredictions = JSON.parse(savedScores);
+    // Recuperar predicciones del backend (localStorage se limpia al cargar)
+    localStorage.removeItem('porra_ucl_scores');
 
     const savedSquad = localStorage.getItem('porra_ucl_squad');
     if (savedSquad) {
@@ -117,6 +134,51 @@ async function loadInitialData() {
 // ============================================================
 // FUNCIONES AUXILIARES DE DATOS
 // ============================================================
+
+/** Carga predicciones desde el backend y sobreescribe el estado */
+async function fetchPredictionsFromBackend() {
+  if (!AppState.currentUser) return;
+  try {
+    const res = await fetch(`${API_BASE}/api/predictions?username=${AppState.currentUser.username}`);
+    const data = await res.json();
+    if (data.ok && data.predictions) {
+      AppState.scorePredictions = data.predictions;
+    }
+  } catch (e) {
+    console.error('Error cargando predicciones del backend:', e);
+  }
+  AppState.hasUnsavedChanges = false;
+  localStorage.removeItem('porra_ucl_scores');
+}
+
+/** Guarda predicciones en el backend */
+async function savePredictionsToBackend() {
+  if (!AppState.currentUser) return false;
+  try {
+    const res = await fetch(`${API_BASE}/api/predictions`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        username: AppState.currentUser.username,
+        predictions: AppState.scorePredictions
+      })
+    });
+    const data = await res.json();
+    if (data.ok) {
+      AppState.hasUnsavedChanges = false;
+      localStorage.removeItem('porra_ucl_scores');
+      showToast('Predicciones guardadas');
+      return true;
+    } else {
+      showToast('Error al guardar');
+      return false;
+    }
+  } catch (e) {
+    console.error('Error guardando predicciones:', e);
+    showToast('Error de conexion');
+    return false;
+  }
+}
 
 /** Transforma un partido del calendar.json al formato interno de la app */
 function buildMatchFromCalendar(m) {
@@ -169,12 +231,12 @@ function teamName(teamId) {
   return AppState.teamsMap[teamId]?.name || 'Desconocido';
 }
 
-/** Filtro de jugadores por texto y equipos bloqueados */
-function filterPlayers(query, selectedIds) {
+/** Filtro de jugadores por texto y posición activa */
+function filterPlayers(query, selectedIds, positionFilter) {
   const q = query.toLowerCase().trim();
   return AppState.allPlayers.filter(p => {
     if (selectedIds.has(p.id)) return false;
-    if (AppState.blockedTeams.has(p.equipo)) return false;
+    if (positionFilter && p.posicion !== positionFilter) return false;
     if (q && !p.nombre.toLowerCase().includes(q)) return false;
     return true;
   });
@@ -400,9 +462,23 @@ function enterApp() {
   navigateToTab('inicio');
   setupHeaderClick();
   fetchPlayers();
+  fetchPredictionsFromBackend();
+  fetchSquadFromBackend();
 }
 
 function navigateToTab(tabName) {
+  // Si hay cambios sin guardar en pronosticos, mostrar aviso
+  if (AppState.hasUnsavedChanges && tabName !== 'pronosticos') {
+    showUnsavedChangesModal(tabName);
+    return;
+  }
+
+  // Si hay cambios sin guardar en plantilla, mostrar aviso
+  if (AppState.hasUnsavedSquadChanges && tabName !== 'plantilla') {
+    showUnsavedSquadChangesModal(tabName);
+    return;
+  }
+
   const navItems = document.querySelectorAll('.nav-item');
   const pages = document.querySelectorAll('.tab-page');
 
@@ -414,6 +490,9 @@ function navigateToTab(tabName) {
   if (activeNav) activeNav.classList.add('active');
   if (activePage) activePage.classList.add('active');
 
+  const appContent = document.querySelector('.app-content');
+  if (appContent) appContent.classList.toggle('no-scroll', tabName === 'pronosticos');
+
   if (tabName === 'inicio') renderInicioTab();
   if (tabName === 'clasificacion') { fetchPlayers().then(() => renderLeaderboard()); }
   if (tabName === 'pronosticos') renderPronosticosTab();
@@ -423,6 +502,182 @@ function navigateToTab(tabName) {
 // ============================================================
 // TAB: INICIO
 // ============================================================
+
+/** Muestra modal de aviso cuando hay cambios sin guardar */
+function showUnsavedChangesModal(targetTab) {
+  const existing = document.querySelector('.unsaved-modal-overlay');
+  if (existing) existing.remove();
+
+  const overlay = document.createElement('div');
+  overlay.className = 'unsaved-modal-overlay';
+  overlay.innerHTML = `
+    <div class="unsaved-modal">
+      <div class="unsaved-modal-icon">⚠️</div>
+      <h3 class="unsaved-modal-title">Cambios sin guardar</h3>
+      <p class="unsaved-modal-text">Tienes predicciones modificadas que no se han guardado en el servidor. Si sales, se perderán.</p>
+      <div class="unsaved-modal-actions">
+        <button class="unsaved-modal-btn unsaved-modal-btn-save" id="modal-save-exit">Guardar y salir</button>
+        <button class="unsaved-modal-btn unsaved-modal-btn-discard" id="modal-discard-exit">Salir sin guardar</button>
+        <button class="unsaved-modal-btn unsaved-modal-btn-cancel" id="modal-cancel">Cancelar</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+
+  overlay.querySelector('#modal-save-exit').addEventListener('click', async () => {
+    overlay.remove();
+    await savePredictionsToBackend();
+    forceNavigateToTab(targetTab);
+  });
+
+  overlay.querySelector('#modal-discard-exit').addEventListener('click', () => {
+    overlay.remove();
+    AppState.hasUnsavedChanges = false;
+    localStorage.removeItem('porra_ucl_scores');
+    forceNavigateToTab(targetTab);
+  });
+
+  overlay.querySelector('#modal-cancel').addEventListener('click', () => {
+    overlay.remove();
+  });
+
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) overlay.remove();
+  });
+}
+
+/** Modal de aviso cuando hay cambios sin guardar en plantilla */
+function showUnsavedSquadChangesModal(targetTab) {
+  const existing = document.querySelector('.unsaved-modal-overlay');
+  if (existing) existing.remove();
+
+  const overlay = document.createElement('div');
+  overlay.className = 'unsaved-modal-overlay';
+  overlay.innerHTML = `
+    <div class="unsaved-modal">
+      <div class="unsaved-modal-icon">⚠️</div>
+      <h3 class="unsaved-modal-title">Plantilla sin guardar</h3>
+      <p class="unsaved-modal-text">Has modificado tu plantilla pero no la has guardado en el servidor. Si sales, los cambios se perderán.</p>
+      <div class="unsaved-modal-actions">
+        <button class="unsaved-modal-btn unsaved-modal-btn-save" id="modal-save-squad">Guardar y salir</button>
+        <button class="unsaved-modal-btn unsaved-modal-btn-discard" id="modal-discard-squad">Salir sin guardar</button>
+        <button class="unsaved-modal-btn unsaved-modal-btn-cancel" id="modal-cancel-squad">Cancelar</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+
+  overlay.querySelector('#modal-save-squad').addEventListener('click', async () => {
+    overlay.remove();
+    await saveSquadToBackend();
+    AppState.hasUnsavedSquadChanges = false;
+    forceNavigateToTab(targetTab);
+  });
+
+  overlay.querySelector('#modal-discard-squad').addEventListener('click', () => {
+    overlay.remove();
+    AppState.hasUnsavedSquadChanges = false;
+    forceNavigateToTab(targetTab);
+  });
+
+  overlay.querySelector('#modal-cancel-squad').addEventListener('click', () => {
+    overlay.remove();
+  });
+
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) overlay.remove();
+  });
+}
+
+/** Modal de logout cuando hay cambios sin guardar */
+function showLogoutWithUnsavedModal() {
+  const existing = document.querySelector('.unsaved-modal-overlay');
+  if (existing) existing.remove();
+
+  const hasPredictions = AppState.hasUnsavedChanges;
+  const hasSquad = AppState.hasUnsavedSquadChanges;
+  const text = hasPredictions && hasSquad
+    ? 'Tienes predicciones y plantilla modificadas que no se han guardado. Si cierras sesion, se perderan.'
+    : hasPredictions
+      ? 'Tienes predicciones modificadas que no se han guardado. Si cierras sesion, se perderan.'
+      : 'Tu plantilla modificada no se ha guardado. Si cierras sesion, los cambios se perderan.';
+
+  const overlay = document.createElement('div');
+  overlay.className = 'unsaved-modal-overlay';
+  overlay.innerHTML = `
+    <div class="unsaved-modal">
+      <div class="unsaved-modal-icon">⚠️</div>
+      <h3 class="unsaved-modal-title">Cambios sin guardar</h3>
+      <p class="unsaved-modal-text">${text}</p>
+      <div class="unsaved-modal-actions">
+        <button class="unsaved-modal-btn unsaved-modal-btn-save" id="modal-save-logout">Guardar y cerrar sesion</button>
+        <button class="unsaved-modal-btn unsaved-modal-btn-discard" id="modal-discard-logout">Cerrar sesion sin guardar</button>
+        <button class="unsaved-modal-btn unsaved-modal-btn-cancel" id="modal-cancel-logout">Cancelar</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+
+  overlay.querySelector('#modal-save-logout').addEventListener('click', async () => {
+    overlay.remove();
+    if (hasPredictions) await savePredictionsToBackend();
+    if (hasSquad) await saveSquadToBackend();
+    localStorage.removeItem('porra_ucl_user');
+    localStorage.removeItem('session_token');
+    AppState.currentUser = null;
+    AppState.sessionToken = null;
+    AppState.hasUnsavedChanges = false;
+    AppState.hasUnsavedSquadChanges = false;
+    checkAuthStatus();
+    showToast('Sesion cerrada correctamente');
+  });
+
+  overlay.querySelector('#modal-discard-logout').addEventListener('click', () => {
+    overlay.remove();
+    localStorage.removeItem('porra_ucl_user');
+    localStorage.removeItem('session_token');
+    localStorage.removeItem('porra_ucl_scores');
+    AppState.currentUser = null;
+    AppState.sessionToken = null;
+    AppState.hasUnsavedChanges = false;
+    AppState.hasUnsavedSquadChanges = false;
+    checkAuthStatus();
+    showToast('Sesion cerrada correctamente');
+  });
+
+  overlay.querySelector('#modal-cancel-logout').addEventListener('click', () => {
+    overlay.remove();
+  });
+
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) overlay.remove();
+  });
+}
+
+/** Navega a una pestaña sin comprobar cambios (uso interno) */
+function forceNavigateToTab(tabName) {
+  const navItems = document.querySelectorAll('.nav-item');
+  const pages = document.querySelectorAll('.tab-page');
+
+  navItems.forEach(n => n.classList.remove('active'));
+  pages.forEach(p => p.classList.remove('active'));
+
+  const activeNav = document.querySelector(`.nav-item[data-tab="${tabName}"]`);
+  const activePage = document.getElementById(`tab-${tabName}`);
+  if (activeNav) activeNav.classList.add('active');
+  if (activePage) activePage.classList.add('active');
+
+  const appContent = document.querySelector('.app-content');
+  if (appContent) appContent.classList.toggle('no-scroll', tabName === 'pronosticos');
+
+  if (tabName === 'inicio') renderInicioTab();
+  if (tabName === 'clasificacion') { fetchPlayers().then(() => renderLeaderboard()); }
+  if (tabName === 'pronosticos') renderPronosticosTab();
+  if (tabName === 'plantilla') renderPlantillaTab();
+}
 function renderInicioTab() {
   const container = document.getElementById('inicio-container');
   if (!container || !AppState.currentUser) return;
@@ -597,117 +852,6 @@ async function fetchPlayers() {
   }
 }
 
-function renderBlockedTeamsBar() {
-  if (AppState.blockedTeams.size === 0) {
-    return '<span class="blocked-teams-empty">Ningun equipo bloqueado aun</span>';
-  }
-  return Array.from(AppState.blockedTeams).map(teamId => {
-    const t = AppState.teamsMap[teamId];
-    return `
-      <span class="blocked-team-tag">
-        ${teamImgTag(teamId, t.ext, t.name, 'blocked-team-img')}
-        ${t?.name || 'Equipo'}
-      </span>
-    `;
-  }).join('');
-}
-
-function renderSquadChips() {
-  if (AppState.squadPicks.length === 0) {
-    return '<p class="squad-chips-empty">Anade jugadores desde la lista de abajo</p>';
-  }
-  return AppState.squadPicks.map((p, i) => {
-    const posLabel = { G: 'POR', D: 'DEF', M: 'MED', F: 'DEL' }[p.posicion] || p.posicion;
-    return `
-      <div class="squad-chip">
-        ${playerImgTag(p.id, p.extension || 'png', p.equipo, AppState.teamsMap[p.equipo]?.ext || 'png', p.nombre, 'squad-chip-img')}
-        <div class="squad-chip-info">
-          <span class="squad-chip-name">${p.nombre}</span>
-          <span class="squad-chip-team">${p.club} &middot; ${posLabel}</span>
-        </div>
-        <button class="squad-chip-remove" data-remove-index="${i}" aria-label="Quitar ${p.nombre}">&times;</button>
-      </div>
-    `;
-  }).join('');
-}
-
-function renderPlayerList(query) {
-  const selectedIds = new Set(AppState.squadPicks.map(p => p.id));
-  const players = filterPlayers(query, selectedIds);
-
-  if (players.length === 0) {
-    return '<p class="squad-no-results">No se encontraron jugadores</p>';
-  }
-
-  return players.slice(0, 50).map(p => {
-    const posLabel = { G: 'POR', D: 'DEF', M: 'MED', F: 'DEL' }[p.posicion] || p.posicion;
-    return `
-      <div class="squad-player-row" data-player-id="${p.id}">
-        ${playerImgTag(p.id, p.extension || 'png', p.equipo, AppState.teamsMap[p.equipo]?.ext || 'png', p.nombre, 'squad-player-img')}
-        <div class="squad-player-info">
-          <div class="squad-player-name">${p.nombre}</div>
-          <div class="squad-player-team">${p.club}</div>
-        </div>
-        <span class="squad-player-pos">${posLabel}</span>
-        <button class="squad-add-btn" data-player-id="${p.id}" aria-label="Anadir ${p.nombre}">+</button>
-      </div>
-    `;
-  }).join('');
-}
-
-function addPlayerToSquad(playerId) {
-  if (AppState.squadPicks.length >= SQUAD_SIZE) return;
-  if (AppState.squadPicks.some(p => p.id === playerId)) return;
-
-  const player = AppState.allPlayers.find(p => p.id === playerId);
-  if (!player) return;
-  if (AppState.blockedTeams.has(player.equipo)) return;
-
-  AppState.squadPicks.push({
-    id: player.id,
-    nombre: player.nombre,
-    posicion: player.posicion,
-    club: player.club,
-    equipo: player.equipo,
-    extension: player.extension || 'png',
-  });
-
-  AppState.blockedTeams.add(player.equipo);
-  localStorage.setItem('porra_ucl_squad', JSON.stringify(AppState.squadPicks));
-
-  refreshSquadUI();
-}
-
-function removePlayerFromSquad(index) {
-  if (index < 0 || index >= AppState.squadPicks.length) return;
-
-  const removed = AppState.squadPicks.splice(index, 1)[0];
-
-  // Verificar si queda algun jugador de ese equipo
-  const stillHasTeam = AppState.squadPicks.some(p => p.equipo === removed.equipo);
-  if (!stillHasTeam) {
-    AppState.blockedTeams.delete(removed.equipo);
-  }
-
-  localStorage.setItem('porra_ucl_squad', JSON.stringify(AppState.squadPicks));
-  refreshSquadUI();
-}
-
-function refreshSquadUI() {
-  const chipsContainer = document.getElementById('squad-chips');
-  const blockedBar = document.getElementById('blocked-teams-bar');
-  const countEl = document.getElementById('squad-count');
-  const finishBtn = document.getElementById('btn-finish-squad');
-  const searchInput = document.getElementById('squad-search-input');
-  const results = document.getElementById('squad-search-results');
-
-  if (chipsContainer) chipsContainer.innerHTML = renderSquadChips();
-  if (blockedBar) blockedBar.innerHTML = renderBlockedTeamsBar();
-  if (countEl) countEl.textContent = AppState.squadPicks.length;
-  if (finishBtn) finishBtn.disabled = AppState.squadPicks.length !== SQUAD_SIZE;
-  if (results) results.innerHTML = renderPlayerList(searchInput?.value || '');
-}
-
 // ============================================================
 // HEADER — Click para Perfil
 // ============================================================
@@ -760,13 +904,20 @@ function showProfileModal() {
 
   closeBtn.addEventListener('click', () => modal.remove());
   logoutBtn.addEventListener('click', () => {
+    if (AppState.hasUnsavedChanges || AppState.hasUnsavedSquadChanges) {
+      modal.remove();
+      showLogoutWithUnsavedModal();
+      return;
+    }
     localStorage.removeItem('porra_ucl_user');
     localStorage.removeItem('session_token');
+    localStorage.removeItem('porra_ucl_scores');
     AppState.currentUser = null;
     AppState.sessionToken = null;
+    AppState.hasUnsavedChanges = false;
     modal.remove();
     checkAuthStatus();
-    showToast('Sesión cerrada correctamente');
+    showToast('Sesion cerrada correctamente');
   });
 
   modal.addEventListener('click', (e) => {
@@ -794,194 +945,596 @@ function updateUserHeader() {
 // ============================================================
 // TAB: PRONÓSTICOS
 // ============================================================
+
+/** Cuenta predicciones completas (home y away son números) */
+function countPredicted() {
+  let count = 0;
+  for (const id of Object.keys(AppState.scorePredictions)) {
+    const p = AppState.scorePredictions[id];
+    if (typeof p.home === 'number' && typeof p.away === 'number') count++;
+  }
+  return count;
+}
+
+/** Cuenta predicciones completas de una ronda */
+function countPredictedInRound(round) {
+  const roundMatches = AppState.matches.filter(m => m.ronda === round);
+  let count = 0;
+  for (const m of roundMatches) {
+    const p = AppState.scorePredictions[m.id];
+    if (p && typeof p.home === 'number' && typeof p.away === 'number') count++;
+  }
+  return count;
+}
+
 function renderPronosticosTab() {
   const container = document.getElementById('pronosticos-container');
   if (!container || !AppState.matches.length) return;
 
-  container.innerHTML = `
-    <div class="wizard-progress-bar">
-      <div class="wizard-progress-fill" style="width: ${Math.round((Object.keys(AppState.scorePredictions).length / AppState.matches.length) * 100)}%"></div>
-    </div>
-    <p class="wizard-progress-text">
-      <strong>${Object.keys(AppState.scorePredictions).length}</strong> de <strong>${AppState.matches.length}</strong> partidos pronosticados
-    </p>
-    <div id="wizard-match-container"></div>
-  `;
-
-  AppState.wizardIndex = 0;
-  renderWizardMatchInTab();
-}
-
-function renderWizardMatchInTab() {
-  const match = AppState.matches[AppState.wizardIndex];
-  if (!match) return;
+  AppState.currentRound = 1;
 
   const total = AppState.matches.length;
-  const current = AppState.wizardIndex + 1;
-  const savedPred = AppState.scorePredictions[match.id] || { home: 0, away: 0 };
-
-  const container = document.getElementById('wizard-match-container');
-  if (!container) return;
+  const predicted = countPredicted();
+  const pct = Math.round((predicted / total) * 100);
 
   container.innerHTML = `
-    <div class="wizard-match-card">
-      <p class="wizard-journey-label">${match.journey} &nbsp;&middot;&nbsp; ${match.fecha}</p>
+    <div class="pronosticos-top-fixed">
+      <button class="save-predictions-btn" id="btn-save-predictions" disabled>💾 Guardar en servidor</button>
+      <div class="wizard-progress-bar">
+        <div class="wizard-progress-fill" style="width: ${pct}%"></div>
+      </div>
+      <p class="wizard-progress-text">
+        <strong>${predicted}</strong> de <strong>${total}</strong> partidos pronosticados
+      </p>
+      <div class="round-nav">
+        <button class="round-nav-btn" id="btn-round-prev" disabled>&larr; Ronda anterior</button>
+        <span class="round-indicator" id="round-indicator">Ronda 1 de 8</span>
+        <button class="round-nav-btn" id="btn-round-next">Siguiente ronda &rarr;</button>
+      </div>
+      <div class="round-progress-text" id="round-progress-text"></div>
+    </div>
 
-      <div class="wizard-teams">
-        <div class="wizard-team">
-          <div class="wizard-team-badge">
-            ${teamImgTag(match.homeTeamId, match.homeBadgeExt, match.homeTeam, '')}
+    <div id="round-matches-container" class="round-matches-scroll"></div>
+  `;
+
+  renderRoundMatches();
+  setupRoundNavigation();
+  setupSaveButton();
+
+  // Delegacion de eventos para botones +/- (una sola vez)
+  const matchesContainer = document.getElementById('round-matches-container');
+  if (matchesContainer) {
+    matchesContainer.removeEventListener('click', handleGoalButtonClick);
+    matchesContainer.addEventListener('click', handleGoalButtonClick);
+  }
+}
+
+function renderRoundMatches() {
+  const container = document.getElementById('round-matches-container');
+  if (!container) return;
+
+  const round = AppState.currentRound;
+  const roundMatches = AppState.matches.filter(m => m.ronda === round);
+
+  // Actualizar indicadores
+  const indicator = document.getElementById('round-indicator');
+  if (indicator) indicator.textContent = `Ronda ${round} de 8`;
+
+  const roundPredicted = countPredictedInRound(round);
+  const roundTotal = roundMatches.length;
+  const roundPct = Math.round((roundPredicted / roundTotal) * 100);
+
+  const roundProgressEl = document.getElementById('round-progress-text');
+  if (roundProgressEl) {
+    roundProgressEl.innerHTML = `Ronda ${round}: <strong>${roundPredicted}</strong> de <strong>${roundTotal}</strong> pronosticados`;
+  }
+
+  // Actualizar barra de progreso global
+  const totalPredicted = countPredicted();
+  const totalMatches = AppState.matches.length;
+  const globalPct = Math.round((totalPredicted / totalMatches) * 100);
+  const progressFill = document.querySelector('.wizard-progress-fill');
+  const progressText = document.querySelector('.pronosticos-header .wizard-progress-text');
+  if (progressFill) progressFill.style.width = `${globalPct}%`;
+  if (progressText) {
+    progressText.innerHTML = `<strong>${totalPredicted}</strong> de <strong>${totalMatches}</strong> partidos pronosticados`;
+  }
+
+  // Botones prev/next de ronda
+  const prevBtn = document.getElementById('btn-round-prev');
+  const nextBtn = document.getElementById('btn-round-next');
+  if (prevBtn) prevBtn.disabled = round <= 1;
+  if (nextBtn) nextBtn.disabled = round >= 8;
+
+  container.innerHTML = roundMatches.map(match => {
+    const pred = AppState.scorePredictions[match.id];
+    const homeDisplay = (pred && typeof pred.home === 'number') ? pred.home : '-';
+    const awayDisplay = (pred && typeof pred.away === 'number') ? pred.away : '-';
+    const cardClass = (pred && typeof pred.home === 'number' && typeof pred.away === 'number')
+      ? 'match-card-round' : 'match-card-round match-card-round-pending';
+
+    return `
+      <div class="${cardClass}" data-match-id="${match.id}">
+        <p class="match-card-round-date">${match.fecha}</p>
+        <div class="match-card-round-teams">
+          <div class="match-card-round-team">
+            <div class="match-card-round-badge">
+              ${teamImgTag(match.homeTeamId, match.homeBadgeExt, match.homeTeam, 'match-card-round-img')}
+            </div>
+            <span class="match-card-round-name">${match.homeTeam}</span>
           </div>
-          <div class="wizard-team-name">${match.homeTeam}</div>
-          <div class="goals-control">
-            <span class="goals-label">Goles</span>
-            <div class="goals-counter">
-              <button class="goals-btn" id="home-minus" aria-label="Restar gol local">&minus;</button>
-              <div class="goals-value" id="home-goals">${savedPred.home}</div>
-              <button class="goals-btn" id="home-plus" aria-label="Anadir gol local">+</button>
+
+          <div class="match-card-round-controls">
+            <div class="match-card-round-score">
+              <button class="goals-btn-round goals-btn-round-minus" data-side="home" data-match="${match.id}" aria-label="Restar gol local">&minus;</button>
+              <span class="goals-value-round" id="home-${match.id}">${homeDisplay}</span>
+              <button class="goals-btn-round goals-btn-round-plus" data-side="home" data-match="${match.id}" aria-label="Anadir gol local">+</button>
+            </div>
+            <span class="match-card-round-vs">VS</span>
+            <div class="match-card-round-score">
+              <button class="goals-btn-round goals-btn-round-minus" data-side="away" data-match="${match.id}" aria-label="Restar gol visitante">&minus;</button>
+              <span class="goals-value-round" id="away-${match.id}">${awayDisplay}</span>
+              <button class="goals-btn-round goals-btn-round-plus" data-side="away" data-match="${match.id}" aria-label="Anadir gol visitante">+</button>
             </div>
           </div>
-        </div>
 
-        <div class="wizard-score-divider">
-          <span class="wizard-score-sep">&ndash;</span>
-          <span class="wizard-date">VS</span>
-        </div>
-
-        <div class="wizard-team">
-          <div class="wizard-team-badge">
-            ${teamImgTag(match.awayTeamId, match.awayBadgeExt, match.awayTeam, '')}
-          </div>
-          <div class="wizard-team-name">${match.awayTeam}</div>
-          <div class="goals-control">
-            <span class="goals-label">Goles</span>
-            <div class="goals-counter">
-              <button class="goals-btn" id="away-minus" aria-label="Restar gol visitante">&minus;</button>
-              <div class="goals-value" id="away-goals">${savedPred.away}</div>
-              <button class="goals-btn" id="away-plus" aria-label="Anadir gol visitante">+</button>
+          <div class="match-card-round-team">
+            <div class="match-card-round-badge">
+              ${teamImgTag(match.awayTeamId, match.awayBadgeExt, match.awayTeam, 'match-card-round-img')}
             </div>
+            <span class="match-card-round-name">${match.awayTeam}</span>
           </div>
         </div>
       </div>
-    </div>
+    `;
+  }).join('');
+}
 
-    <div class="wizard-nav">
-      <button class="btn-wizard-prev" id="btn-wizard-prev" ${AppState.wizardIndex === 0 ? 'disabled' : ''}>
-        &larr; Anterior
-      </button>
-      <p class="wizard-progress-text" style="margin: 0;">${current} / ${total}</p>
-      <button class="btn-wizard-next" id="btn-wizard-next">
-        ${current === total ? 'Último' : 'Siguiente →'}
-      </button>
-    </div>
-  `;
+function handleGoalButtonClick(e) {
+  const btn = e.target.closest('.goals-btn-round');
+  if (!btn) return;
 
-  let homeGoals = savedPred.home;
-  let awayGoals = savedPred.away;
+  const matchId = btn.getAttribute('data-match');
+  const side = btn.getAttribute('data-side');
+  const isPlus = btn.classList.contains('goals-btn-round-plus');
 
-  function updateGoalsDisplay() {
-    document.getElementById('home-goals').textContent = homeGoals;
-    document.getElementById('away-goals').textContent = awayGoals;
-    AppState.scorePredictions[match.id] = { home: homeGoals, away: awayGoals };
-    localStorage.setItem('porra_ucl_scores', JSON.stringify(AppState.scorePredictions));
+  const pred = AppState.scorePredictions[matchId] || { home: null, away: null };
+  let value = pred[side];
+
+  if (isPlus) {
+    // Primera vez que pulsa +: si es null, poner 0
+    value = (value === null) ? 0 : value + 1;
+  } else {
+    // Primera vez que pulsa -: si es null, no hacer nada
+    if (value === null) return;
+    if (value > 0) value--;
   }
 
-  document.getElementById('home-minus')?.addEventListener('click', () => {
-    if (homeGoals > 0) { homeGoals--; updateGoalsDisplay(); }
-  });
-  document.getElementById('home-plus')?.addEventListener('click', () => {
-    homeGoals++;
-    updateGoalsDisplay();
-  });
-  document.getElementById('away-minus')?.addEventListener('click', () => {
-    if (awayGoals > 0) { awayGoals--; updateGoalsDisplay(); }
-  });
-  document.getElementById('away-plus')?.addEventListener('click', () => {
-    awayGoals++;
-    updateGoalsDisplay();
-  });
+  pred[side] = value;
+  AppState.scorePredictions[matchId] = pred;
 
-  document.getElementById('btn-wizard-prev')?.addEventListener('click', () => {
-    if (AppState.wizardIndex > 0) {
-      AppState.wizardIndex--;
-      renderWizardMatchInTab();
+  // Actualizar display
+  const el = document.getElementById(`${side}-${matchId}`);
+  if (el) el.textContent = value;
+
+  // Actualizar clase de la tarjeta (verde si falta algun marcador)
+  const card = document.querySelector(`.match-card-round[data-match-id="${matchId}"]`);
+  if (card) {
+    const bothNumbers = typeof pred.home === 'number' && typeof pred.away === 'number';
+    card.classList.toggle('match-card-round-pending', !bothNumbers);
+  }
+
+  // Guardar en localStorage y marcar cambios
+  localStorage.setItem('porra_ucl_scores', JSON.stringify(AppState.scorePredictions));
+  AppState.hasUnsavedChanges = true;
+
+  // Actualizar boton guardar
+  updateSaveButton();
+
+  // Actualizar contadores de ronda y global
+  updateProgressCounts();
+}
+
+function updateProgressCounts() {
+  const round = AppState.currentRound;
+  const roundPredicted = countPredictedInRound(round);
+  const roundMatches = AppState.matches.filter(m => m.ronda === round);
+  const roundTotal = roundMatches.length;
+
+  const roundProgressEl = document.getElementById('round-progress-text');
+  if (roundProgressEl) {
+    roundProgressEl.innerHTML = `Ronda ${round}: <strong>${roundPredicted}</strong> de <strong>${roundTotal}</strong> pronosticados`;
+  }
+
+  const totalPredicted = countPredicted();
+  const totalMatches = AppState.matches.length;
+  const globalPct = Math.round((totalPredicted / totalMatches) * 100);
+  const progressFill = document.querySelector('.wizard-progress-fill');
+  const progressText = document.querySelector('.pronosticos-header .wizard-progress-text');
+  if (progressFill) progressFill.style.width = `${globalPct}%`;
+  if (progressText) {
+    progressText.innerHTML = `<strong>${totalPredicted}</strong> de <strong>${totalMatches}</strong> partidos pronosticados`;
+  }
+}
+
+function setupRoundNavigation() {
+  document.getElementById('btn-round-prev')?.addEventListener('click', () => {
+    if (AppState.currentRound > 1) {
+      AppState.currentRound--;
+      renderRoundMatches();
     }
   });
 
-  document.getElementById('btn-wizard-next')?.addEventListener('click', () => {
-    AppState.scorePredictions[match.id] = { home: homeGoals, away: awayGoals };
-    localStorage.setItem('porra_ucl_scores', JSON.stringify(AppState.scorePredictions));
-
-    if (AppState.wizardIndex < AppState.matches.length - 1) {
-      AppState.wizardIndex++;
-      renderWizardMatchInTab();
-    } else {
-      showToast('¡Todos los partidos pronosticados!');
+  document.getElementById('btn-round-next')?.addEventListener('click', () => {
+    if (AppState.currentRound < 8) {
+      AppState.currentRound++;
+      renderRoundMatches();
     }
   });
+}
+
+function setupSaveButton() {
+  const btn = document.getElementById('btn-save-predictions');
+  if (!btn) return;
+  btn.disabled = !AppState.hasUnsavedChanges;
+  btn.addEventListener('click', async () => {
+    btn.disabled = true;
+    btn.textContent = 'Guardando...';
+    const ok = await savePredictionsToBackend();
+    btn.textContent = 'Guardar en servidor';
+    updateSaveButton();
+    if (ok) {
+      renderRoundMatches();
+      updateProgressCounts();
+    }
+  });
+}
+
+function updateSaveButton() {
+  const btn = document.getElementById('btn-save-predictions');
+  if (btn) btn.disabled = !AppState.hasUnsavedChanges;
 }
 
 // ============================================================
 // TAB: PLANTILLA IDEAL
 // ============================================================
+
+/** Cuenta cuántos jugadores hay de una posición en la plantilla */
+function countByPosition(position) {
+  return AppState.squadPicks.filter(p => p.posicion === position).length;
+}
+
+/** Obtiene el jugador de una casilla específica */
+function getSlotPlayer(position, index) {
+  const positionPlayers = AppState.squadPicks.filter(p => p.posicion === position);
+  return positionPlayers[index] || null;
+}
+
+/** Abre el panel de búsqueda para una casilla */
+function openSlotSearch(position, index) {
+  const posCount = countByPosition(position);
+  const maxCount = SQUAD_FORMATION[position].count;
+  if (posCount >= maxCount) return;
+
+  AppState.activeSlot = { position, index };
+  const panel = document.getElementById('squad-search-panel');
+  if (panel) {
+    panel.classList.add('active');
+    const input = document.getElementById('squad-search-input');
+    if (input) {
+      input.value = '';
+      input.focus();
+    }
+    renderSearchResults('');
+  }
+}
+
+/** Cierra el panel de búsqueda */
+function closeSlotSearch() {
+  AppState.activeSlot = null;
+  const panel = document.getElementById('squad-search-panel');
+  if (panel) panel.classList.remove('active');
+}
+
+/** Renderiza los resultados de búsqueda filtrados por posición activa */
+function renderSearchResults(query) {
+  const results = document.getElementById('squad-search-results');
+  if (!results) return;
+
+  const selectedIds = new Set(AppState.squadPicks.map(p => p.id));
+  const positionFilter = AppState.activeSlot?.position || null;
+  const players = filterPlayers(query, selectedIds, positionFilter);
+
+  if (players.length === 0) {
+    results.innerHTML = '<p class="squad-no-results">No se encontraron jugadores</p>';
+    return;
+  }
+
+  results.innerHTML = players.slice(0, 50).map(p => {
+    const posLabel = { G: 'POR', D: 'DEF', M: 'MED', F: 'DEL' }[p.posicion] || p.posicion;
+    const team = AppState.teamsMap[p.equipo];
+    const isBlocked = AppState.blockedTeams.has(p.equipo);
+    return `
+      <div class="squad-player-row ${isBlocked ? 'blocked' : ''}" data-player-id="${p.id}" ${isBlocked ? 'data-blocked="true"' : ''}>
+        ${playerImgTag(p.id, p.extension || 'png', p.equipo, team?.ext || 'png', p.nombre, 'squad-player-img')}
+        <div class="squad-player-info">
+          <div class="squad-player-name">${p.nombre}</div>
+          <div class="squad-player-team">${p.club}</div>
+        </div>
+        ${isBlocked ? '<span class="squad-player-blocked-badge">EQUIPO USADO</span>' : `<span class="squad-player-pos">${posLabel}</span>`}
+        ${isBlocked ? '' : `<button class="squad-add-btn" data-player-id="${p.id}" aria-label="Anadir ${p.nombre}">+</button>`}
+      </div>
+    `;
+  }).join('');
+}
+
+/** Selecciona un jugador para la casilla activa */
+function selectPlayerForSlot(playerId) {
+  if (!AppState.activeSlot) return;
+
+  const { position } = AppState.activeSlot;
+  const posCount = countByPosition(position);
+  const maxCount = SQUAD_FORMATION[position].count;
+
+  if (posCount >= maxCount) return;
+  if (AppState.squadPicks.some(p => p.id === playerId)) return;
+
+  const player = AppState.allPlayers.find(p => p.id === playerId);
+  if (!player) return;
+  if (AppState.blockedTeams.has(player.equipo)) return;
+
+  AppState.squadPicks.push({
+    id: player.id,
+    nombre: player.nombre,
+    posicion: player.posicion,
+    club: player.club,
+    equipo: player.equipo,
+    extension: player.extension || 'png',
+  });
+
+  AppState.blockedTeams.add(player.equipo);
+  AppState.hasUnsavedSquadChanges = true;
+  localStorage.setItem('porra_ucl_squad', JSON.stringify(AppState.squadPicks));
+
+  closeSlotSearch();
+  refreshSquadUI();
+}
+
+function removePlayerFromSquad(position, index) {
+  const positionPlayers = AppState.squadPicks.filter(p => p.posicion === position);
+  const playerToRemove = positionPlayers[index];
+  if (!playerToRemove) return;
+
+  const mainIndex = AppState.squadPicks.findIndex(p => p.id === playerToRemove.id);
+  if (mainIndex === -1) return;
+
+  const removed = AppState.squadPicks.splice(mainIndex, 1)[0];
+
+  const stillHasTeam = AppState.squadPicks.some(p => p.equipo === removed.equipo);
+  if (!stillHasTeam) {
+    AppState.blockedTeams.delete(removed.equipo);
+  }
+
+  AppState.hasUnsavedSquadChanges = true;
+  localStorage.setItem('porra_ucl_squad', JSON.stringify(AppState.squadPicks));
+  refreshSquadUI();
+}
+
+/** Renderiza las casillas de selección agrupadas por posición */
+function renderSquadSlots() {
+  const positions = ['G', 'D', 'M', 'F'];
+
+  return positions.map(pos => {
+    const config = SQUAD_FORMATION[pos];
+    const count = countByPosition(pos);
+    const slots = [];
+
+    for (let i = 0; i < config.count; i++) {
+      const player = getSlotPlayer(pos, i);
+      if (player) {
+        const team = AppState.teamsMap[player.equipo];
+        slots.push(`
+          <div class="squad-slot filled" data-position="${pos}" data-index="${i}">
+            ${playerImgTag(player.id, player.extension || 'png', player.equipo, team?.ext || 'png', player.nombre, 'squad-slot-img')}
+            <div class="squad-slot-info">
+              <span class="squad-slot-name">${player.nombre}</span>
+              <span class="squad-slot-team">${player.club}</span>
+            </div>
+            <button class="squad-slot-remove" data-position="${pos}" data-index="${i}" aria-label="Quitar ${player.nombre}">&times;</button>
+          </div>
+        `);
+      } else {
+        slots.push(`
+          <div class="squad-slot empty" data-position="${pos}" data-index="${i}">
+            <span class="squad-slot-plus">+</span>
+            <span class="squad-slot-label">Vacío</span>
+          </div>
+        `);
+      }
+    }
+
+    return `
+      <div class="squad-position-group">
+        <h3 class="squad-position-title">${config.label} <span class="squad-position-count">(${count}/${config.count})</span></h3>
+        <div class="squad-slots-grid">
+          ${slots.join('')}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
 function renderPlantillaTab() {
   const container = document.getElementById('plantilla-container');
   if (!container) return;
 
+  const totalSelected = AppState.squadPicks.length;
+
   container.innerHTML = `
     <div class="squad-picker-wrapper">
 
-      <!-- Barra de equipos bloqueados -->
-      <div class="blocked-teams-bar" id="blocked-teams-bar">
-        ${renderBlockedTeamsBar()}
-      </div>
-
-      <!-- Jugadores seleccionados -->
-      <div class="squad-selected-section">
-        <p class="squad-selected-title">Tu Once (<span id="squad-count">${AppState.squadPicks.length}</span>/${SQUAD_SIZE})</p>
-        <div class="squad-chips-container" id="squad-chips">
-          ${renderSquadChips()}
+      <!-- Cabecera fija -->
+      <div class="squad-top-fixed">
+        <!-- Resumen -->
+        <div class="squad-summary">
+          <span class="squad-summary-text">Tu Plantilla (<span id="squad-count">${totalSelected}</span>/${SQUAD_SIZE})</span>
+          <button class="squad-save-btn" id="btn-save-squad" ${totalSelected === 0 ? 'disabled' : ''}>💾 Guardar</button>
         </div>
       </div>
 
-      <!-- Busqueda -->
-      <div class="squad-search-wrapper">
-        <input type="text" class="squad-search-input" id="squad-search-input"
-               placeholder="Buscar jugador por nombre..." autocomplete="off" spellcheck="false">
+      <!-- Contenido con scroll -->
+      <div class="squad-scroll-content" id="squad-slots">
+        ${renderSquadSlots()}
       </div>
+    </div>
 
-      <!-- Resultados -->
-      <div class="squad-players-list" id="squad-search-results">
-        ${renderPlayerList('')}
+    <!-- Panel de búsqueda (overlay) -->
+    <div class="squad-search-panel" id="squad-search-panel">
+      <div class="squad-search-panel-content">
+        <div class="squad-search-panel-header">
+          <h3 class="squad-search-panel-title" id="squad-search-panel-title">Buscar jugador</h3>
+          <button class="squad-search-panel-close" id="btn-close-search">&times;</button>
+        </div>
+        <div class="squad-search-wrapper">
+          <input type="text" class="squad-search-input" id="squad-search-input"
+                 placeholder="Buscar por nombre..." autocomplete="off" spellcheck="false">
+        </div>
+        <div class="squad-players-list" id="squad-search-results"></div>
       </div>
     </div>
   `;
 
-  // Evento de busqueda
-  const searchInput = document.getElementById('squad-search-input');
-  searchInput?.addEventListener('input', () => {
-    const results = document.getElementById('squad-search-results');
-    if (results) results.innerHTML = renderPlayerList(searchInput.value);
+  // Eventos de casillas vacías
+  container.querySelectorAll('.squad-slot.empty').forEach(slot => {
+    slot.addEventListener('click', () => {
+      const position = slot.getAttribute('data-position');
+      const index = parseInt(slot.getAttribute('data-index'));
+      openSlotSearch(position, index);
+    });
   });
 
-  // Delegacion de eventos en el contenedor de resultados (anadir jugador)
+  // Eventos de casillas llenas (quitar)
+  container.querySelectorAll('.squad-slot-remove').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const position = btn.getAttribute('data-position');
+      const index = parseInt(btn.getAttribute('data-index'));
+      removePlayerFromSquad(position, index);
+    });
+  });
+
+  // Cerrar panel de búsqueda
+  document.getElementById('btn-close-search')?.addEventListener('click', closeSlotSearch);
+
+  // Búsqueda de jugadores
+  const searchInput = document.getElementById('squad-search-input');
+  searchInput?.addEventListener('input', () => {
+    renderSearchResults(searchInput.value);
+  });
+
+  // Seleccionar jugador de la lista
   document.getElementById('squad-search-results')?.addEventListener('click', (e) => {
     const row = e.target.closest('.squad-player-row');
     if (row) {
       const playerId = parseInt(row.getAttribute('data-player-id'));
-      addPlayerToSquad(playerId);
+      selectPlayerForSlot(playerId);
     }
   });
 
-  // Delegacion de eventos en el contenedor de chips (quitar jugador)
-  document.getElementById('squad-chips')?.addEventListener('click', (e) => {
-    const btn = e.target.closest('.squad-chip-remove');
-    if (btn) {
-      e.stopPropagation();
-      const idx = parseInt(btn.getAttribute('data-remove-index'));
-      removePlayerFromSquad(idx);
-    }
+  // Guardar plantilla
+  document.getElementById('btn-save-squad')?.addEventListener('click', saveSquadToBackend);
+
+  // Cerrar panel al hacer clic fuera
+  document.getElementById('squad-search-panel')?.addEventListener('click', (e) => {
+    if (e.target.id === 'squad-search-panel') closeSlotSearch();
   });
+}
+
+async function saveSquadToBackend() {
+  if (!AppState.currentUser) return false;
+
+  const btn = document.getElementById('btn-save-squad');
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = 'Guardando...';
+  }
+
+  try {
+    const res = await fetch(`${API_BASE}/api/squad`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        username: AppState.currentUser.username,
+        squad: AppState.squadPicks
+      })
+    });
+    const data = await res.json();
+    if (data.ok) {
+      AppState.hasUnsavedSquadChanges = false;
+      showToast('Plantilla guardada');
+      return true;
+    } else {
+      showToast(data.error || 'Error al guardar');
+      return false;
+    }
+  } catch (e) {
+    console.error('Error guardando plantilla:', e);
+    showToast('Error de conexion');
+    return false;
+  } finally {
+    if (btn) {
+      btn.disabled = AppState.squadPicks.length === 0;
+      btn.textContent = '💾 Guardar';
+    }
+  }
+}
+
+async function fetchSquadFromBackend() {
+  if (!AppState.currentUser) return;
+
+  try {
+    const res = await fetch(`${API_BASE}/api/squad?username=${AppState.currentUser.username}`);
+    const data = await res.json();
+    if (data.ok && Array.isArray(data.squad)) {
+      AppState.squadPicks = data.squad;
+      AppState.blockedTeams = new Set(data.squad.map(p => p.equipo));
+      AppState.hasUnsavedSquadChanges = false;
+      localStorage.setItem('porra_ucl_squad', JSON.stringify(AppState.squadPicks));
+    }
+  } catch (e) {
+    console.error('Error cargando plantilla del backend:', e);
+  }
+}
+
+function refreshSquadUI() {
+  const slotsContainer = document.getElementById('squad-slots');
+  const countEl = document.getElementById('squad-count');
+  const saveBtn = document.getElementById('btn-save-squad');
+
+  if (slotsContainer) slotsContainer.innerHTML = renderSquadSlots();
+  if (countEl) countEl.textContent = AppState.squadPicks.length;
+  if (saveBtn) saveBtn.disabled = AppState.squadPicks.length === 0;
+
+  // Re-asignar eventos de casillas
+  const container = document.getElementById('plantilla-container');
+  if (container) {
+    container.querySelectorAll('.squad-slot.empty').forEach(slot => {
+      slot.addEventListener('click', () => {
+        const position = slot.getAttribute('data-position');
+        const index = parseInt(slot.getAttribute('data-index'));
+        openSlotSearch(position, index);
+      });
+    });
+
+    container.querySelectorAll('.squad-slot-remove').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const position = btn.getAttribute('data-position');
+        const index = parseInt(btn.getAttribute('data-index'));
+        removePlayerFromSquad(position, index);
+      });
+    });
+  }
 }
 
 // ============================================================

@@ -185,13 +185,13 @@ La aplicación utiliza una estructura de navegación con:
    - **Inicio**: Pantalla de bienvenida con avisos de pendientes y freeze de Champions
    - **Clasificación**: Tabla de posiciones de todos los participantes (obtenidos de `GET /api/players`)
    - **Pronósticos**: Wizard para introducir marcadores de los 144 partidos
-   - **Plantilla**: Selección de 11 jugadores para la plantilla ideal
+   - **Plantilla**: Selección de 25 jugadores para la plantilla ideal (3G, 8D, 8M, 6F)
 
 **Pestañas disponibles:**
 - `tab-inicio`: Pantalla de bienvenida con resumen de estado del usuario
 - `tab-clasificacion`: Tabla de clasificación general
 - `tab-pronosticos`: Wizard de predicciones de partidos
-- `tab-plantilla`: Selección de plantilla ideal (11 jugadores)
+- `tab-plantilla`: Selección de plantilla ideal (25 jugadores: 3G, 8D, 8M, 6F)
 
 **Flujo de usuario:**
 1. Tras registro/login → entra directamente a pestaña Inicio
@@ -237,3 +237,100 @@ Herramientas para obtener automáticamente datos y resultados actualizados de So
 2. **Clasificación General**: Tabla acumulada de puntos y aciertos por cada jugador registrado con su avatar y plantilla ideal.
 3. **Estadísticas de Porra**: Tendencias comunitarias y desglose de predicciones.
 4. **Pestaña Inicio**: Pantalla de bienvenida con avatar del usuario, avisos de partidos/pendientes y countdown de freeze de Champions.
+
+### 5.4. Plantilla Ideal (Nueva Especificación)
+
+#### Estructura de la Plantilla
+
+La plantilla ideal consta de **25 jugadores** distribuidos por posición:
+
+| Posición | Cantidad | Etiqueta |
+|----------|----------|----------|
+| **G** (Portero) | 3 | Porteros |
+| **D** (Defensa) | 8 | Defensas |
+| **M** (Centrocampista) | 8 | Centrocampistas |
+| **F** (Delantero) | 6 | Delanteros |
+
+#### Restricciones
+
+1. **Un solo jugador por equipo**: No pueden repetirse equipos entre los 25 jugadores seleccionados (36 equipos disponibles, 25 posiciones → siempre habrá equipos disponibles).
+2. **Distribución fija por posición**: Se deben respetar las cantidades exactas por cada tipo de jugador.
+3. **Sin duplicados**: Un jugador no puede seleccionarse más de una vez.
+
+#### Interfaz de Selección (UI)
+
+La pantalla de selección muestra **25 casillas** agrupadas por posición:
+
+```
+┌─────────────────────────────────────┐
+│         PLANTILLA IDEAL             │
+├─────────────────────────────────────┤
+│ PORTEROS (0/3)                      │
+│ ┌─────┐ ┌─────┐ ┌─────┐            │
+│ │  +  │ │  +  │ │  +  │            │
+│ └─────┘ └─────┘ └─────┘            │
+├─────────────────────────────────────┤
+│ DEFENSAS (0/8)                      │
+│ ┌─────┐ ┌─────┐ ┌─────┐ ┌─────┐   │
+│ │  +  │ │  +  │ │  +  │ │  +  │   │
+│ └─────┘ └─────┘ └─────┘ └─────┘   │
+│ ┌─────┐ ┌─────┐ ┌─────┐ ┌─────┐   │
+│ │  +  │ │  +  │ │  +  │ │  +  │   │
+│ └─────┘ └─────┘ └─────┘ └─────┘   │
+├─────────────────────────────────────┤
+│ CENTROCAMPISTAS (0/8)               │
+│ ... (similar a defensas)            │
+├─────────────────────────────────────┤
+│ DELANTEROS (0/6)                    │
+│ ... (6 casillas)                    │
+└─────────────────────────────────────┘
+```
+
+**Flujo de interacción:**
+
+1. El usuario ve las 25 casillas vacías agrupadas por posición con contador (ej: "PORTEROS (0/3)")
+2. Al hacer clic en una casilla vacía → Se abre panel de búsqueda filtrado por esa posición
+3. El panel muestra jugadores de la posición seleccionada, excluyendo equipos ya bloqueados
+4. Al seleccionar un jugador → Se asigna a la casilla, se bloquea su equipo, se actualiza contador
+5. Al hacer clic en una casilla con jugador → Se muestra el jugador con opción de eliminar (X)
+6. Al eliminar → Se desbloquea el equipo si no queda ningún otro jugador de ese equipo
+
+#### Estado de la Aplicación
+
+```javascript
+AppState.squadPicks = [];        // Array de hasta 25 jugadores
+AppState.activeSlot = null;      // { position: 'G', index: 0 } - casilla activa
+AppState.blockedTeams = new Set(); // IDs de equipos ya elegidos
+```
+
+#### Constantes
+
+```javascript
+const SQUAD_SIZE = 25;
+const SQUAD_FORMATION = {
+  G: { count: 3, label: 'Porteros' },
+  D: { count: 8, label: 'Defensas' },
+  M: { count: 8, label: 'Centrocampistas' },
+  F: { count: 6, label: 'Delanteros' }
+};
+```
+
+#### Funciones Principales
+
+| Función | Responsabilidad |
+|---------|-----------------|
+| `renderPlantillaTab()` | Renderiza toda la pestaña con casillas agrupadas |
+| `renderSquadSlots()` | Genera HTML de las 25 casillas por posición |
+| `openSlotSearch(position)` | Abre panel de búsqueda filtrado por posición |
+| `selectPlayerForSlot(playerId)` | Asigna jugador a la casilla activa |
+| `addPlayerToSquad(playerId)` | Valida y añade jugador al estado |
+| `removePlayerFromSquad(index)` | Elimina jugador y desbloquea equipo |
+| `validateSquad()` | Comprueba plantilla completa y válida |
+| `saveSquadToBackend()` | Envía plantilla al servidor via PUT /api/squad |
+| `refreshSquadUI()` | Refresca todas las casillas y contadores |
+
+#### Persistencia
+
+- **localStorage**: Clave `porra_ucl_squad` para persistencia local
+- **Backend**: Endpoint `PUT /api/squad` para persistencia en servidor
+- **Sincronización**: Al cargar la app, se obtiene plantilla del backend si existe
