@@ -1972,6 +1972,7 @@ html, body {
 
 .match-card-round-score {
   display: flex;
+  flex-direction: column;
   align-items: center;
   gap: 0;
   background: var(--ucl-surface);
@@ -1986,8 +1987,8 @@ html, body {
   color: var(--text-primary);
   font-size: 1rem;
   font-weight: 900;
-  width: 28px;
-  height: 32px;
+  width: 32px;
+  height: 24px;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -2005,12 +2006,12 @@ html, body {
   font-size: 1rem;
   font-weight: 900;
   color: var(--text-primary);
-  min-width: 24px;
+  min-width: 28px;
   text-align: center;
   line-height: 1;
-  padding: 0 2px;
-  border-left: 1px solid var(--border-color);
-  border-right: 1px solid var(--border-color);
+  padding: 2px 0;
+  border-top: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--border-color);
 }
 
 .match-card-round-vs {

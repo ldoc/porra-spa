@@ -458,16 +458,16 @@ function showAuthError(msg, el) {
 // ============================================================
 // ENTRAR A LA APP (tras login/registro)
 // ============================================================
-function enterApp() {
+async function enterApp() {
   const overlay = document.getElementById('auth-overlay');
   if (overlay) overlay.style.display = 'none';
 
   updateUserHeader();
-  navigateToTab('inicio');
   setupHeaderClick();
   fetchPlayers();
-  fetchPredictionsFromBackend();
+  await fetchPredictionsFromBackend();
   fetchSquadFromBackend();
+  navigateToTab('inicio');
 }
 
 function navigateToTab(tabName) {
@@ -895,7 +895,11 @@ function showProfileModal() {
         </div>
       </div>
 
-      <button id="btn-logout" class="btn-primary" style="background: rgba(239,68,68,0.8); color: #fff; margin-top: 16px; width: 100%;">
+      <button id="btn-change-password" class="btn-primary" style="background: var(--accent-primary); color: #fff; margin-top: 12px; width: 100%;">
+        Cambiar Contraseña
+      </button>
+
+      <button id="btn-logout" class="btn-primary" style="background: rgba(239,68,68,0.8); color: #fff; margin-top: 8px; width: 100%;">
         Cerrar Sesión
       </button>
     </div>
@@ -905,8 +909,13 @@ function showProfileModal() {
 
   const closeBtn = modal.querySelector('#close-profile-modal');
   const logoutBtn = modal.querySelector('#btn-logout');
+  const changePasswordBtn = modal.querySelector('#btn-change-password');
 
   closeBtn.addEventListener('click', () => modal.remove());
+  changePasswordBtn.addEventListener('click', () => {
+    modal.remove();
+    showChangePasswordModal();
+  });
   logoutBtn.addEventListener('click', () => {
     if (AppState.hasUnsavedChanges || AppState.hasUnsavedSquadChanges) {
       modal.remove();
@@ -926,6 +935,102 @@ function showProfileModal() {
 
   modal.addEventListener('click', (e) => {
     if (e.target === modal) modal.remove();
+  });
+}
+
+function showChangePasswordModal() {
+  if (!AppState.currentUser) return;
+
+  const modal = document.createElement('div');
+  modal.className = 'profile-modal';
+  modal.innerHTML = `
+    <div class="profile-modal-content">
+      <button class="profile-modal-close" id="close-change-password-modal">&times;</button>
+      <h2 style="font-size: 1.3rem; font-weight: 800; margin-bottom: 16px;">Cambiar Contraseña</h2>
+
+      <form id="change-password-form" style="width: 100%; display: flex; flex-direction: column; gap: 12px;">
+        <div style="width: 100%; text-align: left;">
+          <label style="font-size: 11px; color: var(--text-muted); font-weight: 700; display: block; margin-bottom: 4px;">Contraseña actual</label>
+          <input type="password" id="current-password" placeholder="Tu contraseña actual" required
+            style="width: 100%; padding: 12px; border-radius: var(--radius-md); border: 1px solid var(--ucl-border);
+            background: var(--ucl-surface); color: var(--text-primary); font-size: 14px; box-sizing: border-box;">
+        </div>
+
+        <div style="width: 100%; text-align: left;">
+          <label style="font-size: 11px; color: var(--text-muted); font-weight: 700; display: block; margin-bottom: 4px;">Nueva contraseña</label>
+          <input type="password" id="new-password" placeholder="Mínimo 6 caracteres" required minlength="6"
+            style="width: 100%; padding: 12px; border-radius: var(--radius-md); border: 1px solid var(--ucl-border);
+            background: var(--ucl-surface); color: var(--text-primary); font-size: 14px; box-sizing: border-box;">
+        </div>
+
+        <div style="width: 100%; text-align: left;">
+          <label style="font-size: 11px; color: var(--text-muted); font-weight: 700; display: block; margin-bottom: 4px;">Confirmar nueva contraseña</label>
+          <input type="password" id="confirm-new-password" placeholder="Repite la nueva contraseña" required minlength="6"
+            style="width: 100%; padding: 12px; border-radius: var(--radius-md); border: 1px solid var(--ucl-border);
+            background: var(--ucl-surface); color: var(--text-primary); font-size: 14px; box-sizing: border-box;">
+        </div>
+
+        <div id="change-password-error" style="color: #ef4444; font-size: 12px; display: none;"></div>
+
+        <button type="submit" class="btn-primary" style="background: var(--accent-primary); color: #fff; width: 100%; margin-top: 4px;">
+          Guardar Contraseña
+        </button>
+      </form>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  const closeBtn = modal.querySelector('#close-change-password-modal');
+  const form = modal.querySelector('#change-password-form');
+  const errorDiv = modal.querySelector('#change-password-error');
+
+  closeBtn.addEventListener('click', () => modal.remove());
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) modal.remove();
+  });
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const currentPassword = modal.querySelector('#current-password').value;
+    const newPassword = modal.querySelector('#new-password').value;
+    const confirmPassword = modal.querySelector('#confirm-new-password').value;
+
+    if (newPassword !== confirmPassword) {
+      errorDiv.textContent = 'Las contraseñas no coinciden';
+      errorDiv.style.display = 'block';
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      errorDiv.textContent = 'La nueva contraseña debe tener al menos 6 caracteres';
+      errorDiv.style.display = 'block';
+      return;
+    }
+
+    try {
+      const res = await fetch(`${API_BASE}/api/auth/change-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: AppState.currentUser.username,
+          currentPassword,
+          newPassword
+        })
+      });
+      const data = await res.json();
+
+      if (data.ok) {
+        modal.remove();
+        showToast('Contraseña actualizada correctamente');
+      } else {
+        errorDiv.textContent = data.error || 'Error al cambiar la contraseña';
+        errorDiv.style.display = 'block';
+      }
+    } catch (err) {
+      errorDiv.textContent = 'Error de conexión con el servidor';
+      errorDiv.style.display = 'block';
+    }
   });
 }
 
@@ -1078,15 +1183,15 @@ function renderRoundMatches() {
 
           <div class="match-card-round-controls">
             <div class="match-card-round-score">
-              <button class="goals-btn-round goals-btn-round-minus" data-side="home" data-match="${match.id}" aria-label="Restar gol local">&minus;</button>
-              <span class="goals-value-round" id="home-${match.id}">${homeDisplay}</span>
               <button class="goals-btn-round goals-btn-round-plus" data-side="home" data-match="${match.id}" aria-label="Anadir gol local">+</button>
+              <span class="goals-value-round" id="home-${match.id}">${homeDisplay}</span>
+              <button class="goals-btn-round goals-btn-round-minus" data-side="home" data-match="${match.id}" aria-label="Restar gol local">&minus;</button>
             </div>
             <span class="match-card-round-vs">VS</span>
             <div class="match-card-round-score">
-              <button class="goals-btn-round goals-btn-round-minus" data-side="away" data-match="${match.id}" aria-label="Restar gol visitante">&minus;</button>
-              <span class="goals-value-round" id="away-${match.id}">${awayDisplay}</span>
               <button class="goals-btn-round goals-btn-round-plus" data-side="away" data-match="${match.id}" aria-label="Anadir gol visitante">+</button>
+              <span class="goals-value-round" id="away-${match.id}">${awayDisplay}</span>
+              <button class="goals-btn-round goals-btn-round-minus" data-side="away" data-match="${match.id}" aria-label="Restar gol visitante">&minus;</button>
             </div>
           </div>
 
@@ -1387,9 +1492,11 @@ function renderSquadSlots() {
       const player = getSlotPlayer(pos, i);
       if (player) {
         const team = AppState.teamsMap[player.equipo];
+        const sourcePlayer = AppState.allPlayers.find(p => p.id === player.id);
+        const playerExt = sourcePlayer?.extension || player.extension || 'png';
         slots.push(`
           <div class="squad-slot filled" data-position="${pos}" data-index="${i}">
-            ${playerImgTag(player.id, player.extension || 'png', player.equipo, team?.ext || 'png', player.nombre, 'squad-slot-img')}
+            ${playerImgTag(player.id, playerExt, player.equipo, team?.ext || 'png', player.nombre, 'squad-slot-img')}
             <div class="squad-slot-info">
               <span class="squad-slot-name">${player.nombre}</span>
               <span class="squad-slot-team">${player.club}</span>
