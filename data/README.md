@@ -10,7 +10,7 @@ Esta carpeta contiene los ficheros JSON y recursos estáticos que alimentan la a
 | --------------------- | --------- | ------------------------------------------------ |
 | `teams.json`          | 36        | Equipos participantes en la competición          |
 | `jugadores.json`      | 1 273     | Jugadores disponibles para la plantilla ideal      |
-| `calendar.json`       | 144       | Partidos de la fase de grupos (8 jornadas)       |
+| `calendar.json`       | 144       | Partidos de la fase de liga (8 jornadas)         |
 | `imgJugadores/`       | 1 273     | Fotos de jugadores (`{id}.png`)                  |
 
 ---
@@ -103,7 +103,7 @@ Listado de jugadores estrella utilizados en la **selección de plantilla ideal**
 
 ## Calendario — `calendar.json`
 
-Partidos de la **fase de grupos**, organizados en **8 jornadas** (18 encuentros por jornada).
+Partidos de la **fase de liga**, organizados en **8 jornadas** (18 encuentros por jornada).
 
 ### Campos
 

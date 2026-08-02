@@ -13,6 +13,62 @@ Este documento establece las normas de desarrollo, la arquitectura de código y 
 - **Experiencia de Usuario (UX)**: Diseño nativo app-like, fluido, rápido e intuitivo.
 - **Orientación Exclusiva**: **Vertical (Portrait mode)**. Toda la interfaz debe estar diseñada, optimizada y probada para pantallas verticales.
 
+### 1.1. Reglas de la Porra - Fase de Liga
+
+#### Formato de la Fase de Liga
+
+Todos los partidos de esta fase se juegan de acuerdo con un sistema de liga en el que cada club se enfrenta a ocho rivales distintos en enfrentamientos de partido único. Cada club juega cuatro partidos como local y cuatro partidos como visitante. Los enfrentamientos se definirán por sorteo. La fecha de celebración de este sorteo está prevista para el 27 de agosto de 2026. El comienzo de la fase de liga esta previsto para el 8 de septiembre de 2026.
+
+De acuerdo con los resultados de estos partidos los clubes se clasificarán en un sistema de liga única obteniendo 3 puntos por victoria, 1 punto por empate y 0 puntos por derrota.
+
+#### Criterios de Desempate
+
+Si dos o más equipos están empatados al finalizar los partidos de la fase de liga, se aplican los siguientes criterios, en este orden, para determinar la clasificación final:
+
+1. Mayor diferencia de goles
+2. Mayor número de goles marcados
+3. Mayor número de goles marcados como visitante
+4. Mayor número de victorias
+5. Mayor número de victorias como visitante
+6. Mayor suma de puntos obtenidos por todos los rivales de la fase de liga
+7. Mayor suma de diferencia de goles obtenida por todos los rivales de la fase de liga
+8. Mayor suma de goles marcados por todos los rivales de la fase de liga
+9. Menor número de puntos disciplinarios basado en el número total de tarjetas amarillas y tarjetas rojas recibidas (tarjeta amarilla = 1 punto, tarjeta roja = 3 puntos, expulsión por doble amarilla = 3 puntos)
+10. Mayor coeficiente UEFA del club
+
+#### Pronóstico de Resultados de la Fase de Liga
+
+Cada participante deberá pronosticar el resultado de cada uno de los 144 partidos previstos para la fase de liga. En base a estos resultados se obtendrá un pronóstico de clasificación para la fase de liga.
+
+#### Puntuación por Pronóstico de Partidos
+
+| Concepto | Puntos |
+|----------|--------|
+| Acierto de resultado (victoria local, empate o victoria visitante) | 8 |
+| Acierto de goles marcados por el equipo local | 3 |
+| Acierto de goles marcados por el equipo visitante | 3 |
+| Acierto de goles marcados por ambos equipos | 1 |
+| **Puntuación máxima por partido** | **15** |
+
+#### Puntuación por Pronóstico de Clasificación
+
+Adicionalmente a la puntuación de los partidos, al finalizar la fase de liga se obtendrán puntos por acertar la posición final de cada equipo en la liga.
+
+**Únicamente obtendrán puntos los equipos que hayan finalizado en una posición igual o superior al puesto 24.** Los puntos se asignan del siguiente modo:
+
+| Posición | Puntos | Posición | Puntos | Posición | Puntos | Posición | Puntos |
+|----------|--------|----------|--------|----------|--------|----------|--------|
+| 1º | 60 | 7º | 21 | 13º | 12 | 19º | 6 |
+| 2º | 51 | 8º | 18 | 14º | 11 | 20º | 5 |
+| 3º | 43 | 9º | 16 | 15º | 10 | 21º | 4 |
+| 4º | 36 | 10º | 15 | 16º | 9 | 22º | 3 |
+| 5º | 30 | 11º | 14 | 17º | 8 | 23º | 2 |
+| 6º | 25 | 12º | 13 | 18º | 7 | 24º | 1 |
+
+**Regla de puntuación por clasificación**: Solo se recibirán los puntos por el valor más bajo de posición que ocupe un equipo teniendo en cuenta la posición pronosticada y la real.
+
+> Ejemplo: Si se ha pronosticado que un equipo acaba en la posición 7 y finalmente acaba en la posición 3, solo se recibirán los puntos de la posición 7 (21 puntos). Si el equipo acaba en la posición 12, solo se recibirán los puntos de la posición 12 (13 puntos).
+
 ---
 
 ## 2. Pautas Generales de Diseño (Mobile Vertical First)
@@ -62,7 +118,7 @@ Este documento establece las normas de desarrollo, la arquitectura de código y 
 │   ├── README.md     # Esquemas, relaciones y documentación de modelos
 │   ├── teams.json    # 36 equipos participantes
 │   ├── jugadores.json # 1 273 jugadores para la plantilla ideal
-│   ├── calendar.json # 144 partidos de la fase de grupos (8 jornadas)
+│   ├── calendar.json # 144 partidos de la fase de liga (8 jornadas)
 │   └── imgJugadores/ # Fotos PNG de jugadores ({id}.png)
 ├── api/              # (Placeholder) Ficheros de integración con APIs
 ├── extract/          # Scripts para obtener información de SofaScore (NO subir en despliegues)
@@ -233,10 +289,151 @@ Módulos encargados de interactuar con el backend o servicios de persistencia de
 Herramientas para obtener automáticamente datos y resultados actualizados de SofaScore y generar/actualizar los ficheros de `data/`.
 
 ### 5.3. Pronósticos, Clasificación y Estadísticas (Champions League 2026/2027)
-1. **Pronósticos por Jornada**: Apuestas y marcadores exactos en los encuentros de la Champions League 2026/2027.
+1. **Pronósticos por Jornada**: Predicciones de marcadores exactos en los 144 partidos de la fase de liga de la Champions League 2026/2027 (15 puntos máximo por partido).
 2. **Clasificación General**: Tabla acumulada de puntos y aciertos por cada jugador registrado con su avatar y plantilla ideal.
 3. **Estadísticas de Porra**: Tendencias comunitarias y desglose de predicciones.
-4. **Pestaña Inicio**: Pantalla de bienvenida con avatar del usuario, avisos de partidos/pendientes y countdown de freeze de Champions.
+4. **Pestaña Inicio**: Pantalla de bienvenida con avatar del usuario, avisos de partidos/pendientes y countdown de freeze de Champions (8 septiembre 2026).
+5. **Pronóstico de Clasificación**: Predicción de la posición final de cada equipo en la fase de liga (puntos por acertar posiciones del 1º al 24º).
+6. **Clasificación Pronosticada**: Pantalla dinámica que muestra la clasificación de los 36 equipos calculada a partir de los marcadores pronosticados por el usuario.
+
+### 5.3.1. Clasificación Pronosticada (Nueva Especificación)
+
+#### Descripción
+
+Pantalla modal que se abre desde la pestaña de Pronósticos y muestra la clasificación resultante de los 36 equipos de la fase de liga, calculada dinámicamente a partir de los marcadores introducidos por el usuario. La clasificación se recalcula cada vez que el usuario accede a la pantalla.
+
+#### Acceso
+
+- **Ubicación del botón**: Cabecera de la pestaña Pronósticos, junto al botón "Guardar en servidor"
+- **Etiqueta del botón**: "Ver Clasificación" (con icono de tabla/classificación)
+- **Comportamiento**: Al hacer clic se abre un modal overlay sobre la pantalla de pronósticos
+
+#### Cálculo de la Clasificación
+
+Para cada uno de los 36 equipos se acumulan las siguientes estadísticas a partir de `AppState.scorePredictions` y `AppState.matches`:
+
+| Estadística | Descripción | Cálculo |
+|-------------|-------------|---------|
+| `PJ` | Partidos jugados | Conteo de partidos pronosticados donde participa el equipo |
+| `V` | Victorias | Marcador donde el equipo tiene más goles que el rival |
+| `E` | Empates | Marcador donde ambos equipos tienen los mismos goles |
+| `D` | Derrotas | Marcador donde el equipo tiene menos goles que el rival |
+| `GF` | Goles a favor | Suma de goles marcados por el equipo |
+| `GC` | Goles en contra | Suma de goles recibidos por el equipo |
+| `DG` | Diferencia de goles | `GF - GC` |
+| `Pts` | Puntos | `V * 3 + E * 1` |
+
+#### Criterios de Desempate
+
+Cuando dos o más equipos están empatados en puntos, se aplican los siguientes criterios en orden (basados en las reglas UCL de la sección 1.1):
+
+1. **Mayor diferencia de goles** (`DG`)
+2. **Mayor número de goles marcados** (`GF`)
+3. **Mayor número de goles marcados como visitante** (goles en partidos donde el equipo es visitante)
+4. **Mayor número de victorias** (`V`)
+5. **Mayor número de victorias como visitante** (victorias donde el equipo es visitante)
+6. **Mayor suma de puntos de los rivales** (suma de puntos obtenidos por cada uno de sus 8 rivales en TODOS sus partidos de la fase de liga, no solo contra el equipo en cuestión)
+7. **Mayor suma de diferencia de goles de los rivales** (suma de la diferencia de goles de cada uno de sus 8 rivales en TODOS sus partidos de la fase de liga)
+8. **Mayor suma de goles marcados por los rivales** (suma de goles marcados por cada uno de sus 8 rivales en TODOS sus partidos de la fase de liga)
+
+> **Nota**: Los criterios 9-10 (tarjetas y coeficiente UEFA) no son calculables con predicciones y se omiten.
+
+> **Optimización de rendimiento**: Los criterios de desempate solo se aplican cuando es necesario. Los criterios 1-5 se evalúan secuencialmente y se detienen en el primero que resuelve el empate. Los criterios 6-8 (más costosos computacionalmente) solo se calculan si persiste el empate tras los 5 primeros, y únicamente para los equipos implicados en dicho empate.
+
+#### Orden de la Tabla
+
+Los equipos se ordenan de mayor a menor puntuación, aplicando los criterios de desempate secuencialmente:
+
+```
+1. Puntos (descendente)
+2. Diferencia de goles (descendente)
+3. Goles marcados (descendente)
+4. Goles marcados como visitante (descendente)
+5. Victorias (descendente)
+6. Victorias como visitante (descendente)
+7. Suma de puntos de los rivales (descendente)
+8. Suma de diferencia de goles de los rivales (descendente)
+9. Suma de goles marcados por los rivales (descendente)
+```
+
+#### Diseño de la Pantalla (Modal Overlay)
+
+```
+┌─────────────────────────────────────────┐
+│  ← CLASIFICACIÓN PRONOSTICADA     (X)   │
+├─────────────────────────────────────────┤
+│  Partidos pronosticados: 108/144        │
+│  ████████████████░░░░ 75%               │
+├─────────────────────────────────────────┤
+│  #  │ Escudo │ Equipo         │Pts│DG│GF│GC│V│E│D│
+│  1  │ [img]  │ FC Barcelona   │24 │+16│28│12│8│0│0│
+│  2  │ [img]  │ Real Madrid    │21 │+12│24│12│7│0│1│
+│  3  │ [img]  │ Arsenal        │21 │+10│22│12│7│0│1│
+│  ...│        │                │   │   │  │  │ │ │ │
+│  36 │ [img]  │ Kairat Almaty  │ 0 │-20│ 4│24│0│0│8│
+├─────────────────────────────────────────┤
+│  Pts=Puntos  DG=Dif.Goles  GF=Goles+   │
+│  GC=Goles-   V=Victorias   E=Empates    │
+│  D=Derrotas                             │
+└─────────────────────────────────────────┘
+```
+
+#### Elementos UI
+
+1. **Cabecera del modal**:
+   - Título "CLASIFICACIÓN PRONOSTICADA"
+   - Botón (X) para cerrar el modal
+   - Barra de progreso con contador de partidos pronosticados
+
+2. **Tabla clasificatoria**:
+   - Columna `#`: Posición del equipo (1-36)
+   - Columna `Escudo`: Imagen del escudo del equipo (`data/imgEquipos/{id}.{ext}`)
+   - Columna `Equipo`: Nombre del equipo
+   - Columna `Pts`: Puntos totales
+   - Columna `DG`: Diferencia de goles (con prefijo + o -)
+   - Columna `GF`: Goles a favor
+   - Columna `GC`: Goles en contra
+   - Columna `V`: Victorias
+   - Columna `E`: Empates
+   - Columna `D`: Derrotas
+
+3. **Pie de tabla**:
+   - Leyenda de siglas (Pts, DG, GF, GC, V, E, D)
+
+4. **Estilos**:
+   - Modal overlay con fondo oscuro semitransparente
+   - Tabla con scroll vertical si el contenido excede la pantalla
+   - Estilos consistentes con el diseño existente (modo oscuro, variables CSS)
+   - Filas alternas con opacidad sutil para legibilidad
+
+#### Funciones JavaScript
+
+| Función | Responsabilidad |
+|---------|-----------------|
+| `calculateStandings()` | Calcula la clasificación de los 36 equipos. Primero obtiene estadísticas básicas de cada equipo, luego calcula estadísticas de rivales **solo para equipos empatados en puntos** (criterios 6-8), y finalmente ordena según criterios de desempate UCL. Devuelve array ordenado. |
+| `getTeamStats(teamId)` | Calcula estadísticas individuales de un equipo: PJ, V, E, D, GF, GC, DG, Pts, awayWins, awayGoals. |
+| `getRivalsStats(teamId)` | Calcula las estadísticas acumuladas de los 8 rivales de un equipo en TODOS sus partidos. Devuelve `{ rivalPointsSum, rivalGDSum, rivalGFSum }` para los criterios 6-8. Solo se invoca cuando hay empate en puntos. |
+| `findTeamMatches(teamId)` | Busca en `AppState.matches` todos los partidos donde participa un equipo (local o visitante). Usado por `getRivalsStats`. |
+| `sortTeams(teams)` | Ordena array de equipos. Primero agrupa por puntos, luego aplica criterios 1-5 a cada grupo. Si hay empates persistentes, calcula criterios 6-8 **solo para los equipos empatados**. |
+| `renderPredictedStandings()` | Genera HTML del modal con barra de progreso y tabla clasificatoria |
+| `showPredictedStandingsModal()` | Abre el modal, calcula clasificación y renderiza |
+| `closePredictedStandingsModal()` | Cierra el modal y limpia estado |
+
+#### Estado de la Aplicación
+
+No se añaden nuevas propiedades a `AppState`. La clasificación se calcula on-demand cada vez que se abre el modal.
+
+#### Persistencia
+
+- **No requiere persistencia**: La clasificación es un cálculo derivado de los pronósticos existentes
+- **Cálculo dinámico**: Se recalcula al abrir el modal (no se almacena)
+
+#### Datos Requeridos
+
+- `AppState.scorePredictions`: Predicciones de marcadores del usuario `{ matchId: { home: number|null, away: number|null } }`
+- `AppState.matches`: Array de partidos con `{ id, homeTeamId, awayTeamId, ... }`
+- `AppState.teamsMap`: Mapa de equipos `{ teamId: { name, ext } }`
+- `data/imgEquipos/{id}.{ext}`: Imágenes de escudos de equipos
 
 ### 5.4. Plantilla Ideal (Nueva Especificación)
 

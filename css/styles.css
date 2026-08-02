@@ -1245,6 +1245,88 @@ html, body {
   transform: scale(0.9);
 }
 
+/* Filtros de búsqueda */
+.squad-filters-row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.squad-search-input-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.squad-search-input-row .squad-search-wrapper {
+  flex: 1;
+  min-width: 0;
+}
+
+.squad-hide-blocked-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  white-space: nowrap;
+  padding: 8px 10px;
+  background: var(--ucl-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  transition: all var(--transition-fast);
+  flex-shrink: 0;
+}
+
+.squad-hide-blocked-toggle:has(.squad-hide-blocked-checkbox:checked) {
+  border-color: var(--accent-cyan);
+  background: rgba(6, 182, 212, 0.15);
+}
+
+.squad-hide-blocked-checkbox {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent-cyan);
+  cursor: pointer;
+  margin: 0;
+}
+
+.squad-hide-blocked-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.squad-team-select {
+  width: 100%;
+  background: var(--ucl-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  color: var(--text-primary);
+  font-family: var(--font-family);
+  font-size: var(--font-size-base);
+  font-weight: 600;
+  outline: none;
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%2394a3b8' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10l-5 5z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  transition: border-color var(--transition-fast);
+}
+
+.squad-team-select:focus {
+  border-color: var(--accent-cyan);
+  box-shadow: 0 0 12px var(--accent-glow);
+}
+
+.squad-team-select option {
+  background: var(--ucl-surface);
+  color: var(--text-primary);
+}
+
 /* Busqueda */
 .squad-search-wrapper {
   position: relative;
@@ -1480,6 +1562,7 @@ html, body {
   background: var(--ucl-surface);
   position: relative;
   min-height: 70px;
+  min-width: 0;
 }
 
 .squad-slot.empty:hover {
@@ -1803,8 +1886,24 @@ html, body {
 }
 
 .match-card-round-pending {
-  background: rgba(16, 185, 129, 0.1);
-  border-color: rgba(16, 185, 129, 0.25);
+  background: rgba(100, 116, 139, 0.1);
+  border-color: rgba(100, 116, 139, 0.3);
+  opacity: 0.7;
+}
+
+.match-card-round-done {
+  background: rgba(34, 197, 94, 0.2);
+  border-color: rgba(34, 197, 94, 0.6);
+  box-shadow: 0 0 15px rgba(34, 197, 94, 0.2);
+  opacity: 1;
+}
+
+.match-done-check {
+  color: #22c55e;
+  font-weight: 900;
+  font-size: 13px;
+  margin-left: 6px;
+  text-shadow: 0 0 8px rgba(34, 197, 94, 0.6);
 }
 
 .match-card-round-date {
@@ -1821,21 +1920,21 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: 4px;
 }
 
 .match-card-round-team {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   flex: 1;
   min-width: 0;
 }
 
 .match-card-round-badge {
-  width: 44px;
-  height: 44px;
+  width: 36px;
+  height: 36px;
   background: var(--ucl-surface);
   border-radius: var(--radius-sm);
   display: flex;
@@ -1855,14 +1954,11 @@ html, body {
   font-weight: 700;
   text-align: center;
   line-height: 1.2;
-  height: 2.4em;
+  height: 2.6em;
   overflow: hidden;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
   max-width: 100%;
 }
 
@@ -1870,7 +1966,7 @@ html, body {
 .match-card-round-controls {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   flex-shrink: 0;
 }
 
@@ -1888,10 +1984,10 @@ html, body {
   background: transparent;
   border: none;
   color: var(--text-primary);
-  font-size: 1.1rem;
+  font-size: 1rem;
   font-weight: 900;
-  width: 32px;
-  height: 36px;
+  width: 28px;
+  height: 32px;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -1906,10 +2002,10 @@ html, body {
 }
 
 .goals-value-round {
-  font-size: 1.1rem;
+  font-size: 1rem;
   font-weight: 900;
   color: var(--text-primary);
-  min-width: 28px;
+  min-width: 24px;
   text-align: center;
   line-height: 1;
   padding: 0 2px;
@@ -2040,4 +2136,230 @@ html, body {
   background: var(--ucl-surface);
   border: 1px solid var(--border-color);
   color: var(--text-secondary);
+}
+
+/* ==========================================
+   CLASIFICACIÓN PRONOSTICADA
+   ========================================== */
+
+/* Botón de volver */
+.back-btn {
+  background: var(--ucl-surface);
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  border-radius: var(--radius-md);
+  padding: 8px 12px;
+  font-family: var(--font-family);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  margin-right: 8px;
+}
+
+.back-btn:active {
+  transform: scale(0.95);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* Barra de progreso */
+.standings-progress {
+  margin-bottom: 8px;
+}
+
+.standings-progress-text {
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+  text-align: center;
+}
+
+.standings-progress-bar {
+  height: 8px;
+  background: var(--ucl-surface);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.standings-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent-primary), var(--accent-cyan));
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+#tab-pred-standings {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+#tab-pred-standings .section-header {
+  flex-shrink: 0;
+}
+
+#pred-standings-container {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 12px;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Tabla de clasificación */
+.standings-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+}
+
+.standings-table thead {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.standings-table th {
+  background: var(--ucl-surface);
+  color: var(--text-secondary);
+  font-weight: 600;
+  padding: 6px 4px;
+  text-align: center;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.standings-table th:nth-child(3) {
+  text-align: left;
+}
+
+.standings-table td {
+  padding: 8px 4px;
+  text-align: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  color: var(--text-primary);
+  vertical-align: middle;
+}
+
+.standings-table td:nth-child(3) {
+  text-align: left;
+  font-weight: 600;
+}
+
+.standings-table tbody tr:nth-child(even) {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.standings-table tbody tr:active {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+/* Posiciones de los 8 primeros (clasificados) */
+.standings-table tbody tr.top-8 td:first-child {
+  color: var(--accent-primary);
+  font-weight: 800;
+}
+
+/* Posiciones 9-24 (playoffs) */
+.standings-table tbody tr.top-24 td:first-child {
+  color: var(--accent-cyan);
+  font-weight: 700;
+}
+
+/* Posiciones 25-36 (eliminados) */
+.standings-table tbody tr.bottom-12 td:first-child {
+  color: var(--text-muted);
+}
+
+.standings-badge-img {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+  border-radius: 2px;
+}
+
+.standings-team-name {
+  font-size: 11px;
+  line-height: 1.2;
+}
+
+/* Columnas numéricas compactas */
+.standings-table td.pts-col {
+  font-weight: 800;
+  color: var(--accent-primary);
+}
+
+.standings-table td.gd-col {
+  font-weight: 600;
+}
+
+.standings-table td.gd-positive {
+  color: #10b981;
+}
+
+.standings-table td.gd-negative {
+  color: #ef4444;
+}
+
+.standings-table td.gd-zero {
+  color: var(--text-muted);
+}
+
+/* Columna de criterio de desempate */
+.standings-table td.criterion-col {
+  font-weight: 700;
+  color: var(--accent-cyan);
+  font-size: 10px;
+}
+
+/* Pie de tabla - leyenda */
+.standings-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  justify-content: center;
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-color);
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.standings-legend span {
+  white-space: nowrap;
+}
+
+/* Botón de clasificación en pronósticos */
+.pronosticos-actions-row {
+  display: flex;
+  gap: 8px;
+}
+
+.pronosticos-actions-row .save-predictions-btn {
+  flex: 1;
+}
+
+.standings-btn {
+  flex: 0 0 auto;
+  background: linear-gradient(135deg, #8B5CF6 0%, #6366F1 50%, #3B82F6 100%);
+  border: none;
+  color: #fff;
+  border-radius: var(--radius-md);
+  padding: 14px;
+  font-family: var(--font-family);
+  font-size: var(--font-size-base);
+  font-weight: 700;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(139, 92, 246, 0.3);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  margin-bottom: 12px;
+}
+
+.standings-btn:active {
+  transform: scale(0.95);
+  box-shadow: 0 1px 4px rgba(139, 92, 246, 0.2);
 }

@@ -29,6 +29,8 @@ const AppState = {
   hasUnsavedChanges: false, // flag de cambios sin guardar en predicciones
   hasUnsavedSquadChanges: false, // flag de cambios sin guardar en plantilla
   activeSlot: null,     // { position: 'G', index: 0 } - casilla activa para búsqueda
+  teamFilter: null,     // filtro de equipo activo en búsqueda
+  hideBlocked: false,   // ocultar jugadores de equipos bloqueados
   savedSquadSnapshot: [], // snapshot de plantilla al guardar para comparar
 };
 
@@ -232,11 +234,13 @@ function teamName(teamId) {
 }
 
 /** Filtro de jugadores por texto y posición activa */
-function filterPlayers(query, selectedIds, positionFilter) {
+function filterPlayers(query, selectedIds, positionFilter, teamFilter, hideBlocked) {
   const q = query.toLowerCase().trim();
   return AppState.allPlayers.filter(p => {
     if (selectedIds.has(p.id)) return false;
     if (positionFilter && p.posicion !== positionFilter) return false;
+    if (teamFilter && p.equipo !== parseInt(teamFilter)) return false;
+    if (hideBlocked && AppState.blockedTeams.has(p.equipo)) return false;
     if (q && !p.nombre.toLowerCase().includes(q)) return false;
     return true;
   });
@@ -979,7 +983,10 @@ function renderPronosticosTab() {
 
   container.innerHTML = `
     <div class="pronosticos-top-fixed">
-      <button class="save-predictions-btn" id="btn-save-predictions" disabled>💾 Guardar en servidor</button>
+      <div class="pronosticos-actions-row">
+        <button class="save-predictions-btn" id="btn-save-predictions" disabled>💾 Guardar en servidor</button>
+        <button class="standings-btn" id="btn-show-standings" onclick="showPredictedStandings()">📊 Ver Clasificación</button>
+      </div>
       <div class="wizard-progress-bar">
         <div class="wizard-progress-fill" style="width: ${pct}%"></div>
       </div>
@@ -1050,12 +1057,17 @@ function renderRoundMatches() {
     const pred = AppState.scorePredictions[match.id];
     const homeDisplay = (pred && typeof pred.home === 'number') ? pred.home : '-';
     const awayDisplay = (pred && typeof pred.away === 'number') ? pred.away : '-';
-    const cardClass = (pred && typeof pred.home === 'number' && typeof pred.away === 'number')
-      ? 'match-card-round' : 'match-card-round match-card-round-pending';
+    const isComplete = pred && typeof pred.home === 'number' && typeof pred.away === 'number';
+    const cardClass = isComplete
+      ? 'match-card-round match-card-round-done'
+      : 'match-card-round match-card-round-pending';
+    const checkIcon = isComplete
+      ? '<span class="match-done-check">✓</span>'
+      : '';
 
     return `
       <div class="${cardClass}" data-match-id="${match.id}">
-        <p class="match-card-round-date">${match.fecha}</p>
+        <p class="match-card-round-date">${match.fecha}${checkIcon}</p>
         <div class="match-card-round-teams">
           <div class="match-card-round-team">
             <div class="match-card-round-badge">
@@ -1217,6 +1229,8 @@ function openSlotSearch(position, index) {
   if (posCount >= maxCount) return;
 
   AppState.activeSlot = { position, index };
+  AppState.teamFilter = null;
+  AppState.hideBlocked = false;
   const panel = document.getElementById('squad-search-panel');
   if (panel) {
     panel.classList.add('active');
@@ -1225,6 +1239,7 @@ function openSlotSearch(position, index) {
       input.value = '';
       input.focus();
     }
+    renderTeamFilter();
     renderSearchResults('');
   }
 }
@@ -1236,6 +1251,43 @@ function closeSlotSearch() {
   if (panel) panel.classList.remove('active');
 }
 
+/** Renderiza el filtro de equipos disponible (equipos sin jugador seleccionado) */
+function renderTeamFilter() {
+  const container = document.getElementById('squad-team-filter');
+  if (!container) return;
+
+  const positionFilter = AppState.activeSlot?.position || null;
+  const availableTeams = new Set();
+
+  AppState.allPlayers.forEach(p => {
+    if (positionFilter && p.posicion !== positionFilter) return;
+    if (AppState.blockedTeams.has(p.equipo)) return;
+    availableTeams.add(p.equipo);
+  });
+
+  if (availableTeams.size === 0) {
+    container.innerHTML = '';
+    return;
+  }
+
+  const sortedTeams = [...availableTeams]
+    .map(id => ({ id, name: AppState.teamsMap[id]?.name || `Equipo ${id}` }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+
+  container.innerHTML = `
+    <select class="squad-team-select" id="squad-team-select">
+      <option value="">Todos los equipos (${sortedTeams.length})</option>
+      ${sortedTeams.map(t => `<option value="${t.id}">${t.name}</option>`).join('')}
+    </select>
+  `;
+
+  document.getElementById('squad-team-select')?.addEventListener('change', (e) => {
+    AppState.teamFilter = e.target.value || null;
+    const input = document.getElementById('squad-search-input');
+    renderSearchResults(input?.value || '');
+  });
+}
+
 /** Renderiza los resultados de búsqueda filtrados por posición activa */
 function renderSearchResults(query) {
   const results = document.getElementById('squad-search-results');
@@ -1243,7 +1295,9 @@ function renderSearchResults(query) {
 
   const selectedIds = new Set(AppState.squadPicks.map(p => p.id));
   const positionFilter = AppState.activeSlot?.position || null;
-  const players = filterPlayers(query, selectedIds, positionFilter);
+  const teamFilter = AppState.teamFilter || null;
+  const hideBlocked = AppState.hideBlocked;
+  const players = filterPlayers(query, selectedIds, positionFilter, teamFilter, hideBlocked);
 
   if (players.length === 0) {
     results.innerHTML = '<p class="squad-no-results">No se encontraron jugadores</p>';
@@ -1395,9 +1449,18 @@ function renderPlantillaTab() {
           <h3 class="squad-search-panel-title" id="squad-search-panel-title">Buscar jugador</h3>
           <button class="squad-search-panel-close" id="btn-close-search">&times;</button>
         </div>
-        <div class="squad-search-wrapper">
-          <input type="text" class="squad-search-input" id="squad-search-input"
-                 placeholder="Buscar por nombre..." autocomplete="off" spellcheck="false">
+        <div class="squad-filters-row">
+          <div class="squad-team-filter" id="squad-team-filter"></div>
+          <div class="squad-search-input-row">
+            <div class="squad-search-wrapper">
+              <input type="text" class="squad-search-input" id="squad-search-input"
+                     placeholder="Buscar por nombre..." autocomplete="off" spellcheck="false">
+            </div>
+            <label class="squad-hide-blocked-toggle">
+              <input type="checkbox" id="squad-hide-blocked" class="squad-hide-blocked-checkbox">
+              <span class="squad-hide-blocked-label">No mostrar usados</span>
+            </label>
+          </div>
         </div>
         <div class="squad-players-list" id="squad-search-results"></div>
       </div>
@@ -1430,6 +1493,13 @@ function renderPlantillaTab() {
   const searchInput = document.getElementById('squad-search-input');
   searchInput?.addEventListener('input', () => {
     renderSearchResults(searchInput.value);
+  });
+
+  // Checkbox ocultar bloqueados
+  const hideBlockedCheck = document.getElementById('squad-hide-blocked');
+  hideBlockedCheck?.addEventListener('change', (e) => {
+    AppState.hideBlocked = e.target.checked;
+    renderSearchResults(searchInput?.value || '');
   });
 
   // Seleccionar jugador de la lista
@@ -1638,4 +1708,342 @@ function showToast(message) {
     toast.style.transform = 'translateX(-50%) translateY(20px)';
     setTimeout(() => toast.remove(), 300);
   }, 2800);
+}
+
+// ============================================================
+// CLASIFICACIÓN PRONOSTICADA
+// ============================================================
+
+/**
+ * Busca todos los partidos donde participa un equipo (local o visitante)
+ * @param {number} teamId - ID del equipo
+ * @returns {Array} Array de partidos del equipo
+ */
+function findTeamMatches(teamId) {
+  return AppState.matches.filter(m => m.homeTeamId === teamId || m.awayTeamId === teamId);
+}
+
+/**
+ * Calcula estadísticas individuales de un equipo
+ * @param {number} teamId - ID del equipo
+ * @returns {Object} Estadísticas del equipo
+ */
+function getTeamStats(teamId) {
+  const stats = {
+    teamId,
+    played: 0,
+    wins: 0,
+    draws: 0,
+    losses: 0,
+    gf: 0,
+    gc: 0,
+    gd: 0,
+    points: 0,
+    awayWins: 0,
+    awayGoals: 0
+  };
+
+  const teamMatches = findTeamMatches(teamId);
+
+  for (const match of teamMatches) {
+    const pred = AppState.scorePredictions[match.id];
+    if (!pred || typeof pred.home !== 'number' || typeof pred.away !== 'number') continue;
+
+    const isHome = match.homeTeamId === teamId;
+    const teamGoals = isHome ? pred.home : pred.away;
+    const rivalGoals = isHome ? pred.away : pred.home;
+
+    stats.played++;
+    stats.gf += teamGoals;
+    stats.gc += rivalGoals;
+
+    if (teamGoals > rivalGoals) {
+      stats.wins++;
+      stats.points += 3;
+      if (!isHome) stats.awayWins++;
+    } else if (teamGoals === rivalGoals) {
+      stats.draws++;
+      stats.points += 1;
+    } else {
+      stats.losses++;
+    }
+
+    if (!isHome) {
+      stats.awayGoals += teamGoals;
+    }
+  }
+
+  stats.gd = stats.gf - stats.gc;
+  return stats;
+}
+
+/**
+ * Calcula las estadísticas acumuladas de los 8 rivales de un equipo
+ * en TODOS sus partidos de la fase de liga (no solo contra el equipo en cuestión)
+ * @param {number} teamId - ID del equipo
+ * @param {Map} statsCache - Caché de estadísticas { teamId → stats }
+ * @returns {Object} { rivalPointsSum, rivalGDSum, rivalGFSum }
+ */
+function getRivalsStats(teamId, statsCache) {
+  const teamMatches = findTeamMatches(teamId);
+  const rivalIds = new Set();
+
+  for (const match of teamMatches) {
+    const rivalId = match.homeTeamId === teamId ? match.awayTeamId : match.homeTeamId;
+    rivalIds.add(rivalId);
+  }
+
+  let rivalPointsSum = 0;
+  let rivalGDSum = 0;
+  let rivalGFSum = 0;
+
+  for (const rivalId of rivalIds) {
+    let rivalStats = statsCache.get(rivalId);
+    if (!rivalStats) {
+      rivalStats = getTeamStats(rivalId);
+      statsCache.set(rivalId, rivalStats);
+    }
+    rivalPointsSum += rivalStats.points;
+    rivalGDSum += rivalStats.gd;
+    rivalGFSum += rivalStats.gf;
+  }
+
+  return { rivalPointsSum, rivalGDSum, rivalGFSum };
+}
+
+/**
+ * Ordena array de equipos aplicando criterios de desempate UCL
+ * Los criterios de desempate solo se aplican cuando es necesario
+ * @param {Array} teams - Array de objetos de equipo con stats
+ * @returns {Array} Array ordenado
+ */
+function sortTeams(teams) {
+  if (teams.length <= 1) return teams;
+
+  // Caché de stats para no recalcular
+  const statsCache = new Map();
+  for (const t of teams) {
+    statsCache.set(t.teamId, t);
+  }
+
+  // Función de comparación con criterios de desempate
+  function compareTeams(a, b) {
+    // Criterio 0: Puntos (primero, siempre)
+    if (b.points !== a.points) return b.points - a.points;
+
+    // Criterio 1: Diferencia de goles
+    if (b.gd !== a.gd) return b.gd - a.gd;
+
+    // Criterio 2: Goles marcados
+    if (b.gf !== a.gf) return b.gf - a.gf;
+
+    // Criterio 3: Goles como visitante
+    if (b.awayGoals !== a.awayGoals) return b.awayGoals - a.awayGoals;
+
+    // Criterio 4: Victorias
+    if (b.wins !== a.wins) return b.wins - a.wins;
+
+    // Criterio 5: Victorias como visitante
+    if (b.awayWins !== a.awayWins) return b.awayWins - a.awayWins;
+
+    // Criterios 6-8: Estadísticas de rivales (más costosos)
+    // Solo se calculan si hay empate persistente
+    const aRivals = getRivalsStats(a.teamId, statsCache);
+    const bRivals = getRivalsStats(b.teamId, statsCache);
+
+    // Criterio 6: Suma de puntos de rivales
+    if (bRivals.rivalPointsSum !== aRivals.rivalPointsSum) {
+      return bRivals.rivalPointsSum - aRivals.rivalPointsSum;
+    }
+
+    // Criterio 7: Suma de diferencia de goles de rivales
+    if (bRivals.rivalGDSum !== aRivals.rivalGDSum) {
+      return bRivals.rivalGDSum - aRivals.rivalGDSum;
+    }
+
+    // Criterio 8: Suma de goles marcados por rivales
+    if (bRivals.rivalGFSum !== aRivals.rivalGFSum) {
+      return bRivals.rivalGFSum - aRivals.rivalGFSum;
+    }
+
+    // Si todo es igual, ordenar por nombre (estable)
+    const aName = AppState.teamsMap[a.teamId]?.name || '';
+    const bName = AppState.teamsMap[b.teamId]?.name || '';
+    return aName.localeCompare(bName);
+  }
+
+  return [...teams].sort(compareTeams);
+}
+
+/**
+ * Determina qué criterio de desempate separa a dos equipos empatados
+ * @param {Object} a - Primer equipo
+ * @param {Object} b - Segundo equipo
+ * @param {Map} statsCache - Caché de estadísticas
+ * @returns {number|null} Número de criterio (1-8) o null si no están empatados
+ */
+function getTiebreakCriterion(a, b, statsCache) {
+  // Si no están empatados en puntos, no hay criterio
+  if (a.points !== b.points) return null;
+
+  // Criterio 1: Diferencia de goles
+  if (a.gd !== b.gd) return 1;
+
+  // Criterio 2: Goles marcados
+  if (a.gf !== b.gf) return 2;
+
+  // Criterio 3: Goles como visitante
+  if (a.awayGoals !== b.awayGoals) return 3;
+
+  // Criterio 4: Victorias
+  if (a.wins !== b.wins) return 4;
+
+  // Criterio 5: Victorias como visitante
+  if (a.awayWins !== b.awayWins) return 5;
+
+  // Criterios 6-8
+  const aRivals = getRivalsStats(a.teamId, statsCache);
+  const bRivals = getRivalsStats(b.teamId, statsCache);
+
+  if (aRivals.rivalPointsSum !== bRivals.rivalPointsSum) return 6;
+  if (aRivals.rivalGDSum !== bRivals.rivalGDSum) return 7;
+  if (aRivals.rivalGFSum !== bRivals.rivalGFSum) return 8;
+
+  return null; // Totalmente iguales
+}
+
+/**
+ * Calcula la clasificación completa de los 36 equipos
+ * @returns {Array} Array ordenado de equipos con estadísticas, posición y criterio
+ */
+function calculateStandings() {
+  const teamIds = Object.keys(AppState.teamsMap).map(Number);
+  const teams = [];
+  const statsCache = new Map();
+
+  for (const teamId of teamIds) {
+    const stats = getTeamStats(teamId);
+    const teamInfo = AppState.teamsMap[teamId];
+    teams.push({
+      ...stats,
+      name: teamInfo?.name || 'Desconocido',
+      badgeExt: teamInfo?.ext || 'png'
+    });
+    statsCache.set(teamId, stats);
+  }
+
+  const sorted = sortTeams(teams);
+
+  // Asignar posición y criterio de desempate
+  return sorted.map((team, index) => {
+    let criterion = null;
+
+    // Si hay un equipo anterior con mismos puntos, buscar qué criterio los separó
+    if (index > 0) {
+      const prevTeam = sorted[index - 1];
+      if (prevTeam.points === team.points) {
+        // Buscar el criterio entre este equipo y el anterior
+        criterion = getTiebreakCriterion(prevTeam, team, statsCache);
+      }
+    }
+
+    return {
+      ...team,
+      position: index + 1,
+      criterion: criterion
+    };
+  });
+}
+
+/**
+ * Renderiza el contenido del modal de clasificación pronosticada
+ */
+function renderPredictedStandings() {
+  const container = document.getElementById('pred-standings-container');
+  if (!container) return;
+
+  const standings = calculateStandings();
+  const totalMatches = AppState.matches.length;
+  const predicted = countPredicted();
+  const pct = Math.round((predicted / totalMatches) * 100);
+
+  const rows = standings.map(team => {
+    const gdSign = team.gd > 0 ? '+' : '';
+    let rowClass = '';
+    if (team.position <= 8) rowClass = 'top-8';
+    else if (team.position <= 24) rowClass = 'top-24';
+    else rowClass = 'bottom-12';
+
+    let gdClass = 'gd-zero';
+    if (team.gd > 0) gdClass = 'gd-positive';
+    else if (team.gd < 0) gdClass = 'gd-negative';
+
+    const criterionDisplay = team.criterion !== null ? team.criterion : '-';
+
+    return `
+      <tr class="${rowClass}">
+        <td>${team.position}</td>
+        <td><img src="data/imgEquipos/${team.teamId}.${team.badgeExt}" class="standings-badge-img" alt="${team.name}" onerror="this.style.display='none'"></td>
+        <td><span class="standings-team-name">${team.name}</span></td>
+        <td class="pts-col">${team.points}</td>
+        <td class="gd-col ${gdClass}">${gdSign}${team.gd}</td>
+        <td>${team.gf}</td>
+        <td>${team.gc}</td>
+        <td>${team.wins}</td>
+        <td>${team.draws}</td>
+        <td>${team.losses}</td>
+        <td class="criterion-col">${criterionDisplay}</td>
+      </tr>
+    `;
+  }).join('');
+
+  container.innerHTML = `
+    <div class="standings-progress">
+      <p class="standings-progress-text">
+        Partidos pronosticados: <strong>${predicted}</strong>/${totalMatches}
+      </p>
+      <div class="standings-progress-bar">
+        <div class="standings-progress-fill" style="width: ${pct}%"></div>
+      </div>
+    </div>
+
+    <table class="standings-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th></th>
+          <th>Equipo</th>
+          <th>Pts</th>
+          <th>DG</th>
+          <th>GF</th>
+          <th>GC</th>
+          <th>V</th>
+          <th>E</th>
+          <th>D</th>
+          <th>Des.</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${rows}
+      </tbody>
+    </table>
+
+    <div class="standings-legend">
+      <span><strong>Pts</strong>=Puntos</span>
+      <span><strong>DG</strong>=Dif.Goles</span>
+      <span><strong>GF</strong>=Goles+</span>
+      <span><strong>GC</strong>=Goles-</span>
+      <span><strong>V</strong>=Victorias</span>
+      <span><strong>E</strong>=Empates</span>
+      <span><strong>D</strong>=Derrotas</span>
+    </div>
+  `;
+}
+
+/**
+ * Navega a la pantalla de clasificación pronosticada
+ */
+function showPredictedStandings() {
+  renderPredictedStandings();
+  navigateToTab('pred-standings');
 }
