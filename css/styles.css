@@ -2139,6 +2139,598 @@ html, body {
   color: var(--text-secondary);
 }
 
+/* ==========================================================================
+   DESGLOSE DE PUNTOS POR USUARIO (BREAKDOWN MODAL)
+   ========================================================================== */
+
+.breakdown-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 99999;
+  animation: fadeIn 0.2s ease;
+}
+
+.breakdown-modal {
+  background: var(--ucl-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  width: 90%;
+  max-width: 420px;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: modalPop 0.3s ease-out;
+}
+
+.breakdown-modal-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.breakdown-modal-back,
+.breakdown-modal-close {
+  background: var(--ucl-surface);
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: var(--font-size-lg);
+  transition: all var(--transition-fast);
+}
+
+.breakdown-modal-back:active,
+.breakdown-modal-close:active {
+  transform: scale(0.95);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.breakdown-modal-title {
+  flex: 1;
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.breakdown-modal-total {
+  padding: 16px;
+  text-align: center;
+  font-size: var(--font-size-xl);
+  color: var(--text-primary);
+  background: rgba(16, 185, 129, 0.1);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.breakdown-modal-total strong {
+  color: var(--accent-primary);
+  font-size: var(--font-size-2xl);
+}
+
+.breakdown-modal-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+}
+
+.breakdown-journey {
+  margin-bottom: 24px;
+}
+
+.breakdown-journey-title {
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  color: var(--accent-cyan);
+  margin-bottom: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.breakdown-match {
+  background: var(--ucl-surface);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+  margin-bottom: 8px;
+}
+
+.breakdown-match-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.breakdown-score {
+  color: var(--text-muted);
+  font-size: var(--font-size-xs);
+}
+
+.breakdown-points {
+  font-size: var(--font-size-xs);
+  padding: 6px 8px;
+  border-radius: var(--radius-sm);
+}
+
+.breakdown-points.has-points {
+  background: rgba(16, 185, 129, 0.15);
+  color: var(--accent-primary);
+}
+
+.breakdown-points.no-points {
+  background: rgba(100, 116, 139, 0.15);
+  color: var(--text-muted);
+}
+
+/* ==========================================================================
+   PERFIL DE USUARIO (MODAL CON TABS)
+   ========================================================================== */
+
+.profile-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.profile-tab {
+  flex: 1;
+  padding: 12px;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  border-bottom: 2px solid transparent;
+}
+
+.profile-tab.active {
+  color: var(--accent-primary);
+  border-bottom-color: var(--accent-primary);
+}
+
+.profile-tab:active {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.profile-total-points {
+  padding: 12px 16px;
+  text-align: center;
+  font-size: var(--font-size-lg);
+  color: var(--text-primary);
+  background: rgba(16, 185, 129, 0.1);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.profile-total-points strong {
+  color: var(--accent-primary);
+  font-size: var(--font-size-xl);
+}
+
+.profile-match {
+  background: var(--ucl-surface);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+  margin-bottom: 8px;
+}
+
+.profile-match-teams {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.profile-match-team {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--text-primary);
+  flex: 1;
+  min-width: 0;
+}
+
+.profile-match-team:last-child {
+  justify-content: flex-end;
+  text-align: right;
+}
+
+.profile-match-badge {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.profile-match-score {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.profile-score-pred {
+  color: var(--text-secondary);
+  padding: 2px 6px;
+  border-radius: var(--radius-xs);
+  background: var(--ucl-card);
+}
+
+.profile-score-pred.correct {
+  color: var(--accent-primary);
+  background: rgba(16, 185, 129, 0.2);
+}
+
+.profile-score-sep {
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.profile-match-real {
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+  text-align: center;
+  margin-bottom: 4px;
+}
+
+.profile-pending {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.profile-match-points {
+  font-size: var(--font-size-xs);
+  padding: 6px 8px;
+  border-radius: var(--radius-sm);
+  margin-top: 6px;
+}
+
+.profile-match-points.has-points {
+  background: rgba(16, 185, 129, 0.15);
+  color: var(--accent-primary);
+}
+
+.profile-match-points.no-points {
+  background: rgba(100, 116, 139, 0.15);
+  color: var(--text-muted);
+}
+
+.profile-squad-section {
+  margin-bottom: 20px;
+}
+
+.profile-squad-section-title {
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  color: var(--accent-cyan);
+  margin-bottom: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.profile-squad-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.profile-squad-card {
+  background: var(--ucl-surface);
+  border-radius: var(--radius-sm);
+  padding: 10px 6px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.profile-squad-img {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-full);
+  object-fit: cover;
+  background: var(--ucl-card);
+}
+
+.profile-squad-name {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+.profile-squad-club {
+  font-size: 10px;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+.profile-squad-pts {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--accent-primary);
+}
+
+/* ==========================================================================
+   RESULTADOS POR JORNADA
+   ========================================================================== */
+
+.resultados-journey {
+  margin-bottom: 24px;
+}
+
+.resultados-journey-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: var(--ucl-surface);
+  border-radius: var(--radius-md);
+  margin-bottom: 12px;
+}
+
+.resultados-journey-title {
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+  color: var(--accent-cyan);
+  margin: 0;
+}
+
+.resultados-journey-count {
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+}
+
+.resultados-match {
+  background: var(--ucl-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  margin-bottom: 12px;
+}
+
+.resultados-match-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.resultados-team {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  text-align: center;
+}
+
+.resultados-badge {
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+}
+
+.resultados-team-name {
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.2;
+}
+
+.resultados-score {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.resultados-goals {
+  font-size: var(--font-size-2xl);
+  font-weight: 800;
+  color: var(--text-primary);
+  min-width: 24px;
+  text-align: center;
+}
+
+.resultados-separator {
+  font-size: var(--font-size-xl);
+  color: var(--text-muted);
+}
+
+.resultados-players {
+  border-top: 1px solid var(--border-color);
+  padding-top: 12px;
+}
+
+.resultados-players-title {
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+
+.resultados-player {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-xs);
+  margin-bottom: 4px;
+}
+
+.resultados-player.has-points {
+  background: rgba(16, 185, 129, 0.1);
+}
+
+.resultados-player.no-points {
+  background: rgba(100, 116, 139, 0.1);
+}
+
+.resultados-player-name {
+  font-weight: 600;
+  color: var(--text-primary);
+  flex: 1;
+}
+
+.resultados-player-pred {
+  color: var(--text-secondary);
+  font-size: 12px;
+  min-width: 50px;
+  text-align: center;
+  margin: 0 8px;
+}
+
+.resultados-player-points {
+  font-weight: 700;
+  color: var(--accent-primary);
+  min-width: 40px;
+  text-align: right;
+}
+
+.resultados-player-breakdown {
+  color: var(--text-muted);
+  font-size: 10px;
+  flex: 2;
+}
+
+.resultados-squad-breakdown {
+  padding: 4px 8px 8px 32px;
+}
+
+.resultados-squad-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  padding: 2px 0;
+  color: var(--text-secondary);
+}
+
+.resultados-squad-name {
+  font-weight: 500;
+  min-width: 100px;
+}
+
+.resultados-squad-pts {
+  font-weight: 700;
+  min-width: 45px;
+  text-align: right;
+}
+
+.resultados-squad-pts.positive {
+  color: var(--accent-primary);
+}
+
+.resultados-squad-pts.negative {
+  color: #ef4444;
+}
+
+.resultados-squad-conceptos {
+  color: var(--text-muted);
+  font-size: 10px;
+}
+
+/* ==========================================
+   MODAL DESGLOSE PUNTOS JUGADOR
+   ========================================== */
+
+.player-breakdown-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  z-index: 100000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.breakdown-modal-subtitle {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: var(--font-size-xs);
+  padding: 4px 16px 8px;
+}
+
+.breakdown-match {
+  background: var(--ucl-surface);
+  border-radius: var(--radius-md);
+  padding: 12px;
+  margin-bottom: 8px;
+}
+
+.breakdown-match-title {
+  font-weight: 600;
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+
+.breakdown-item {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--font-size-xs);
+  padding: 2px 0;
+  color: var(--text-secondary);
+}
+
+.breakdown-item .positive {
+  color: var(--accent-primary);
+  font-weight: 600;
+}
+
+.breakdown-item .negative {
+  color: #ef4444;
+  font-weight: 600;
+}
+
+.breakdown-match-total {
+  text-align: right;
+  font-size: var(--font-size-xs);
+  color: var(--text-primary);
+  padding-top: 6px;
+  border-top: 1px solid var(--border-color);
+  margin-top: 6px;
+}
+
+.breakdown-modal-footer {
+  text-align: center;
+  padding: 12px 16px;
+  border-top: 1px solid var(--border-color);
+  color: var(--text-primary);
+  font-size: var(--font-size-sm);
+}
+
 /* ==========================================
    CLASIFICACIÓN PRONOSTICADA
    ========================================== */
@@ -2257,19 +2849,37 @@ html, body {
   background: rgba(255, 255, 255, 0.05);
 }
 
-/* Posiciones de los 8 primeros (clasificados) */
+/* Posiciones 1-8 (clasificación directa) */
+.standings-table tbody tr.top-8 {
+  background: rgba(16, 185, 129, 0.25) !important;
+}
+.standings-table tbody tr.top-8:hover {
+  background: rgba(16, 185, 129, 0.35) !important;
+}
 .standings-table tbody tr.top-8 td:first-child {
   color: var(--accent-primary);
   font-weight: 800;
 }
 
 /* Posiciones 9-24 (playoffs) */
+.standings-table tbody tr.top-24 {
+  background: rgba(34, 211, 238, 0.18) !important;
+}
+.standings-table tbody tr.top-24:hover {
+  background: rgba(34, 211, 238, 0.28) !important;
+}
 .standings-table tbody tr.top-24 td:first-child {
   color: var(--accent-cyan);
   font-weight: 700;
 }
 
 /* Posiciones 25-36 (eliminados) */
+.standings-table tbody tr.bottom-12 {
+  background: rgba(100, 116, 139, 0.15) !important;
+}
+.standings-table tbody tr.bottom-12:hover {
+  background: rgba(100, 116, 139, 0.25) !important;
+}
 .standings-table tbody tr.bottom-12 td:first-child {
   color: var(--text-muted);
 }
@@ -2330,6 +2940,36 @@ html, body {
 
 .standings-legend span {
   white-space: nowrap;
+}
+
+.standings-color-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  justify-content: center;
+  margin-top: 8px;
+  font-size: 10px;
+}
+
+.standings-color-item {
+  padding: 3px 8px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+.standings-color-item.top-8 {
+  background: rgba(16, 185, 129, 0.2);
+  color: var(--accent-primary);
+}
+
+.standings-color-item.top-24 {
+  background: rgba(34, 211, 238, 0.15);
+  color: var(--accent-cyan);
+}
+
+.standings-color-item.bottom-12 {
+  background: rgba(100, 116, 139, 0.15);
+  color: var(--text-muted);
 }
 
 /* Botón de clasificación en pronósticos */

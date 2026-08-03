@@ -69,6 +69,37 @@ Adicionalmente a la puntuación de los partidos, al finalizar la fase de liga se
 
 > Ejemplo: Si se ha pronosticado que un equipo acaba en la posición 7 y finalmente acaba en la posición 3, solo se recibirán los puntos de la posición 7 (21 puntos). Si el equipo acaba en la posición 12, solo se recibirán los puntos de la posición 12 (13 puntos).
 
+#### Puntuación de la Plantilla Ideal
+
+Se seleccionará una plantilla compuesta por un total de 25 jugadores formada por 3 porteros, 8 defensas, 8 centrocampistas y 6 delanteros. En la plantilla no podrá haber más de un jugador del mismo club.
+
+Los jugadores seleccionados recibirán puntos a lo largo de la competición de acuerdo con los siguientes criterios:
+
+##### Puntuación Sofascore
+
+Puntuación obtenida en cada partido según la aplicación Sofascore. 6 puntos Sofascore equivalen a 0 puntos. Si la puntuación Sofascore es superior a 6, se obtiene 1 punto por cada 0,3 puntos Sofascore recibidos. La puntuación máxima en Sofascore es de 10 puntos, por lo que el número máximo de puntos que se podrán recibir será de 13. En el caso de que la puntuación Sofascore sea inferior a 6, la puntuación recibida por el jugador será negativa. Hasta 5,7 puntos Sofascore el jugador recibirá un punto negativo (-1). Por debajo de ese valor, por cada 0,3 puntos Sofascore menos, el jugador recibirá un punto negativo adicional.
+
+##### Puntuación por goles marcados
+
+Por cada gol marcado en un partido el jugador recibirá 1 punto adicional. Dependiendo de su demarcación obtendrá puntos adicionales del siguiente modo:
+
+| Demarcación | Puntos adicionales por gol |
+|-------------|---------------------------|
+| Delantero | +1 |
+| Centrocampista | +2 |
+| Defensa | +3 |
+| Portero | +4 |
+
+En el caso de que el gol se marque de penalti el jugador no recibe esta puntuación adicional por demarcación.
+
+##### Porteros (penaltis parados y goles recibidos)
+
+Esta puntuación aplica solo a los porteros. Los porteros recibirán una puntuación adicional negativa de 1 punto (-1) por cada gol recibido. En el caso de que el portero pare un penalti recibirá una puntuación adicional positiva de 3 puntos (+3).
+
+##### Puntuación por portería a cero
+
+Si al finalizar el partido el equipo no ha recibido goles, el portero recibirá una puntuación adicional positiva de 5 puntos (+5), y los defensas una puntuación adicional positiva de 2 puntos (+2), siempre y cuando en ambos casos hayan jugado más de 70 minutos.
+
 ---
 
 ## 2. Pautas Generales de Diseño (Mobile Vertical First)
@@ -245,7 +276,8 @@ La aplicación utiliza una estructura de navegación con:
 
 **Pestañas disponibles:**
 - `tab-inicio`: Pantalla de bienvenida con resumen de estado del usuario
-- `tab-clasificacion`: Tabla de clasificación general
+- `tab-clasificacion`: Tabla de clasificación general de usuarios (puntos reales)
+- `tab-resultados`: Resultados de partidos por jornada y puntos de usuarios
 - `tab-pronosticos`: Wizard de predicciones de partidos
 - `tab-plantilla`: Selección de plantilla ideal (25 jugadores: 3G, 8D, 8M, 6F)
 
@@ -434,6 +466,330 @@ No se añaden nuevas propiedades a `AppState`. La clasificación se calcula on-d
 - `AppState.matches`: Array de partidos con `{ id, homeTeamId, awayTeamId, ... }`
 - `AppState.teamsMap`: Mapa de equipos `{ teamId: { name, ext } }`
 - `data/imgEquipos/{id}.{ext}`: Imágenes de escudos de equipos
+
+### 5.3.2. Clasificación de Usuarios (Puntos Reales)
+
+#### Descripción
+
+Pestaña que muestra la clasificación de todos los participantes calculada con puntos reales obtenidos de las predicciones vs resultados reales almacenados en MongoDB (colección `matchstats`).
+
+#### Reglas de Puntuación
+
+Para cada partido con resultado disponible en `matchstats`, se calculan los puntos según las reglas de la sección 1.1:
+
+| Concepto | Puntos | Descripción |
+|----------|--------|-------------|
+| Acierto de resultado (V/E/D) | 8 | El pronóstico indica el mismo resultado que el real (victoria local, empate o victoria visitante) |
+| Acierto de goles del equipo local | 3 | Los goles pronosticados del equipo local coinciden con los reales |
+| Acierto de goles del equipo visitante | 3 | Los goles pronosticados del equipo visitante coinciden con los reales |
+| Acierto de goles de ambos equipos | 1 | Ambos goles (local y visitante) coinciden con los reales |
+| **Máximo por partido** | **15** | |
+
+#### Lógica de Cálculo
+
+```javascript
+// Para cada partido con resultado en matchstats:
+function calculateMatchPoints(prediction, matchStats, match) {
+  // prediction: { home: number, away: number } del usuario
+  // matchStats.stats: { teamId: { goles: number }, ... }
+  // match: { homeTeamId, awayTeamId, ... }
+  
+  const realHome = matchStats.stats[match.homeTeamId].goles;
+  const realAway = matchStats.stats[match.awayTeamId].goles;
+  
+  let points = 0;
+  let breakdown = [];
+  
+  // Acierto de resultado (V/E/D)
+  const predResult = getMatchResult(prediction.home, prediction.away);
+  const realResult = getMatchResult(realHome, realAway);
+  if (predResult === realResult) {
+    points += 8;
+    breakdown.push('8 por acertar resultado');
+  }
+  
+  // Acierto de goles local
+  if (prediction.home === realHome) {
+    points += 3;
+    breakdown.push('3 por goles local');
+  }
+  
+  // Acierto de goles visitante
+  if (prediction.away === realAway) {
+    points += 3;
+    breakdown.push('3 por goles visitante');
+  }
+  
+  // Acierto de ambos goles
+  if (prediction.home === realHome && prediction.away === realAway) {
+    points += 1;
+    breakdown.push('1 por ambos goles');
+  }
+  
+  return { points, breakdown };
+}
+
+function getMatchResult(homeGoals, awayGoals) {
+  if (homeGoals > awayGoals) return 'H'; // Home win
+  if (homeGoals < awayGoals) return 'A'; // Away win
+  return 'D'; // Draw
+}
+```
+
+#### Cálculo Total por Usuario
+
+```javascript
+function calculateUserTotalPoints(username, allMatchStats) {
+  const predictions = AppState.allPredictions[username]; // Todas las predicciones del usuario
+  let totalPoints = 0;
+  let matchDetails = [];
+  
+  for (const match of AppState.matches) {
+    const matchStats = allMatchStats.find(ms => ms.eventId === match.id);
+    if (!matchStats) continue; // Partido sin resultado aún
+    
+    const prediction = predictions?.[match.id];
+    if (!prediction || prediction.home === null || prediction.away === null) {
+      // Partido no pronosticado
+      matchDetails.push({
+        match,
+        points: 0,
+        breakdown: ['Partido no pronosticado']
+      });
+      continue;
+    }
+    
+    const { points, breakdown } = calculateMatchPoints(prediction, matchStats, match);
+    totalPoints += points;
+    matchDetails.push({ match, points, breakdown });
+  }
+  
+  return { totalPoints, matchDetails };
+}
+```
+
+#### Fuente de Datos
+
+- **Predicciones de todos los usuarios**: `GET /api/predictions/all` (nuevo endpoint necesario)
+- **Resultados de partidos**: `GET /api/match-stats` (nuevo endpoint necesario, devuelve todos los matchstats)
+- **Lista de usuarios**: `GET /api/players`
+
+#### Diseño de la Pantalla
+
+```
+┌─────────────────────────────────────────┐
+│  CLASIFICACIÓN                          │
+├─────────────────────────────────────────┤
+│  Partidos con resultado: 18/144         │
+│  ████████░░░░░░░░░░░░ 12.5%             │
+├─────────────────────────────────────────┤
+│  # │ Avatar │ Usuario      │ Puntos     │
+│  1 │  ⚽    │ juan123      │ 145 pts    │
+│  2 │  🏆    │ maria456     │ 132 pts    │
+│  3 │  🦁    │ pedro789     │ 128 pts    │
+│  ...                                    │
+├─────────────────────────────────────────┤
+│  Pulsar en usuario para ver desglose    │
+└─────────────────────────────────────────┘
+```
+
+#### Perfil de Usuario (Modal con 2 tabs)
+
+Al pulsar en un usuario se abre un modal con 2 pestañas: **Pronósticos** y **Plantilla**.
+
+##### Tab 1: Pronósticos
+
+Muestra todos los pronósticos del usuario vs resultados reales, agrupados por jornada.
+
+- Se muestran **todos los partidos pronosticados** por el usuario
+- Para partidos con resultado en matchstats, se muestra el resultado real y los puntos obtenidos
+- Para partidos sin resultado, se muestra "Pendiente"
+
+```
+┌─────────────────────────────────────────┐
+│  ← PERFIL: juan123               (X)   │
+├─────────────────────────────────────────┤
+│  [Pronósticos]  [Plantilla]             │
+├─────────────────────────────────────────┤
+│  JORNADA 1                              │
+│  ┌─────────────────────────────────┐    │
+│  │ Athletic Club                   │    │
+│  │ Pronóstico: 2 - 1               │    │
+│  │ Real:       0 - 2               │    │
+│  │ → 3 pts (3 por goles local)     │    │
+│  └─────────────────────────────────┘    │
+│  ┌─────────────────────────────────┐    │
+│  │ PSV Eindhoven                   │    │
+│  │ Pronóstico: 1 - 1               │    │
+│  │ Real:       1 - 1               │    │
+│  │ → 15 pts (8+3+3+1)             │    │
+│  └─────────────────────────────────┘    │
+│  ┌─────────────────────────────────┐    │
+│  │ Benfica                         │    │
+│  │ Pronóstico: 2 - 0               │    │
+│  │ Real:       ⏳ Pendiente         │    │
+│  └─────────────────────────────────┘    │
+├─────────────────────────────────────────┤
+│  Total: 48 pts                          │
+└─────────────────────────────────────────┘
+```
+
+##### Tab 2: Plantilla
+
+Muestra los 25 jugadores de la plantilla del usuario, agrupados por posición, con los puntos acumulados de cada jugador.
+
+**Posiciones**: Portero, Defensa, Centrocampista, Delantero (nombres completos).
+
+**Puntuación de jugadores**: Se calcula según las reglas de puntuación de la plantilla ideal definidas en la sección 1.1 (rating Sofascore, goles por demarcación, portería a cero, penaltis parados). Al pulsar sobre un jugador se muestra el desglose por partido.
+
+```
+┌─────────────────────────────────────────┐
+│  ← PERFIL: juan123               (X)   │
+├─────────────────────────────────────────┤
+│  [Pronósticos]  [Plantilla]             │
+├─────────────────────────────────────────┤
+│  PORTEROS                               │
+│  ┌─────┐ ┌─────┐ ┌─────┐              │
+│  │ foto│ │ foto│ │ foto│              │
+│  │ Don │ │ Cour│ │ Neuer│              │
+│  │ 14  │ │ 13  │ │ 14  │              │
+│  └─────┘ └─────┘ └─────┘              │
+│  DEFENSAS                               │
+│  ┌─────┐ ┌─────┐ ┌─────┐ ┌─────┐     │
+│  │ ... │ │ ... │ │ ... │ │ ... │     │
+│  └─────┘ └─────┘ └─────┘ └─────┘     │
+│  CENTROCAMPISTAS                        │
+│  ...                                    │
+│  DELANTEROS                             │
+│  ...                                    │
+├─────────────────────────────────────────┤
+│  Puntos totales plantilla: 181          │
+└─────────────────────────────────────────┘
+```
+
+#### Funciones JavaScript
+
+| Función | Responsabilidad |
+|---------|-----------------|
+| `fetchMatchStats()` | Obtiene todos los matchstats del backend y los almacena en `AppState.matchStats` |
+| `fetchAllPredictions()` | Obtiene las predicciones de todos los usuarios del backend |
+| `calculateMatchPoints(prediction, matchStats, match)` | Calcula puntos y desglose de predicciones para un partido individual |
+| `calculateUserTotalPoints(username)` | Calcula puntos totales de predicciones y desglose detallado para un usuario |
+| `calculatePlayerMatchPoints(playerData, squadPlayer, matchStat)` | Calcula puntos de un jugador de plantilla en un partido (rating, goles, portería a cero, penaltis) |
+| `calculateSquadPoints(squad, matchStats)` | Calcula puntos de toda la plantilla de un usuario con desglose por jugador y partido |
+| `renderClasificacionTab()` | Renderiza la pestaña de clasificación con puntos totales (predicciones + plantilla) |
+| `showUserProfileModal(username)` | Abre modal con 2 tabs: pronósticos y plantilla del usuario |
+| `showPlayerPointsBreakdown(detail)` | Abre modal con desglose de puntos de un jugador por partido |
+| `renderSquadTab(container, username)` | Renderiza la tab de plantilla con puntos calculados y desglose |
+| `getMatchResult(homeGoals, awayGoals)` | Devuelve 'H', 'A' o 'D' según el resultado del partido |
+
+#### Estado de la Aplicación
+
+```javascript
+AppState.matchStats = [];           // Array de todos los matchstats del backend
+AppState.allPredictions = {};       // { username: { matchId: { home, away } } }
+AppState.userPoints = {};           // { username: { totalPoints, matchDetails } }
+AppState.squadsCache = {};          // { username: squad[] } - caché de plantillas para resultados
+```
+
+#### Persistencia
+
+- **No requiere persistencia local**: Los datos se obtienen del backend
+- **Cálculo dinámico**: Se recalcula al abrir la pestaña o al recibir nuevos datos
+
+### 5.3.3. Resultados por Jornada (Nueva Especificación)
+
+#### Descripción
+
+Pestaña que muestra los resultados de los partidos jugados, agrupados por jornada, y debajo de cada jornada un desglose de los puntos obtenidos por cada jugador en esos partidos.
+
+#### Criterio de Visibilidad
+
+Solo se muestran las **jornadas que tengan al menos un partido con resultado** en `matchstats`. Las jornadas sin partidos disputados no se muestran.
+
+#### Diseño de la Pantalla
+
+```
+┌─────────────────────────────────────────┐
+│  RESULTADOS                             │
+├─────────────────────────────────────────┤
+│  JORNADA 1 (6 partidos)                 │
+├─────────────────────────────────────────┤
+│  Athletic Club  0 - 2  Arsenal          │
+│  ─────────────────────────────────────  │
+│  Puntos por jugador:                    │
+│  juan123: 11 pts (8 por acertar         │
+│           resultado, 3 por goles local) │
+│  maria456: 3 pts (3 por goles local)    │
+│  pedro789: 0 pts (Partido no            │
+│            pronosticado)                │
+│  ─────────────────────────────────────  │
+│  PSV  1 - 1  Royale Union               │
+│  ─────────────────────────────────────  │
+│  Puntos por jugador:                    │
+│  juan123: 8 pts (8 por acertar          │
+│           resultado)                    │
+│  maria456: 12 pts (8 por acertar        │
+│            resultado, 3 por goles       │
+│            local, 1 por ambos goles)    │
+│  pedro789: 0 pts (Partido no            │
+│            pronosticado)                │
+│  ...                                    │
+├─────────────────────────────────────────┤
+│  JORNADA 2 (6 partidos)                 │
+│  ...                                    │
+└─────────────────────────────────────────┘
+```
+
+#### Estructura de Datos
+
+```javascript
+// Datos procesados para renderizado
+AppState.resultsByJourney = [
+  {
+    journey: 'Jornada 1',
+    matches: [
+      {
+        match: { id: 14566909, homeTeam: 'Athletic Club', awayTeam: 'Arsenal', ... },
+        stats: { home: 0, away: 2 },
+        playerPoints: [
+          { username: 'juan123', points: 11, breakdown: ['8 por acertar resultado', '3 por goles local'] },
+          { username: 'maria456', points: 3, breakdown: ['3 por goles local'] },
+          { username: 'pedro789', points: 0, breakdown: ['Partido no pronosticado'] }
+        ]
+      },
+      // ... más partidos de la jornada
+    ]
+  },
+  // ... más jornadas
+];
+```
+
+#### Flujo de Datos
+
+1. **Obtener matchstats**: `GET /api/match-stats` → Array de todos los partidos con resultado
+2. **Obtener predicciones**: `GET /api/predictions/all` → Predicciones de todos los usuarios
+3. **Agrupar por jornada**: Usar `AppState.matches` para obtener la jornada de cada partido
+4. **Calcular puntos**: Para cada partido, calcular puntos de cada usuario
+5. **Renderizar**: Mostrar jornadas con partidos, partidos con resultado, puntos por usuario
+
+#### Funciones JavaScript
+
+| Función | Responsabilidad |
+|---------|-----------------|
+| `renderResultadosTab()` | Renderiza la pestaña completa de resultados |
+| `groupMatchesByJourney()` | Agrupa los partidos con resultado por jornada |
+| `renderJourneySection(journey)` | Renderiza una sección de jornada con sus partidos |
+| `renderMatchResult(match, stats)` | Renderiza el resultado de un partido |
+| `renderPlayerPointsForMatch(match, playerPoints)` | Renderiza los puntos de cada jugador para un partido |
+
+#### Diseño Visual
+
+- **Jornadas**: Encabezado con nombre de jornada y número de partidos disputados
+- **Partidos**: Tarjeta con equipos, escudos y marcador
+- **Puntos**: Lista debajo de cada partido con usuario, puntos y desglose
+- **Partidos no pronosticados**: Mostrar "Partido no pronosticado - 0 puntos"
+- **Colores**: Usar colores del sistema de diseño existente (verde para aciertos, gris para sin pronóstico)
 
 ### 5.4. Plantilla Ideal (Nueva Especificación)
 

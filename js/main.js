@@ -32,6 +32,11 @@ const AppState = {
   teamFilter: null,     // filtro de equipo activo en búsqueda
   hideBlocked: false,   // ocultar jugadores de equipos bloqueados
   savedSquadSnapshot: [], // snapshot de plantilla al guardar para comparar
+  matchStats: [],       // Array de todos los matchstats del backend
+  allPredictions: {},   // { username: { matchId: { home, away } } }
+  userPoints: {},       // { username: { totalPoints, matchDetails } }
+  squadsCache: {},      // { username: squad[] } - caché de plantillas para resultados
+  currentSquadDetails: [], // detalles de plantilla para modal de desglose
 };
 
 const SQUAD_SIZE = 25;
@@ -225,7 +230,8 @@ function teamImgTag(teamId, ext, alt, className) {
 /** Genera tag <img> para jugador con fallback a escudo del equipo */
 function playerImgTag(playerId, ext, teamId, teamExt, alt, className) {
   const cls = className ? ` class="${className}"` : '';
-  return `<img src="data/imgJugadores/${playerId}.${ext}" alt="${alt}"${cls} onerror="this.onerror=null;this.src='data/imgEquipos/${teamId}.${teamExt}'">`;
+  const fallbackExt = ext === 'png' ? 'webp' : 'png';
+  return `<img src="data/imgJugadores/${playerId}.${ext}" alt="${alt}"${cls} onerror="this.onerror=null;this.src='data/imgJugadores/${playerId}.${fallbackExt}';this.onerror=function(){this.onerror=null;this.src='data/imgEquipos/${teamId}.${teamExt}'}">`;
 }
 
 /** Devuelve el nombre de un equipo por su id */
@@ -244,6 +250,722 @@ function filterPlayers(query, selectedIds, positionFilter, teamFilter, hideBlock
     if (q && !p.nombre.toLowerCase().includes(q)) return false;
     return true;
   });
+}
+
+// ============================================================
+// FUNCIONES DE CALCULO DE PUNTOS
+// ============================================================
+
+/** Obtiene todos los matchstats del backend */
+async function fetchMatchStats() {
+  try {
+    const res = await fetch(`${API_BASE}/api/match-stats`);
+    const data = await res.json();
+    if (data.ok && data.matchStats) {
+      AppState.matchStats = data.matchStats;
+    }
+  } catch (e) {
+    console.error('Error cargando matchstats:', e);
+  }
+}
+
+/** Obtiene las predicciones de todos los usuarios del backend */
+async function fetchAllPredictions() {
+  try {
+    const res = await fetch(`${API_BASE}/api/predictions/all`);
+    const data = await res.json();
+    if (data.ok && data.predictions) {
+      AppState.allPredictions = data.predictions;
+    }
+  } catch (e) {
+    console.error('Error cargando todas las predicciones:', e);
+  }
+}
+
+/** Devuelve 'H', 'A' o 'D' según el resultado del partido */
+function getMatchResult(homeGoals, awayGoals) {
+  if (homeGoals > awayGoals) return 'H';
+  if (homeGoals < awayGoals) return 'A';
+  return 'D';
+}
+
+/** Calcula puntos y desglose para un partido individual */
+function calculateMatchPoints(prediction, matchStats, match) {
+  if (!matchStats || !matchStats.stats) {
+    return { points: 0, breakdown: ['Partido sin resultado'] };
+  }
+
+  const realHome = matchStats.stats[match.homeTeamId]?.goles;
+  const realAway = matchStats.stats[match.awayTeamId]?.goles;
+
+  if (realHome === undefined || realAway === undefined) {
+    return { points: 0, breakdown: ['Partido sin resultado'] };
+  }
+
+  if (!prediction || prediction.home === null || prediction.away === null) {
+    return { points: 0, breakdown: ['Partido no pronosticado'] };
+  }
+
+  let points = 0;
+  let breakdown = [];
+
+  // Acierto de resultado (V/E/D)
+  const predResult = getMatchResult(prediction.home, prediction.away);
+  const realResult = getMatchResult(realHome, realAway);
+  if (predResult === realResult) {
+    points += 8;
+    breakdown.push('8 por acertar resultado');
+  }
+
+  // Acierto de goles local
+  if (prediction.home === realHome) {
+    points += 3;
+    breakdown.push('3 por goles local');
+  }
+
+  // Acierto de goles visitante
+  if (prediction.away === realAway) {
+    points += 3;
+    breakdown.push('3 por goles visitante');
+  }
+
+  // Acierto de ambos goles (solo si acierta ambos individualmente)
+  if (prediction.home === realHome && prediction.away === realAway) {
+    points += 1;
+    breakdown.push('1 por ambos goles');
+  }
+
+  return { points, breakdown };
+}
+
+/** Calcula puntos totales y desglose detallado para un usuario */
+function calculateUserTotalPoints(username) {
+  const predictions = AppState.allPredictions[username] || {};
+  let totalPoints = 0;
+  let matchDetails = [];
+
+  for (const match of AppState.matches) {
+    const matchStats = AppState.matchStats.find(ms => ms.eventId === match.id);
+    if (!matchStats) continue;
+
+    const prediction = predictions[match.id];
+    const { points, breakdown } = calculateMatchPoints(prediction, matchStats, match);
+    totalPoints += points;
+    matchDetails.push({ match, points, breakdown });
+  }
+
+  return { totalPoints, matchDetails };
+}
+
+// ============================================================
+// CALCULO DE PUNTOS DE PLANTILLA IDEAL
+// ============================================================
+
+/** Calcula los puntos de un jugador en un partido específico */
+function calculatePlayerMatchPoints(playerData, squadPlayer, matchStat) {
+  // Si no jugó, 0 puntos
+  if (!playerData.minutos || playerData.minutos === 0) {
+    return { total: 0, desglose: [] };
+  }
+
+  let total = 0;
+  const desglose = [];
+
+  // 1. Puntuación Sofascore (rating -> puntos)
+  const rating = playerData.puntos || 0;
+  // Si el rating es 0, Sofascore no asignó puntuación (suplente con poco tiempo)
+  if (rating === 0) {
+    return { total: 0, desglose: [] };
+  }
+  let ratingPoints = 0;
+  if (rating >= 6) {
+    ratingPoints = Math.min(13, Math.floor((rating - 6) / 0.3));
+  } else if (rating >= 5.7) {
+    ratingPoints = -1;
+  } else {
+    ratingPoints = Math.max(-13, -1 + Math.floor((rating - 5.7) / 0.3));
+  }
+  if (ratingPoints !== 0) {
+    total += ratingPoints;
+    desglose.push({ concepto: `Rating Sofascore (${rating.toFixed(1)})`, puntos: ratingPoints });
+  }
+
+  // 2. Puntuación por goles marcados
+  const goles = playerData.goles || 0;
+  if (goles > 0) {
+    const pos = squadPlayer.posicion;
+    const bonusMap = { F: 1, M: 2, D: 3, G: 4 };
+    const penaltisMarcados = playerData.penaltiMarcado || 0;
+    const golesCampo = goles - penaltisMarcados;
+
+    for (let i = 0; i < goles; i++) {
+      total += 1;
+      desglose.push({ concepto: 'Gol marcado', puntos: 1 });
+    }
+
+    if (golesCampo > 0 && bonusMap[pos]) {
+      const bonusTotal = golesCampo * bonusMap[pos];
+      total += bonusTotal;
+      desglose.push({ concepto: `Bonus ${pos} por ${golesCampo} gol(es) de campo`, puntos: bonusTotal });
+    }
+  }
+
+  // 3. Porteros: goles recibidos y penaltis parados
+  if (squadPlayer.posicion === 'G') {
+    const golesRecibidos = playerData.golesRecibidos || 0;
+
+    if (golesRecibidos > 0) {
+      total -= golesRecibidos;
+      desglose.push({ concepto: `${golesRecibidos} gol(es) recibido(s)`, puntos: -golesRecibidos });
+    }
+
+    const penaltisParados = playerData.penaltiParado || 0;
+    if (penaltisParados > 0) {
+      const bonus = penaltisParados * 3;
+      total += bonus;
+      desglose.push({ concepto: `${penaltisParados} penalti(s) parado(s)`, puntos: bonus });
+    }
+  }
+
+  // 4. Portería a cero (G +5, D +2 si >70 min)
+  const equipoId = String(squadPlayer.equipo);
+  const rivalId = Object.keys(matchStat.stats || {}).find(id => id !== equipoId && id !== 'jugadores');
+  const golesEquipoRival = rivalId ? (matchStat.stats[rivalId]?.goles || 0) : 0;
+  const golesRecibidosPortero = squadPlayer.posicion === 'G' ? (playerData.golesRecibidos || 0) : golesEquipoRival;
+  if (golesRecibidosPortero === 0 && playerData.minutos > 70) {
+    if (squadPlayer.posicion === 'G') {
+      total += 5;
+      desglose.push({ concepto: 'Portería a cero', puntos: 5 });
+    } else if (squadPlayer.posicion === 'D') {
+      total += 2;
+      desglose.push({ concepto: 'Portería a cero', puntos: 2 });
+    }
+  }
+
+  return { total, desglose };
+}
+
+/** Calcula los puntos de TODA la plantilla de un usuario */
+function calculateSquadPoints(squad, matchStats) {
+  let totalPoints = 0;
+  const playerDetails = [];
+
+  for (const squadPlayer of squad) {
+    let jugadorTotal = 0;
+    const partidos = [];
+
+    for (const ms of matchStats) {
+      const jugadorData = ms.stats?.jugadores?.find(j => String(j.id) === String(squadPlayer.id));
+      if (!jugadorData) continue;
+
+      const { total, desglose } = calculatePlayerMatchPoints(jugadorData, squadPlayer, ms);
+      if (total !== 0 || desglose.length > 0) {
+        jugadorTotal += total;
+        partidos.push({ eventId: ms.eventId, puntos: total, desglose });
+      }
+    }
+
+    totalPoints += jugadorTotal;
+    playerDetails.push({
+      jugador: squadPlayer,
+      puntosTotal: jugadorTotal,
+      partidos
+    });
+  }
+
+  return { totalPoints, playerDetails };
+}
+
+/** Busca el nombre del partido (equipos) a partir de un eventId */
+function getMatchName(eventId) {
+  const match = AppState.matches.find(m => m.id === eventId);
+  if (!match) return `Partido ${eventId}`;
+  return `${match.homeTeam} vs ${match.awayTeam}`;
+}
+
+/** Renderiza la pestaña de clasificación con puntos reales */
+async function renderClasificacionTab() {
+  const container = document.getElementById('clasificacion-container');
+  if (!container) return;
+
+  // Siempre refrescar datos al entrar
+  container.innerHTML = `<div style="padding: 24px; text-align: center; color: var(--text-muted);">Cargando datos...</div>`;
+  await Promise.all([fetchPlayers(), fetchMatchStats(), fetchAllPredictions()]);
+
+  const players = AppState.players || [];
+
+  if (!players.length) {
+    container.innerHTML = `<div style="padding: 24px; text-align: center; color: var(--text-muted);">Cargando clasificación...</div>`;
+    return;
+  }
+
+  // Calcular puntos reales para cada usuario (predicciones + plantilla)
+  const playersWithPoints = await Promise.all(players.map(async p => {
+    const userData = calculateUserTotalPoints(p.name);
+    AppState.userPoints[p.name] = userData;
+
+    // Obtener plantilla y calcular puntos de plantilla
+    let squadPoints = 0;
+    try {
+      const res = await fetch(`${API_BASE}/api/squad?username=${encodeURIComponent(p.name)}`);
+      const data = await res.json();
+      if (data.ok && data.squad && data.squad.length) {
+        const { totalPoints } = calculateSquadPoints(data.squad, AppState.matchStats);
+        squadPoints = totalPoints;
+      }
+    } catch (e) { /* sin plantilla */ }
+
+    return {
+      ...p,
+      predictionPoints: userData.totalPoints,
+      squadPoints,
+      realPoints: userData.totalPoints + squadPoints
+    };
+  }));
+
+  // Ordenar por puntos descendente
+  playersWithPoints.sort((a, b) => b.realPoints - a.realPoints);
+
+  container.innerHTML = playersWithPoints.map((p, i) => {
+    const rank = i + 1;
+    const isMe = AppState.currentUser && p.name === AppState.currentUser.name;
+    const breakdownParts = [];
+    if (p.predictionPoints) breakdownParts.push(`${p.predictionPoints} pronósticos`);
+    if (p.squadPoints) breakdownParts.push(`${p.squadPoints} plantilla`);
+    const breakdownStr = breakdownParts.length ? ` (${breakdownParts.join(' + ')})` : '';
+    return `
+      <div class="leaderboard-row ${isMe ? 'current-user' : ''}" onclick="showUserProfileModal('${p.name}')">
+        <div class="rank-badge rank-${rank}">${rank}</div>
+        <div class="player-avatar">${p.avatar}</div>
+        <div class="player-info">
+          <div class="player-name">${p.name}${isMe ? ' <span style="color:var(--accent-primary)">(Tu)</span>' : ''}</div>
+          <div class="player-breakdown" style="font-size:10px;color:var(--text-muted)">${breakdownStr}</div>
+        </div>
+        <div class="player-points">${p.realPoints} <span style="font-size:10px;color:var(--text-muted)">pts</span></div>
+      </div>
+    `;
+  }).join('');
+}
+
+/** Renderiza la tab de pronósticos en el modal de perfil */
+function showUserProfileModal(username) {
+  const existing = document.querySelector('.breakdown-modal-overlay');
+  if (existing) existing.remove();
+
+  const userData = AppState.userPoints[username];
+  if (!userData) {
+    showToast('Cargando datos del usuario...');
+    return;
+  }
+
+  const overlay = document.createElement('div');
+  overlay.className = 'breakdown-modal-overlay';
+
+  overlay.innerHTML = `
+    <div class="breakdown-modal">
+      <div class="breakdown-modal-header">
+        <button class="breakdown-modal-back" id="breakdown-close">←</button>
+        <h3 class="breakdown-modal-title">${username}</h3>
+        <button class="breakdown-modal-close" id="breakdown-close-x">✕</button>
+      </div>
+      <div class="profile-tabs">
+        <button class="profile-tab active" data-tab="predictions">Pronósticos</button>
+        <button class="profile-tab" data-tab="squad">Plantilla</button>
+      </div>
+      <div class="breakdown-modal-content" id="profile-tab-content">
+        <div style="padding: 24px; text-align: center; color: var(--text-muted);">Cargando...</div>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+
+  const closeModal = () => overlay.remove();
+  overlay.querySelector('#breakdown-close').addEventListener('click', closeModal);
+  overlay.querySelector('#breakdown-close-x').addEventListener('click', closeModal);
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) closeModal();
+  });
+
+  const tabContent = overlay.querySelector('#profile-tab-content');
+  const tabs = overlay.querySelectorAll('.profile-tab');
+
+  function activateTab(tabName) {
+    tabs.forEach(t => t.classList.toggle('active', t.dataset.tab === tabName));
+    if (tabName === 'predictions') renderPredictionsTab(tabContent, userData);
+    else if (tabName === 'squad') renderSquadTab(tabContent, username);
+  }
+
+  tabs.forEach(t => t.addEventListener('click', () => activateTab(t.dataset.tab)));
+
+  activateTab('predictions');
+}
+
+/** Renderiza la tab de pronósticos en el modal de perfil */
+function renderPredictionsTab(container, userData) {
+  let matchesByJourney = {};
+  for (const detail of userData.matchDetails) {
+    const journey = detail.match.journey;
+    if (!matchesByJourney[journey]) matchesByJourney[journey] = [];
+    matchesByJourney[journey].push(detail);
+  }
+
+  // Also include matches the user predicted but don't have results yet
+  const username = Object.keys(AppState.userPoints).find(u => AppState.userPoints[u] === userData);
+  const predictions = AppState.allPredictions[username] || {};
+  for (const match of AppState.matches) {
+    const prediction = predictions[match.id];
+    if (!prediction) continue;
+    const hasResult = AppState.matchStats.some(ms => ms.eventId === match.id);
+    if (hasResult) continue; // already included
+    const journey = match.journey;
+    if (!matchesByJourney[journey]) matchesByJourney[journey] = [];
+    matchesByJourney[journey].push({
+      match,
+      points: 0,
+      breakdown: ['Pendiente'],
+      predicted: prediction
+    });
+  }
+
+  let contentHtml = '';
+  for (const [journey, matches] of Object.entries(matchesByJourney)) {
+    contentHtml += `
+      <div class="breakdown-journey">
+        <div class="breakdown-journey-title">${journey}</div>
+        ${matches.map(m => {
+          const matchStats = AppState.matchStats.find(ms => ms.eventId === m.match.id);
+          const prediction = m.predicted || AppState.allPredictions[username]?.[m.match.id];
+          const hasResult = !!matchStats;
+          const realHome = hasResult ? matchStats.stats[m.match.homeTeamId]?.goles : null;
+          const realAway = hasResult ? matchStats.stats[m.match.awayTeamId]?.goles : null;
+          const predHome = prediction?.home;
+          const predAway = prediction?.away;
+          const isPending = !hasResult;
+          const homeCorrect = hasResult && predHome === realHome;
+          const awayCorrect = hasResult && predAway === realAway;
+
+          return `
+            <div class="profile-match">
+              <div class="profile-match-teams">
+                <div class="profile-match-team">
+                  <img class="profile-match-badge" src="data/imgEquipos/${m.match.homeTeamId}.${m.match.homeBadgeExt}" alt="${m.match.homeTeam}" onerror="this.style.display='none'">
+                  <span>${m.match.homeTeam}</span>
+                </div>
+                <div class="profile-match-score">
+                  <span class="profile-score-pred ${homeCorrect ? 'correct' : ''}">${predHome !== null && predHome !== undefined ? predHome : '-'}</span>
+                  <span class="profile-score-sep">-</span>
+                  <span class="profile-score-pred ${awayCorrect ? 'correct' : ''}">${predAway !== null && predAway !== undefined ? predAway : '-'}</span>
+                </div>
+                <div class="profile-match-team">
+                  <span>${m.match.awayTeam}</span>
+                  <img class="profile-match-badge" src="data/imgEquipos/${m.match.awayTeamId}.${m.match.awayBadgeExt}" alt="${m.match.awayTeam}" onerror="this.style.display='none'">
+                </div>
+              </div>
+              <div class="profile-match-real">
+                ${isPending ? '<span class="profile-pending">⏳ Pendiente</span>' : `Real: ${realHome} - ${realAway}`}
+              </div>
+              ${hasResult ? `
+                <div class="profile-match-points ${m.points > 0 ? 'has-points' : 'no-points'}">
+                  → ${m.points} pts${m.breakdown.length ? ' (' + m.breakdown.join(', ') + ')' : ''}
+                </div>
+              ` : ''}
+            </div>
+          `;
+        }).join('')}
+      </div>
+    `;
+  }
+
+  if (!contentHtml) {
+    contentHtml = '<div style="padding: 24px; text-align: center; color: var(--text-muted);">No hay pronósticos para mostrar</div>';
+  }
+
+  container.innerHTML = `
+    <div class="profile-total-points">Puntos totales: <strong>${userData.totalPoints}</strong></div>
+    ${contentHtml}
+  `;
+}
+
+/** Renderiza la tab de plantilla en el modal de perfil */
+async function renderSquadTab(container, username) {
+  container.innerHTML = '<div style="padding: 24px; text-align: center; color: var(--text-muted);">Cargando plantilla...</div>';
+
+  try {
+    const res = await fetch(`${API_BASE}/api/squad?username=${encodeURIComponent(username)}`);
+    const data = await res.json();
+    if (!data.ok || !data.squad || !data.squad.length) {
+      container.innerHTML = '<div style="padding: 24px; text-align: center; color: var(--text-muted);">Este usuario no tiene plantilla</div>';
+      return;
+    }
+
+    const squad = data.squad;
+    const positionOrder = ['G', 'D', 'M', 'F'];
+    const positionNames = { G: 'Porteros', D: 'Defensas', M: 'Centrocampistas', F: 'Delanteros' };
+
+    // Calcular puntos con la nueva función
+    const { totalPoints, playerDetails } = calculateSquadPoints(squad, AppState.matchStats);
+
+    const grouped = {};
+    for (const pos of positionOrder) grouped[pos] = [];
+    for (const detail of playerDetails) {
+      const pos = detail.jugador.posicion || 'F';
+      if (!grouped[pos]) grouped[pos] = [];
+      grouped[pos].push(detail);
+    }
+
+    // Store details globally for modal access
+    AppState.currentSquadDetails = playerDetails;
+
+    let html = '';
+    for (const pos of positionOrder) {
+      const details = grouped[pos];
+      if (!details.length) continue;
+      html += `<div class="profile-squad-section"><div class="profile-squad-section-title">${positionNames[pos]}</div>`;
+      html += '<div class="profile-squad-grid">';
+      for (const detail of details) {
+        const p = detail.jugador;
+        const pts = detail.puntosTotal;
+        const idx = playerDetails.indexOf(detail);
+        html += `
+          <div class="profile-squad-card" onclick="showPlayerPointsBreakdown(AppState.currentSquadDetails[${idx}])" style="cursor:pointer">
+            <img class="profile-squad-img" src="data/imgJugadores/${p.id}.${p.extension || 'png'}" alt="${p.nombre}" onerror="this.onerror=null;this.src='data/imgJugadores/${p.id}.webp'">
+            <div class="profile-squad-name">${p.nombre}</div>
+            <div class="profile-squad-club">${p.club}</div>
+            <div class="profile-squad-pts">${pts} pts</div>
+          </div>
+        `;
+      }
+      html += '</div></div>';
+    }
+
+    container.innerHTML = `
+      <div class="profile-total-points">Puntos totales plantilla: <strong>${totalPoints}</strong></div>
+      ${html}
+    `;
+  } catch (e) {
+    container.innerHTML = '<div style="padding: 24px; text-align: center; color: var(--text-muted);">Error al cargar plantilla</div>';
+  }
+}
+
+/** Muestra modal con desglose de puntos de un jugador por partido */
+function showPlayerPointsBreakdown(detail) {
+  const existing = document.querySelector('.player-breakdown-modal-overlay');
+  if (existing) existing.remove();
+
+  const p = detail.jugador;
+  const overlay = document.createElement('div');
+  overlay.className = 'player-breakdown-modal-overlay';
+
+  let partidosHtml = '';
+  if (detail.partidos.length === 0) {
+    partidosHtml = '<div style="padding: 16px; text-align: center; color: var(--text-muted);">Sin puntos en ningún partido</div>';
+  } else {
+    for (const partido of detail.partidos) {
+      const matchName = getMatchName(partido.eventId);
+      const desgloseItems = partido.desglose.map(d =>
+        `<div class="breakdown-item"><span>${d.concepto}</span><span class="${d.puntos >= 0 ? 'positive' : 'negative'}">${d.puntos > 0 ? '+' : ''}${d.puntos}</span></div>`
+      ).join('');
+      partidosHtml += `
+        <div class="breakdown-match">
+          <div class="breakdown-match-title">${matchName}</div>
+          ${desgloseItems}
+          <div class="breakdown-match-total">Subtotal: <strong>${partido.puntos > 0 ? '+' : ''}${partido.puntos}</strong></div>
+        </div>
+      `;
+    }
+  }
+
+  overlay.innerHTML = `
+    <div class="breakdown-modal">
+      <div class="breakdown-modal-header">
+        <button class="breakdown-modal-back" id="player-breakdown-close">←</button>
+        <h3 class="breakdown-modal-title">${p.nombre}</h3>
+        <button class="breakdown-modal-close" id="player-breakdown-close-x">✕</button>
+      </div>
+      <div class="breakdown-modal-subtitle">${p.club} | ${p.posicion === 'G' ? 'Portero' : p.posicion === 'D' ? 'Defensa' : p.posicion === 'M' ? 'Centrocampista' : 'Delantero'}</div>
+      <div class="breakdown-modal-content">
+        ${partidosHtml}
+      </div>
+      <div class="breakdown-modal-footer">
+        <strong>Total: ${detail.puntosTotal} pts</strong>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+
+  const closeModal = () => overlay.remove();
+  overlay.querySelector('#player-breakdown-close').addEventListener('click', closeModal);
+  overlay.querySelector('#player-breakdown-close-x').addEventListener('click', closeModal);
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) closeModal(); });
+}
+
+/** Renderiza la pestaña de resultados por jornada */
+async function renderResultadosTab() {
+  const container = document.getElementById('resultados-container');
+  if (!container) return;
+
+  // Siempre refrescar datos al entrar
+  container.innerHTML = `<div style="padding: 24px; text-align: center; color: var(--text-muted);">Cargando datos...</div>`;
+  await Promise.all([fetchMatchStats(), fetchAllPredictions()]);
+
+  if (!AppState.matchStats.length) {
+    container.innerHTML = `<div style="padding: 24px; text-align: center; color: var(--text-muted);">No hay resultados disponibles aún.</div>`;
+    return;
+  }
+
+  // Precargar plantillas de todos los usuarios
+  const squadsCache = {};
+  if (AppState.players.length) {
+    const squadPromises = AppState.players.map(async p => {
+      try {
+        const res = await fetch(`${API_BASE}/api/squad?username=${encodeURIComponent(p.name)}`);
+        const data = await res.json();
+        if (data.ok && data.squad) squadsCache[p.name] = data.squad;
+      } catch (e) { /* ignore */ }
+    });
+    await Promise.all(squadPromises);
+  }
+  AppState.squadsCache = squadsCache;
+
+  // Agrupar partidos por jornada
+  const matchesByJourney = {};
+  for (const match of AppState.matches) {
+    const matchStats = AppState.matchStats.find(ms => ms.eventId === match.id);
+    if (!matchStats) continue;
+
+    const journey = match.journey;
+    if (!matchesByJourney[journey]) matchesByJourney[journey] = [];
+
+    const stats = matchStats.stats;
+    const homeGoals = stats[match.homeTeamId]?.goles;
+    const awayGoals = stats[match.awayTeamId]?.goles;
+
+    matchesByJourney[journey].push({
+      match,
+      homeGoals,
+      awayGoals,
+    });
+  }
+
+  if (!Object.keys(matchesByJourney).length) {
+    container.innerHTML = `<div style="padding: 24px; text-align: center; color: var(--text-muted);">No hay resultados disponibles aún.</div>`;
+    return;
+  }
+
+  let html = '';
+  for (const [journey, matches] of Object.entries(matchesByJourney)) {
+    html += `
+      <div class="resultados-journey">
+        <div class="resultados-journey-header">
+          <h3 class="resultados-journey-title">${journey}</h3>
+          <span class="resultados-journey-count">${matches.length} partido${matches.length > 1 ? 's' : ''}</span>
+        </div>
+        ${matches.map(m => renderMatchResult(m)).join('')}
+      </div>
+    `;
+  }
+
+  container.innerHTML = html;
+}
+
+/** Renderiza el resultado de un partido con puntos de jugadores */
+function renderMatchResult({ match, homeGoals, awayGoals }) {
+  let playersHtml = '';
+  const matchStats = AppState.matchStats.find(ms => ms.eventId === match.id);
+
+  for (const player of AppState.players) {
+    const predictions = AppState.allPredictions[player.name] || {};
+    const prediction = predictions[match.id];
+
+    let points = 0;
+    let breakdown = [];
+
+    const predHome = prediction?.home;
+    const predAway = prediction?.away;
+    const hasPrediction = prediction && predHome !== null && predHome !== undefined && predAway !== null && predAway !== undefined;
+
+    if (hasPrediction) {
+      const result = calculateMatchPoints(prediction, matchStats, match);
+      points = result.points;
+      breakdown = result.breakdown;
+    } else {
+      breakdown = ['Partido no pronosticado'];
+    }
+
+    // Calcular puntos de plantilla para este partido
+    let squadPoints = 0;
+    let squadBreakdown = [];
+    const userSquad = AppState.squadsCache?.[player.name];
+    if (userSquad && matchStats) {
+      for (const squadPlayer of userSquad) {
+        const jugadorData = matchStats.stats?.jugadores?.find(j => String(j.id) === String(squadPlayer.id));
+        if (!jugadorData) continue;
+        const { total, desglose } = calculatePlayerMatchPoints(jugadorData, squadPlayer, matchStats);
+        if (total !== 0) {
+          squadPoints += total;
+          squadBreakdown.push({ nombre: squadPlayer.nombre, puntos: total, desglose });
+        }
+      }
+    }
+
+    const predStr = hasPrediction ? `${predHome} - ${predAway}` : 'Sin pronóstico';
+    const totalUserPoints = points + squadPoints;
+
+    playersHtml += `
+      <div class="resultados-player ${totalUserPoints > 0 ? 'has-points' : 'no-points'}">
+        <span class="resultados-player-name">${player.avatar} ${player.name}</span>
+        <span class="resultados-player-pred">${predStr}</span>
+        <span class="resultados-player-points">${totalUserPoints} pts</span>
+        <span class="resultados-player-breakdown">
+          ${points !== 0 ? `${points} pronóst.` : ''}
+          ${squadPoints !== 0 ? `${squadPoints > 0 ? '+' : ''}${squadPoints} plant.` : ''}
+          ${points === 0 && squadPoints === 0 ? breakdown.join(', ') : ''}
+        </span>
+      </div>
+    `;
+
+    // Mostrar desglose de jugadores de plantilla si hay puntos
+    if (squadBreakdown.length > 0) {
+      playersHtml += '<div class="resultados-squad-breakdown">';
+      for (const sb of squadBreakdown) {
+        const conceptos = sb.desglose.map(d => d.concepto).join(', ');
+        playersHtml += `
+          <div class="resultados-squad-item">
+            <span class="resultados-squad-name">${sb.nombre}</span>
+            <span class="resultados-squad-pts ${sb.puntos >= 0 ? 'positive' : 'negative'}">${sb.puntos > 0 ? '+' : ''}${sb.puntos} pts</span>
+            <span class="resultados-squad-conceptos">${conceptos}</span>
+          </div>
+        `;
+      }
+      playersHtml += '</div>';
+    }
+  }
+
+  return `
+    <div class="resultados-match">
+      <div class="resultados-match-header">
+        <div class="resultados-team">
+          ${teamImgTag(match.homeTeamId, match.homeBadgeExt, match.homeTeam, 'resultados-badge')}
+          <span class="resultados-team-name">${match.homeTeam}</span>
+        </div>
+        <div class="resultados-score">
+          <span class="resultados-goals">${homeGoals}</span>
+          <span class="resultados-separator">-</span>
+          <span class="resultados-goals">${awayGoals}</span>
+        </div>
+        <div class="resultados-team">
+          ${teamImgTag(match.awayTeamId, match.awayBadgeExt, match.awayTeam, 'resultados-badge')}
+          <span class="resultados-team-name">${match.awayTeam}</span>
+        </div>
+      </div>
+      <div class="resultados-players">
+        <div class="resultados-players-title">Puntos por jugador:</div>
+        ${playersHtml}
+      </div>
+    </div>
+  `;
 }
 
 // ============================================================
@@ -467,6 +1189,8 @@ async function enterApp() {
   fetchPlayers();
   await fetchPredictionsFromBackend();
   fetchSquadFromBackend();
+  fetchMatchStats();
+  fetchAllPredictions();
   navigateToTab('inicio');
 }
 
@@ -498,7 +1222,8 @@ function navigateToTab(tabName) {
   if (appContent) appContent.classList.toggle('no-scroll', tabName === 'pronosticos');
 
   if (tabName === 'inicio') renderInicioTab();
-  if (tabName === 'clasificacion') { fetchPlayers().then(() => renderLeaderboard()); }
+  if (tabName === 'clasificacion') renderClasificacionTab();
+  if (tabName === 'resultados') renderResultadosTab();
   if (tabName === 'pronosticos') renderPronosticosTab();
   if (tabName === 'plantilla') renderPlantillaTab();
 }
@@ -678,7 +1403,8 @@ function forceNavigateToTab(tabName) {
   if (appContent) appContent.classList.toggle('no-scroll', tabName === 'pronosticos');
 
   if (tabName === 'inicio') renderInicioTab();
-  if (tabName === 'clasificacion') { fetchPlayers().then(() => renderLeaderboard()); }
+  if (tabName === 'clasificacion') renderClasificacionTab();
+  if (tabName === 'resultados') renderResultadosTab();
   if (tabName === 'pronosticos') renderPronosticosTab();
   if (tabName === 'plantilla') renderPlantillaTab();
 }
@@ -2143,6 +2869,11 @@ function renderPredictedStandings() {
       <span><strong>V</strong>=Victorias</span>
       <span><strong>E</strong>=Empates</span>
       <span><strong>D</strong>=Derrotas</span>
+    </div>
+    <div class="standings-color-legend">
+      <span class="standings-color-item top-8">1-8: Clasificación directa</span>
+      <span class="standings-color-item top-24">9-24: Playoffs</span>
+      <span class="standings-color-item bottom-12">25-36: Eliminados</span>
     </div>
   `;
 }
