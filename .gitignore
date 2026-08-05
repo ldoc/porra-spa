@@ -145,3 +145,6 @@ vite.config.ts.timestamp-*
 # Extractions & sofa score scripts (local only)
 extract/
 
+# Local dev server (replaces python -m http.server)
+server.mjs
+

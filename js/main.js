@@ -41,6 +41,11 @@ const AppState = {
 
 const SQUAD_SIZE = 25;
 
+function authHeaders() {
+  const token = AppState.sessionToken || localStorage.getItem('session_token');
+  return token ? { 'Authorization': `Bearer ${token}` } : {};
+}
+
 const SQUAD_FORMATION = {
   G: { count: 3, label: 'Porteros' },
   D: { count: 8, label: 'Defensas' },
@@ -146,7 +151,7 @@ async function loadInitialData() {
 async function fetchPredictionsFromBackend() {
   if (!AppState.currentUser) return;
   try {
-    const res = await fetch(`${API_BASE}/api/predictions?username=${AppState.currentUser.username}`);
+    const res = await fetch(`${API_BASE}/api/predictions`, { headers: authHeaders() });
     const data = await res.json();
     if (data.ok && data.predictions) {
       AppState.scorePredictions = data.predictions;
@@ -164,16 +169,19 @@ async function savePredictionsToBackend() {
   try {
     const res = await fetch(`${API_BASE}/api/predictions`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
       body: JSON.stringify({
-        username: AppState.currentUser.username,
         predictions: AppState.scorePredictions
       })
     });
+    if (res.status === 401) { logout(); return false; }
     const data = await res.json();
     if (data.ok) {
       AppState.hasUnsavedChanges = false;
       localStorage.removeItem('porra_ucl_scores');
+      // Invalidar caché para que se refresquen los datos
+      AppState._allPredictionsTime = 0;
+      AppState._matchStatsTime = 0;
       showToast('Predicciones guardadas');
       return true;
     } else {
@@ -221,17 +229,61 @@ function formatDate(ts) {
   return `${dia} ${mes} ${anio}, ${hora}:${min}`;
 }
 
+function debounce(fn, ms = 300) {
+  let timer;
+  return (...args) => {
+    clearTimeout(timer);
+    timer = setTimeout(() => fn(...args), ms);
+  };
+}
+
+function skeletonRows(count = 5) {
+  return Array(count).fill('').map(() => `
+    <div class="skeleton-row">
+      <div class="skeleton skeleton-img"></div>
+      <div style="flex:1">
+        <div class="skeleton skeleton-text"></div>
+        <div class="skeleton skeleton-text-sm"></div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function skeletonCards(count = 6) {
+  return Array(count).fill('').map(() => `
+    <div class="skeleton-card">
+      <div class="skeleton skeleton-img"></div>
+      <div class="skeleton skeleton-text" style="width:80%"></div>
+      <div class="skeleton skeleton-text-sm" style="width:50%"></div>
+    </div>
+  `).join('');
+}
+
+function skeletonTableRows(count = 8) {
+  return Array(count).fill('').map(() => `
+    <div class="skeleton-table-row">
+      <div class="skeleton" style="width:20px;height:14px"></div>
+      <div class="skeleton skeleton-badge"></div>
+      <div class="skeleton skeleton-text" style="margin:0"></div>
+      <div class="skeleton" style="width:30px;height:14px"></div>
+      <div class="skeleton" style="width:30px;height:14px"></div>
+      <div class="skeleton" style="width:24px;height:14px"></div>
+      <div class="skeleton" style="width:24px;height:14px"></div>
+      <div class="skeleton" style="width:24px;height:14px"></div>
+    </div>
+  `).join('');
+}
+
 /** Devuelve el nombre de un equipo por su id */
 function teamImgTag(teamId, ext, alt, className) {
   const cls = className ? ` class="${className}"` : '';
-  return `<img src="data/imgEquipos/${teamId}.${ext}" alt="${alt}"${cls}>`;
+  return `<img src="data/imgEquipos/${teamId}.${ext}" alt="${alt}"${cls} loading="lazy">`;
 }
 
-/** Genera tag <img> para jugador con fallback a escudo del equipo */
-function playerImgTag(playerId, ext, teamId, teamExt, alt, className) {
+/** Genera tag <img> para jugador */
+function playerImgTag(playerId, ext, alt, className) {
   const cls = className ? ` class="${className}"` : '';
-  const fallbackExt = ext === 'png' ? 'webp' : 'png';
-  return `<img src="data/imgJugadores/${playerId}.${ext}" alt="${alt}"${cls} onerror="this.onerror=null;this.src='data/imgJugadores/${playerId}.${fallbackExt}';this.onerror=function(){this.onerror=null;this.src='data/imgEquipos/${teamId}.${teamExt}'}">`;
+  return `<img src="data/imgJugadores/${playerId}.${ext}" alt="${alt}"${cls} loading="lazy">`;
 }
 
 /** Devuelve el nombre de un equipo por su id */
@@ -257,12 +309,19 @@ function filterPlayers(query, selectedIds, positionFilter, teamFilter, hideBlock
 // ============================================================
 
 /** Obtiene todos los matchstats del backend */
+const CACHE_TTL = 30000; // 30 segundos
+
 async function fetchMatchStats() {
+  // Usar caché si tiene menos de 30 segundos
+  if (AppState.matchStats.length > 0 && AppState._matchStatsTime && Date.now() - AppState._matchStatsTime < CACHE_TTL) {
+    return;
+  }
   try {
     const res = await fetch(`${API_BASE}/api/match-stats`);
     const data = await res.json();
     if (data.ok && data.matchStats) {
       AppState.matchStats = data.matchStats;
+      AppState._matchStatsTime = Date.now();
     }
   } catch (e) {
     console.error('Error cargando matchstats:', e);
@@ -271,11 +330,16 @@ async function fetchMatchStats() {
 
 /** Obtiene las predicciones de todos los usuarios del backend */
 async function fetchAllPredictions() {
+  // Usar caché si tiene menos de 30 segundos
+  if (AppState._allPredictionsTime && Date.now() - AppState._allPredictionsTime < CACHE_TTL) {
+    return;
+  }
   try {
     const res = await fetch(`${API_BASE}/api/predictions/all`);
     const data = await res.json();
     if (data.ok && data.predictions) {
       AppState.allPredictions = data.predictions;
+      AppState._allPredictionsTime = Date.now();
     }
   } catch (e) {
     console.error('Error cargando todas las predicciones:', e);
@@ -429,10 +493,10 @@ function calculatePlayerMatchPoints(playerData, squadPlayer, matchStat) {
 
   // 4. Portería a cero (G +5, D +2 si >70 min)
   const equipoId = String(squadPlayer.equipo);
-  const rivalId = Object.keys(matchStat.stats || {}).find(id => id !== equipoId && id !== 'jugadores');
-  const golesEquipoRival = rivalId ? (matchStat.stats[rivalId]?.goles || 0) : 0;
-  const golesRecibidosPortero = squadPlayer.posicion === 'G' ? (playerData.golesRecibidos || 0) : golesEquipoRival;
-  if (golesRecibidosPortero === 0 && playerData.minutos > 70) {
+  const statsKeys = Object.keys(matchStat.stats || {});
+  const rivalId = statsKeys.find(id => id !== equipoId && id !== 'jugadores');
+  const golesRival = rivalId ? (matchStat.stats[rivalId]?.goles || 0) : 0;
+  if (golesRival === 0 && playerData.minutos > 70) {
     if (squadPlayer.posicion === 'G') {
       total += 5;
       desglose.push({ concepto: 'Portería a cero', puntos: 5 });
@@ -450,12 +514,24 @@ function calculateSquadPoints(squad, matchStats) {
   let totalPoints = 0;
   const playerDetails = [];
 
+  // Pre-construir índice de búsqueda O(1) por eventId y playerId
+  const playerIndex = new Map();
+  for (const ms of matchStats) {
+    const map = new Map();
+    if (ms.stats?.jugadores) {
+      for (const j of ms.stats.jugadores) {
+        map.set(String(j.id), j);
+      }
+    }
+    playerIndex.set(ms.eventId, map);
+  }
+
   for (const squadPlayer of squad) {
     let jugadorTotal = 0;
     const partidos = [];
 
     for (const ms of matchStats) {
-      const jugadorData = ms.stats?.jugadores?.find(j => String(j.id) === String(squadPlayer.id));
+      const jugadorData = playerIndex.get(ms.eventId)?.get(String(squadPlayer.id));
       if (!jugadorData) continue;
 
       const { total, desglose } = calculatePlayerMatchPoints(jugadorData, squadPlayer, ms);
@@ -488,8 +564,7 @@ async function renderClasificacionTab() {
   const container = document.getElementById('clasificacion-container');
   if (!container) return;
 
-  // Siempre refrescar datos al entrar
-  container.innerHTML = `<div style="padding: 24px; text-align: center; color: var(--text-muted);">Cargando datos...</div>`;
+  container.innerHTML = skeletonRows(8);
   await Promise.all([fetchPlayers(), fetchMatchStats(), fetchAllPredictions()]);
 
   const players = AppState.players || [];
@@ -500,20 +575,29 @@ async function renderClasificacionTab() {
   }
 
   // Calcular puntos reales para cada usuario (predicciones + plantilla)
-  const playersWithPoints = await Promise.all(players.map(async p => {
+  // Obtener todas las plantillas en una sola petición (con caché)
+  if (!AppState.squadsCache || !Object.keys(AppState.squadsCache).length || !AppState._squadsCacheTime || Date.now() - AppState._squadsCacheTime >= CACHE_TTL) {
+    try {
+      const res = await fetch(`${API_BASE}/api/squad/all`);
+      const data = await res.json();
+      if (data.ok && data.squads) {
+        AppState.squadsCache = data.squads;
+        AppState._squadsCacheTime = Date.now();
+      }
+    } catch (e) { /* ignore */ }
+  }
+
+  const playersWithPoints = players.map(p => {
     const userData = calculateUserTotalPoints(p.name);
     AppState.userPoints[p.name] = userData;
 
-    // Obtener plantilla y calcular puntos de plantilla
+    // Obtener plantilla del caché
     let squadPoints = 0;
-    try {
-      const res = await fetch(`${API_BASE}/api/squad?username=${encodeURIComponent(p.name)}`);
-      const data = await res.json();
-      if (data.ok && data.squad && data.squad.length) {
-        const { totalPoints } = calculateSquadPoints(data.squad, AppState.matchStats);
-        squadPoints = totalPoints;
-      }
-    } catch (e) { /* sin plantilla */ }
+    const userSquad = AppState.squadsCache?.[p.name];
+    if (userSquad && userSquad.length) {
+      const { totalPoints } = calculateSquadPoints(userSquad, AppState.matchStats);
+      squadPoints = totalPoints;
+    }
 
     return {
       ...p,
@@ -521,7 +605,7 @@ async function renderClasificacionTab() {
       squadPoints,
       realPoints: userData.totalPoints + squadPoints
     };
-  }));
+  });
 
   // Ordenar por puntos descendente
   playersWithPoints.sort((a, b) => b.realPoints - a.realPoints);
@@ -649,7 +733,7 @@ function renderPredictionsTab(container, userData) {
             <div class="profile-match">
               <div class="profile-match-teams">
                 <div class="profile-match-team">
-                  <img class="profile-match-badge" src="data/imgEquipos/${m.match.homeTeamId}.${m.match.homeBadgeExt}" alt="${m.match.homeTeam}" onerror="this.style.display='none'">
+                  <img class="profile-match-badge" src="data/imgEquipos/${m.match.homeTeamId}.${m.match.homeBadgeExt}" alt="${m.match.homeTeam}" loading="lazy" onerror="this.style.display='none'">
                   <span>${m.match.homeTeam}</span>
                 </div>
                 <div class="profile-match-score">
@@ -659,7 +743,7 @@ function renderPredictionsTab(container, userData) {
                 </div>
                 <div class="profile-match-team">
                   <span>${m.match.awayTeam}</span>
-                  <img class="profile-match-badge" src="data/imgEquipos/${m.match.awayTeamId}.${m.match.awayBadgeExt}" alt="${m.match.awayTeam}" onerror="this.style.display='none'">
+                  <img class="profile-match-badge" src="data/imgEquipos/${m.match.awayTeamId}.${m.match.awayBadgeExt}" alt="${m.match.awayTeam}" loading="lazy" onerror="this.style.display='none'">
                 </div>
               </div>
               <div class="profile-match-real">
@@ -692,14 +776,34 @@ async function renderSquadTab(container, username) {
   container.innerHTML = '<div style="padding: 24px; text-align: center; color: var(--text-muted);">Cargando plantilla...</div>';
 
   try {
-    const res = await fetch(`${API_BASE}/api/squad?username=${encodeURIComponent(username)}`);
-    const data = await res.json();
-    if (!data.ok || !data.squad || !data.squad.length) {
+    let squad = null;
+
+    // Intentar usar caché primero
+    if (AppState.squadsCache && AppState.squadsCache[username]) {
+      squad = AppState.squadsCache[username];
+    } else {
+      // Fetch individual si no está en caché
+      const res = await fetch(`${API_BASE}/api/squad?username=${encodeURIComponent(username)}`);
+      const data = await res.json();
+      if (data.ok && data.squad && data.squad.length) {
+        squad = data.squad;
+        // Guardar en caché
+        if (!AppState.squadsCache) AppState.squadsCache = {};
+        AppState.squadsCache[username] = squad;
+      }
+    }
+
+    if (!squad || !squad.length) {
       container.innerHTML = '<div style="padding: 24px; text-align: center; color: var(--text-muted);">Este usuario no tiene plantilla</div>';
       return;
     }
 
-    const squad = data.squad;
+    // Enriquecer squad con datos completos de allPlayers (extension, etc.)
+    squad = squad.map(sp => {
+      const full = AppState.allPlayers.find(p => p.id === sp.id);
+      return full ? { ...sp, extension: full.extension || sp.extension || 'png' } : { ...sp, extension: sp.extension || 'png' };
+    });
+
     const positionOrder = ['G', 'D', 'M', 'F'];
     const positionNames = { G: 'Porteros', D: 'Defensas', M: 'Centrocampistas', F: 'Delanteros' };
 
@@ -729,7 +833,7 @@ async function renderSquadTab(container, username) {
         const idx = playerDetails.indexOf(detail);
         html += `
           <div class="profile-squad-card" onclick="showPlayerPointsBreakdown(AppState.currentSquadDetails[${idx}])" style="cursor:pointer">
-            <img class="profile-squad-img" src="data/imgJugadores/${p.id}.${p.extension || 'png'}" alt="${p.nombre}" onerror="this.onerror=null;this.src='data/imgJugadores/${p.id}.webp'">
+            <img class="profile-squad-img" src="data/imgJugadores/${p.id}.${p.extension || 'png'}" alt="${p.nombre}" loading="lazy">
             <div class="profile-squad-name">${p.nombre}</div>
             <div class="profile-squad-club">${p.club}</div>
             <div class="profile-squad-pts">${pts} pts</div>
@@ -806,8 +910,7 @@ async function renderResultadosTab() {
   const container = document.getElementById('resultados-container');
   if (!container) return;
 
-  // Siempre refrescar datos al entrar
-  container.innerHTML = `<div style="padding: 24px; text-align: center; color: var(--text-muted);">Cargando datos...</div>`;
+  container.innerHTML = skeletonRows(6);
   await Promise.all([fetchMatchStats(), fetchAllPredictions()]);
 
   if (!AppState.matchStats.length) {
@@ -815,19 +918,17 @@ async function renderResultadosTab() {
     return;
   }
 
-  // Precargar plantillas de todos los usuarios
-  const squadsCache = {};
-  if (AppState.players.length) {
-    const squadPromises = AppState.players.map(async p => {
-      try {
-        const res = await fetch(`${API_BASE}/api/squad?username=${encodeURIComponent(p.name)}`);
-        const data = await res.json();
-        if (data.ok && data.squad) squadsCache[p.name] = data.squad;
-      } catch (e) { /* ignore */ }
-    });
-    await Promise.all(squadPromises);
+  // Precargar plantillas de todos los usuarios (una sola petición, con caché)
+  if (!AppState.squadsCache || !Object.keys(AppState.squadsCache).length || !AppState._squadsCacheTime || Date.now() - AppState._squadsCacheTime >= CACHE_TTL) {
+    try {
+      const res = await fetch(`${API_BASE}/api/squad/all`);
+      const data = await res.json();
+      if (data.ok && data.squads) {
+        AppState.squadsCache = data.squads;
+        AppState._squadsCacheTime = Date.now();
+      }
+    } catch (e) { /* ignore */ }
   }
-  AppState.squadsCache = squadsCache;
 
   // Agrupar partidos por jornada
   const matchesByJourney = {};
@@ -1138,9 +1239,8 @@ async function completeProfile() {
   try {
     await fetch(`${API_BASE}/api/auth/profile`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
       body: JSON.stringify({
-        username: AppState.currentUser.username,
         avatar: AppState.selectedAvatar
       })
     });
@@ -1737,13 +1837,13 @@ function showChangePasswordModal() {
     try {
       const res = await fetch(`${API_BASE}/api/auth/change-password`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify({
-          username: AppState.currentUser.username,
           currentPassword,
           newPassword
         })
       });
+      if (res.status === 401) { logout(); return; }
       const data = await res.json();
 
       if (data.ok) {
@@ -2137,11 +2237,10 @@ function renderSearchResults(query) {
 
   results.innerHTML = players.slice(0, 50).map(p => {
     const posLabel = { G: 'POR', D: 'DEF', M: 'MED', F: 'DEL' }[p.posicion] || p.posicion;
-    const team = AppState.teamsMap[p.equipo];
     const isBlocked = AppState.blockedTeams.has(p.equipo);
     return `
       <div class="squad-player-row ${isBlocked ? 'blocked' : ''}" data-player-id="${p.id}" ${isBlocked ? 'data-blocked="true"' : ''}>
-        ${playerImgTag(p.id, p.extension || 'png', p.equipo, team?.ext || 'png', p.nombre, 'squad-player-img')}
+        ${playerImgTag(p.id, p.extension || 'png', p.nombre, 'squad-player-img')}
         <div class="squad-player-info">
           <div class="squad-player-name">${p.nombre}</div>
           <div class="squad-player-team">${p.club}</div>
@@ -2217,12 +2316,11 @@ function renderSquadSlots() {
     for (let i = 0; i < config.count; i++) {
       const player = getSlotPlayer(pos, i);
       if (player) {
-        const team = AppState.teamsMap[player.equipo];
         const sourcePlayer = AppState.allPlayers.find(p => p.id === player.id);
         const playerExt = sourcePlayer?.extension || player.extension || 'png';
         slots.push(`
           <div class="squad-slot filled" data-position="${pos}" data-index="${i}">
-            ${playerImgTag(player.id, playerExt, player.equipo, team?.ext || 'png', player.nombre, 'squad-slot-img')}
+            ${playerImgTag(player.id, playerExt, player.nombre, 'squad-slot-img')}
             <div class="squad-slot-info">
               <span class="squad-slot-name">${player.nombre}</span>
               <span class="squad-slot-team">${player.club}</span>
@@ -2324,9 +2422,8 @@ function renderPlantillaTab() {
 
   // Búsqueda de jugadores
   const searchInput = document.getElementById('squad-search-input');
-  searchInput?.addEventListener('input', () => {
-    renderSearchResults(searchInput.value);
-  });
+  const debouncedSearch = debounce((val) => renderSearchResults(val), 300);
+  searchInput?.addEventListener('input', (e) => debouncedSearch(e.target.value));
 
   // Checkbox ocultar bloqueados
   const hideBlockedCheck = document.getElementById('squad-hide-blocked');
@@ -2365,15 +2462,17 @@ async function saveSquadToBackend() {
   try {
     const res = await fetch(`${API_BASE}/api/squad`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
       body: JSON.stringify({
-        username: AppState.currentUser.username,
         squad: AppState.squadPicks
       })
     });
+    if (res.status === 401) { logout(); return false; }
     const data = await res.json();
     if (data.ok) {
       AppState.hasUnsavedSquadChanges = false;
+      // Invalidar caché para que se refresquen los datos
+      AppState._squadsCacheTime = 0;
       showToast('Plantilla guardada');
       return true;
     } else {
@@ -2396,7 +2495,7 @@ async function fetchSquadFromBackend() {
   if (!AppState.currentUser) return;
 
   try {
-    const res = await fetch(`${API_BASE}/api/squad?username=${AppState.currentUser.username}`);
+    const res = await fetch(`${API_BASE}/api/squad`, { headers: authHeaders() });
     const data = await res.json();
     if (data.ok && Array.isArray(data.squad)) {
       AppState.squadPicks = data.squad;
@@ -2816,7 +2915,7 @@ function renderPredictedStandings() {
     return `
       <tr class="${rowClass}">
         <td>${team.position}</td>
-        <td><img src="data/imgEquipos/${team.teamId}.${team.badgeExt}" class="standings-badge-img" alt="${team.name}" onerror="this.style.display='none'"></td>
+        <td><img src="data/imgEquipos/${team.teamId}.${team.badgeExt}" class="standings-badge-img" alt="${team.name}" loading="lazy" onerror="this.style.display='none'"></td>
         <td><span class="standings-team-name">${team.name}</span></td>
         <td class="pts-col">${team.points}</td>
         <td class="gd-col ${gdClass}">${gdSign}${team.gd}</td>
