@@ -2483,6 +2483,43 @@ html, body {
    RESULTADOS POR JORNADA
    ========================================================================== */
 
+.resultados-round-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-bottom: 16px;
+  padding: 12px;
+  background: var(--ucl-surface);
+  border-radius: var(--radius-md);
+}
+
+.resultados-round-btn {
+  background: var(--ucl-primary);
+  color: #fff;
+  border: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  font-size: 1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.2s;
+}
+
+.resultados-round-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.resultados-round-label {
+  font-weight: 700;
+  font-size: 1rem;
+  color: var(--text-primary);
+}
+
 .resultados-journey {
   margin-bottom: 24px;
 }
@@ -2522,7 +2559,16 @@ html, body {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  margin-bottom: 16px;
+  margin-bottom: 8px;
+}
+
+.resultados-match-date {
+  text-align: center;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
 }
 
 .resultados-team {

@@ -33,6 +33,7 @@ const AppState = {
   hideBlocked: false,   // ocultar jugadores de equipos bloqueados
   savedSquadSnapshot: [], // snapshot de plantilla al guardar para comparar
   matchStats: [],       // Array de todos los matchstats del backend
+  resultadosRound: null, // Ronda seleccionada en pestaña resultados
   allPredictions: {},   // { username: { matchId: { home, away } } }
   userPoints: {},       // { username: { totalPoints, matchDetails } }
   squadsCache: {},      // { username: squad[] } - caché de plantillas para resultados
@@ -44,6 +45,12 @@ const SQUAD_SIZE = 25;
 function authHeaders() {
   const token = AppState.sessionToken || localStorage.getItem('session_token');
   return token ? { 'Authorization': `Bearer ${token}` } : {};
+}
+
+function isFrozen() {
+  const startRoundsDate = AppState.appConfig?.championsStartRoundsDate;
+  if (!startRoundsDate) return false;
+  return new Date() >= new Date(startRoundsDate);
 }
 
 const SQUAD_FORMATION = {
@@ -109,8 +116,8 @@ async function loadInitialData() {
     } catch (e) {
       // config por defecto si falla
       AppState.appConfig = {
-        championsFreezeDate: '2026-09-15T21:00:00Z',
-        championsFreezeLabel: 'Fase de Grupos',
+        championsStartRoundsDate: '2026-09-08T21:00:00Z',
+        championsStartRoundsLabel: 'Fase de Grupos',
         totalMatches: 144,
         squadSize: 25,
         squadFormation: {
@@ -166,6 +173,10 @@ async function fetchPredictionsFromBackend() {
 /** Guarda predicciones en el backend */
 async function savePredictionsToBackend() {
   if (!AppState.currentUser) return false;
+  if (isFrozen()) {
+    showToast('Los pronósticos están bloqueados');
+    return false;
+  }
   try {
     const res = await fetch(`${API_BASE}/api/predictions`, {
       method: 'PUT',
@@ -311,9 +322,9 @@ function filterPlayers(query, selectedIds, positionFilter, teamFilter, hideBlock
 /** Obtiene todos los matchstats del backend */
 const CACHE_TTL = 30000; // 30 segundos
 
-async function fetchMatchStats() {
-  // Usar caché si tiene menos de 30 segundos
-  if (AppState.matchStats.length > 0 && AppState._matchStatsTime && Date.now() - AppState._matchStatsTime < CACHE_TTL) {
+async function fetchMatchStats(force = false) {
+  // Usar caché si tiene menos de 30 segundos (salvo force)
+  if (!force && AppState.matchStats.length > 0 && AppState._matchStatsTime && Date.now() - AppState._matchStatsTime < CACHE_TTL) {
     return;
   }
   try {
@@ -335,7 +346,7 @@ async function fetchAllPredictions() {
     return;
   }
   try {
-    const res = await fetch(`${API_BASE}/api/predictions/all`);
+    const res = await fetch(`${API_BASE}/api/predictions/all`, { headers: authHeaders() });
     const data = await res.json();
     if (data.ok && data.predictions) {
       AppState.allPredictions = data.predictions;
@@ -343,6 +354,118 @@ async function fetchAllPredictions() {
     }
   } catch (e) {
     console.error('Error cargando todas las predicciones:', e);
+  }
+}
+
+// ============================================================
+// AUTO-REFRESH DE RESULTADOS
+// ============================================================
+
+let _statsPollInterval = null;
+let _statsVisibilityHandler = null;
+let _lastStatsUpdate = null;
+
+function showNewMatchToast() {
+  document.querySelector('.toast-new-match')?.remove();
+
+  const toast = document.createElement('div');
+  toast.className = 'toast-new-match';
+  toast.innerHTML = 'Nuevo resultado disponible<br><span style="text-decoration:underline">Ver resultados</span>';
+
+  Object.assign(toast.style, {
+    position: 'fixed',
+    bottom: '80px',
+    left: '50%',
+    transform: 'translateX(-50%) translateY(20px)',
+    backgroundColor: '#10B981',
+    color: '#021319',
+    padding: '12px 20px',
+    borderRadius: '20px',
+    fontWeight: '700',
+    fontSize: '0.85rem',
+    whiteSpace: 'pre-line',
+    textAlign: 'center',
+    boxShadow: '0 10px 25px rgba(0,0,0,0.5)',
+    zIndex: '2000',
+    opacity: '0',
+    transition: 'all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+    cursor: 'pointer',
+  });
+
+  toast.addEventListener('click', () => {
+    toast.remove();
+    navigateToTab('resultados');
+  });
+
+  (document.getElementById('app-viewport') || document.body).appendChild(toast);
+
+  requestAnimationFrame(() => {
+    toast.style.opacity = '1';
+    toast.style.transform = 'translateX(-50%) translateY(0)';
+  });
+
+  setTimeout(() => {
+    toast.style.opacity = '0';
+    toast.style.transform = 'translateX(-50%) translateY(20px)';
+    setTimeout(() => toast.remove(), 300);
+  }, 8000);
+}
+
+async function fetchMatchStatsUpdated() {
+  try {
+    const res = await fetch(`${API_BASE}/api/match-stats/updated`);
+    const data = await res.json();
+    console.log('[POLL]', data, 'lastKnown:', _lastStatsUpdate);
+    if (data.ok) {
+      const newUpdate = data.lastUpdated || data.count;
+      if (_lastStatsUpdate && newUpdate !== _lastStatsUpdate) {
+        console.log('[POLL] ¡Nuevos datos! Refrescando...');
+        await fetchMatchStats(true);
+        const activeTab = document.querySelector('.nav-item.active')?.dataset?.tab;
+        if (activeTab === 'resultados') renderResultadosTab();
+        if (activeTab === 'clasificacion') renderClasificacionTab();
+        showNewMatchToast();
+      }
+      _lastStatsUpdate = newUpdate;
+    }
+  } catch (e) {
+    console.log('[POLL] Error:', e.message);
+  }
+}
+
+function startMatchStatsPolling() {
+  stopMatchStatsPolling();
+  if (!isFrozen()) return;
+
+  const poll = () => {
+    if (document.visibilityState === 'visible') fetchMatchStatsUpdated();
+  };
+
+  const onVisibilityChange = () => {
+    if (document.visibilityState === 'visible') {
+      poll();
+      _statsPollInterval = setInterval(poll, 60000);
+    } else {
+      stopMatchStatsPolling();
+    }
+  };
+
+  document.addEventListener('visibilitychange', onVisibilityChange);
+  _statsVisibilityHandler = onVisibilityChange;
+
+  if (document.visibilityState === 'visible') {
+    _statsPollInterval = setInterval(poll, 60000);
+  }
+}
+
+function stopMatchStatsPolling() {
+  if (_statsPollInterval) {
+    clearInterval(_statsPollInterval);
+    _statsPollInterval = null;
+  }
+  if (_statsVisibilityHandler) {
+    document.removeEventListener('visibilitychange', _statsVisibilityHandler);
+    _statsVisibilityHandler = null;
   }
 }
 
@@ -574,16 +697,39 @@ async function renderClasificacionTab() {
     return;
   }
 
-  // Calcular puntos reales para cada usuario (predicciones + plantilla)
-  // Obtener todas las plantillas en una sola petición (con caché)
-  if (!AppState.squadsCache || !Object.keys(AppState.squadsCache).length || !AppState._squadsCacheTime || Date.now() - AppState._squadsCacheTime >= CACHE_TTL) {
-    try {
-      const res = await fetch(`${API_BASE}/api/squad/all`);
-      const data = await res.json();
-      if (data.ok && data.squads) {
-        AppState.squadsCache = data.squads;
-        AppState._squadsCacheTime = Date.now();
-      }
+  // Pre-freeze: solo nombres, sin puntos; solo el propio usuario es clickable
+  if (!isFrozen()) {
+    // Calcular puntos del usuario actual para que su perfil funcione
+    if (AppState.currentUser) {
+      const myData = calculateUserTotalPoints(AppState.currentUser.name);
+      AppState.userPoints[AppState.currentUser.name] = myData;
+    }
+    container.innerHTML = players.map((p, i) => {
+      const isMe = AppState.currentUser && p.name === AppState.currentUser.name;
+      const clickAttr = isMe ? `onclick="showUserProfileModal('${p.name}')"` : `onclick="showToast('Los pronósticos de otros usuarios<br>se verán al inicio de la competición')"`;
+      return `
+        <div class="leaderboard-row ${isMe ? 'current-user' : ''}" ${clickAttr} style="${isMe ? 'cursor:pointer' : ''}">
+          <div class="rank-badge">${i + 1}</div>
+          <div class="player-avatar">${p.avatar}</div>
+          <div class="player-info">
+            <div class="player-name">${p.name}${isMe ? ' <span style="color:var(--accent-primary)">(Tu)</span>' : ''}</div>
+          </div>
+        </div>
+      `;
+    }).join('');
+    return;
+  }
+
+   // Post-freeze: puntos reales + perfil clickable
+   // Obtener todas las plantillas en una sola petición (con caché)
+   if (!AppState.squadsCache || !Object.keys(AppState.squadsCache).length || !AppState._squadsCacheTime || Date.now() - AppState._squadsCacheTime >= CACHE_TTL) {
+     try {
+       const res = await fetch(`${API_BASE}/api/squad/all`, { headers: authHeaders() });
+       const data = await res.json();
+       if (data.ok && data.squads) {
+         AppState.squadsCache = { ...AppState.squadsCache, ...data.squads };
+         AppState._squadsCacheTime = Date.now();
+       }
     } catch (e) { /* ignore */ }
   }
 
@@ -635,6 +781,15 @@ async function renderClasificacionTab() {
 function showUserProfileModal(username) {
   const existing = document.querySelector('.breakdown-modal-overlay');
   if (existing) existing.remove();
+
+  // Pre-freeze: no se puede ver el perfil de otros usuarios
+  if (!isFrozen()) {
+    const isMe = AppState.currentUser && username === AppState.currentUser.name;
+    if (!isMe) {
+      showToast('Los pronósticos y plantillas de otros usuarios<br>se verán al inicio de la competición');
+      return;
+    }
+  }
 
   const userData = AppState.userPoints[username];
   if (!userData) {
@@ -778,8 +933,11 @@ async function renderSquadTab(container, username) {
   try {
     let squad = null;
 
-    // Intentar usar caché primero
-    if (AppState.squadsCache && AppState.squadsCache[username]) {
+    // Si es el usuario actual, usar datos locales (más recientes)
+    if (AppState.currentUser && username === AppState.currentUser.name && AppState.squadPicks && AppState.squadPicks.length) {
+      squad = AppState.squadPicks;
+    } else if (AppState.squadsCache && AppState.squadsCache[username]) {
+      // Intentar usar caché para otros usuarios
       squad = AppState.squadsCache[username];
     } else {
       // Fetch individual si no está en caché
@@ -910,6 +1068,11 @@ async function renderResultadosTab() {
   const container = document.getElementById('resultados-container');
   if (!container) return;
 
+  if (!isFrozen()) {
+    container.innerHTML = `<div style="padding: 24px; text-align: center; color: var(--text-muted);">Los resultados estarán disponibles al comenzar la competición.</div>`;
+    return;
+  }
+
   container.innerHTML = skeletonRows(6);
   await Promise.all([fetchMatchStats(), fetchAllPredictions()]);
 
@@ -918,63 +1081,104 @@ async function renderResultadosTab() {
     return;
   }
 
-  // Precargar plantillas de todos los usuarios (una sola petición, con caché)
-  if (!AppState.squadsCache || !Object.keys(AppState.squadsCache).length || !AppState._squadsCacheTime || Date.now() - AppState._squadsCacheTime >= CACHE_TTL) {
-    try {
-      const res = await fetch(`${API_BASE}/api/squad/all`);
-      const data = await res.json();
-      if (data.ok && data.squads) {
-        AppState.squadsCache = data.squads;
-        AppState._squadsCacheTime = Date.now();
-      }
+   // Precargar plantillas de todos los usuarios (una sola petición, con caché)
+   if (!AppState.squadsCache || !Object.keys(AppState.squadsCache).length || !AppState._squadsCacheTime || Date.now() - AppState._squadsCacheTime >= CACHE_TTL) {
+     try {
+       const res = await fetch(`${API_BASE}/api/squad/all`, { headers: authHeaders() });
+       const data = await res.json();
+       if (data.ok && data.squads) {
+         AppState.squadsCache = { ...AppState.squadsCache, ...data.squads };
+         AppState._squadsCacheTime = Date.now();
+       }
     } catch (e) { /* ignore */ }
   }
 
-  // Agrupar partidos por jornada
-  const matchesByJourney = {};
+  // Obtener rondas con resultados
+  const roundsWithResults = new Set();
   for (const match of AppState.matches) {
     const matchStats = AppState.matchStats.find(ms => ms.eventId === match.id);
-    if (!matchStats) continue;
-
-    const journey = match.journey;
-    if (!matchesByJourney[journey]) matchesByJourney[journey] = [];
-
-    const stats = matchStats.stats;
-    const homeGoals = stats[match.homeTeamId]?.goles;
-    const awayGoals = stats[match.awayTeamId]?.goles;
-
-    matchesByJourney[journey].push({
-      match,
-      homeGoals,
-      awayGoals,
-    });
+    if (matchStats) roundsWithResults.add(match.ronda);
   }
+  const availableRounds = [...roundsWithResults].sort((a, b) => a - b);
 
-  if (!Object.keys(matchesByJourney).length) {
+  if (!availableRounds.length) {
     container.innerHTML = `<div style="padding: 24px; text-align: center; color: var(--text-muted);">No hay resultados disponibles aún.</div>`;
     return;
   }
 
-  let html = '';
-  for (const [journey, matches] of Object.entries(matchesByJourney)) {
+  // Determinar ronda por defecto: la última con resultados
+  if (!AppState.resultadosRound || !availableRounds.includes(AppState.resultadosRound)) {
+    AppState.resultadosRound = availableRounds[availableRounds.length - 1];
+  }
+
+  const currentRound = AppState.resultadosRound;
+  const roundMatches = AppState.matches.filter(m => m.ronda === currentRound);
+
+  // Filtrar solo partidos con resultado
+  const matchesWithResults = [];
+  for (const match of roundMatches) {
+    const matchStats = AppState.matchStats.find(ms => ms.eventId === match.id);
+    if (!matchStats) continue;
+    const stats = matchStats.stats;
+    matchesWithResults.push({
+      match,
+      homeGoals: stats[match.homeTeamId]?.goles,
+      awayGoals: stats[match.awayTeamId]?.goles,
+    });
+  }
+
+  // Ordenar partidos de más reciente a más antiguo
+  matchesWithResults.sort((a, b) => b.match.fechaTs - a.match.fechaTs);
+
+  const roundIndex = availableRounds.indexOf(currentRound);
+  const hasPrev = roundIndex > 0;
+  const hasNext = roundIndex < availableRounds.length - 1;
+
+  let html = `
+    <div class="resultados-round-nav">
+      <button class="resultados-round-btn" id="btn-resultados-round-prev" ${!hasPrev ? 'disabled' : ''}>◀</button>
+      <span class="resultados-round-label">Jornada ${currentRound}</span>
+      <button class="resultados-round-btn" id="btn-resultados-round-next" ${!hasNext ? 'disabled' : ''}>▶</button>
+    </div>
+  `;
+
+  if (matchesWithResults.length) {
     html += `
       <div class="resultados-journey">
         <div class="resultados-journey-header">
-          <h3 class="resultados-journey-title">${journey}</h3>
-          <span class="resultados-journey-count">${matches.length} partido${matches.length > 1 ? 's' : ''}</span>
+          <h3 class="resultados-journey-title">Jornada ${currentRound}</h3>
+          <span class="resultados-journey-count">${matchesWithResults.length} partido${matchesWithResults.length > 1 ? 's' : ''}</span>
         </div>
-        ${matches.map(m => renderMatchResult(m)).join('')}
+        ${matchesWithResults.map(m => renderMatchResult(m)).join('')}
       </div>
     `;
+  } else {
+    html += `<div style="padding: 24px; text-align: center; color: var(--text-muted);">No hay resultados en esta jornada.</div>`;
   }
 
   container.innerHTML = html;
+
+  // Eventos de navegación
+  document.getElementById('btn-resultados-round-prev')?.addEventListener('click', () => {
+    if (hasPrev) {
+      AppState.resultadosRound = availableRounds[roundIndex - 1];
+      renderResultadosTab();
+    }
+  });
+  document.getElementById('btn-resultados-round-next')?.addEventListener('click', () => {
+    if (hasNext) {
+      AppState.resultadosRound = availableRounds[roundIndex + 1];
+      renderResultadosTab();
+    }
+  });
 }
 
 /** Renderiza el resultado de un partido con puntos de jugadores */
 function renderMatchResult({ match, homeGoals, awayGoals }) {
   let playersHtml = '';
   const matchStats = AppState.matchStats.find(ms => ms.eventId === match.id);
+
+  const playersWithPoints = [];
 
   for (const player of AppState.players) {
     const predictions = AppState.allPredictions[player.name] || {};
@@ -995,7 +1199,6 @@ function renderMatchResult({ match, homeGoals, awayGoals }) {
       breakdown = ['Partido no pronosticado'];
     }
 
-    // Calcular puntos de plantilla para este partido
     let squadPoints = 0;
     let squadBreakdown = [];
     const userSquad = AppState.squadsCache?.[player.name];
@@ -1014,23 +1217,29 @@ function renderMatchResult({ match, homeGoals, awayGoals }) {
     const predStr = hasPrediction ? `${predHome} - ${predAway}` : 'Sin pronóstico';
     const totalUserPoints = points + squadPoints;
 
+    playersWithPoints.push({ player, predStr, totalUserPoints, points, squadPoints, breakdown, squadBreakdown });
+  }
+
+  // Ordenar por puntos de mayor a menor
+  playersWithPoints.sort((a, b) => b.totalUserPoints - a.totalUserPoints);
+
+  for (const p of playersWithPoints) {
     playersHtml += `
-      <div class="resultados-player ${totalUserPoints > 0 ? 'has-points' : 'no-points'}">
-        <span class="resultados-player-name">${player.avatar} ${player.name}</span>
-        <span class="resultados-player-pred">${predStr}</span>
-        <span class="resultados-player-points">${totalUserPoints} pts</span>
+      <div class="resultados-player ${p.totalUserPoints > 0 ? 'has-points' : 'no-points'}">
+        <span class="resultados-player-name">${p.player.avatar} ${p.player.name}</span>
+        <span class="resultados-player-pred">${p.predStr}</span>
+        <span class="resultados-player-points">${p.totalUserPoints} pts</span>
         <span class="resultados-player-breakdown">
-          ${points !== 0 ? `${points} pronóst.` : ''}
-          ${squadPoints !== 0 ? `${squadPoints > 0 ? '+' : ''}${squadPoints} plant.` : ''}
-          ${points === 0 && squadPoints === 0 ? breakdown.join(', ') : ''}
+          ${p.points !== 0 ? `${p.points} pronóst.` : ''}
+          ${p.squadPoints !== 0 ? `${p.squadPoints > 0 ? '+' : ''}${p.squadPoints} plant.` : ''}
+          ${p.points === 0 && p.squadPoints === 0 ? p.breakdown.join(', ') : ''}
         </span>
       </div>
     `;
 
-    // Mostrar desglose de jugadores de plantilla si hay puntos
-    if (squadBreakdown.length > 0) {
+    if (p.squadBreakdown.length > 0) {
       playersHtml += '<div class="resultados-squad-breakdown">';
-      for (const sb of squadBreakdown) {
+      for (const sb of p.squadBreakdown) {
         const conceptos = sb.desglose.map(d => d.concepto).join(', ');
         playersHtml += `
           <div class="resultados-squad-item">
@@ -1061,6 +1270,7 @@ function renderMatchResult({ match, homeGoals, awayGoals }) {
           <span class="resultados-team-name">${match.awayTeam}</span>
         </div>
       </div>
+      <div class="resultados-match-date">${match.fecha}</div>
       <div class="resultados-players">
         <div class="resultados-players-title">Puntos por jugador:</div>
         ${playersHtml}
@@ -1291,6 +1501,7 @@ async function enterApp() {
   fetchSquadFromBackend();
   fetchMatchStats();
   fetchAllPredictions();
+  startMatchStatsPolling();
   navigateToTab('inicio');
 }
 
@@ -1305,6 +1516,11 @@ function navigateToTab(tabName) {
   if (AppState.hasUnsavedSquadChanges && tabName !== 'plantilla') {
     showUnsavedSquadChangesModal(tabName);
     return;
+  }
+
+  // Resetear ronda de resultados al salir de la pestaña
+  if (tabName !== 'resultados') {
+    AppState.resultadosRound = null;
   }
 
   const navItems = document.querySelectorAll('.nav-item');
@@ -1460,6 +1676,7 @@ function showLogoutWithUnsavedModal() {
     AppState.sessionToken = null;
     AppState.hasUnsavedChanges = false;
     AppState.hasUnsavedSquadChanges = false;
+    stopMatchStatsPolling();
     checkAuthStatus();
     showToast('Sesion cerrada correctamente');
   });
@@ -1473,6 +1690,7 @@ function showLogoutWithUnsavedModal() {
     AppState.sessionToken = null;
     AppState.hasUnsavedChanges = false;
     AppState.hasUnsavedSquadChanges = false;
+    stopMatchStatsPolling();
     checkAuthStatus();
     showToast('Sesion cerrada correctamente');
   });
@@ -1521,14 +1739,14 @@ function renderInicioTab() {
   const squadCount = AppState.squadPicks.length;
   const squadPending = squadSize - squadCount;
 
-  // Calcular tiempo hasta freeze
-  const freezeDate = config.championsFreezeDate ? new Date(config.championsFreezeDate) : null;
+  // Calcular tiempo hasta inicio de rondas
+  const startRoundsDate = config.championsStartRoundsDate ? new Date(config.championsStartRoundsDate) : null;
   const now = new Date();
-  const isFrozen = freezeDate && now >= freezeDate;
+  const isFrozenNow = startRoundsDate && now >= startRoundsDate;
   let freezeHtml = '';
 
-  if (freezeDate && !isFrozen) {
-    const diff = freezeDate - now;
+  if (startRoundsDate && !isFrozenNow) {
+    const diff = startRoundsDate - now;
     const days = Math.floor(diff / (1000 * 60 * 60 * 24));
     const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
     const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
@@ -1542,7 +1760,7 @@ function renderInicioTab() {
       <div class="inicio-card inicio-freeze">
         <div class="inicio-card-icon">🔒</div>
         <div class="inicio-card-content">
-          <div class="inicio-card-title">${config.championsFreezeLabel || 'Champions League'}</div>
+          <div class="inicio-card-title">${config.championsStartRoundsLabel || 'Champions League'}</div>
           <div class="inicio-card-desc">
             Comienza en <strong>${timeStr}</strong>.<br>
             A partir de ese momento no podrás modificar pronósticos ni plantilla.
@@ -1550,14 +1768,14 @@ function renderInicioTab() {
         </div>
       </div>
     `;
-  } else if (isFrozen) {
+  } else if (isFrozenNow) {
     freezeHtml = `
       <div class="inicio-card inicio-freeze frozen">
         <div class="inicio-card-icon">🔒</div>
         <div class="inicio-card-content">
           <div class="inicio-card-title">Ronda en curso</div>
           <div class="inicio-card-desc">
-            La ${config.championsFreezeLabel || 'Champions League'} está en marcha. Los pronós y la plantilla están bloqueados.
+            La ${config.championsStartRoundsLabel || 'Champions League'} está en marcha. Los pronós y la plantilla están bloqueados.
           </div>
         </div>
       </div>
@@ -1754,6 +1972,7 @@ function showProfileModal() {
     AppState.currentUser = null;
     AppState.sessionToken = null;
     AppState.hasUnsavedChanges = false;
+    stopMatchStatsPolling();
     modal.remove();
     checkAuthStatus();
     showToast('Sesion cerrada correctamente');
@@ -1911,11 +2130,13 @@ function renderPronosticosTab() {
   const total = AppState.matches.length;
   const predicted = countPredicted();
   const pct = Math.round((predicted / total) * 100);
+  const frozen = isFrozen();
 
   container.innerHTML = `
     <div class="pronosticos-top-fixed">
+      ${frozen ? '<div style="background:rgba(239,68,68,0.15);color:#ef4444;padding:8px 12px;border-radius:8px;margin-bottom:8px;font-size:13px;text-align:center;">🔒 Pronósticos bloqueados — la competición ha comenzado</div>' : ''}
       <div class="pronosticos-actions-row">
-        <button class="save-predictions-btn" id="btn-save-predictions" disabled>💾 Guardar en servidor</button>
+        <button class="save-predictions-btn" id="btn-save-predictions" disabled ${frozen ? 'style="opacity:0.5;pointer-events:none"' : ''}>💾 Guardar en servidor</button>
         <button class="standings-btn" id="btn-show-standings" onclick="showPredictedStandings()">📊 Ver Clasificación</button>
       </div>
       <div class="wizard-progress-bar">
@@ -2034,6 +2255,10 @@ function renderRoundMatches() {
 }
 
 function handleGoalButtonClick(e) {
+  if (isFrozen()) {
+    showToast('Los pronósticos están bloqueados<br>hasta el inicio de la competición');
+    return;
+  }
   const btn = e.target.closest('.goals-btn-round');
   if (!btn) return;
 
@@ -2135,7 +2360,7 @@ function setupSaveButton() {
 
 function updateSaveButton() {
   const btn = document.getElementById('btn-save-predictions');
-  if (btn) btn.disabled = !AppState.hasUnsavedChanges;
+  if (btn) btn.disabled = isFrozen() || !AppState.hasUnsavedChanges;
 }
 
 // ============================================================
@@ -2155,6 +2380,10 @@ function getSlotPlayer(position, index) {
 
 /** Abre el panel de búsqueda para una casilla */
 function openSlotSearch(position, index) {
+  if (isFrozen()) {
+    showToast('La plantilla está bloqueada<br>hasta el inicio de la competición');
+    return;
+  }
   const posCount = countByPosition(position);
   const maxCount = SQUAD_FORMATION[position].count;
   if (posCount >= maxCount) return;
@@ -2254,6 +2483,10 @@ function renderSearchResults(query) {
 
 /** Selecciona un jugador para la casilla activa */
 function selectPlayerForSlot(playerId) {
+  if (isFrozen()) {
+    showToast('La plantilla está bloqueada');
+    return;
+  }
   if (!AppState.activeSlot) return;
 
   const { position } = AppState.activeSlot;
@@ -2285,6 +2518,10 @@ function selectPlayerForSlot(playerId) {
 }
 
 function removePlayerFromSquad(position, index) {
+  if (isFrozen()) {
+    showToast('La plantilla está bloqueada');
+    return;
+  }
   const positionPlayers = AppState.squadPicks.filter(p => p.posicion === position);
   const playerToRemove = positionPlayers[index];
   if (!playerToRemove) return;
@@ -2354,16 +2591,18 @@ function renderPlantillaTab() {
   if (!container) return;
 
   const totalSelected = AppState.squadPicks.length;
+  const frozen = isFrozen();
 
   container.innerHTML = `
     <div class="squad-picker-wrapper">
 
       <!-- Cabecera fija -->
       <div class="squad-top-fixed">
+        ${frozen ? '<div style="background:rgba(239,68,68,0.15);color:#ef4444;padding:8px 12px;border-radius:8px;margin-bottom:8px;font-size:13px;text-align:center;">🔒 Plantilla bloqueada — la competición ha comenzado</div>' : ''}
         <!-- Resumen -->
         <div class="squad-summary">
           <span class="squad-summary-text">Tu Plantilla (<span id="squad-count">${totalSelected}</span>/${SQUAD_SIZE})</span>
-          <button class="squad-save-btn" id="btn-save-squad" ${totalSelected === 0 ? 'disabled' : ''}>💾 Guardar</button>
+          <button class="squad-save-btn" id="btn-save-squad" ${totalSelected === 0 || frozen ? 'disabled' : ''} ${frozen ? 'style="opacity:0.5"' : ''}>💾 Guardar</button>
         </div>
       </div>
 
@@ -2452,6 +2691,10 @@ function renderPlantillaTab() {
 
 async function saveSquadToBackend() {
   if (!AppState.currentUser) return false;
+  if (isFrozen()) {
+    showToast('La plantilla está bloqueada');
+    return false;
+  }
 
   const btn = document.getElementById('btn-save-squad');
   if (btn) {
@@ -2471,7 +2714,9 @@ async function saveSquadToBackend() {
     const data = await res.json();
     if (data.ok) {
       AppState.hasUnsavedSquadChanges = false;
-      // Invalidar caché para que se refresquen los datos
+      // Actualizar caché con los nuevos datos y invalidar timestamp
+      if (!AppState.squadsCache) AppState.squadsCache = {};
+      AppState.squadsCache[AppState.currentUser.name] = AppState.squadPicks;
       AppState._squadsCacheTime = 0;
       showToast('Plantilla guardada');
       return true;
@@ -2608,7 +2853,7 @@ function showToast(message) {
 
   const toast = document.createElement('div');
   toast.className = 'toast-msg';
-  toast.textContent = message;
+  toast.innerHTML = message;
 
   Object.assign(toast.style, {
     position: 'fixed',
@@ -2621,6 +2866,8 @@ function showToast(message) {
     borderRadius: '20px',
     fontWeight: '700',
     fontSize: '0.85rem',
+    whiteSpace: 'pre-line',
+    textAlign: 'center',
     boxShadow: '0 10px 25px rgba(0,0,0,0.5)',
     zIndex: '2000',
     opacity: '0',

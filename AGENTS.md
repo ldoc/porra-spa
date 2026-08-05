@@ -887,3 +887,16 @@ const SQUAD_FORMATION = {
 - **localStorage**: Clave `porra_ucl_squad` para persistencia local
 - **Backend**: Endpoint `PUT /api/squad` para persistencia en servidor
 - **Sincronización**: Al cargar la app, se obtiene plantilla del backend si existe
+
+
+
+## Reglas basicas de la porra
+
+- Desde la fecha actual hasta el día antes del primer partido de la jornada 1 cada usuario podra ver y modificar su plantilla y sus pronosticos de resultados
+- Los demas jugadores no podran durante este tiempo ver la plantilla ni los pronosticos de resultados de los otros, cada uno ve lo suyo (esto va por la pantalla de clasificacion donde puedes pinchar en otro jugador y ver su plantilla y resultados)
+- Una vez enpezada la jornada 1 se bloqueara el acceso a la edicion de la plantilla y los pronosticos de resultados para todos los jugadores (la fecha estara definida en "championsFreezeDate") y los demas jugadores tendran acceso a ver la plantilla y los pronosticos de resultados de los otros desde clasificacion.
+- Los partidos se iran subiendo a medida que se conozcan los resultados mediante el script de api-porra math-stats
+- Según se vayan subiendo partidos el usuario deberia poder verlos en la app (hay que ver si tenemos esto ya imlpementado, no se si al subir uno o varios partidos el usuario ya los tendria disponibles)
+
+
+
