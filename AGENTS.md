@@ -4,6 +4,13 @@ Este documento establece las normas de desarrollo, la arquitectura de código y 
 
 ---
 
+> **⚠️ IMPORTANTE - Cache-busting**: Cuando se suban cambios a GitHub que afecten a `css/styles.css` o `js/main.js`, **SIEMPRE** incrementar la versión en `index.html`:
+> - CSS: `<link rel="stylesheet" href="css/styles.css?v=X">`
+> - JS: `<script src="js/main.js?v=X"></script>`
+> Sin esto, el navegador no descargará los cambios y el usuario verá la versión anterior.
+
+---
+
 ## 1. Visión del Producto
 
 **Porra SPA** es una aplicación web (Single Page Application) orientada a la participación en una porra para la **UEFA Champions League de la temporada 2026/2027**.
