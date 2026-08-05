@@ -110,7 +110,7 @@ async function loadInitialData() {
 
     // Configuración del torneo desde backend
     try {
-      const configRes = await fetch(`${API_BASE}/api/config`);
+      const configRes = await fetch(`${API_BASE}/api/config?t=${Date.now()}`);
       const configData = await configRes.json();
       if (configData.ok) AppState.appConfig = configData.config;
     } catch (e) {
