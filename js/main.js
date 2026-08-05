@@ -2256,7 +2256,7 @@ function renderRoundMatches() {
 
 function handleGoalButtonClick(e) {
   if (isFrozen()) {
-    showToast('Los pronósticos están bloqueados<br>hasta el inicio de la competición');
+    showToast('Los pronósticos están bloqueados<br>la competición ha comenzado');
     return;
   }
   const btn = e.target.closest('.goals-btn-round');
@@ -2381,7 +2381,7 @@ function getSlotPlayer(position, index) {
 /** Abre el panel de búsqueda para una casilla */
 function openSlotSearch(position, index) {
   if (isFrozen()) {
-    showToast('La plantilla está bloqueada<br>hasta el inicio de la competición');
+    showToast('La plantilla está bloqueada<br>la competición ha comenzado');
     return;
   }
   const posCount = countByPosition(position);
