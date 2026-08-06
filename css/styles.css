@@ -2520,6 +2520,13 @@ html, body {
   color: var(--text-primary);
 }
 
+.resultados-round-count {
+  font-weight: 400;
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+  margin-left: 6px;
+}
+
 .resultados-journey {
   margin-bottom: 24px;
 }

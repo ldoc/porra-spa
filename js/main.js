@@ -1137,7 +1137,7 @@ async function renderResultadosTab() {
   let html = `
     <div class="resultados-round-nav">
       <button class="resultados-round-btn" id="btn-resultados-round-prev" ${!hasPrev ? 'disabled' : ''}>◀</button>
-      <span class="resultados-round-label">Jornada ${currentRound}</span>
+      <span class="resultados-round-label">Jornada ${currentRound} <span class="resultados-round-count">(${matchesWithResults.length} partidos)</span></span>
       <button class="resultados-round-btn" id="btn-resultados-round-next" ${!hasNext ? 'disabled' : ''}>▶</button>
     </div>
   `;
@@ -1145,10 +1145,6 @@ async function renderResultadosTab() {
   if (matchesWithResults.length) {
     html += `
       <div class="resultados-journey">
-        <div class="resultados-journey-header">
-          <h3 class="resultados-journey-title">Jornada ${currentRound}</h3>
-          <span class="resultados-journey-count">${matchesWithResults.length} partido${matchesWithResults.length > 1 ? 's' : ''}</span>
-        </div>
         ${matchesWithResults.map(m => renderMatchResult(m)).join('')}
       </div>
     `;
