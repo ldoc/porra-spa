@@ -1158,6 +1158,27 @@ async function renderResultadosTab() {
 
   container.innerHTML = html;
 
+  // Toggle expand/collapse partidos
+  container.querySelectorAll('.resultados-expand-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const playersDiv = document.getElementById('match-expand-' + btn.dataset.matchId);
+      if (!playersDiv) return;
+      playersDiv.classList.toggle('collapsed');
+      const icon = btn.querySelector('.expand-icon');
+      icon.textContent = playersDiv.classList.contains('collapsed') ? '▼' : '▲';
+    });
+  });
+
+  // Toggle expand/collapse desglose plantilla por jugador
+  container.querySelectorAll('.resultados-player-expand-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const squadDiv = document.getElementById(btn.dataset.playerTarget);
+      if (!squadDiv) return;
+      squadDiv.classList.toggle('collapsed');
+      btn.textContent = squadDiv.classList.contains('collapsed') ? '▸' : '▾';
+    });
+  });
+
   // Eventos de navegación
   document.getElementById('btn-resultados-round-prev')?.addEventListener('click', () => {
     if (hasPrev) {
@@ -1214,7 +1235,7 @@ function renderMatchResult({ match, homeGoals, awayGoals }) {
       }
     }
 
-    const predStr = hasPrediction ? `${predHome} - ${predAway}` : 'Sin pronóstico';
+    const predStr = hasPrediction ? `${predHome} - ${predAway}` : 'S.P.';
     const totalUserPoints = points + squadPoints;
 
     playersWithPoints.push({ player, predStr, totalUserPoints, points, squadPoints, breakdown, squadBreakdown });
@@ -1223,22 +1244,25 @@ function renderMatchResult({ match, homeGoals, awayGoals }) {
   // Ordenar por puntos de mayor a menor
   playersWithPoints.sort((a, b) => b.totalUserPoints - a.totalUserPoints);
 
-  for (const p of playersWithPoints) {
+  playersWithPoints.forEach((p, pIdx) => {
+    const hasSquad = p.squadBreakdown.length > 0;
+    const hasBreakdown = p.breakdown.length > 0;
+    const playerTargetId = `player-squad-${match.id}-${pIdx}`;
+
     playersHtml += `
       <div class="resultados-player ${p.totalUserPoints > 0 ? 'has-points' : 'no-points'}">
         <span class="resultados-player-name">${p.player.avatar} ${p.player.name}</span>
         <span class="resultados-player-pred">${p.predStr}</span>
         <span class="resultados-player-points">${p.totalUserPoints} pts</span>
-        <span class="resultados-player-breakdown">
-          ${p.points !== 0 ? `${p.points} pronóst.` : ''}
-          ${p.squadPoints !== 0 ? `${p.squadPoints > 0 ? '+' : ''}${p.squadPoints} plant.` : ''}
-          ${p.points === 0 && p.squadPoints === 0 ? p.breakdown.join(', ') : ''}
-        </span>
+        <button class="resultados-player-expand-btn" data-player-target="${playerTargetId}">▸</button>
       </div>
     `;
 
-    if (p.squadBreakdown.length > 0) {
-      playersHtml += '<div class="resultados-squad-breakdown">';
+    playersHtml += `<div class="resultados-squad-breakdown collapsed" id="${playerTargetId}">`;
+    if (hasBreakdown) {
+      playersHtml += `<div class="resultados-breakdown-section">${p.breakdown.join(' · ')}</div>`;
+    }
+    if (hasSquad) {
       for (const sb of p.squadBreakdown) {
         const conceptos = sb.desglose.map(d => d.concepto).join(', ');
         playersHtml += `
@@ -1249,9 +1273,9 @@ function renderMatchResult({ match, homeGoals, awayGoals }) {
           </div>
         `;
       }
-      playersHtml += '</div>';
     }
-  }
+    playersHtml += '</div>';
+  });
 
   return `
     <div class="resultados-match">
@@ -1271,7 +1295,10 @@ function renderMatchResult({ match, homeGoals, awayGoals }) {
         </div>
       </div>
       <div class="resultados-match-date">${match.fecha}</div>
-      <div class="resultados-players">
+      <button class="resultados-expand-btn" data-match-id="${match.id}">
+        Ver puntuaciones <span class="expand-icon">▼</span>
+      </button>
+      <div class="resultados-players collapsed" id="match-expand-${match.id}">
         <div class="resultados-players-title">Puntos por jugador:</div>
         ${playersHtml}
       </div>

@@ -2627,7 +2627,7 @@ html, body {
 .resultados-player {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   padding: 6px 8px;
   border-radius: var(--radius-sm);
   font-size: var(--font-size-xs);
@@ -2646,27 +2646,35 @@ html, body {
   font-weight: 600;
   color: var(--text-primary);
   flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .resultados-player-pred {
   color: var(--text-secondary);
   font-size: 12px;
-  min-width: 50px;
+  width: 42px;
+  flex-shrink: 0;
   text-align: center;
-  margin: 0 8px;
+  margin-left: 20px;
 }
 
 .resultados-player-points {
   font-weight: 700;
   color: var(--accent-primary);
-  min-width: 40px;
+  width: 38px;
+  flex-shrink: 0;
   text-align: right;
 }
 
-.resultados-player-breakdown {
-  color: var(--text-muted);
-  font-size: 10px;
-  flex: 2;
+.resultados-breakdown-section {
+  font-size: 11px;
+  color: var(--text-secondary);
+  padding: 4px 0 6px;
+  border-bottom: 1px solid var(--border-color);
+  margin-bottom: 4px;
 }
 
 .resultados-squad-breakdown {
@@ -2704,6 +2712,76 @@ html, body {
 .resultados-squad-conceptos {
   color: var(--text-muted);
   font-size: 10px;
+}
+
+/* ==========================================
+   EXPAND / COLLAPSE — RESULTADOS
+   ========================================== */
+
+.resultados-expand-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  padding: 8px;
+  margin-top: 8px;
+  background: var(--ucl-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+
+.resultados-expand-btn:active {
+  background: var(--ucl-card-hover);
+  color: var(--accent-primary);
+}
+
+.resultados-expand-btn .expand-icon {
+  font-size: 0.7rem;
+  transition: transform 0.2s;
+}
+
+.resultados-players {
+  transition: max-height 0.3s ease, opacity 0.2s ease, padding 0.3s ease;
+  overflow: hidden;
+}
+
+.resultados-players.collapsed {
+  max-height: 0;
+  opacity: 0;
+  padding-top: 0;
+  border-top: none;
+}
+
+.resultados-player-expand-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  cursor: pointer;
+  padding: 2px 4px;
+  margin-left: auto;
+  transition: color 0.2s;
+  line-height: 1;
+}
+
+.resultados-player-expand-btn:active {
+  color: var(--accent-primary);
+}
+
+.resultados-squad-breakdown {
+  transition: max-height 0.3s ease, opacity 0.2s ease;
+  overflow: hidden;
+}
+
+.resultados-squad-breakdown.collapsed {
+  max-height: 0;
+  opacity: 0;
 }
 
 /* ==========================================
