@@ -1093,42 +1093,45 @@ async function renderResultadosTab() {
     } catch (e) { /* ignore */ }
   }
 
-  // Obtener rondas con resultados
-  const roundsWithResults = new Set();
-  for (const match of AppState.matches) {
-    const matchStats = AppState.matchStats.find(ms => ms.eventId === match.id);
-    if (matchStats) roundsWithResults.add(match.ronda);
-  }
-  const availableRounds = [...roundsWithResults].sort((a, b) => a - b);
+  // Obtener todas las rondas disponibles
+  const availableRounds = [...new Set(AppState.matches.map(m => m.ronda))].sort((a, b) => a - b);
 
   if (!availableRounds.length) {
     container.innerHTML = `<div style="padding: 24px; text-align: center; color: var(--text-muted);">No hay resultados disponibles aún.</div>`;
     return;
   }
 
-  // Determinar ronda por defecto: la última con resultados
+  // Determinar ronda por defecto: la última con resultados, o la última en general
   if (!AppState.resultadosRound || !availableRounds.includes(AppState.resultadosRound)) {
-    AppState.resultadosRound = availableRounds[availableRounds.length - 1];
+    const roundsWithResults = [...new Set(AppState.matchStats.map(ms => {
+      const match = AppState.matches.find(m => m.id === ms.eventId);
+      return match?.ronda;
+    }).filter(Boolean))];
+    AppState.resultadosRound = roundsWithResults.length ? roundsWithResults[roundsWithResults.length - 1] : availableRounds[availableRounds.length - 1];
   }
 
   const currentRound = AppState.resultadosRound;
   const roundMatches = AppState.matches.filter(m => m.ronda === currentRound);
 
-  // Filtrar solo partidos con resultado
-  const matchesWithResults = [];
+  // Todos los partidos de la jornada
+  const allRoundMatches = [];
   for (const match of roundMatches) {
     const matchStats = AppState.matchStats.find(ms => ms.eventId === match.id);
-    if (!matchStats) continue;
-    const stats = matchStats.stats;
-    matchesWithResults.push({
+    const hasResult = matchStats && matchStats.stats;
+    allRoundMatches.push({
       match,
-      homeGoals: stats[match.homeTeamId]?.goles,
-      awayGoals: stats[match.awayTeamId]?.goles,
+      homeGoals: hasResult ? matchStats.stats[match.homeTeamId]?.goles : null,
+      awayGoals: hasResult ? matchStats.stats[match.awayTeamId]?.goles : null,
+      hasResult,
     });
   }
 
-  // Ordenar partidos de más reciente a más antiguo
-  matchesWithResults.sort((a, b) => b.match.fechaTs - a.match.fechaTs);
+  // Ordenar: disputados primero (más reciente), luego sin disputar (por fecha)
+  allRoundMatches.sort((a, b) => {
+    if (a.hasResult && !b.hasResult) return -1;
+    if (!a.hasResult && b.hasResult) return 1;
+    return b.match.fechaTs - a.match.fechaTs;
+  });
 
   const roundIndex = availableRounds.indexOf(currentRound);
   const hasPrev = roundIndex > 0;
@@ -1137,15 +1140,15 @@ async function renderResultadosTab() {
   let html = `
     <div class="resultados-round-nav">
       <button class="resultados-round-btn" id="btn-resultados-round-prev" ${!hasPrev ? 'disabled' : ''}>◀</button>
-      <span class="resultados-round-label">Jornada ${currentRound} <span class="resultados-round-count">(${matchesWithResults.length} partidos)</span></span>
+      <span class="resultados-round-label">Jornada ${currentRound} <span class="resultados-round-count">(${allRoundMatches.length} partidos)</span></span>
       <button class="resultados-round-btn" id="btn-resultados-round-next" ${!hasNext ? 'disabled' : ''}>▶</button>
     </div>
   `;
 
-  if (matchesWithResults.length) {
+  if (allRoundMatches.length) {
     html += `
       <div class="resultados-journey">
-        ${matchesWithResults.map(m => renderMatchResult(m)).join('')}
+        ${allRoundMatches.map(m => renderMatchResult(m)).join('')}
       </div>
     `;
   } else {
@@ -1191,9 +1194,9 @@ async function renderResultadosTab() {
 }
 
 /** Renderiza el resultado de un partido con puntos de jugadores */
-function renderMatchResult({ match, homeGoals, awayGoals }) {
+function renderMatchResult({ match, homeGoals, awayGoals, hasResult }) {
   let playersHtml = '';
-  const matchStats = AppState.matchStats.find(ms => ms.eventId === match.id);
+  const matchStats = hasResult ? AppState.matchStats.find(ms => ms.eventId === match.id) : null;
 
   const playersWithPoints = [];
 
@@ -1208,10 +1211,12 @@ function renderMatchResult({ match, homeGoals, awayGoals }) {
     const predAway = prediction?.away;
     const hasPrediction = prediction && predHome !== null && predHome !== undefined && predAway !== null && predAway !== undefined;
 
-    if (hasPrediction) {
+    if (hasResult && hasPrediction) {
       const result = calculateMatchPoints(prediction, matchStats, match);
       points = result.points;
       breakdown = result.breakdown;
+    } else if (hasPrediction) {
+      breakdown = [];
     } else {
       breakdown = ['Partido no pronosticado'];
     }
@@ -1219,7 +1224,7 @@ function renderMatchResult({ match, homeGoals, awayGoals }) {
     let squadPoints = 0;
     let squadBreakdown = [];
     const userSquad = AppState.squadsCache?.[player.name];
-    if (userSquad && matchStats) {
+    if (hasResult && userSquad && matchStats) {
       for (const squadPlayer of userSquad) {
         const jugadorData = matchStats.stats?.jugadores?.find(j => String(j.id) === String(squadPlayer.id));
         if (!jugadorData) continue;
@@ -1234,58 +1239,72 @@ function renderMatchResult({ match, homeGoals, awayGoals }) {
     const predStr = hasPrediction ? `${predHome} - ${predAway}` : 'S.P.';
     const totalUserPoints = points + squadPoints;
 
-    playersWithPoints.push({ player, predStr, totalUserPoints, points, squadPoints, breakdown, squadBreakdown });
+    playersWithPoints.push({ player, predStr, totalUserPoints, points, squadPoints, breakdown, squadBreakdown, hasPrediction });
   }
 
-  // Ordenar por puntos de mayor a menor
-  playersWithPoints.sort((a, b) => b.totalUserPoints - a.totalUserPoints);
+  // Ordenar: si hay resultado por puntos, si no alfabético
+  if (hasResult) {
+    playersWithPoints.sort((a, b) => b.totalUserPoints - a.totalUserPoints);
+  } else {
+    playersWithPoints.sort((a, b) => a.player.name.localeCompare(b.player.name));
+  }
 
   playersWithPoints.forEach((p, pIdx) => {
-    const hasSquad = p.squadBreakdown.length > 0;
-    const hasBreakdown = p.breakdown.length > 0;
+    const hasSquad = hasResult && p.squadBreakdown.length > 0;
+    const hasBreakdown = hasResult && p.breakdown.length > 0;
     const playerTargetId = `player-squad-${match.id}-${pIdx}`;
 
     const isCurrentUser = AppState.currentUser && p.player.name === AppState.currentUser.name;
 
     playersHtml += `
-      <div class="resultados-player ${p.totalUserPoints > 0 ? 'has-points' : 'no-points'} ${isCurrentUser ? 'is-current-user' : ''}">
+      <div class="resultados-player ${hasResult ? (p.totalUserPoints > 0 ? 'has-points' : 'no-points') : 'no-result'} ${isCurrentUser ? 'is-current-user' : ''}">
         <span class="resultados-player-name">${p.player.avatar} ${p.player.name}${isCurrentUser ? ' <span class="current-user-tag">(Tú)</span>' : ''}</span>
         <span class="resultados-player-pred">${p.predStr}</span>
-        <span class="resultados-player-points">${p.totalUserPoints} pts</span>
-        <button class="resultados-player-expand-btn" data-player-target="${playerTargetId}">▸</button>
+        ${hasResult ? `<span class="resultados-player-points">${p.totalUserPoints} pts</span>` : ''}
+        ${hasResult ? `<button class="resultados-player-expand-btn" data-player-target="${playerTargetId}">▸</button>` : ''}
       </div>
     `;
 
-    playersHtml += `<div class="resultados-squad-breakdown collapsed" id="${playerTargetId}">`;
-    if (hasBreakdown) {
-      playersHtml += `<div class="resultados-breakdown-section">${p.breakdown.join(' · ')}</div>`;
-    }
-    if (hasSquad) {
-      for (const sb of p.squadBreakdown) {
-        const conceptos = sb.desglose.map(d => d.concepto).join(', ');
-        playersHtml += `
-          <div class="resultados-squad-item">
-            <span class="resultados-squad-name">${sb.nombre}</span>
-            <span class="resultados-squad-pts ${sb.puntos >= 0 ? 'positive' : 'negative'}">${sb.puntos > 0 ? '+' : ''}${sb.puntos} pts</span>
-            <span class="resultados-squad-conceptos">${conceptos}</span>
-          </div>
-        `;
+    if (hasResult) {
+      playersHtml += `<div class="resultados-squad-breakdown collapsed" id="${playerTargetId}">`;
+      if (hasBreakdown) {
+        playersHtml += `<div class="resultados-breakdown-section">${p.breakdown.join(' · ')}</div>`;
       }
+      if (hasSquad) {
+        for (const sb of p.squadBreakdown) {
+          const conceptos = sb.desglose.map(d => d.concepto).join(', ');
+          playersHtml += `
+            <div class="resultados-squad-item">
+              <span class="resultados-squad-name">${sb.nombre}</span>
+              <span class="resultados-squad-pts ${sb.puntos >= 0 ? 'positive' : 'negative'}">${sb.puntos > 0 ? '+' : ''}${sb.puntos} pts</span>
+              <span class="resultados-squad-conceptos">${conceptos}</span>
+            </div>
+          `;
+        }
+      }
+      playersHtml += '</div>';
     }
-    playersHtml += '</div>';
   });
 
+  const scoreDisplay = hasResult ? `
+    <span class="resultados-goals">${homeGoals}</span>
+    <span class="resultados-separator">-</span>
+    <span class="resultados-goals">${awayGoals}</span>
+  ` : `
+    <span class="resultados-goals pending">-</span>
+    <span class="resultados-separator">-</span>
+    <span class="resultados-goals pending">-</span>
+  `;
+
   return `
-    <div class="resultados-match">
+    <div class="resultados-match ${!hasResult ? 'no-result' : ''}">
       <div class="resultados-match-header">
         <div class="resultados-team">
           ${teamImgTag(match.homeTeamId, match.homeBadgeExt, match.homeTeam, 'resultados-badge')}
           <span class="resultados-team-name">${match.homeTeam}</span>
         </div>
         <div class="resultados-score">
-          <span class="resultados-goals">${homeGoals}</span>
-          <span class="resultados-separator">-</span>
-          <span class="resultados-goals">${awayGoals}</span>
+          ${scoreDisplay}
         </div>
         <div class="resultados-team">
           ${teamImgTag(match.awayTeamId, match.awayBadgeExt, match.awayTeam, 'resultados-badge')}
@@ -1294,10 +1313,10 @@ function renderMatchResult({ match, homeGoals, awayGoals }) {
       </div>
       <div class="resultados-match-date">${match.fecha}</div>
       <button class="resultados-expand-btn" data-match-id="${match.id}">
-        Ver puntuaciones <span class="expand-icon">▼</span>
+        ${hasResult ? 'Ver puntuaciones' : 'Ver pronósticos'} <span class="expand-icon">▼</span>
       </button>
       <div class="resultados-players collapsed" id="match-expand-${match.id}">
-        <div class="resultados-players-title">Puntos por jugador:</div>
+        <div class="resultados-players-title">${hasResult ? 'Puntos por jugador:' : 'Pronósticos de jugadores:'}</div>
         ${playersHtml}
       </div>
     </div>
