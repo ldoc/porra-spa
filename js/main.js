@@ -38,6 +38,12 @@ const AppState = {
   userPoints: {},       // { username: { totalPoints, matchDetails } }
   squadsCache: {},      // { username: squad[] } - caché de plantillas para resultados
   currentSquadDetails: [], // detalles de plantilla para modal de desglose
+  realStandings: [],    // Clasificación real calculada desde matchStats
+  classificationPoints: {}, // { username: { totalPoints, teamDetails } }
+  resultadosTab: 'jornadas', // Tab seleccionado en resultados: 'jornadas' o 'clasificacion'
+  finalPredictions: null, // { champion, runnerUp, semiFinalists, quarterFinalists, roundOf16, roundOf32 }
+  hasUnsavedFinalChanges: false, // flag de cambios sin guardar en fase final
+  selectedFinalTeam: null, // teamId seleccionado para colocar en zona
 };
 
 const SQUAD_SIZE = 25;
@@ -51,6 +57,12 @@ function isFrozen() {
   const startRoundsDate = AppState.appConfig?.championsStartRoundsDate;
   if (!startRoundsDate) return false;
   return new Date() >= new Date(startRoundsDate);
+}
+
+function isFinalsFrozen() {
+  const finalsFreezeDate = AppState.appConfig?.finalsFreezeDate;
+  if (!finalsFreezeDate) return false;
+  return new Date() >= new Date(finalsFreezeDate);
 }
 
 const SQUAD_FORMATION = {
@@ -331,8 +343,13 @@ async function fetchMatchStats(force = false) {
     const res = await fetch(`${API_BASE}/api/match-stats`);
     const data = await res.json();
     if (data.ok && data.matchStats) {
+      const hadData = AppState.matchStats.length > 0;
       AppState.matchStats = data.matchStats;
       AppState._matchStatsTime = Date.now();
+      // Invalidar caché de clasificación si se actualizaron los datos
+      if (hadData || data.matchStats.length > 0) {
+        invalidateClassificationCache();
+      }
     }
   } catch (e) {
     console.error('Error cargando matchstats:', e);
@@ -349,7 +366,11 @@ async function fetchAllPredictions() {
     const res = await fetch(`${API_BASE}/api/predictions/all`, { headers: authHeaders() });
     const data = await res.json();
     if (data.ok && data.predictions) {
-      AppState.allPredictions = data.predictions;
+      const unwrapped = {};
+      for (const [username, userData] of Object.entries(data.predictions)) {
+        unwrapped[username] = userData.predictions || {};
+      }
+      AppState.allPredictions = unwrapped;
       AppState._allPredictionsTime = Date.now();
     }
   } catch (e) {
@@ -733,6 +754,12 @@ async function renderClasificacionTab() {
     } catch (e) { /* ignore */ }
   }
 
+  // Pre-calcular clasificación real una sola vez
+  const hasMatchStats = AppState.matchStats.length > 0;
+  if (hasMatchStats) {
+    calculateRealStandings();
+  }
+
   const playersWithPoints = players.map(p => {
     const userData = calculateUserTotalPoints(p.name);
     AppState.userPoints[p.name] = userData;
@@ -745,11 +772,19 @@ async function renderClasificacionTab() {
       squadPoints = totalPoints;
     }
 
+    // Calcular puntos por clasificación
+    let classificationPts = 0;
+    if (hasMatchStats) {
+      const classData = calculateClassificationPoints(p.name);
+      classificationPts = classData.totalPoints;
+    }
+
     return {
       ...p,
       predictionPoints: userData.totalPoints,
       squadPoints,
-      realPoints: userData.totalPoints + squadPoints
+      classificationPoints: classificationPts,
+      realPoints: userData.totalPoints + squadPoints + classificationPts
     };
   });
 
@@ -762,6 +797,7 @@ async function renderClasificacionTab() {
     const breakdownParts = [];
     if (p.predictionPoints) breakdownParts.push(`${p.predictionPoints} pronósticos`);
     if (p.squadPoints) breakdownParts.push(`${p.squadPoints} plantilla`);
+    if (p.classificationPoints) breakdownParts.push(`${p.classificationPoints} clasificación`);
     const breakdownStr = breakdownParts.length ? ` (${breakdownParts.join(' + ')})` : '';
     return `
       <div class="leaderboard-row ${isMe ? 'current-user' : ''}" onclick="showUserProfileModal('${p.name}')">
@@ -810,6 +846,7 @@ function showUserProfileModal(username) {
       <div class="profile-tabs">
         <button class="profile-tab active" data-tab="predictions">Pronósticos</button>
         <button class="profile-tab" data-tab="squad">Plantilla</button>
+        <button class="profile-tab" data-tab="classification">Clasificación</button>
       </div>
       <div class="breakdown-modal-content" id="profile-tab-content">
         <div style="padding: 24px; text-align: center; color: var(--text-muted);">Cargando...</div>
@@ -833,6 +870,7 @@ function showUserProfileModal(username) {
     tabs.forEach(t => t.classList.toggle('active', t.dataset.tab === tabName));
     if (tabName === 'predictions') renderPredictionsTab(tabContent, userData);
     else if (tabName === 'squad') renderSquadTab(tabContent, username);
+    else if (tabName === 'classification') renderClassificationTab(tabContent, username);
   }
 
   tabs.forEach(t => t.addEventListener('click', () => activateTab(t.dataset.tab)));
@@ -1010,6 +1048,105 @@ async function renderSquadTab(container, username) {
   }
 }
 
+/** Renderiza la tab de clasificación en el modal de perfil */
+function renderClassificationTab(container, username) {
+  // Verificar si hay clasificación real disponible
+  if (!AppState.matchStats.length) {
+    container.innerHTML = '<div style="padding: 24px; text-align: center; color: var(--text-muted);">La clasificación real estará disponible cuando se disputen partidos.</div>';
+    return;
+  }
+
+  // Calcular puntos de clasificación del usuario
+  const classData = calculateClassificationPoints(username);
+
+  if (!classData.teamDetails.length) {
+    container.innerHTML = '<div style="padding: 24px; text-align: center; color: var(--text-muted);">No hay datos de clasificación disponibles.</div>';
+    return;
+  }
+
+  // Filtrar solo equipos con posición real 1-24 (los que puntúan)
+  const scoringTeams = classData.teamDetails.filter(t => t.realPos <= 24);
+  const nonScoringTeams = classData.teamDetails.filter(t => t.realPos > 24);
+
+  let html = `
+    <div class="profile-total-points">Puntos totales clasificación: <strong>${classData.totalPoints}</strong></div>
+    <div class="classification-legend" style="padding: 8px 16px; font-size: 11px; color: var(--text-muted); text-align: center;">
+      Solo puntúan equipos en posición 1-24 | Mínimo entre posición pronosticada y real
+    </div>
+  `;
+
+  // Tabla de equipos que puntúan
+  if (scoringTeams.length) {
+    html += `
+      <div class="classification-section">
+        <div class="classification-section-title">Equipos que puntúan (1º-24º)</div>
+        <div class="classification-table">
+          <div class="classification-header">
+            <span class="col-pos">#</span>
+            <span class="col-team">Equipo</span>
+            <span class="col-pred">Pron.</span>
+            <span class="col-real">Real</span>
+            <span class="col-pts">Pts</span>
+          </div>
+    `;
+
+    for (const team of scoringTeams.sort((a, b) => a.realPos - b.realPos)) {
+      const predDisplay = team.predictedPos <= 36 ? team.predictedPos : '-';
+      const ptsClass = team.points > 0 ? 'positive' : '';
+      html += `
+        <div class="classification-row">
+          <span class="col-pos">${team.realPos}</span>
+          <span class="col-team">
+            <img src="data/imgEquipos/${team.teamId}.${team.badgeExt}" class="classification-badge" alt="${team.name}" loading="lazy" onerror="this.style.display='none'">
+            ${team.name}
+          </span>
+          <span class="col-pred">${predDisplay}</span>
+          <span class="col-real">${team.realPos}</span>
+          <span class="col-pts ${ptsClass}">${team.points}</span>
+        </div>
+      `;
+    }
+
+    html += '</div></div>';
+  }
+
+  // Tabla de equipos que no puntúan (resumen)
+  if (nonScoringTeams.length) {
+    html += `
+      <div class="classification-section">
+        <div class="classification-section-title">Equipos sin puntos (25º-36º)</div>
+        <div class="classification-table">
+          <div class="classification-header">
+            <span class="col-pos">#</span>
+            <span class="col-team">Equipo</span>
+            <span class="col-pred">Pron.</span>
+            <span class="col-real">Real</span>
+            <span class="col-pts">Pts</span>
+          </div>
+    `;
+
+    for (const team of nonScoringTeams.sort((a, b) => a.realPos - b.realPos)) {
+      const predDisplay = team.predictedPos <= 36 ? team.predictedPos : '-';
+      html += `
+        <div class="classification-row muted">
+          <span class="col-pos">${team.realPos}</span>
+          <span class="col-team">
+            <img src="data/imgEquipos/${team.teamId}.${team.badgeExt}" class="classification-badge" alt="${team.name}" loading="lazy" onerror="this.style.display='none'">
+            ${team.name}
+          </span>
+          <span class="col-pred">${predDisplay}</span>
+          <span class="col-real">${team.realPos}</span>
+          <span class="col-pts">0</span>
+        </div>
+      `;
+    }
+
+    html += '</div></div>';
+  }
+
+  container.innerHTML = html;
+}
+
 /** Muestra modal con desglose de puntos de un jugador por partido */
 function showPlayerPointsBreakdown(detail) {
   const existing = document.querySelector('.player-breakdown-modal-overlay');
@@ -1093,104 +1230,216 @@ async function renderResultadosTab() {
     } catch (e) { /* ignore */ }
   }
 
-  // Obtener todas las rondas disponibles
-  const availableRounds = [...new Set(AppState.matches.map(m => m.ronda))].sort((a, b) => a - b);
+  // Pre-calcular clasificación real
+  calculateRealStandings();
 
-  if (!availableRounds.length) {
-    container.innerHTML = `<div style="padding: 24px; text-align: center; color: var(--text-muted);">No hay resultados disponibles aún.</div>`;
-    return;
-  }
+  // Selector de tabs
+  const currentTab = AppState.resultadosTab || 'jornadas';
+  let headerHtml = `
+    <div class="resultados-tabs">
+      <button class="resultados-tab ${currentTab === 'jornadas' ? 'active' : ''}" data-tab="jornadas">Jornadas</button>
+      <button class="resultados-tab ${currentTab === 'clasificacion' ? 'active' : ''}" data-tab="clasificacion">Clasificación Real</button>
+    </div>
+  `;
+  let scrollHtml = '';
 
-  // Determinar ronda por defecto: la última con resultados, o la última en general
-  if (!AppState.resultadosRound || !availableRounds.includes(AppState.resultadosRound)) {
-    const roundsWithResults = [...new Set(AppState.matchStats.map(ms => {
-      const match = AppState.matches.find(m => m.id === ms.eventId);
-      return match?.ronda;
-    }).filter(Boolean))];
-    AppState.resultadosRound = roundsWithResults.length ? roundsWithResults[roundsWithResults.length - 1] : availableRounds[availableRounds.length - 1];
-  }
+  if (currentTab === 'clasificacion') {
+    // Mostrar clasificación real
+    scrollHtml = renderRealStandingsTable();
+  } else {
+    // Mostrar jornadas (código existente)
+    // Obtener todas las rondas disponibles
+    const availableRounds = [...new Set(AppState.matches.map(m => m.ronda))].sort((a, b) => a - b);
 
-  const currentRound = AppState.resultadosRound;
-  const roundMatches = AppState.matches.filter(m => m.ronda === currentRound);
+    if (!availableRounds.length) {
+      scrollHtml = `<div style="padding: 24px; text-align: center; color: var(--text-muted);">No hay resultados disponibles aún.</div>`;
+      container.innerHTML = headerHtml + scrollHtml;
+      return;
+    }
 
-  // Todos los partidos de la jornada
-  const allRoundMatches = [];
-  for (const match of roundMatches) {
-    const matchStats = AppState.matchStats.find(ms => ms.eventId === match.id);
-    const hasResult = matchStats && matchStats.stats;
-    allRoundMatches.push({
-      match,
-      homeGoals: hasResult ? matchStats.stats[match.homeTeamId]?.goles : null,
-      awayGoals: hasResult ? matchStats.stats[match.awayTeamId]?.goles : null,
-      hasResult,
+    // Determinar ronda por defecto: la última con resultados, o la última en general
+    if (!AppState.resultadosRound || !availableRounds.includes(AppState.resultadosRound)) {
+      const roundsWithResults = [...new Set(AppState.matchStats.map(ms => {
+        const match = AppState.matches.find(m => m.id === ms.eventId);
+        return match?.ronda;
+      }).filter(Boolean))];
+      AppState.resultadosRound = roundsWithResults.length ? roundsWithResults[roundsWithResults.length - 1] : availableRounds[availableRounds.length - 1];
+    }
+
+    const currentRound = AppState.resultadosRound;
+    const roundMatches = AppState.matches.filter(m => m.ronda === currentRound);
+
+    // Todos los partidos de la jornada
+    const allRoundMatches = [];
+    for (const match of roundMatches) {
+      const matchStats = AppState.matchStats.find(ms => ms.eventId === match.id);
+      const hasResult = matchStats && matchStats.stats;
+      allRoundMatches.push({
+        match,
+        homeGoals: hasResult ? matchStats.stats[match.homeTeamId]?.goles : null,
+        awayGoals: hasResult ? matchStats.stats[match.awayTeamId]?.goles : null,
+        hasResult,
+      });
+    }
+
+    // Ordenar: disputados primero (más reciente), luego sin disputar (por fecha)
+    allRoundMatches.sort((a, b) => {
+      if (a.hasResult && !b.hasResult) return -1;
+      if (!a.hasResult && b.hasResult) return 1;
+      return b.match.fechaTs - a.match.fechaTs;
     });
+
+    const roundIndex = availableRounds.indexOf(currentRound);
+    const hasPrev = roundIndex > 0;
+    const hasNext = roundIndex < availableRounds.length - 1;
+
+    headerHtml += `
+      <div class="resultados-round-nav">
+        <button class="resultados-round-btn" id="btn-resultados-round-prev" ${!hasPrev ? 'disabled' : ''}>◀</button>
+        <span class="resultados-round-label">Jornada ${currentRound} <span class="resultados-round-count">(${allRoundMatches.length} partidos)</span></span>
+        <button class="resultados-round-btn" id="btn-resultados-round-next" ${!hasNext ? 'disabled' : ''}>▶</button>
+      </div>
+    `;
+
+    if (allRoundMatches.length) {
+      scrollHtml = `
+        <div class="resultados-journey">
+          ${allRoundMatches.map(m => renderMatchResult(m)).join('')}
+        </div>
+      `;
+    } else {
+      scrollHtml = `<div style="padding: 24px; text-align: center; color: var(--text-muted);">No hay resultados en esta jornada.</div>`;
+    }
+
+    // Eventos de navegación de jornadas
+    setTimeout(() => {
+      document.getElementById('btn-resultados-round-prev')?.addEventListener('click', () => {
+        if (roundIndex > 0) {
+          AppState.resultadosRound = availableRounds[roundIndex - 1];
+          renderResultadosTab();
+        }
+      });
+      document.getElementById('btn-resultados-round-next')?.addEventListener('click', () => {
+        if (roundIndex < availableRounds.length - 1) {
+          AppState.resultadosRound = availableRounds[roundIndex + 1];
+          renderResultadosTab();
+        }
+      });
+    }, 0);
   }
 
-  // Ordenar: disputados primero (más reciente), luego sin disputar (por fecha)
-  allRoundMatches.sort((a, b) => {
-    if (a.hasResult && !b.hasResult) return -1;
-    if (!a.hasResult && b.hasResult) return 1;
-    return b.match.fechaTs - a.match.fechaTs;
+  container.innerHTML = `
+    <div class="resultados-header">${headerHtml}</div>
+    <div class="resultados-scroll">${scrollHtml}</div>
+  `;
+
+  // Eventos de expand/collapse para partidos y jugadores
+  container.addEventListener('click', e => {
+    const expandBtn = e.target.closest('.resultados-expand-btn');
+    if (expandBtn) {
+      const matchId = expandBtn.dataset.matchId;
+      const target = document.getElementById(`match-expand-${matchId}`);
+      if (target) {
+        target.classList.toggle('collapsed');
+        expandBtn.querySelector('.expand-icon').textContent = target.classList.contains('collapsed') ? '▼' : '▲';
+      }
+      return;
+    }
+    const playerBtn = e.target.closest('.resultados-player-expand-btn');
+    if (playerBtn) {
+      const targetId = playerBtn.dataset.playerTarget;
+      const target = document.getElementById(targetId);
+      if (target) {
+        target.classList.toggle('collapsed');
+        playerBtn.textContent = target.classList.contains('collapsed') ? '▸' : '▾';
+      }
+    }
   });
 
-  const roundIndex = availableRounds.indexOf(currentRound);
-  const hasPrev = roundIndex > 0;
-  const hasNext = roundIndex < availableRounds.length - 1;
+  // Eventos de tabs (comunes a ambos modos)
+  container.querySelectorAll('.resultados-tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      AppState.resultadosTab = btn.dataset.tab;
+      renderResultadosTab();
+    });
+  });
+}
+
+/** Renderiza la tabla de clasificación real en la pestaña de resultados */
+function renderRealStandingsTable() {
+  const standings = AppState.realStandings;
+  if (!standings || !standings.length) {
+    return '<div style="padding: 24px; text-align: center; color: var(--text-muted);">No hay clasificación disponible.</div>';
+  }
+
+  // Contar partidos disputados
+  const totalMatches = AppState.matches.length;
+  const playedMatches = AppState.matchStats.length;
+  const pct = totalMatches > 0 ? Math.round((playedMatches / totalMatches) * 100) : 0;
 
   let html = `
-    <div class="resultados-round-nav">
-      <button class="resultados-round-btn" id="btn-resultados-round-prev" ${!hasPrev ? 'disabled' : ''}>◀</button>
-      <span class="resultados-round-label">Jornada ${currentRound} <span class="resultados-round-count">(${allRoundMatches.length} partidos)</span></span>
-      <button class="resultados-round-btn" id="btn-resultados-round-next" ${!hasNext ? 'disabled' : ''}>▶</button>
+    <div class="standings-progress">
+      <p class="standings-progress-text">
+        Partidos disputados: <strong>${playedMatches}</strong>/${totalMatches}
+      </p>
+      <div class="standings-progress-bar">
+        <div class="standings-progress-fill" style="width: ${pct}%"></div>
+      </div>
+    </div>
+    <div class="standings-table-container">
+      <table class="standings-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th></th>
+            <th>Equipo</th>
+            <th>Pts</th>
+            <th>DG</th>
+            <th>GF</th>
+            <th>GC</th>
+            <th>PJ</th>
+          </tr>
+        </thead>
+        <tbody>
+  `;
+
+  for (const team of standings) {
+    const gdSign = team.gd > 0 ? '+' : '';
+    let rowClass = '';
+    if (team.position <= 8) rowClass = 'top-8';
+    else if (team.position <= 24) rowClass = 'top-24';
+    else rowClass = 'bottom-12';
+
+    let gdClass = 'gd-zero';
+    if (team.gd > 0) gdClass = 'gd-positive';
+    else if (team.gd < 0) gdClass = 'gd-negative';
+
+    html += `
+      <tr class="${rowClass}">
+        <td>${team.position}</td>
+        <td><img src="data/imgEquipos/${team.teamId}.${team.badgeExt}" class="standings-badge-img" alt="${team.name}" loading="lazy" onerror="this.style.display='none'"></td>
+        <td><span class="standings-team-name">${team.name}</span></td>
+        <td class="pts-col">${team.points}</td>
+        <td class="gd-col ${gdClass}">${gdSign}${team.gd}</td>
+        <td>${team.gf}</td>
+        <td>${team.gc}</td>
+        <td>${team.played}</td>
+      </tr>
+    `;
+  }
+
+  html += `
+        </tbody>
+      </table>
+    </div>
+    <div class="standings-legend">
+      <span class="standings-color-item top-8">1-8: Clasificación directa</span>
+      <span class="standings-color-item top-24">9-24: Playoffs</span>
+      <span class="standings-color-item bottom-12">25-36: Eliminados</span>
     </div>
   `;
 
-  if (allRoundMatches.length) {
-    html += `
-      <div class="resultados-journey">
-        ${allRoundMatches.map(m => renderMatchResult(m)).join('')}
-      </div>
-    `;
-  } else {
-    html += `<div style="padding: 24px; text-align: center; color: var(--text-muted);">No hay resultados en esta jornada.</div>`;
-  }
-
-  container.innerHTML = html;
-
-  // Toggle expand/collapse partidos
-  container.querySelectorAll('.resultados-expand-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const playersDiv = document.getElementById('match-expand-' + btn.dataset.matchId);
-      if (!playersDiv) return;
-      playersDiv.classList.toggle('collapsed');
-      const icon = btn.querySelector('.expand-icon');
-      icon.textContent = playersDiv.classList.contains('collapsed') ? '▼' : '▲';
-    });
-  });
-
-  // Toggle expand/collapse desglose plantilla por jugador
-  container.querySelectorAll('.resultados-player-expand-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const squadDiv = document.getElementById(btn.dataset.playerTarget);
-      if (!squadDiv) return;
-      squadDiv.classList.toggle('collapsed');
-      btn.textContent = squadDiv.classList.contains('collapsed') ? '▸' : '▾';
-    });
-  });
-
-  // Eventos de navegación
-  document.getElementById('btn-resultados-round-prev')?.addEventListener('click', () => {
-    if (hasPrev) {
-      AppState.resultadosRound = availableRounds[roundIndex - 1];
-      renderResultadosTab();
-    }
-  });
-  document.getElementById('btn-resultados-round-next')?.addEventListener('click', () => {
-    if (hasNext) {
-      AppState.resultadosRound = availableRounds[roundIndex + 1];
-      renderResultadosTab();
-    }
-  });
+  return html;
 }
 
 /** Renderiza el resultado de un partido con puntos de jugadores */
@@ -1545,6 +1794,7 @@ async function enterApp() {
   fetchSquadFromBackend();
   fetchMatchStats();
   fetchAllPredictions();
+  fetchFinalPredictionsFromBackend();
   startMatchStatsPolling();
   navigateToTab('inicio');
 }
@@ -1559,6 +1809,12 @@ function navigateToTab(tabName) {
   // Si hay cambios sin guardar en plantilla, mostrar aviso
   if (AppState.hasUnsavedSquadChanges && tabName !== 'plantilla') {
     showUnsavedSquadChangesModal(tabName);
+    return;
+  }
+
+  // Si hay cambios sin guardar en fase final, mostrar aviso
+  if (AppState.hasUnsavedFinalChanges && tabName !== 'final-predictions') {
+    showUnsavedFinalChangesModal(tabName);
     return;
   }
 
@@ -1585,6 +1841,7 @@ function navigateToTab(tabName) {
   if (tabName === 'clasificacion') renderClasificacionTab();
   if (tabName === 'resultados') renderResultadosTab();
   if (tabName === 'pronosticos') renderPronosticosTab();
+  if (tabName === 'final-predictions') renderFinalPredictionsTab();
   if (tabName === 'plantilla') renderPlantillaTab();
 }
 
@@ -1672,6 +1929,50 @@ function showUnsavedSquadChangesModal(targetTab) {
   });
 
   overlay.querySelector('#modal-cancel-squad').addEventListener('click', () => {
+    overlay.remove();
+  });
+
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) overlay.remove();
+  });
+}
+
+/** Modal de aviso cuando hay cambios sin guardar en fase final */
+function showUnsavedFinalChangesModal(targetTab) {
+  const existing = document.querySelector('.unsaved-modal-overlay');
+  if (existing) existing.remove();
+
+  const overlay = document.createElement('div');
+  overlay.className = 'unsaved-modal-overlay';
+  overlay.innerHTML = `
+    <div class="unsaved-modal">
+      <div class="unsaved-modal-icon">⚠️</div>
+      <h3 class="unsaved-modal-title">Fase final sin guardar</h3>
+      <p class="unsaved-modal-text">Has modificado tus predicciones de fase final pero no las has guardado. Si sales, los cambios se perderán.</p>
+      <div class="unsaved-modal-actions">
+        <button class="unsaved-modal-btn unsaved-modal-btn-save" id="modal-save-final">Guardar y salir</button>
+        <button class="unsaved-modal-btn unsaved-modal-btn-discard" id="modal-discard-final">Salir sin guardar</button>
+        <button class="unsaved-modal-btn unsaved-modal-btn-cancel" id="modal-cancel-final">Cancelar</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+
+  overlay.querySelector('#modal-save-final').addEventListener('click', async () => {
+    overlay.remove();
+    await saveFinalPredictionsToBackend();
+    AppState.hasUnsavedFinalChanges = false;
+    forceNavigateToTab(targetTab);
+  });
+
+  overlay.querySelector('#modal-discard-final').addEventListener('click', () => {
+    overlay.remove();
+    AppState.hasUnsavedFinalChanges = false;
+    forceNavigateToTab(targetTab);
+  });
+
+  overlay.querySelector('#modal-cancel-final').addEventListener('click', () => {
     overlay.remove();
   });
 
@@ -2182,6 +2483,7 @@ function renderPronosticosTab() {
       <div class="pronosticos-actions-row">
         <button class="save-predictions-btn" id="btn-save-predictions" disabled ${frozen ? 'style="opacity:0.5;pointer-events:none"' : ''}>💾 Guardar en servidor</button>
         <button class="standings-btn" id="btn-show-standings" onclick="showPredictedStandings()">📊 Ver Clasificación</button>
+        <button class="standings-btn" id="btn-show-final" onclick="navigateToTab('final-predictions')" style="background: linear-gradient(135deg, #8B5CF6, #EC4899);">🏆 Fase Final</button>
       </div>
       <div class="wizard-progress-bar">
         <div class="wizard-progress-fill" style="width: ${pct}%"></div>
@@ -3265,4 +3567,796 @@ function renderPredictedStandings() {
 function showPredictedStandings() {
   renderPredictedStandings();
   navigateToTab('pred-standings');
+}
+
+// ============================================================
+// CLASIFICACIÓN REAL (basada en resultados de partidos)
+// ============================================================
+
+/**
+ * Tabla de puntos por posición en la clasificación
+ * Solo se asignan puntos a equipos en posición 1-24
+ */
+const CLASSIFICATION_POINTS = {
+  1: 60, 2: 51, 3: 43, 4: 36, 5: 30, 6: 25,
+  7: 21, 8: 18, 9: 16, 10: 15, 11: 14, 12: 13,
+  13: 12, 14: 11, 15: 10, 16: 9, 17: 8, 18: 7,
+  19: 6, 20: 5, 21: 4, 22: 3, 23: 2, 24: 1
+};
+
+/**
+ * Busca todos los partidos con resultado donde participa un equipo
+ * @param {number} teamId - ID del equipo
+ * @returns {Array} Array de partidos con resultado del equipo
+ */
+function findRealTeamMatches(teamId) {
+  return AppState.matches.filter(m => {
+    const matchStat = AppState.matchStats.find(ms => ms.eventId === m.id);
+    return matchStat && matchStat.stats &&
+           matchStat.stats[m.homeTeamId] !== undefined &&
+           matchStat.stats[m.awayTeamId] !== undefined;
+  }).filter(m => m.homeTeamId === teamId || m.awayTeamId === teamId);
+}
+
+/**
+ * Calcula estadísticas reales de un equipo desde matchStats
+ * @param {number} teamId - ID del equipo
+ * @returns {Object} Estadísticas reales del equipo
+ */
+function getRealTeamStats(teamId) {
+  const stats = {
+    teamId,
+    played: 0,
+    wins: 0,
+    draws: 0,
+    losses: 0,
+    gf: 0,
+    gc: 0,
+    gd: 0,
+    points: 0,
+    awayWins: 0,
+    awayGoals: 0
+  };
+
+  const teamMatches = findRealTeamMatches(teamId);
+
+  for (const match of teamMatches) {
+    const matchStat = AppState.matchStats.find(ms => ms.eventId === match.id);
+    if (!matchStat || !matchStat.stats) continue;
+
+    const realHome = matchStat.stats[match.homeTeamId]?.goles;
+    const realAway = matchStat.stats[match.awayTeamId]?.goles;
+    if (realHome === undefined || realAway === undefined) continue;
+
+    const isHome = match.homeTeamId === teamId;
+    const teamGoals = isHome ? realHome : realAway;
+    const rivalGoals = isHome ? realAway : realHome;
+
+    stats.played++;
+    stats.gf += teamGoals;
+    stats.gc += rivalGoals;
+
+    if (teamGoals > rivalGoals) {
+      stats.wins++;
+      stats.points += 3;
+      if (!isHome) stats.awayWins++;
+    } else if (teamGoals === rivalGoals) {
+      stats.draws++;
+      stats.points += 1;
+    } else {
+      stats.losses++;
+    }
+
+    if (!isHome) {
+      stats.awayGoals += teamGoals;
+    }
+  }
+
+  stats.gd = stats.gf - stats.gc;
+  return stats;
+}
+
+/**
+ * Calcula las estadísticas acumuladas de los 8 rivales de un equipo
+ * usando datos reales de matchStats
+ * @param {number} teamId - ID del equipo
+ * @param {Map} statsCache - Caché de estadísticas { teamId → stats }
+ * @returns {Object} { rivalPointsSum, rivalGDSum, rivalGFSum }
+ */
+function getRealRivalsStats(teamId, statsCache) {
+  const teamMatches = findRealTeamMatches(teamId);
+  const rivalIds = new Set();
+
+  for (const match of teamMatches) {
+    const rivalId = match.homeTeamId === teamId ? match.awayTeamId : match.homeTeamId;
+    rivalIds.add(rivalId);
+  }
+
+  let rivalPointsSum = 0;
+  let rivalGDSum = 0;
+  let rivalGFSum = 0;
+
+  for (const rivalId of rivalIds) {
+    let rivalStats = statsCache.get(rivalId);
+    if (!rivalStats) {
+      rivalStats = getRealTeamStats(rivalId);
+      statsCache.set(rivalId, rivalStats);
+    }
+    rivalPointsSum += rivalStats.points;
+    rivalGDSum += rivalStats.gd;
+    rivalGFSum += rivalStats.gf;
+  }
+
+  return { rivalPointsSum, rivalGDSum, rivalGFSum };
+}
+
+/**
+ * Calcula la clasificación real completa de los 36 equipos
+ * basada en los resultados de los partidos (matchStats)
+ * @returns {Array} Array ordenado de equipos con estadísticas y posición
+ */
+function calculateRealStandings() {
+  // Si ya está calculada y hay datos, devolverla
+  if (AppState.realStandings.length > 0 && AppState.matchStats.length > 0) {
+    return AppState.realStandings;
+  }
+
+  const teamIds = Object.keys(AppState.teamsMap).map(Number);
+  const teams = [];
+  const statsCache = new Map();
+
+  for (const teamId of teamIds) {
+    const stats = getRealTeamStats(teamId);
+    const teamInfo = AppState.teamsMap[teamId];
+    teams.push({
+      ...stats,
+      name: teamInfo?.name || 'Desconocido',
+      badgeExt: teamInfo?.ext || 'png'
+    });
+    statsCache.set(teamId, stats);
+  }
+
+  // Función de comparación con criterios de desempate UCL
+  function compareTeams(a, b) {
+    if (b.points !== a.points) return b.points - a.points;
+    if (b.gd !== a.gd) return b.gd - a.gd;
+    if (b.gf !== a.gf) return b.gf - a.gf;
+    if (b.awayGoals !== a.awayGoals) return b.awayGoals - a.awayGoals;
+    if (b.wins !== a.wins) return b.wins - a.wins;
+    if (b.awayWins !== a.awayWins) return b.awayWins - a.awayWins;
+
+    const aRivals = getRealRivalsStats(a.teamId, statsCache);
+    const bRivals = getRealRivalsStats(b.teamId, statsCache);
+
+    if (bRivals.rivalPointsSum !== aRivals.rivalPointsSum) {
+      return bRivals.rivalPointsSum - aRivals.rivalPointsSum;
+    }
+    if (bRivals.rivalGDSum !== aRivals.rivalGDSum) {
+      return bRivals.rivalGDSum - aRivals.rivalGDSum;
+    }
+    if (bRivals.rivalGFSum !== aRivals.rivalGFSum) {
+      return bRivals.rivalGFSum - aRivals.rivalGFSum;
+    }
+
+    const aName = AppState.teamsMap[a.teamId]?.name || '';
+    const bName = AppState.teamsMap[b.teamId]?.name || '';
+    return aName.localeCompare(bName);
+  }
+
+  const sorted = teams.sort(compareTeams);
+
+  // Asignar posición
+  const result = sorted.map((team, index) => ({
+    ...team,
+    position: index + 1
+  }));
+
+  // Guardar en caché
+  AppState.realStandings = result;
+  return result;
+}
+
+/**
+ * Calcula la clasificación pronosticada por un usuario
+ * basada en sus predicciones de marcadores
+ * @param {string} username - Nombre del usuario
+ * @returns {Array} Array ordenado de equipos con posición pronosticada
+ */
+function calculateUserPredictedStandings(username) {
+  const predictions = AppState.allPredictions[username];
+  if (!predictions) return [];
+
+  const teamIds = Object.keys(AppState.teamsMap).map(Number);
+  const teams = [];
+  const statsCache = new Map();
+
+  for (const teamId of teamIds) {
+    const stats = {
+      teamId,
+      played: 0,
+      wins: 0,
+      draws: 0,
+      losses: 0,
+      gf: 0,
+      gc: 0,
+      gd: 0,
+      points: 0,
+      awayWins: 0,
+      awayGoals: 0
+    };
+
+    const teamMatches = AppState.matches.filter(m =>
+      m.homeTeamId === teamId || m.awayTeamId === teamId
+    );
+
+    for (const match of teamMatches) {
+      const pred = predictions[match.id];
+      if (!pred || typeof pred.home !== 'number' || typeof pred.away !== 'number') continue;
+
+      const isHome = match.homeTeamId === teamId;
+      const teamGoals = isHome ? pred.home : pred.away;
+      const rivalGoals = isHome ? pred.away : pred.home;
+
+      stats.played++;
+      stats.gf += teamGoals;
+      stats.gc += rivalGoals;
+
+      if (teamGoals > rivalGoals) {
+        stats.wins++;
+        stats.points += 3;
+        if (!isHome) stats.awayWins++;
+      } else if (teamGoals === rivalGoals) {
+        stats.draws++;
+        stats.points += 1;
+      } else {
+        stats.losses++;
+      }
+
+      if (!isHome) {
+        stats.awayGoals += teamGoals;
+      }
+    }
+
+    stats.gd = stats.gf - stats.gc;
+    const teamInfo = AppState.teamsMap[teamId];
+    teams.push({
+      ...stats,
+      name: teamInfo?.name || 'Desconocido',
+      badgeExt: teamInfo?.ext || 'png'
+    });
+    statsCache.set(teamId, stats);
+  }
+
+  // Usar la misma función de ordenación
+  function compareTeams(a, b) {
+    if (b.points !== a.points) return b.points - a.points;
+    if (b.gd !== a.gd) return b.gd - a.gd;
+    if (b.gf !== a.gf) return b.gf - a.gf;
+    if (b.awayGoals !== a.awayGoals) return b.awayGoals - a.awayGoals;
+    if (b.wins !== a.wins) return b.wins - a.wins;
+    if (b.awayWins !== a.awayWins) return b.awayWins - a.awayWins;
+
+    // Para la pronosticada, calcular stats de rivales usando el caché local
+    function getLocalRivalsStats(teamId) {
+      const teamMatches = AppState.matches.filter(m =>
+        m.homeTeamId === teamId || m.awayTeamId === teamId
+      );
+      const rivalIds = new Set();
+      for (const match of teamMatches) {
+        const rivalId = match.homeTeamId === teamId ? match.awayTeamId : match.homeTeamId;
+        rivalIds.add(rivalId);
+      }
+
+      let rivalPointsSum = 0;
+      let rivalGDSum = 0;
+      let rivalGFSum = 0;
+
+      for (const rivalId of rivalIds) {
+        const rivalStats = statsCache.get(rivalId);
+        if (rivalStats) {
+          rivalPointsSum += rivalStats.points;
+          rivalGDSum += rivalStats.gd;
+          rivalGFSum += rivalStats.gf;
+        }
+      }
+
+      return { rivalPointsSum, rivalGDSum, rivalGFSum };
+    }
+
+    const aRivals = getLocalRivalsStats(a.teamId);
+    const bRivals = getLocalRivalsStats(b.teamId);
+
+    if (bRivals.rivalPointsSum !== aRivals.rivalPointsSum) {
+      return bRivals.rivalPointsSum - aRivals.rivalPointsSum;
+    }
+    if (bRivals.rivalGDSum !== aRivals.rivalGDSum) {
+      return bRivals.rivalGDSum - aRivals.rivalGDSum;
+    }
+    if (bRivals.rivalGFSum !== aRivals.rivalGFSum) {
+      return bRivals.rivalGFSum - aRivals.rivalGFSum;
+    }
+
+    const aName = AppState.teamsMap[a.teamId]?.name || '';
+    const bName = AppState.teamsMap[b.teamId]?.name || '';
+    return aName.localeCompare(bName);
+  }
+
+  const sorted = teams.sort(compareTeams);
+  return sorted.map((team, index) => ({
+    ...team,
+    position: index + 1
+  }));
+}
+
+/**
+ * Calcula los puntos por pronóstico de clasificación para un usuario
+ * Regla: solo se reciben puntos por el valor más bajo de posición
+ * (pronosticada vs real)
+ * @param {string} username - Nombre del usuario
+ * @returns {Object} { totalPoints, teamDetails: [{ teamId, name, predictedPos, realPos, points }] }
+ */
+function calculateClassificationPoints(username) {
+  // Si ya está calculada, devolverla
+  if (AppState.classificationPoints[username]) {
+    return AppState.classificationPoints[username];
+  }
+
+  const realStandings = calculateRealStandings();
+  if (!realStandings.length) {
+    return { totalPoints: 0, teamDetails: [] };
+  }
+
+  const predictedStandings = calculateUserPredictedStandings(username);
+  if (!predictedStandings.length) {
+    return { totalPoints: 0, teamDetails: [] };
+  }
+
+  // Crear mapas de posición por teamId
+  const realPositionMap = {};
+  for (const team of realStandings) {
+    realPositionMap[team.teamId] = team.position;
+  }
+
+  const predictedPositionMap = {};
+  for (const team of predictedStandings) {
+    predictedPositionMap[team.teamId] = team.position;
+  }
+
+  let totalPoints = 0;
+  const teamDetails = [];
+
+  for (const team of realStandings) {
+    const teamId = team.teamId;
+    const realPos = realPositionMap[teamId] || 36;
+    const predictedPos = predictedPositionMap[teamId] || 36;
+
+    // Solo se asignan puntos a equipos en posición real 1-24
+    if (realPos > 24) {
+      teamDetails.push({
+        teamId,
+        name: team.name,
+        badgeExt: team.badgeExt,
+        predictedPos,
+        realPos,
+        points: 0
+      });
+      continue;
+    }
+
+    // Obtener puntos por cada posición
+    const realPts = CLASSIFICATION_POINTS[realPos] || 0;
+    const predictedPts = CLASSIFICATION_POINTS[predictedPos] || 0;
+
+    // Regla: el valor más bajo de posición
+    const pts = Math.min(realPts, predictedPts);
+    totalPoints += pts;
+
+    teamDetails.push({
+      teamId,
+      name: team.name,
+      badgeExt: team.badgeExt,
+      predictedPos,
+      realPos,
+      points: pts
+    });
+  }
+
+  const result = { totalPoints, teamDetails };
+  AppState.classificationPoints[username] = result;
+  return result;
+}
+
+/**
+ * Invalida la caché de clasificación real y puntos de clasificación
+ * Se llama cuando se actualizan los matchStats
+ */
+function invalidateClassificationCache() {
+  AppState.realStandings = [];
+  AppState.classificationPoints = {};
+}
+
+// ============================================================
+// TAB: FASE FINAL - PRONÓSTICOS
+// ============================================================
+
+/**
+ * Renderiza la pestaña de predicciones de fase final
+ */
+async function renderFinalPredictionsTab() {
+  const container = document.getElementById('final-predictions-container');
+  if (!container) return;
+
+  const frozen = isFinalsFrozen();
+  
+  if (AppState.matchStats.length === 0) {
+    await fetchMatchStats();
+  }
+  
+  if (AppState.realStandings.length === 0) {
+    calculateRealStandings();
+  }
+  
+  const standings = AppState.realStandings;
+  
+  if (!standings || standings.length === 0) {
+    container.innerHTML = `
+      <div class="final-predictions-empty">
+        <div class="empty-icon">📊</div>
+        <div class="empty-text">Clasificación no disponible</div>
+        <div class="empty-subtext">La fase de liga debe finalizar para acceder a esta funcionalidad</div>
+      </div>
+    `;
+    return;
+  }
+
+  const qualifiedTeams = standings.slice(0, 24).map(s => ({
+    id: s.teamId,
+    name: s.name,
+    position: s.position
+  }));
+
+  if (!AppState.finalPredictions) {
+    AppState.finalPredictions = {
+      champion: null,
+      runnerUp: null,
+      semiFinalists: [],
+      quarterFinalists: [],
+      roundOf16: [],
+      roundOf32: []
+    };
+  }
+
+  const fp = AppState.finalPredictions;
+  const assignedTeams = new Set([
+    fp.champion,
+    fp.runnerUp,
+    ...fp.semiFinalists,
+    ...fp.quarterFinalists,
+    ...fp.roundOf16,
+    ...fp.roundOf32
+  ].filter(Boolean));
+
+  const availableTeams = qualifiedTeams.filter(t => !assignedTeams.has(t.id));
+
+  function getTeamImg(teamId) {
+    const ext = AppState.teamsMap[teamId]?.ext || 'png';
+    return `data/imgEquipos/${teamId}.${ext}`;
+  }
+
+  // --- Champion podium slot ---
+  function renderPodiumSlot(type, teamId) {
+    const isChampion = type === 'champion';
+    const label = isChampion ? 'Campeón' : 'Subcampeón';
+    const icon = isChampion ? '🏆' : '🥈';
+
+    if (teamId) {
+      const team = qualifiedTeams.find(t => t.id === teamId);
+      if (!team) return '';
+      return `
+        <div class="podium-slot ${type}">
+          <span class="podium-label">${label}</span>
+          <span class="podium-icon">${icon}</span>
+          <div class="podium-team">
+            <img class="podium-team-img" src="${getTeamImg(teamId)}" alt="${team.name}" onerror="this.src='data/imgEquipos/default.png'">
+            <span class="podium-team-name">${team.name}</span>
+          </div>
+          ${!frozen ? `<div class="podium-remove" data-zone="${type}" data-action="remove-podium">✕</div>` : ''}
+        </div>
+      `;
+    }
+    return `
+      <div class="podium-slot ${type}">
+        <span class="podium-label">${label}</span>
+        <span class="podium-icon">${icon}</span>
+        <div class="podium-empty">
+          <div class="podium-empty-icon">${icon}</div>
+          <span class="podium-empty-text">Toca para asignar</span>
+        </div>
+      </div>
+    `;
+  }
+
+  container.innerHTML = `
+    <div class="final-predictions-layout">
+      <div class="final-predictions-fixed">
+        ${frozen ? `
+          <div class="final-predictions-frozen">
+            <div class="frozen-icon">🔒</div>
+            <div class="frozen-text">Predicciones bloqueadas</div>
+            <div class="frozen-subtext">La fase de dieciseisavos ha comenzado</div>
+          </div>
+        ` : ''}
+
+        ${!frozen ? '<div class="selection-hint">Toca un equipo y luego un hueco para colocarlo</div>' : ''}
+
+        <div class="teams-pool">
+          <div class="teams-pool-header">Equipos disponibles (${availableTeams.length})</div>
+          <div class="teams-pool-scroll" id="teams-pool-scroll">
+            ${availableTeams.map(team => `
+              <div class="team-chip ${AppState.selectedFinalTeam === team.id ? 'selected' : ''}" data-team-id="${team.id}">
+                <img class="team-chip-img" src="${getTeamImg(team.id)}" alt="${team.name}" onerror="this.src='data/imgEquipos/default.png'">
+                <span class="team-chip-name">${team.name}</span>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      </div>
+
+      <div class="final-predictions-scroll">
+        <div class="podium-row">
+          ${renderPodiumSlot('champion', fp.champion)}
+          ${renderPodiumSlot('runnerUp', fp.runnerUp)}
+        </div>
+
+        <div class="drop-zones-container">
+          ${renderDropZone('⚔️ Semifinalistas', 'semiFinalists', fp.semiFinalists, 2, qualifiedTeams, frozen)}
+          ${renderDropZone('🏅 Cuartos de final', 'quarterFinalists', fp.quarterFinalists, 4, qualifiedTeams, frozen)}
+          ${renderDropZone('⚡ Octavos de final', 'roundOf16', fp.roundOf16, 8, qualifiedTeams, frozen)}
+          ${renderDropZone('📋 Dieciseisavos', 'roundOf32', fp.roundOf32, 8, qualifiedTeams, frozen)}
+        </div>
+      </div>
+    </div>
+  `;
+
+  if (!frozen) {
+    setupFinalPredictionsTapToPlace();
+
+    document.querySelectorAll('.podium-remove').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const zone = btn.getAttribute('data-zone');
+        if (zone === 'champion') fp.champion = null;
+        else if (zone === 'runnerUp') fp.runnerUp = null;
+        AppState.hasUnsavedFinalChanges = true;
+        renderFinalPredictionsTab();
+      });
+    });
+  }
+
+  const headerSaveBtn = document.getElementById('btn-save-final-header');
+  if (headerSaveBtn) {
+    headerSaveBtn.disabled = frozen;
+    headerSaveBtn.style.display = frozen ? 'none' : '';
+  }
+}
+
+function renderDropZone(title, zoneId, value, maxSlots, qualifiedTeams, frozen) {
+  const values = Array.isArray(value) ? value : (value ? [value] : []);
+  const isComplete = values.length === maxSlots;
+  const slots = [];
+  
+  for (let i = 0; i < maxSlots; i++) {
+    const teamId = values[i] || null;
+    if (teamId) {
+      const team = qualifiedTeams.find(t => t.id === teamId);
+      if (team) {
+        const ext = AppState.teamsMap[teamId]?.ext || 'png';
+        slots.push(`
+          <div class="drop-slot filled" data-zone="${zoneId}" data-index="${i}" data-team-id="${teamId}">
+            <img class="drop-slot-img" src="data/imgEquipos/${teamId}.${ext}" alt="${team.name}" onerror="this.src='data/imgEquipos/default.png'">
+            <span class="drop-slot-name">${team.name}</span>
+            ${!frozen ? '<div class="drop-slot-remove" data-action="remove">✕</div>' : ''}
+          </div>
+        `);
+      }
+    } else {
+      slots.push(`
+        <div class="drop-slot" data-zone="${zoneId}" data-index="${i}">
+          <span class="drop-slot-empty">+</span>
+        </div>
+      `);
+    }
+  }
+
+  return `
+    <div class="drop-zone" data-zone="${zoneId}">
+      <div class="drop-zone-header">
+        <span class="drop-zone-title">${title}</span>
+        <span class="drop-zone-count ${isComplete ? 'complete' : ''}">${values.length}/${maxSlots}</span>
+      </div>
+      <div class="drop-zone-slots" data-zone="${zoneId}">
+        ${slots.join('')}
+      </div>
+    </div>
+  `;
+}
+
+/**
+ * Configura tap-to-place para la fase final
+ */
+function setupFinalPredictionsTapToPlace() {
+  const poolChips = document.querySelectorAll('.team-chip');
+  poolChips.forEach(chip => {
+    chip.addEventListener('click', (e) => {
+      const teamId = parseInt(chip.getAttribute('data-team-id'));
+      if (AppState.selectedFinalTeam === teamId) {
+        AppState.selectedFinalTeam = null;
+        chip.classList.remove('selected');
+      } else {
+        document.querySelectorAll('.team-chip.selected').forEach(c => c.classList.remove('selected'));
+        AppState.selectedFinalTeam = teamId;
+        chip.classList.add('selected');
+      }
+    });
+  });
+
+  const emptySlots = document.querySelectorAll('.drop-slot:not(.filled)');
+  emptySlots.forEach(slot => {
+    slot.addEventListener('click', () => {
+      if (!AppState.selectedFinalTeam) return;
+      const zoneId = slot.getAttribute('data-zone');
+      const index = parseInt(slot.getAttribute('data-index'));
+      addTeamToZone(AppState.selectedFinalTeam, zoneId, index);
+      AppState.selectedFinalTeam = null;
+    });
+  });
+
+  // Podium empty slots (champion / runnerUp)
+  document.querySelectorAll('.podium-slot').forEach(slot => {
+    if (slot.querySelector('.podium-empty')) {
+      slot.addEventListener('click', () => {
+        if (!AppState.selectedFinalTeam) return;
+        const zone = slot.classList.contains('champion') ? 'champion' : 'runnerUp';
+        addTeamToZone(AppState.selectedFinalTeam, zone, 0);
+        AppState.selectedFinalTeam = null;
+      });
+    }
+  });
+
+  const removeButtons = document.querySelectorAll('.drop-slot-remove');
+  removeButtons.forEach(btn => {
+    btn.addEventListener('click', handleRemoveFromZone);
+  });
+}
+
+/**
+ * Añade un equipo a una zona específica
+ */
+function addTeamToZone(teamId, zoneId, index) {
+  const fp = AppState.finalPredictions;
+  if (!fp) return;
+
+  // Si es zona individual (champion, runnerUp)
+  if (zoneId === 'champion') {
+    fp.champion = teamId;
+  } else if (zoneId === 'runnerUp') {
+    fp.runnerUp = teamId;
+  } else {
+    // Zonas de array
+    const arr = fp[zoneId];
+    if (Array.isArray(arr)) {
+      // Si hay un equipo en ese índice, reemplazar
+      if (index < arr.length) {
+        arr[index] = teamId;
+      } else {
+        // Añadir al final
+        arr.push(teamId);
+      }
+    }
+  }
+
+  AppState.hasUnsavedFinalChanges = true;
+  renderFinalPredictionsTab();
+}
+
+/**
+ * Maneja la eliminación de un equipo de una zona
+ */
+function handleRemoveFromZone(e) {
+  e.stopPropagation();
+  const slot = e.target.closest('.drop-slot');
+  if (!slot) return;
+
+  const zoneId = slot.getAttribute('data-zone');
+  const index = parseInt(slot.getAttribute('data-index'));
+  const teamId = parseInt(slot.getAttribute('data-team-id'));
+
+  removeTeamFromZone(zoneId, index, teamId);
+}
+
+/**
+ * Elimina un equipo de una zona específica
+ */
+function removeTeamFromZone(zoneId, index, teamId) {
+  const fp = AppState.finalPredictions;
+  if (!fp) return;
+
+  if (zoneId === 'champion' && fp.champion === teamId) {
+    fp.champion = null;
+  } else if (zoneId === 'runnerUp' && fp.runnerUp === teamId) {
+    fp.runnerUp = null;
+  } else if (Array.isArray(fp[zoneId])) {
+    const arr = fp[zoneId];
+    const idx = arr.indexOf(teamId);
+    if (idx !== -1) {
+      arr.splice(idx, 1);
+    }
+  }
+
+  AppState.hasUnsavedFinalChanges = true;
+  renderFinalPredictionsTab();
+}
+
+/**
+ * Guarda las predicciones de fase final en el backend
+ */
+async function saveFinalPredictionsToBackend() {
+  const token = AppState.sessionToken || localStorage.getItem('session_token');
+  if (!token) {
+    showToast('Debes iniciar sesión para guardar');
+    return;
+  }
+
+  const fp = AppState.finalPredictions;
+  if (!fp) {
+    showToast('No hay predicciones para guardar');
+    return;
+  }
+
+  try {
+    const response = await fetch(`${API_BASE}/api/final-predictions`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ finalPredictions: fp })
+    });
+
+    const data = await response.json();
+
+    if (data.ok) {
+      AppState.hasUnsavedFinalChanges = false;
+      showToast('✅ Predicciones guardadas correctamente');
+    } else {
+      showToast('❌ Error al guardar: ' + (data.error || 'Error desconocido'));
+    }
+  } catch (error) {
+    console.error('Error saving final predictions:', error);
+    showToast('❌ Error de conexión al guardar');
+  }
+}
+
+/**
+ * Obtiene las predicciones de fase final del backend
+ */
+async function fetchFinalPredictionsFromBackend() {
+  const token = AppState.sessionToken || localStorage.getItem('session_token');
+  if (!token) return;
+
+  try {
+    const response = await fetch(`${API_BASE}/api/final-predictions`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+
+    const data = await response.json();
+
+    if (data.ok && data.finalPredictions) {
+      AppState.finalPredictions = data.finalPredictions;
+    }
+  } catch (error) {
+    console.error('Error fetching final predictions:', error);
+  }
 }
