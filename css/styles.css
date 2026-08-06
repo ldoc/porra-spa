@@ -2649,6 +2649,12 @@ html, body {
   background: rgba(100, 116, 139, 0.1);
 }
 
+.resultados-player.is-current-user {
+  background: rgba(139, 92, 246, 0.15);
+  border-left: 3px solid var(--accent-violet);
+  padding-left: 5px;
+}
+
 .resultados-player-name {
   font-weight: 600;
   color: var(--text-primary);

@@ -1245,8 +1245,10 @@ function renderMatchResult({ match, homeGoals, awayGoals }) {
     const hasBreakdown = p.breakdown.length > 0;
     const playerTargetId = `player-squad-${match.id}-${pIdx}`;
 
+    const isCurrentUser = AppState.currentUser && p.player.name === AppState.currentUser.name;
+
     playersHtml += `
-      <div class="resultados-player ${p.totalUserPoints > 0 ? 'has-points' : 'no-points'}">
+      <div class="resultados-player ${p.totalUserPoints > 0 ? 'has-points' : 'no-points'} ${isCurrentUser ? 'is-current-user' : ''}">
         <span class="resultados-player-name">${p.player.avatar} ${p.player.name}</span>
         <span class="resultados-player-pred">${p.predStr}</span>
         <span class="resultados-player-points">${p.totalUserPoints} pts</span>
