@@ -214,36 +214,41 @@ La SPA se comunica con el backend en `https://api-porra.vercel.app`:
 ```javascript
 const API_BASE = 'https://api-porra.vercel.app';
 
-// Login
-POST /api/auth/login
-Body: { username, password }
-Response: { ok, token, user: { username, avatar } }
+// ─── Autenticación ────────────────────────────────────────────
+POST /api/auth/register          // Body: { username, password, invitationCode }
+POST /api/auth/login             // Body: { username, password }
+GET  /api/auth/profile           // Query: ?username=xxx
+POST /api/auth/profile           // Body: { avatar }
+POST /api/auth/change-password   // Body: { currentPassword, newPassword }
 
-// Registro
-POST /api/auth/register
-Body: { username, password, invitationCode }
-Response: { ok, token, user: { username } }
+// ─── Pronósticos de partidos ──────────────────────────────────
+GET  /api/predictions            // Query: ?username=xxx (pre-freeze: solo propio)
+PUT  /api/predictions            // Body: { predictions } (bloqueado tras freeze)
+GET  /api/predictions/all        // Post-freeze: todos. Pre-freeze: solo propio
 
-// Obtener perfil
-GET /api/auth/profile?username=nombreusuario
-Response: { ok, avatar }
+// ─── Fase Final ───────────────────────────────────────────────
+GET  /api/final-predictions      // Query: ?username=xxx (pre-freeze: solo propio)
+PUT  /api/final-predictions      // Body: { finalPredictions } (bloqueado tras finalsFreezeDate)
 
-// Guardar perfil
-POST /api/auth/profile
-Body: { username, avatar }
-Response: { ok, avatar }
+// ─── Plantilla ideal ──────────────────────────────────────────
+GET  /api/squad                  // Query: ?username=xxx
+PUT  /api/squad                  // Body: { squad } (bloqueado tras freeze)
+GET  /api/squad/all              // Post-freeze: todos. Pre-freeze: solo propio
 
-// Configuración del torneo
-GET /api/config
-Response: { ok, config: { championsFreezeDate, championsFreezeLabel, totalMatches, squadSize } }
+// ─── Configuración y jugadores ────────────────────────────────
+GET  /api/config                 // { championsFreezeDate, finalsFreezeDate, squadSize, ... }
+GET  /api/avatars/taken          // Avatares ya cogidos
+GET  /api/players                // Todos los usuarios registrados
 
-// Avatares ya cogidos
-GET /api/avatars/taken
-Response: { ok, taken: ["⚽", "🏆", ...] }
+// ─── Estadísticas de partidos (Sofascore) ─────────────────────
+GET  /api/match-stats            // Todos los matchstats almacenados
+GET  /api/match-stats/:eventId   // Scraping en vivo de un partido específico
+GET  /api/match-stats/updated    // Contador + última actualización
+DELETE /api/match-stats/:eventId // Eliminar un matchstat
 
-// Todos los jugadores registrados (para clasificación)
-GET /api/players
-Response: { ok, players: [{ name, avatar, points, hits }, ...] }
+// ─── Legacy ───────────────────────────────────────────────────
+GET  /nuevoUsuario               // Generar código de invitación (6 chars)
+GET  /usuario?clave=xxxx         // Buscar usuario por clave de invitación
 ```
 
 #### Variables de Entorno Requeridas (Backend)
@@ -258,10 +263,122 @@ Response: { ok, players: [{ name, avatar, points, hits }, ...] }
 
 ```json
 {
-  "username": "nombreusuario",
-  "passwordHash": "salt:hash",
-  "avatar": "⚽",
-  "createdAt": "2026-07-31T00:00:00.000Z"
+  "clave": "string (unique, required, indexed)",
+  "username": "string (unique, required, lowercase, indexed)",
+  "passwordHash": "string (required, format: salt:hash via scrypt)",
+  "avatar": "string | null (emoji seleccionado)",
+  "squad": [{
+    "id": "number (Sofascore player ID)",
+    "nombre": "string",
+    "posicion": "string (G/D/M/F)",
+    "club": "string",
+    "equipo": "number (Sofascore team ID)",
+    "extension": "string (png/webp)"
+  }],
+  "predictions": {
+    "[eventId]": { "home": "number|null", "away": "number|null" }
+  },
+  "finalPredictions": {
+    "champion": "number|null (team ID)",
+    "runnerUp": "number|null (team ID)",
+    "semiFinalists": "[number] (max 2)",
+    "quarterFinalists": "[number] (max 4)",
+    "roundOf16": "[number] (max 8)",
+    "roundOf32": "[number] (max 8)"
+  },
+  "createdAt": "Date"
+}
+```
+
+#### Modelo de Datos de Estadísticas de Partidos (MatchStats)
+
+```json
+{
+  "eventId": "number (unique, required, indexed - Sofascore event ID)",
+  "stats": {
+    "[homeTeamId]": { "goles": "number" },
+    "[awayTeamId]": { "goles": "number" },
+    "jugadores": [{
+      "id": "number",
+      "nombre": "string",
+      "posicion": "string (G/D/M/F)",
+      "equipo": "number (team ID)",
+      "puntos": "number (Sofascore rating)",
+      "goles": "number",
+      "minutos": "number",
+      "paradas": "number (goalkeeper saves)",
+      "esSuplente": "boolean",
+      "penaltiMarcado": "boolean",
+      "penaltiParado": "boolean",
+      "golesRecibidos": "number (goalkeeper only)"
+    }]
+  },
+  "lastUpdated": "Date"
+}
+```
+
+#### Modelo de Invitaciones (Invitation)
+
+```json
+{
+  "code": "string (unique, required, indexed - 6 char hex)",
+  "usedBy": "string | null (username)",
+  "createdAt": "Date"
+}
+```
+
+#### Configuración del Torneo (config.json)
+
+| Clave | Valor | Descripción |
+|-------|-------|-------------|
+| `championsStartRoundsDate` | `"2026-07-01T21:00:00Z"` | Fecha de freeze de fase de liga (bloquea predictions y squad) |
+| `championsStartRoundsLabel` | `"Fase de Grupos"` | Etiqueta legible de la fase |
+| `finalsFreezeDate` | `"2026-12-01T00:00:00Z"` | Fecha de freeze de fase final (bloquea finalPredictions) |
+| `finalsFreezeLabel` | `"Fase de Dieciseisavos"` | Etiqueta legible de la fase final |
+| `totalMatches` | `144` | Total de partidos de fase de liga |
+| `squadSize` | `25` | Tamaño de la plantilla ideal |
+| `squadFormation.G` | `3` | Porteros en plantilla |
+| `squadFormation.D` | `8` | Defensas en plantilla |
+| `squadFormation.M` | `8` | Centrocampistas en plantilla |
+| `squadFormation.F` | `6` | Delanteros en plantilla |
+
+### 5.6. Scripts de Scraping (api-porra/scripts/)
+
+Scripts para obtener datos de Sofascore y poblar MongoDB. **NO subir en despliegues de producción.**
+
+| Script | Descripción | Uso |
+|--------|-------------|-----|
+| `calendario.js` | Obtiene los 144 partidos de las 8 jornadas de la fase de liga | `node scripts/calendario.js` |
+| `equipos.js` | Obtiene los 36 equipos + logos de Sofascore | `node scripts/equipos.js` |
+| `matchStats.js` | Módulo core: obtiene estadísticas de un partido por eventId (lineups, incidents, ratings) | Importado por otros scripts |
+| `scrapeRounds.js` | Scraping por lotes de jornadas 1-2 (36 partidos) | `node scripts/scrapeRounds.js` |
+| `scrapeRounds2to8.js` | Scraping por lotes de jornadas 2-8, saltando partidos existentes | `node scripts/scrapeRounds2to8.js` |
+| `migrateToMongo.js` | Migración de datos de GitHub JSON a MongoDB | `node scripts/migrateToMongo.js` |
+
+**Estructura de datos que genera matchStats:**
+
+```javascript
+{
+  stats: {
+    [homeTeamId]: { goles: 2 },
+    [awayTeamId]: { goles: 1 },
+    jugadores: [
+      {
+        id: 12345,
+        nombre: "Player Name",
+        posicion: "M",           // G/D/M/F
+        equipo: 1234,            // Team ID
+        puntos: 7.2,             // Sofascore rating
+        goles: 1,
+        minutos: 90,
+        paradas: 0,              // Solo porteros
+        esSuplente: false,
+        penaltiMarcado: false,
+        penaltiParado: false,    // Solo porteros
+        golesRecibidos: 1        // Solo porteros
+      }
+    ]
+  }
 }
 ```
 
@@ -275,11 +392,12 @@ Response: { ok, players: [{ name, avatar, points, hits }, ...] }
 La aplicación utiliza una estructura de navegación con:
 
 1. **Header Superior**: Muestra avatar y nombre del usuario. Al hacer clic, accede a la pestaña Perfil.
-2. **Menú Inferior (4 items)**:
+2. **Menú Inferior (5 items)**:
    - **Inicio**: Pantalla de bienvenida con avisos de pendientes y freeze de Champions
    - **Clasificación**: Tabla de posiciones de todos los participantes (obtenidos de `GET /api/players`)
    - **Pronósticos**: Wizard para introducir marcadores de los 144 partidos
    - **Plantilla**: Selección de 25 jugadores para la plantilla ideal (3G, 8D, 8M, 6F)
+   - **Fase Final**: Predicciones de la fase de eliminatorias (campeón a dieciseisavos)
 
 **Pestañas disponibles:**
 - `tab-inicio`: Pantalla de bienvenida con resumen de estado del usuario
@@ -287,12 +405,14 @@ La aplicación utiliza una estructura de navegación con:
 - `tab-resultados`: Resultados de partidos por jornada y puntos de usuarios
 - `tab-pronosticos`: Wizard de predicciones de partidos
 - `tab-plantilla`: Selección de plantilla ideal (25 jugadores: 3G, 8D, 8M, 6F)
+- `tab-final-predictions`: Predicciones de la fase final (24 equipos asignados a rondas)
 
 **Flujo de usuario:**
 1. Tras registro/login → entra directamente a pestaña Inicio
 2. Los pronósticos y plantilla se guardan localmente en `localStorage`
 3. Los datos se persisten automáticamente al modificar marcadores o selección
 4. Desde Inicio se puede navegar a Pronósticos o Plantilla pulsando en las tarjetas de aviso
+5. Desde Pronósticos se puede acceder a la Fase Final pulsando el botón "Fase Final"
 
 ### 5.2. Datos y APIs (`data/`, `api/`, `extract/`)
 
@@ -894,6 +1014,147 @@ const SQUAD_FORMATION = {
 - **localStorage**: Clave `porra_ucl_squad` para persistencia local
 - **Backend**: Endpoint `PUT /api/squad` para persistencia en servidor
 - **Sincronización**: Al cargar la app, se obtiene plantilla del backend si existe
+
+### 5.5. Fase Final (Predicciones de Eliminatorias)
+
+#### Descripción
+
+Pestaña que permite al usuario predecir el cuadro completo de eliminatorias de la Champions League, asignando los 24 equipos clasificados de la fase de liga a cada ronda: campeón, subcampeón, semifinalistas, cuartos de final, octavos de final y dieciseisavos.
+
+#### Distribución de Equipos
+
+| Ronda | Cantidad | Descripción |
+|-------|----------|-------------|
+| Campeón | 1 | Equipo ganador de la Champions League |
+| Subcampeón | 1 | Equipo finalista |
+| Semifinalistas | 2 | Equipos en semifinales |
+| Cuartos de final | 4 | Equipos en cuartos de final |
+| Octavos de final | 8 | Equipos en octavos de final |
+| Dieciseisavos | 8 | Equipos en treintaidosavos (ronda previa) |
+| **Total** | **24** | Los 24 equipos de la fase de liga |
+
+#### Restricciones
+
+1. **24 equipos**: Se asignan los 24 equipos de la clasificación de la fase de liga (puestos 1-24)
+2. **Sin repetir equipos**: Cada equipo solo puede asignarse a una ronda
+3. **Freeze date**: Las predicciones se bloquean cuando comienza la fase de eliminatorias (`finalsFreezeDate` en config.json)
+4. **Edición**: Los usuarios pueden modificar sus predicciones libremente hasta la fecha de freeze
+
+#### Interfaz de Selección (UI)
+
+La pantalla utiliza un sistema de **selección por toque** (tap-to-place):
+
+```
+┌─────────────────────────────────────────┐
+│  ← Volver  [Guardar]    🏆 FASE FINAL   │
+├─────────────────────────────────────────┤
+│  Selecciona un equipo y toca una casilla │
+├─────────────────────────────────────────┤
+│  Equipos disponibles (24)               │
+│  ┌─────┐ ┌─────┐ ┌─────┐ ┌─────┐      │
+│  │ img │ │ img │ │ img │ │ img │ ...   │
+│  │Team1│ │Team2│ │Team3│ │Team4│       │
+│  └─────┘ └─────┘ └─────┘ └─────┘      │
+├─────────────────────────────────────────┤
+│  🏆 Campeón        🥈 Subcampeón        │
+│  ┌──────────┐     ┌──────────┐         │
+│  │    +     │     │    +     │         │
+│  └──────────┘     └──────────┘         │
+├─────────────────────────────────────────┤
+│  ⚔️ Semifinalistas (2)                  │
+│  ┌──────┐ ┌──────┐                     │
+│  │  +   │ │  +   │                     │
+│  └──────┘ └──────┘                     │
+├─────────────────────────────────────────┤
+│  🏅 Cuartos de final (4)                │
+│  ┌──────┐ ┌──────┐ ┌──────┐ ┌──────┐  │
+│  │  +   │ │  +   │ │  +   │ │  +   │  │
+│  └──────┘ └──────┘ └──────┘ └──────┘  │
+├─────────────────────────────────────────┤
+│  ⚡ Octavos de final (8)                │
+│  ┌──────┐ ┌──────┐ ┌──────┐ ┌──────┐  │
+│  │  +   │ │  +   │ │  +   │ │  +   │  │
+│  └──────┘ └──────┘ └──────┘ └──────┘  │
+│  ┌──────┐ ┌──────┐ ┌──────┐ ┌──────┐  │
+│  │  +   │ │  +   │ │  +   │ │  +   │  │
+│  └──────┘ └──────┘ └──────┘ └──────┘  │
+├─────────────────────────────────────────┤
+│  📋 Dieciseisavos (8)                   │
+│  ┌──────┐ ┌──────┐ ┌──────┐ ┌──────┐  │
+│  │  +   │ │  +   │ │  +   │ │  +   │  │
+│  └──────┘ └──────┘ └──────┘ └──────┘  │
+│  ┌──────┐ ┌──────┐ ┌──────┐ ┌──────┐  │
+│  │  +   │ │  +   │ │  +   │ │  +   │  │
+│  └──────┘ └──────┘ └──────┘ └──────┘  │
+└─────────────────────────────────────────┘
+```
+
+**Flujo de interacción:**
+
+1. **Seleccionar equipo**: Toca un equipo en la lista de disponibles (se resalta con borde cyan)
+2. **Asignar a ronda**: Toca una casilla vacía en la ronda deseada
+3. **Eliminar asignación**: Toca el botón ✕ en una casilla ocupada
+4. **Deseleccionar**: Toca de nuevo el equipo seleccionado para quitar la selección
+5. **Guardar**: Pulsa "Guardar" en la cabecera para persistir en el servidor
+
+**Layout de la pantalla:**
+
+- **Header fijo** (`.final-predictions-fixed`): Banner de freeze, hint de selección, pool de equipos
+- **Área scrolleable** (`.final-predictions-scroll`): Podium (campeón/subcampeón) + zonas de drop
+
+**Colores por ronda (border-left):**
+- Campeón: `--accent-gold` + 🏆
+- Subcampeón: `--accent-silver` + 🥈
+- Semifinalistas: `--accent-primary` (violeta) + ⚔️
+- Cuartos: `--accent-cyan` + 🏅
+- Octavos: `--accent-green` + ⚡
+- Dieciseisavos: `--text-muted` (gris) + 📋
+
+#### Estado de la Aplicación
+
+```javascript
+AppState.finalPredictions = null;      // Objeto con predicciones o null
+AppState.selectedFinalTeam = null;     // ID del equipo seleccionado en el pool
+AppState.hasUnsavedFinalChanges = false; // Bandera de cambios sin guardar
+```
+
+**Estructura de `finalPredictions`:**
+
+```javascript
+{
+  champion: Number | null,       // ID del equipo campeón
+  runnerUp: Number | null,       // ID del equipo subcampeón
+  semiFinalists: [Number],       // Array de IDs (máx 2)
+  quarterFinalists: [Number],    // Array de IDs (máx 4)
+  roundOf16: [Number],           // Array de IDs (máx 8)
+  roundOf32: [Number]            // Array de IDs (máx 8)
+}
+```
+
+#### Funciones JavaScript
+
+| Función | Responsabilidad |
+|---------|-----------------|
+| `renderFinalPredictionsTab()` | Renderiza la pestaña completa: header fijo, pool de equipos, podium y zonas de drop |
+| `setupFinalPredictionsTapToPlace()` | Configura listeners de click para chips del pool, slots vacíos del podium y drop zones |
+| `addTeamToZone(teamId, zoneId, index)` | Asigna un equipo a una zona específica (champion, runnerUp, semiFinalists, etc.) |
+| `removeTeamFromZone(zoneId, index)` | Elimina un equipo de una zona y lo devuelve al pool |
+| `saveFinalPredictionsToBackend()` | Guarda las predicciones en el servidor via PUT /api/final-predictions |
+| `fetchFinalPredictionsFromBackend()` | Obtiene las predicciones del servidor y las carga en AppState |
+| `isFinalsFrozen()` | Comprueba si la fecha actual supera `finalsFreezeDate` |
+| `showUnsavedFinalChangesModal()` | Muestra modal de confirmación si hay cambios sin guardar |
+
+#### Persistencia
+
+- **Backend**: Endpoint `GET/PUT /api/final-predictions` para persistencia en MongoDB
+- **Campo en User schema**: `finalPredictions` (Mixed type)
+- **Freeze**: Controlado por `finalsFreezeDate` en config.json
+
+#### Datos Requeridos
+
+- `AppState.realStandings`: Array de equipos clasificados de la fase de liga (puestos 1-24)
+- `AppState.teamsMap`: Mapa de equipos `{ teamId: { name, ext } }`
+- `data/imgEquipos/{id}.{ext}`: Imágenes de escudos de equipos
 
 
 
