@@ -1857,5 +1857,18 @@
       "id": 2686,
       "name": "Atalanta"
     }
+  },
+  {
+    "ronda": 8,
+    "id": 14566899,
+    "fecha": 1769630400,
+    "equipoLocal": {
+      "id": 2714,
+      "name": "SSC Napoli"
+    },
+    "equipoVisitante": {
+      "id": 38,
+      "name": "Chelsea"
+    }
   }
 ]
