@@ -1249,7 +1249,7 @@ function renderMatchResult({ match, homeGoals, awayGoals }) {
 
     playersHtml += `
       <div class="resultados-player ${p.totalUserPoints > 0 ? 'has-points' : 'no-points'} ${isCurrentUser ? 'is-current-user' : ''}">
-        <span class="resultados-player-name">${p.player.avatar} ${p.player.name}</span>
+        <span class="resultados-player-name">${p.player.avatar} ${p.player.name}${isCurrentUser ? ' <span class="current-user-tag">(Tú)</span>' : ''}</span>
         <span class="resultados-player-pred">${p.predStr}</span>
         <span class="resultados-player-points">${p.totalUserPoints} pts</span>
         <button class="resultados-player-expand-btn" data-player-target="${playerTargetId}">▸</button>
