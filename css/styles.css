@@ -2492,6 +2492,9 @@ html, body {
   padding: 12px;
   background: var(--ucl-surface);
   border-radius: var(--radius-md);
+  position: sticky;
+  top: 0;
+  z-index: 10;
 }
 
 .resultados-round-btn {
