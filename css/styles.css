@@ -2490,7 +2490,8 @@ html, body {
   gap: 16px;
   margin-bottom: 16px;
   padding: 12px;
-  background: var(--ucl-surface);
+  background: rgba(139, 92, 246, 0.2);
+  border: 1px solid var(--accent-violet);
   border-radius: var(--radius-md);
   position: sticky;
   top: 0;
