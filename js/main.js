@@ -30,7 +30,7 @@ const AppState = {
   hasUnsavedSquadChanges: false, // flag de cambios sin guardar en plantilla
   activeSlot: null,     // { position: 'G', index: 0 } - casilla activa para búsqueda
   teamFilter: null,     // filtro de equipo activo en búsqueda
-  hideBlocked: false,   // ocultar jugadores de equipos bloqueados
+
   savedSquadSnapshot: [], // snapshot de plantilla al guardar para comparar
   matchStats: [],       // Array de todos los matchstats del backend
   resultadosRound: null, // Ronda seleccionada en pestaña resultados
@@ -302,14 +302,14 @@ function teamName(teamId) {
   return AppState.teamsMap[teamId]?.name || 'Desconocido';
 }
 
-/** Filtro de jugadores por texto y posición activa */
-function filterPlayers(query, selectedIds, positionFilter, teamFilter, hideBlocked) {
+/** Filtro de jugadores por texto y posición activa. Solo muestra jugadores de equipos disponibles. */
+function filterPlayers(query, selectedIds, positionFilter, teamFilter) {
   const q = query.toLowerCase().trim();
   return AppState.allPlayers.filter(p => {
     if (selectedIds.has(p.id)) return false;
     if (positionFilter && p.posicion !== positionFilter) return false;
     if (teamFilter && p.equipo !== parseInt(teamFilter)) return false;
-    if (hideBlocked && AppState.blockedTeams.has(p.equipo)) return false;
+    if (AppState.blockedTeams.has(p.equipo)) return false;
     if (q && !p.nombre.toLowerCase().includes(q)) return false;
     return true;
   });
@@ -2434,7 +2434,7 @@ function openSlotSearch(position, index) {
 
   AppState.activeSlot = { position, index };
   AppState.teamFilter = null;
-  AppState.hideBlocked = false;
+
   const panel = document.getElementById('squad-search-panel');
   if (panel) {
     panel.classList.add('active');
@@ -2500,8 +2500,7 @@ function renderSearchResults(query) {
   const selectedIds = new Set(AppState.squadPicks.map(p => p.id));
   const positionFilter = AppState.activeSlot?.position || null;
   const teamFilter = AppState.teamFilter || null;
-  const hideBlocked = AppState.hideBlocked;
-  const players = filterPlayers(query, selectedIds, positionFilter, teamFilter, hideBlocked);
+  const players = filterPlayers(query, selectedIds, positionFilter, teamFilter);
 
   if (players.length === 0) {
     results.innerHTML = '<p class="squad-no-results">No se encontraron jugadores</p>';
@@ -2670,10 +2669,7 @@ function renderPlantillaTab() {
               <input type="text" class="squad-search-input" id="squad-search-input"
                      placeholder="Buscar por nombre..." autocomplete="off" spellcheck="false">
             </div>
-            <label class="squad-hide-blocked-toggle">
-              <input type="checkbox" id="squad-hide-blocked" class="squad-hide-blocked-checkbox">
-              <span class="squad-hide-blocked-label">No mostrar usados</span>
-            </label>
+
           </div>
         </div>
         <div class="squad-players-list" id="squad-search-results"></div>
@@ -2708,12 +2704,7 @@ function renderPlantillaTab() {
   const debouncedSearch = debounce((val) => renderSearchResults(val), 300);
   searchInput?.addEventListener('input', (e) => debouncedSearch(e.target.value));
 
-  // Checkbox ocultar bloqueados
-  const hideBlockedCheck = document.getElementById('squad-hide-blocked');
-  hideBlockedCheck?.addEventListener('change', (e) => {
-    AppState.hideBlocked = e.target.checked;
-    renderSearchResults(searchInput?.value || '');
-  });
+
 
   // Seleccionar jugador de la lista
   document.getElementById('squad-search-results')?.addEventListener('click', (e) => {
