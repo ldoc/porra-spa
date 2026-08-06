@@ -2490,7 +2490,7 @@ html, body {
   gap: 16px;
   margin-bottom: 16px;
   padding: 12px;
-  background: var(--accent-violet);
+  background: var(--accent-purple);
   border-radius: var(--radius-md);
   position: sticky;
   top: 0;
