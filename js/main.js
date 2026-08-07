@@ -44,6 +44,7 @@ const AppState = {
   finalPredictions: null, // { champion, runnerUp, semiFinalists, quarterFinalists, roundOf16, roundOf32 }
   hasUnsavedFinalChanges: false, // flag de cambios sin guardar en fase final
   selectedFinalTeam: null, // teamId seleccionado para colocar en zona
+  hasTop8InRoundOf32: false, // flag: hay equipos top-8 en deciseisavos (bloquea save)
 };
 
 const SQUAD_SIZE = 25;
@@ -3208,7 +3209,6 @@ function showToast(message) {
     boxShadow: '0 10px 25px rgba(0,0,0,0.5)',
     zIndex: '2000',
     opacity: '0',
-    whiteSpace: 'nowrap',
     transition: 'all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
   });
 
@@ -3757,6 +3757,17 @@ function calculateRealStandings() {
 }
 
 /**
+ * Comprueba si un equipo está entre los 8 primeros de la clasificación real
+ * Los 8 primeros pasan directamente a octavos de final (no juegan deciseisavos)
+ * @param {number} teamId - ID del equipo
+ * @returns {boolean} true si el equipo es top-8
+ */
+function isTop8Team(teamId) {
+  if (!AppState.realStandings || AppState.realStandings.length === 0) return false;
+  return AppState.realStandings.slice(0, 8).some(t => t.teamId === teamId);
+}
+
+/**
  * Calcula la clasificación pronosticada por un usuario
  * basada en sus predicciones de marcadores
  * @param {string} username - Nombre del usuario
@@ -4027,6 +4038,20 @@ async function renderFinalPredictionsTab() {
   }
 
   const fp = AppState.finalPredictions;
+
+  // Comprobar si hay equipos top-8 en deciseisavos (restricción de fase final)
+  if (fp.roundOf32 && fp.roundOf32.length > 0) {
+    const top8InRoundOf32 = fp.roundOf32.filter(teamId => isTop8Team(teamId));
+    if (top8InRoundOf32.length > 0) {
+      showToast('Hay equipos top-8 en deciseisavos que deben moverse a octavos o superior. No podrás guardar hasta corregirlo.');
+      AppState.hasTop8InRoundOf32 = true;
+    } else {
+      AppState.hasTop8InRoundOf32 = false;
+    }
+  } else {
+    AppState.hasTop8InRoundOf32 = false;
+  }
+
   const assignedTeams = new Set([
     fp.champion,
     fp.runnerUp,
@@ -4037,6 +4062,9 @@ async function renderFinalPredictionsTab() {
   ].filter(Boolean));
 
   const availableTeams = qualifiedTeams.filter(t => !assignedTeams.has(t.id));
+
+  const savedScrollLeft = document.querySelector('.final-predictions-fixed')?.scrollTop || 0;
+  const savedScrollRight = document.querySelector('.final-predictions-scroll')?.scrollTop || 0;
 
   function getTeamImg(teamId) {
     const ext = AppState.teamsMap[teamId]?.ext || 'png';
@@ -4092,12 +4120,14 @@ async function renderFinalPredictionsTab() {
         <div class="teams-pool">
           <div class="teams-pool-header">Equipos disponibles (${availableTeams.length})</div>
           <div class="teams-pool-scroll" id="teams-pool-scroll">
-            ${availableTeams.map(team => `
-              <div class="team-chip ${AppState.selectedFinalTeam === team.id ? 'selected' : ''}" data-team-id="${team.id}">
+            ${availableTeams.map(team => {
+              const top8 = isTop8Team(team.id);
+              return `
+              <div class="team-chip ${top8 ? 'top-8' : ''} ${AppState.selectedFinalTeam === team.id ? 'selected' : ''}" data-team-id="${team.id}">
                 <img class="team-chip-img" src="${getTeamImg(team.id)}" alt="${team.name}" onerror="this.src='data/imgEquipos/default.png'">
                 <span class="team-chip-name">${team.name}</span>
-              </div>
-            `).join('')}
+              </div>`;
+            }).join('')}
           </div>
         </div>
       </div>
@@ -4118,24 +4148,31 @@ async function renderFinalPredictionsTab() {
     </div>
   `;
 
+  requestAnimationFrame(() => {
+    const left = document.querySelector('.final-predictions-fixed');
+    const right = document.querySelector('.final-predictions-scroll');
+    if (left) left.scrollTop = savedScrollLeft;
+    if (right) right.scrollTop = savedScrollRight;
+  });
+
   if (!frozen) {
     setupFinalPredictionsTapToPlace();
 
     document.querySelectorAll('.podium-remove').forEach(btn => {
-      btn.addEventListener('click', (e) => {
+      btn.addEventListener('click', async (e) => {
         e.stopPropagation();
         const zone = btn.getAttribute('data-zone');
         if (zone === 'champion') fp.champion = null;
         else if (zone === 'runnerUp') fp.runnerUp = null;
         AppState.hasUnsavedFinalChanges = true;
-        renderFinalPredictionsTab();
+        await renderFinalPredictionsTab();
       });
     });
   }
 
   const headerSaveBtn = document.getElementById('btn-save-final-header');
   if (headerSaveBtn) {
-    headerSaveBtn.disabled = frozen;
+    headerSaveBtn.disabled = frozen || AppState.hasTop8InRoundOf32;
     headerSaveBtn.style.display = frozen ? 'none' : '';
   }
 }
@@ -4232,9 +4269,15 @@ function setupFinalPredictionsTapToPlace() {
 /**
  * Añade un equipo a una zona específica
  */
-function addTeamToZone(teamId, zoneId, index) {
+async function addTeamToZone(teamId, zoneId, index) {
   const fp = AppState.finalPredictions;
   if (!fp) return;
+
+  // Validación: los 8 primeros clasificados no pueden ir a deciseisavos
+  if (zoneId === 'roundOf32' && isTop8Team(teamId)) {
+    showToast('Top 8 no va a dieciseisavos.<br>Pásalos a octavos o superior.');
+    return;
+  }
 
   // Si es zona individual (champion, runnerUp)
   if (zoneId === 'champion') {
@@ -4256,7 +4299,7 @@ function addTeamToZone(teamId, zoneId, index) {
   }
 
   AppState.hasUnsavedFinalChanges = true;
-  renderFinalPredictionsTab();
+  await renderFinalPredictionsTab();
 }
 
 /**
@@ -4277,7 +4320,7 @@ function handleRemoveFromZone(e) {
 /**
  * Elimina un equipo de una zona específica
  */
-function removeTeamFromZone(zoneId, index, teamId) {
+async function removeTeamFromZone(zoneId, index, teamId) {
   const fp = AppState.finalPredictions;
   if (!fp) return;
 
@@ -4294,7 +4337,7 @@ function removeTeamFromZone(zoneId, index, teamId) {
   }
 
   AppState.hasUnsavedFinalChanges = true;
-  renderFinalPredictionsTab();
+  await renderFinalPredictionsTab();
 }
 
 /**

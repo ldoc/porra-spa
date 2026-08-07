@@ -3395,20 +3395,28 @@ html, body {
 
 .final-predictions-layout {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   height: calc(100dvh - 140px);
   padding: 0 12px;
+  align-items: stretch;
+  margin-top: 8px;
 }
 
 .final-predictions-fixed {
+  width: 50%;
+  min-width: 0;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
   gap: 10px;
-  padding-bottom: 10px;
+  padding-right: 10px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .final-predictions-scroll {
+  width: 50%;
+  min-width: 0;
   flex: 1;
   overflow-y: auto;
   display: flex;
@@ -3437,6 +3445,10 @@ html, body {
   border-radius: var(--radius-md);
   padding: 10px 12px;
   border: 1px solid var(--border-color);
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .teams-pool-header {
@@ -3458,15 +3470,18 @@ html, body {
 
 .teams-pool-scroll {
   display: flex;
+  flex-direction: column;
   gap: 6px;
-  overflow-x: auto;
+  overflow-y: auto;
   padding-bottom: 6px;
   scroll-behavior: smooth;
   -webkit-overflow-scrolling: touch;
+  flex: 1;
+  min-height: 0;
 }
 
 .teams-pool-scroll::-webkit-scrollbar {
-  height: 3px;
+  width: 3px;
 }
 
 .teams-pool-scroll::-webkit-scrollbar-track {
@@ -3486,7 +3501,7 @@ html, body {
   border: 1.5px solid var(--border-color);
   border-radius: var(--radius-sm);
   padding: 6px 10px;
-  min-width: fit-content;
+  width: 100%;
   cursor: pointer;
   transition: all var(--transition-fast);
   user-select: none;
@@ -3504,6 +3519,11 @@ html, body {
   transform: scale(1.03);
 }
 
+.team-chip.top-8 {
+  border-color: var(--accent-purple);
+  background: rgba(139, 92, 246, 0.08);
+}
+
 .team-chip-img {
   width: 22px;
   height: 22px;
@@ -3512,7 +3532,7 @@ html, body {
 }
 
 .team-chip-name {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 600;
   color: var(--text-primary);
   white-space: nowrap;
@@ -3751,7 +3771,7 @@ html, body {
 
 .drop-zone-slots {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap: 6px;
 }
 
