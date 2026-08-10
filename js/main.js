@@ -54,16 +54,112 @@ function authHeaders() {
   return token ? { 'Authorization': `Bearer ${token}` } : {};
 }
 
-function isFrozen() {
-  const startRoundsDate = AppState.appConfig?.championsStartRoundsDate;
-  if (!startRoundsDate) return false;
-  return new Date() >= new Date(startRoundsDate);
+function getFaseJuego() {
+  return AppState.appConfig?.faseJuego || 'FASE_PRETEMPORADA';
 }
 
-function isFinalsFrozen() {
-  const finalsFreezeDate = AppState.appConfig?.finalsFreezeDate;
-  if (!finalsFreezeDate) return false;
-  return new Date() >= new Date(finalsFreezeDate);
+async function fetchWithPhase(url, options = {}) {
+  const headers = { ...options.headers };
+  if (AppState.appConfig) {
+    headers['X-Client-Phase'] = getFaseJuego();
+  }
+  const res = await fetch(url, { ...options, headers });
+
+  if (res.status === 409) {
+    try {
+      const data = await res.json();
+      if (data.error === 'PHASE_CHANGED') {
+        showPhaseChangeModal(data.previousPhase, data.currentPhase);
+      }
+    } catch (e) {
+      // Ignore JSON parse errors
+    }
+    return new Response(JSON.stringify({ ok: false, error: 'PHASE_CHANGED' }), {
+      status: 409,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+
+  return res;
+}
+
+function showPhaseChangeModal(previousPhase, currentPhase) {
+  const existing = document.querySelector('.phase-change-overlay');
+  if (existing) return;
+
+  const overlay = document.createElement('div');
+  overlay.className = 'phase-change-overlay';
+  overlay.innerHTML = `
+    <div class="phase-change-modal">
+      <div class="phase-change-icon">🔄</div>
+      <h3 class="phase-change-title">Cambio de Fase</h3>
+      <p class="phase-change-text">
+        La fase del juego ha cambiado de<br>
+        <strong>${previousPhase}</strong><br>
+        a<br>
+        <strong>${currentPhase}</strong>
+      </p>
+      <p class="phase-change-subtext">La página se recargará automáticamente...</p>
+    </div>
+  `;
+
+  Object.assign(overlay.style, {
+    position: 'fixed',
+    top: '0',
+    left: '0',
+    width: '100%',
+    height: '100%',
+    backgroundColor: 'rgba(0, 0, 0, 0.85)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: '9999',
+    opacity: '0',
+    transition: 'opacity 0.3s ease'
+  });
+
+  const modal = overlay.querySelector('.phase-change-modal');
+  Object.assign(modal.style, {
+    backgroundColor: '#1E293B',
+    borderRadius: '16px',
+    padding: '32px 24px',
+    textAlign: 'center',
+    maxWidth: '320px',
+    width: '90%',
+    boxShadow: '0 20px 60px rgba(0,0,0,0.5)'
+  });
+
+  const icon = overlay.querySelector('.phase-change-icon');
+  Object.assign(icon.style, { fontSize: '48px', marginBottom: '16px' });
+
+  const title = overlay.querySelector('.phase-change-title');
+  Object.assign(title.style, { color: '#F1F5F9', fontSize: '1.3rem', marginBottom: '16px' });
+
+  const text = overlay.querySelector('.phase-change-text');
+  Object.assign(text.style, { color: '#94A3B8', fontSize: '0.95rem', lineHeight: '1.6', marginBottom: '16px' });
+
+  const subtext = overlay.querySelector('.phase-change-subtext');
+  Object.assign(subtext.style, { color: '#64748B', fontSize: '0.8rem' });
+
+  document.body.appendChild(overlay);
+  requestAnimationFrame(() => { overlay.style.opacity = '1'; });
+
+  setTimeout(() => {
+    window.location.reload();
+  }, 3000);
+}
+
+function isFasePretemporada() {
+  return getFaseJuego() === 'FASE_PRETEMPORADA';
+}
+
+function isFaseLiga() {
+  const fase = getFaseJuego();
+  return fase === 'FASE_LIGA' || fase === 'FASE_PRE16';
+}
+
+function isFasePre16() {
+  return getFaseJuego() === 'FASE_PRE16';
 }
 
 const SQUAD_FORMATION = {
@@ -123,7 +219,7 @@ async function loadInitialData() {
 
     // Configuración del torneo desde backend
     try {
-      const configRes = await fetch(`${API_BASE}/api/config?t=${Date.now()}`);
+      const configRes = await fetchWithPhase(`${API_BASE}/api/config?t=${Date.now()}`);
       const configData = await configRes.json();
       if (configData.ok) AppState.appConfig = configData.config;
     } catch (e) {
@@ -171,7 +267,7 @@ async function loadInitialData() {
 async function fetchPredictionsFromBackend() {
   if (!AppState.currentUser) return;
   try {
-    const res = await fetch(`${API_BASE}/api/predictions`, { headers: authHeaders() });
+    const res = await fetchWithPhase(`${API_BASE}/api/predictions`, { headers: authHeaders() });
     const data = await res.json();
     if (data.ok && data.predictions) {
       AppState.scorePredictions = data.predictions;
@@ -186,12 +282,12 @@ async function fetchPredictionsFromBackend() {
 /** Guarda predicciones en el backend */
 async function savePredictionsToBackend() {
   if (!AppState.currentUser) return false;
-  if (isFrozen()) {
+  if (isFaseLiga()) {
     showToast('Los pronósticos están bloqueados');
     return false;
   }
   try {
-    const res = await fetch(`${API_BASE}/api/predictions`, {
+    const res = await fetchWithPhase(`${API_BASE}/api/predictions`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json', ...authHeaders() },
       body: JSON.stringify({
@@ -341,7 +437,7 @@ async function fetchMatchStats(force = false) {
     return;
   }
   try {
-    const res = await fetch(`${API_BASE}/api/match-stats`);
+    const res = await fetchWithPhase(`${API_BASE}/api/match-stats`);
     const data = await res.json();
     if (data.ok && data.matchStats) {
       const hadData = AppState.matchStats.length > 0;
@@ -364,7 +460,7 @@ async function fetchAllPredictions() {
     return;
   }
   try {
-    const res = await fetch(`${API_BASE}/api/predictions/all`, { headers: authHeaders() });
+    const res = await fetchWithPhase(`${API_BASE}/api/predictions/all`, { headers: authHeaders() });
     const data = await res.json();
     if (data.ok && data.predictions) {
       const unwrapped = {};
@@ -435,7 +531,7 @@ function showNewMatchToast() {
 
 async function fetchMatchStatsUpdated() {
   try {
-    const res = await fetch(`${API_BASE}/api/match-stats/updated`);
+    const res = await fetchWithPhase(`${API_BASE}/api/match-stats/updated`);
     const data = await res.json();
     console.log('[POLL]', data, 'lastKnown:', _lastStatsUpdate);
     if (data.ok) {
@@ -457,7 +553,7 @@ async function fetchMatchStatsUpdated() {
 
 function startMatchStatsPolling() {
   stopMatchStatsPolling();
-  if (!isFrozen()) return;
+  if (isFasePretemporada()) return;
 
   const poll = () => {
     if (document.visibilityState === 'visible') fetchMatchStatsUpdated();
@@ -720,7 +816,7 @@ async function renderClasificacionTab() {
   }
 
   // Pre-freeze: solo nombres, sin puntos; solo el propio usuario es clickable
-  if (!isFrozen()) {
+  if (isFasePretemporada()) {
     // Calcular puntos del usuario actual para que su perfil funcione
     if (AppState.currentUser) {
       const myData = calculateUserTotalPoints(AppState.currentUser.name);
@@ -746,7 +842,7 @@ async function renderClasificacionTab() {
    // Obtener todas las plantillas en una sola petición (con caché)
    if (!AppState.squadsCache || !Object.keys(AppState.squadsCache).length || !AppState._squadsCacheTime || Date.now() - AppState._squadsCacheTime >= CACHE_TTL) {
      try {
-       const res = await fetch(`${API_BASE}/api/squad/all`, { headers: authHeaders() });
+       const res = await fetchWithPhase(`${API_BASE}/api/squad/all`, { headers: authHeaders() });
        const data = await res.json();
        if (data.ok && data.squads) {
          AppState.squadsCache = { ...AppState.squadsCache, ...data.squads };
@@ -820,7 +916,7 @@ function showUserProfileModal(username) {
   if (existing) existing.remove();
 
   // Pre-freeze: no se puede ver el perfil de otros usuarios
-  if (!isFrozen()) {
+  if (isFasePretemporada()) {
     const isMe = AppState.currentUser && username === AppState.currentUser.name;
     if (!isMe) {
       showToast('Los pronósticos y plantillas de otros usuarios<br>se verán al inicio de la competición');
@@ -980,7 +1076,7 @@ async function renderSquadTab(container, username) {
       squad = AppState.squadsCache[username];
     } else {
       // Fetch individual si no está en caché
-      const res = await fetch(`${API_BASE}/api/squad?username=${encodeURIComponent(username)}`);
+      const res = await fetchWithPhase(`${API_BASE}/api/squad?username=${encodeURIComponent(username)}`);
       const data = await res.json();
       if (data.ok && data.squad && data.squad.length) {
         squad = data.squad;
@@ -1206,7 +1302,7 @@ async function renderResultadosTab() {
   const container = document.getElementById('resultados-container');
   if (!container) return;
 
-  if (!isFrozen()) {
+  if (isFasePretemporada()) {
     container.innerHTML = `<div style="padding: 24px; text-align: center; color: var(--text-muted);">Los resultados estarán disponibles al comenzar la competición.</div>`;
     return;
   }
@@ -1222,7 +1318,7 @@ async function renderResultadosTab() {
    // Precargar plantillas de todos los usuarios (una sola petición, con caché)
    if (!AppState.squadsCache || !Object.keys(AppState.squadsCache).length || !AppState._squadsCacheTime || Date.now() - AppState._squadsCacheTime >= CACHE_TTL) {
      try {
-       const res = await fetch(`${API_BASE}/api/squad/all`, { headers: authHeaders() });
+       const res = await fetchWithPhase(`${API_BASE}/api/squad/all`, { headers: authHeaders() });
        const data = await res.json();
        if (data.ok && data.squads) {
          AppState.squadsCache = { ...AppState.squadsCache, ...data.squads };
@@ -1671,7 +1767,7 @@ async function handleAuthSubmit(e) {
     }
 
     try {
-      const res = await fetch(`${API_BASE}/api/auth/register`, {
+      const res = await fetchWithPhase(`${API_BASE}/api/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password, invitationCode })
@@ -1693,7 +1789,7 @@ async function handleAuthSubmit(e) {
     }
   } else {
     try {
-      const res = await fetch(`${API_BASE}/api/auth/login`, {
+      const res = await fetchWithPhase(`${API_BASE}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password })
@@ -1741,7 +1837,7 @@ async function completeProfile() {
   };
 
   try {
-    await fetch(`${API_BASE}/api/auth/profile`, {
+    await fetchWithPhase(`${API_BASE}/api/auth/profile`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...authHeaders() },
       body: JSON.stringify({
@@ -1798,6 +1894,178 @@ async function enterApp() {
   fetchFinalPredictionsFromBackend();
   startMatchStatsPolling();
   navigateToTab('inicio');
+}
+
+// ============================================================
+// ADMIN PANEL
+// ============================================================
+
+async function checkAdminStatus() {
+  const token = localStorage.getItem('session_token');
+  if (!token || !AppState.currentUser) return false;
+
+  try {
+    const response = await fetchWithPhase(`${API_BASE}/api/auth/profile`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const data = await response.json();
+    return data.isAdmin === true;
+  } catch (error) {
+    console.error('Error verificando admin:', error);
+    return false;
+  }
+}
+
+function showAdminModal() {
+  const fase = getFaseJuego();
+
+  const modal = document.createElement('div');
+  modal.className = 'profile-modal';
+  modal.innerHTML = `
+    <div class="profile-modal-content" style="max-width: 400px;">
+      <button class="profile-modal-close" id="close-admin-modal">&times;</button>
+      <div style="font-size: 2rem; margin-bottom: 8px;">⚙️</div>
+      <h2 style="font-size: 1.3rem; font-weight: 800; margin-bottom: 4px;">Panel de Administración</h2>
+      <span class="admin-badge" style="background: rgba(102,126,234,0.2); color: #667eea; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 700;">ADMIN</span>
+
+      <div style="width: 100%; margin-top: 20px; text-align: left;">
+        <label style="font-size: 11px; color: var(--text-muted); font-weight: 700; display: block; margin-bottom: 8px;">Fase Actual:</label>
+        <div style="display: flex; gap: 10px;">
+          <select id="admin-phase-select" style="flex: 1; padding: 12px; border-radius: var(--radius-md); border: 1px solid var(--ucl-border); background: var(--ucl-surface); color: var(--text-primary); font-size: 14px;">
+            <option value="FASE_PRETEMPORADA" ${fase === 'FASE_PRETEMPORADA' ? 'selected' : ''}>FASE_PRETEMPORADA</option>
+            <option value="FASE_LIGA" ${fase === 'FASE_LIGA' ? 'selected' : ''}>FASE_LIGA</option>
+            <option value="FASE_PRE16" ${fase === 'FASE_PRE16' ? 'selected' : ''}>FASE_PRE16</option>
+          </select>
+        </div>
+      </div>
+
+      <div style="width: 100%; margin-top: 16px; background: var(--ucl-surface); padding: 12px; border-radius: var(--radius-md);">
+        <p style="font-size: 12px; color: var(--text-muted); margin: 0;">Fase actual: <strong style="color: var(--text-primary);">${fase}</strong></p>
+      </div>
+
+      <button id="btn-admin-change-phase" class="btn-primary" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #fff; margin-top: 16px; width: 100%;">
+        Cambiar Fase
+      </button>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  const closeBtn = modal.querySelector('#close-admin-modal');
+  const changePhaseBtn = modal.querySelector('#btn-admin-change-phase');
+
+  closeBtn.addEventListener('click', () => modal.remove());
+  changePhaseBtn.addEventListener('click', () => {
+    const select = modal.querySelector('#admin-phase-select');
+    const targetPhase = select.value;
+    const currentPhase = getFaseJuego();
+
+    if (targetPhase === currentPhase) {
+      showToast('Ya estás en esta fase');
+      return;
+    }
+
+    modal.remove();
+    showPhaseConfirmModal(targetPhase);
+  });
+
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) modal.remove();
+  });
+}
+
+function showPhaseConfirmModal(targetPhase) {
+  const modal = document.createElement('div');
+  modal.className = 'profile-modal';
+  modal.innerHTML = `
+    <div class="profile-modal-content" style="max-width: 400px;">
+      <button class="profile-modal-close" id="close-confirm-modal">&times;</button>
+      <div style="font-size: 2rem; margin-bottom: 8px;">⚠️</div>
+      <h2 style="font-size: 1.2rem; font-weight: 800; margin-bottom: 12px;">Cambiar Fase del Juego</h2>
+
+      <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">
+        ¿Estás seguro de cambiar a <strong style="color: var(--text-primary);">${targetPhase}</strong>?
+      </p>
+
+      <div style="width: 100%; background: rgba(255,193,7,0.1); border: 1px solid rgba(255,193,7,0.3); border-radius: var(--radius-md); padding: 12px; margin-bottom: 16px;">
+        <p style="font-size: 12px; color: #ffc107; margin: 0 0 8px 0; font-weight: 700;">⚠️ Advertencia:</p>
+        <ul style="font-size: 12px; color: var(--text-muted); margin: 0; padding-left: 16px;">
+          <li>Esto afectará a <strong>todos</strong> los usuarios</li>
+          <li>Las predicciones pueden bloquearse/desbloquearse</li>
+          <li>La visibilidad de datos cambiará inmediatamente</li>
+        </ul>
+      </div>
+
+      <div style="display: flex; gap: 10px; width: 100%;">
+        <button id="btn-cancel-phase" class="btn-primary" style="flex: 1; background: var(--ucl-surface); color: var(--text-primary);">Cancelar</button>
+        <button id="btn-confirm-phase" class="btn-primary" style="flex: 1; background: rgba(239,68,68,0.8); color: #fff;">Confirmar Cambio</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  const closeBtn = modal.querySelector('#close-confirm-modal');
+  const cancelBtn = modal.querySelector('#btn-cancel-phase');
+  const confirmBtn = modal.querySelector('#btn-confirm-phase');
+
+  closeBtn.addEventListener('click', () => modal.remove());
+  cancelBtn.addEventListener('click', () => modal.remove());
+  confirmBtn.addEventListener('click', async () => {
+    confirmBtn.disabled = true;
+    confirmBtn.textContent = 'Cambiando...';
+
+    const token = localStorage.getItem('session_token');
+    if (!token) {
+      showToast('No estás autenticado');
+      modal.remove();
+      return;
+    }
+
+    try {
+      const response = await fetchWithPhase(`${API_BASE}/api/admin/fase-juego`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ faseJuego: targetPhase })
+      });
+
+      const data = await response.json();
+
+      if (data.ok) {
+        showToast(`Fase cambiada a ${targetPhase}`);
+        modal.remove();
+
+        try {
+          const configRes = await fetchWithPhase(`${API_BASE}/api/config?t=${Date.now()}`);
+          const configData = await configRes.json();
+          if (configData.ok) AppState.appConfig = configData.config;
+        } catch (e) {
+          AppState.appConfig.faseJuego = targetPhase;
+        }
+
+        const activeTab = document.querySelector('.nav-item.active')?.dataset?.tab || 'inicio';
+        if (activeTab === 'inicio') renderInicioTab();
+        else if (activeTab === 'clasificacion') renderClasificacionTab();
+        else if (activeTab === 'resultados') renderResultadosTab();
+        else if (activeTab === 'pronosticos') renderPronosticosTab();
+        else if (activeTab === 'plantilla') renderPlantillaTab();
+      } else {
+        showToast(`Error: ${data.error}`);
+        modal.remove();
+      }
+    } catch (error) {
+      console.error('Error cambiando fase:', error);
+      showToast('Error al cambiar fase');
+      modal.remove();
+    }
+  });
+
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) modal.remove();
+  });
 }
 
 function navigateToTab(tabName) {
@@ -2079,54 +2347,47 @@ function renderInicioTab() {
   const user = AppState.currentUser;
   const config = AppState.appConfig || {};
   const totalMatches = config.totalMatches || AppState.matches.length || 144;
-  const squadSize = config.squadSize || 11;
+  const squadSize = config.squadSize || 25;
   const predicted = Object.keys(AppState.scorePredictions).length;
   const pending = totalMatches - predicted;
   const squadCount = AppState.squadPicks.length;
   const squadPending = squadSize - squadCount;
 
-  // Calcular tiempo hasta inicio de rondas
-  const startRoundsDate = config.championsStartRoundsDate ? new Date(config.championsStartRoundsDate) : null;
-  const now = new Date();
-  const isFrozenNow = startRoundsDate && now >= startRoundsDate;
-  let freezeHtml = '';
+  // Información de la fase de juego actual
+  const fase = getFaseJuego();
+  const faseInfo = {
+    'FASE_PRETEMPORADA': {
+      titulo: 'Pretemporada',
+      descripcion: 'Estamos en pretemporada. Puedes hacer tus predicciones y plantilla.',
+      icono: '📝',
+      color: '#4CAF50'
+    },
+    'FASE_LIGA': {
+      titulo: 'Fase de Liga',
+      descripcion: 'La competición ha comenzado. Predicciones y plantilla bloqueadas.',
+      icono: '⚽',
+      color: '#FF9800'
+    },
+    'FASE_PRE16': {
+      titulo: 'Fase de Dieciseisavos',
+      descripcion: 'Fase de dieciseisavos. Predicciones bloqueadas.',
+      icono: '🏆',
+      color: '#F44336'
+    }
+  };
 
-  if (startRoundsDate && !isFrozenNow) {
-    const diff = startRoundsDate - now;
-    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-    const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+  const info = faseInfo[fase] || faseInfo['FASE_PRETEMPORADA'];
 
-    let timeStr = '';
-    if (days > 0) timeStr = `${days}d ${hours}h`;
-    else if (hours > 0) timeStr = `${hours}h ${mins}min`;
-    else timeStr = `${mins} minutos`;
-
-    freezeHtml = `
-      <div class="inicio-card inicio-freeze">
-        <div class="inicio-card-icon">🔒</div>
-        <div class="inicio-card-content">
-          <div class="inicio-card-title">${config.championsStartRoundsLabel || 'Champions League'}</div>
-          <div class="inicio-card-desc">
-            Comienza en <strong>${timeStr}</strong>.<br>
-            A partir de ese momento no podrás modificar pronósticos ni plantilla.
-          </div>
-        </div>
+  const faseHtml = `
+    <div class="inicio-card inicio-fase" style="border-left: 4px solid ${info.color}">
+      <div class="inicio-card-icon">${info.icono}</div>
+      <div class="inicio-card-content">
+        <div class="inicio-card-title">${info.titulo}</div>
+        <div class="inicio-card-desc">${info.descripcion}</div>
+        <span class="fase-badge" style="background: ${info.color}">${fase}</span>
       </div>
-    `;
-  } else if (isFrozenNow) {
-    freezeHtml = `
-      <div class="inicio-card inicio-freeze frozen">
-        <div class="inicio-card-icon">🔒</div>
-        <div class="inicio-card-content">
-          <div class="inicio-card-title">Ronda en curso</div>
-          <div class="inicio-card-desc">
-            La ${config.championsStartRoundsLabel || 'Champions League'} está en marcha. Los pronós y la plantilla están bloqueados.
-          </div>
-        </div>
-      </div>
-    `;
-  }
+    </div>
+  `;
 
   container.innerHTML = `
     <div class="inicio-welcome">
@@ -2135,7 +2396,7 @@ function renderInicioTab() {
       <p class="inicio-subtitle">Bienvenido a la Porra UCL 2026/27</p>
     </div>
 
-    ${freezeHtml}
+    ${faseHtml}
 
     ${pending > 0 ? `
       <div class="inicio-card inicio-pending" onclick="navigateToTab('pronosticos')">
@@ -2199,7 +2460,7 @@ async function loadAvatars() {
 
   let taken = [];
   try {
-    const res = await fetch(`${API_BASE}/api/avatars/taken`);
+    const res = await fetchWithPhase(`${API_BASE}/api/avatars/taken`);
     const data = await res.json();
     if (data.ok) taken = data.taken || [];
   } catch (e) {
@@ -2238,7 +2499,7 @@ async function loadAvatars() {
 // ============================================================
 async function fetchPlayers() {
   try {
-    const res = await fetch(`${API_BASE}/api/players`);
+    const res = await fetchWithPhase(`${API_BASE}/api/players`);
     const data = await res.json();
     if (data.ok) AppState.players = data.players || [];
   } catch (e) {
@@ -2289,6 +2550,10 @@ function showProfileModal() {
         Cambiar Contraseña
       </button>
 
+      <button id="btn-admin-panel" class="btn-primary" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #fff; margin-top: 8px; width: 100%; display: none;">
+        Panel de Administración
+      </button>
+
       <button id="btn-logout" class="btn-primary" style="background: rgba(239,68,68,0.8); color: #fff; margin-top: 8px; width: 100%;">
         Cerrar Sesión
       </button>
@@ -2300,12 +2565,26 @@ function showProfileModal() {
   const closeBtn = modal.querySelector('#close-profile-modal');
   const logoutBtn = modal.querySelector('#btn-logout');
   const changePasswordBtn = modal.querySelector('#btn-change-password');
+  const adminBtn = modal.querySelector('#btn-admin-panel');
+
+  // Show admin button if user is admin
+  checkAdminStatus().then(isAdmin => {
+    if (isAdmin && adminBtn) {
+      adminBtn.style.display = 'block';
+    }
+  });
 
   closeBtn.addEventListener('click', () => modal.remove());
   changePasswordBtn.addEventListener('click', () => {
     modal.remove();
     showChangePasswordModal();
   });
+  if (adminBtn) {
+    adminBtn.addEventListener('click', () => {
+      modal.remove();
+      showAdminModal();
+    });
+  }
   logoutBtn.addEventListener('click', () => {
     if (AppState.hasUnsavedChanges || AppState.hasUnsavedSquadChanges) {
       modal.remove();
@@ -2400,7 +2679,7 @@ function showChangePasswordModal() {
     }
 
     try {
-      const res = await fetch(`${API_BASE}/api/auth/change-password`, {
+      const res = await fetchWithPhase(`${API_BASE}/api/auth/change-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify({
@@ -2476,7 +2755,7 @@ function renderPronosticosTab() {
   const total = AppState.matches.length;
   const predicted = countPredicted();
   const pct = Math.round((predicted / total) * 100);
-  const frozen = isFrozen();
+  const frozen = isFaseLiga();
 
   container.innerHTML = `
     <div class="pronosticos-top-fixed">
@@ -2602,7 +2881,7 @@ function renderRoundMatches() {
 }
 
 function handleGoalButtonClick(e) {
-  if (isFrozen()) {
+  if (isFaseLiga()) {
     showToast('Los pronósticos están bloqueados<br>la competición ha comenzado');
     return;
   }
@@ -2707,7 +2986,7 @@ function setupSaveButton() {
 
 function updateSaveButton() {
   const btn = document.getElementById('btn-save-predictions');
-  if (btn) btn.disabled = isFrozen() || !AppState.hasUnsavedChanges;
+  if (btn) btn.disabled = isFaseLiga() || !AppState.hasUnsavedChanges;
 }
 
 // ============================================================
@@ -2727,7 +3006,7 @@ function getSlotPlayer(position, index) {
 
 /** Abre el panel de búsqueda para una casilla */
 function openSlotSearch(position, index) {
-  if (isFrozen()) {
+  if (isFaseLiga()) {
     showToast('La plantilla está bloqueada<br>la competición ha comenzado');
     return;
   }
@@ -2829,7 +3108,7 @@ function renderSearchResults(query) {
 
 /** Selecciona un jugador para la casilla activa */
 function selectPlayerForSlot(playerId) {
-  if (isFrozen()) {
+  if (isFaseLiga()) {
     showToast('La plantilla está bloqueada');
     return;
   }
@@ -2864,7 +3143,7 @@ function selectPlayerForSlot(playerId) {
 }
 
 function removePlayerFromSquad(position, index) {
-  if (isFrozen()) {
+  if (isFaseLiga()) {
     showToast('La plantilla está bloqueada');
     return;
   }
@@ -2937,7 +3216,7 @@ function renderPlantillaTab() {
   if (!container) return;
 
   const totalSelected = AppState.squadPicks.length;
-  const frozen = isFrozen();
+  const frozen = isFaseLiga();
 
   container.innerHTML = `
     <div class="squad-picker-wrapper">
@@ -3029,7 +3308,7 @@ function renderPlantillaTab() {
 
 async function saveSquadToBackend() {
   if (!AppState.currentUser) return false;
-  if (isFrozen()) {
+  if (isFaseLiga()) {
     showToast('La plantilla está bloqueada');
     return false;
   }
@@ -3041,7 +3320,7 @@ async function saveSquadToBackend() {
   }
 
   try {
-    const res = await fetch(`${API_BASE}/api/squad`, {
+    const res = await fetchWithPhase(`${API_BASE}/api/squad`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json', ...authHeaders() },
       body: JSON.stringify({
@@ -3078,7 +3357,7 @@ async function fetchSquadFromBackend() {
   if (!AppState.currentUser) return;
 
   try {
-    const res = await fetch(`${API_BASE}/api/squad`, { headers: authHeaders() });
+    const res = await fetchWithPhase(`${API_BASE}/api/squad`, { headers: authHeaders() });
     const data = await res.json();
     if (data.ok && Array.isArray(data.squad)) {
       AppState.squadPicks = data.squad;
@@ -3997,7 +4276,7 @@ async function renderFinalPredictionsTab() {
   const container = document.getElementById('final-predictions-container');
   if (!container) return;
 
-  const frozen = isFinalsFrozen();
+  const frozen = isFaseLiga();
   
   if (AppState.matchStats.length === 0) {
     await fetchMatchStats();
@@ -4357,7 +4636,7 @@ async function saveFinalPredictionsToBackend() {
   }
 
   try {
-    const response = await fetch(`${API_BASE}/api/final-predictions`, {
+    const response = await fetchWithPhase(`${API_BASE}/api/final-predictions`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -4388,7 +4667,7 @@ async function fetchFinalPredictionsFromBackend() {
   if (!token) return;
 
   try {
-    const response = await fetch(`${API_BASE}/api/final-predictions`, {
+    const response = await fetchWithPhase(`${API_BASE}/api/final-predictions`, {
       headers: {
         'Authorization': `Bearer ${token}`
       }

@@ -16,7 +16,7 @@
   <link
     href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800;900&display=swap"
     rel="stylesheet">
-  <link rel="stylesheet" href="css/styles.css?v=33">
+  <link rel="stylesheet" href="css/styles.css?v=35">
 </head>
 
 <body>
@@ -219,7 +219,36 @@
 
   </div>
 
-  <script src="js/main.js?v=27"></script>
+  <!-- Modal de confirmación para cambio de fase -->
+  <div id="phase-change-modal" class="modal" style="display: none;">
+    <div class="modal-overlay" onclick="closePhaseChangeModal()"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Cambiar Fase del Juego</h3>
+        <button class="modal-close" onclick="closePhaseChangeModal()">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <p>¿Estás seguro de cambiar a <strong id="target-phase-name">FASE_LIGA</strong>?</p>
+
+        <div class="warning-box">
+          <p><strong>Advertencia:</strong></p>
+          <ul>
+            <li>Esto afectará a <strong>todos</strong> los usuarios</li>
+            <li>Las predicciones pueden bloquearse/desbloquearse</li>
+            <li>La visibilidad de datos cambiará inmediatamente</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button onclick="closePhaseChangeModal()" class="btn-secondary">Cancelar</button>
+        <button onclick="confirmPhaseChange()" class="btn-danger">Confirmar Cambio</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/main.js?v=30"></script>
 </body>
 
 </html>
