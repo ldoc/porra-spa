@@ -1986,6 +1986,160 @@ function showAdminModal() {
   });
 }
 
+function showInvitationCodesModal() {
+  const modal = document.createElement('div');
+  modal.className = 'profile-modal';
+  modal.innerHTML = `
+    <div class="profile-modal-content" style="max-width: 400px; max-height: 80vh; overflow-y: auto;">
+      <button class="profile-modal-close" id="close-invitations-modal">&times;</button>
+      <h2 style="font-size: 1.2rem; font-weight: 800; margin-bottom: 4px;">Códigos de Invitación</h2>
+      <span class="ucl-tag" style="margin-bottom: 16px;">Gestión de códigos</span>
+
+      <div style="display: flex; gap: 8px; margin-bottom: 16px; width: 100%;">
+        <button id="tab-available" class="btn-tab active" style="flex: 1;">Disponibles</button>
+        <button id="tab-used" class="btn-tab" style="flex: 1;">Usados</button>
+      </div>
+
+      <button id="btn-create-code" class="btn-primary" style="background: var(--accent-green, #10B981); color: #fff; width: 100%; margin-bottom: 12px;">
+        + Nuevo Código
+      </button>
+
+      <div id="invitations-list" style="width: 100%;">
+        <div style="text-align: center; padding: 20px; color: var(--text-muted);">Cargando...</div>
+      </div>
+
+      <div id="invitations-count" style="width: 100%; text-align: center; margin-top: 12px; font-size: 12px; color: var(--text-muted);"></div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  const closeBtn = modal.querySelector('#close-invitations-modal');
+  const tabAvailable = modal.querySelector('#tab-available');
+  const tabUsed = modal.querySelector('#tab-used');
+  const createBtn = modal.querySelector('#btn-create-code');
+
+  let currentTab = 'available';
+  let invitations = [];
+
+  closeBtn.addEventListener('click', () => modal.remove());
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) modal.remove();
+  });
+
+  tabAvailable.addEventListener('click', () => {
+    currentTab = 'available';
+    tabAvailable.classList.add('active');
+    tabUsed.classList.remove('active');
+    renderInvitationsList();
+  });
+
+  tabUsed.addEventListener('click', () => {
+    currentTab = 'used';
+    tabUsed.classList.add('active');
+    tabAvailable.classList.remove('active');
+    renderInvitationsList();
+  });
+
+  createBtn.addEventListener('click', async () => {
+    await createInvitationCode();
+    await loadInvitations();
+  });
+
+  async function loadInvitations() {
+    try {
+      const res = await fetchWithPhase(`${API_BASE}/api/admin/invitations`, {
+        headers: authHeaders()
+      });
+      if (res.status === 401) { logout(); return; }
+      const data = await res.json();
+      if (data.ok) {
+        invitations = data.invitations;
+        renderInvitationsList();
+      } else {
+        showToast('Error al cargar códigos');
+      }
+    } catch (e) {
+      console.error('Error cargando invitaciones:', e);
+      showToast('Error de conexión');
+    }
+  }
+
+  function renderInvitationsList() {
+    const list = modal.querySelector('#invitations-list');
+    const count = modal.querySelector('#invitations-count');
+
+    const filtered = currentTab === 'available'
+      ? invitations.filter(inv => inv.usedBy === null)
+      : invitations.filter(inv => inv.usedBy !== null);
+
+    if (filtered.length === 0) {
+      list.innerHTML = `<div style="text-align: center; padding: 20px; color: var(--text-muted);">No hay códigos ${currentTab === 'available' ? 'disponibles' : 'usados'}</div>`;
+      count.textContent = `Total: 0 códigos`;
+      return;
+    }
+
+    list.innerHTML = filtered.map(inv => `
+      <div style="background: var(--ucl-surface); padding: 12px; border-radius: var(--radius-md); margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <div style="font-family: monospace; font-size: 1.1rem; font-weight: 700; color: var(--text-primary);">${inv.code}</div>
+          <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">
+            ${currentTab === 'available'
+              ? `Creado: ${new Date(inv.createdAt).toLocaleDateString('es-ES')}`
+              : `Usado por: ${inv.usedBy}`
+            }
+          </div>
+        </div>
+        ${currentTab === 'available' ? `<button onclick="deleteInvitationCode('${inv.code}')" style="background: rgba(239,68,68,0.2); border: none; color: #ef4444; padding: 8px; border-radius: 8px; cursor: pointer;">🗑️</button>` : ''}
+      </div>
+    `).join('');
+
+    count.textContent = `Total: ${filtered.length} códigos`;
+  }
+
+  async function createInvitationCode() {
+    try {
+      const res = await fetchWithPhase(`${API_BASE}/api/admin/invitations`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...authHeaders() }
+      });
+      if (res.status === 401) { logout(); return; }
+      const data = await res.json();
+      if (data.ok) {
+        showToast(`Código creado: ${data.invitation.code}`);
+      } else {
+        showToast('Error al crear código');
+      }
+    } catch (e) {
+      console.error('Error creando invitación:', e);
+      showToast('Error de conexión');
+    }
+  }
+
+  window.deleteInvitationCode = async function(code) {
+    if (!confirm(`¿Eliminar el código ${code}?`)) return;
+    try {
+      const res = await fetchWithPhase(`${API_BASE}/api/admin/invitations/${code}`, {
+        method: 'DELETE',
+        headers: authHeaders()
+      });
+      if (res.status === 401) { logout(); return; }
+      const data = await res.json();
+      if (data.ok) {
+        showToast(`Código ${code} eliminado`);
+        await loadInvitations();
+      } else {
+        showToast(data.error || 'Error al eliminar código');
+      }
+    } catch (e) {
+      console.error('Error eliminando invitación:', e);
+      showToast('Error de conexión');
+    }
+  };
+
+  loadInvitations();
+}
+
 function showPhaseConfirmModal(targetPhase) {
   const modal = document.createElement('div');
   modal.className = 'profile-modal';

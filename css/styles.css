@@ -873,6 +873,25 @@ html, body {
 }
 .btn-primary:active { transform: scale(0.97); }
 
+.btn-tab {
+  padding: 10px 16px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+  background: var(--ucl-surface);
+  color: var(--text-muted);
+  font-family: var(--font-family);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-tab.active {
+  background: var(--accent-primary);
+  color: #fff;
+  border-color: var(--accent-primary);
+}
+
 .btn-text {
   background: none;
   border: none;
