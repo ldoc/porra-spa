@@ -1766,6 +1766,11 @@ async function handleAuthSubmit(e) {
       return;
     }
 
+    if (!/^[0-9A-Fa-f]{6}$/.test(invitationCode)) {
+      showAuthError('El código debe tener 6 caracteres (0-9, A-F)', errorEl);
+      return;
+    }
+
     try {
       const res = await fetchWithPhase(`${API_BASE}/api/auth/register`, {
         method: 'POST',
