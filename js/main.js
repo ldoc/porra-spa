@@ -1946,6 +1946,10 @@ function showAdminModal() {
       <button id="btn-admin-change-phase" class="btn-primary" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #fff; margin-top: 16px; width: 100%;">
         Cambiar Fase
       </button>
+
+      <button id="btn-manage-invitations" class="btn-primary" style="background: linear-gradient(135deg, #10B981 0%, #059669 100%); color: #fff; margin-top: 8px; width: 100%;">
+        Gestionar Códigos de Invitación
+      </button>
     </div>
   `;
 
@@ -1953,6 +1957,7 @@ function showAdminModal() {
 
   const closeBtn = modal.querySelector('#close-admin-modal');
   const changePhaseBtn = modal.querySelector('#btn-admin-change-phase');
+  const manageInvitationsBtn = modal.querySelector('#btn-manage-invitations');
 
   closeBtn.addEventListener('click', () => modal.remove());
   changePhaseBtn.addEventListener('click', () => {
@@ -1968,6 +1973,13 @@ function showAdminModal() {
     modal.remove();
     showPhaseConfirmModal(targetPhase);
   });
+
+  if (manageInvitationsBtn) {
+    manageInvitationsBtn.addEventListener('click', () => {
+      modal.remove();
+      showInvitationCodesModal();
+    });
+  }
 
   modal.addEventListener('click', (e) => {
     if (e.target === modal) modal.remove();
