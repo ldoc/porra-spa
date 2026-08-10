@@ -246,8 +246,12 @@ GET  /api/match-stats/:eventId   // Scraping en vivo de un partido específico
 GET  /api/match-stats/updated    // Contador + última actualización
 DELETE /api/match-stats/:eventId // Eliminar un matchstat
 
+// ─── Administración (solo admins) ──────────────────────────────
+GET    /api/admin/invitations       // Listar códigos de invitación
+POST   /api/admin/invitations       // Crear nuevo código
+DELETE /api/admin/invitations/:code // Eliminar código no usado
+
 // ─── Legacy ───────────────────────────────────────────────────
-GET  /nuevoUsuario               // Generar código de invitación (6 chars)
 GET  /usuario?clave=xxxx         // Buscar usuario por clave de invitación
 ```
 
