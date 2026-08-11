@@ -2969,7 +2969,8 @@ function countPredicted() {
 
 /** Cuenta predicciones completas de una ronda */
 function countPredictedInRound(round) {
-  const roundMatches = AppState.matches.filter(m => m.ronda === round);
+  const phaseMatches = AppState.currentPhaseMatches || [];
+  const roundMatches = phaseMatches.filter(m => m.ronda === round);
   let count = 0;
   for (const m of roundMatches) {
     const p = AppState.scorePredictions[m.id];
@@ -2978,20 +2979,56 @@ function countPredictedInRound(round) {
   return count;
 }
 
+/**
+ * Counts predicted matches in a specific set of matches.
+ */
+function countPredictedInPhase(matches) {
+  let count = 0;
+  for (const m of matches) {
+    const p = AppState.scorePredictions[m.id];
+    if (p && typeof p.home === 'number' && typeof p.away === 'number') count++;
+  }
+  return count;
+}
+
+/**
+ * Checks if predictions for a specific fase are frozen.
+ * Liga predictions are frozen in FASE_LIGA and later.
+ * 16 predictions are frozen in FASE_16 and later.
+ * etc.
+ */
+function isPhaseFrozen(fase) {
+  const phase = getFaseJuego();
+  const faseOrder = ['liga', '16', '8', '4', 'semis', 'final'];
+  const faseIndex = faseOrder.indexOf(fase);
+  const currentFase = getFaseForCurrentPhase();
+  const currentFaseIndex = faseOrder.indexOf(currentFase);
+
+  if (phase.startsWith('FASE_PRE')) {
+    return faseIndex < currentFaseIndex;
+  }
+  return faseIndex <= currentFaseIndex;
+}
+
 function renderPronosticosTab() {
   const container = document.getElementById('pronosticos-container');
-  if (!container || !AppState.matches.length) return;
+  if (!container) return;
+
+  const { matches: phaseMatches, rounds, fase } = getMatchesForCurrentPhase();
+  if (!phaseMatches.length) return;
 
   AppState.currentRound = 1;
+  AppState.currentPhaseMatches = phaseMatches;
+  AppState.currentPhaseRounds = rounds;
 
-  const total = AppState.matches.length;
-  const predicted = countPredicted();
+  const total = phaseMatches.length;
+  const predicted = countPredictedInPhase(phaseMatches);
   const pct = Math.round((predicted / total) * 100);
-  const frozen = isLigaFrozen();
+  const frozen = isPhaseFrozen(fase);
 
   container.innerHTML = `
     <div class="pronosticos-top-fixed">
-      ${frozen ? '<div style="background:rgba(239,68,68,0.15);color:#ef4444;padding:8px 12px;border-radius:8px;margin-bottom:8px;font-size:13px;text-align:center;">🔒 Pronósticos bloqueados — la competición ha comenzado</div>' : ''}
+      ${frozen ? '<div style="background:rgba(239,68,68,0.15);color:#ef4444;padding:8px 12px;border-radius:8px;margin-bottom:8px;font-size:13px;text-align:center;">🔒 Pronósticos bloqueados — esta fase ha comenzado</div>' : ''}
       <div class="pronosticos-actions-row">
         <button class="save-predictions-btn" id="btn-save-predictions" disabled ${frozen || AppState.predictionsConfirmed ? 'style="opacity:0.5;pointer-events:none"' : ''}>💾 Guardar</button>
         <button class="confirm-predictions-btn" id="btn-confirm-predictions" ${frozen || AppState.predictionsConfirmed || predicted < total ? 'disabled' : ''}>✅ Confirmar</button>
@@ -3006,7 +3043,7 @@ function renderPronosticosTab() {
       </p>
       <div class="round-nav">
         <button class="round-nav-btn" id="btn-round-prev" disabled>&larr; Ronda anterior</button>
-        <span class="round-indicator" id="round-indicator">Ronda 1 de 8</span>
+        <span class="round-indicator" id="round-indicator">Ronda 1 de ${rounds}</span>
         <button class="round-nav-btn" id="btn-round-next">Siguiente ronda &rarr;</button>
       </div>
       <div class="round-progress-text" id="round-progress-text"></div>
@@ -3052,11 +3089,13 @@ function renderRoundMatches() {
   if (!container) return;
 
   const round = AppState.currentRound;
-  const roundMatches = AppState.matches.filter(m => m.ronda === round);
+  const phaseMatches = AppState.currentPhaseMatches || [];
+  const roundMatches = phaseMatches.filter(m => m.ronda === round);
+  const totalRounds = AppState.currentPhaseRounds || 1;
 
   // Actualizar indicadores
   const indicator = document.getElementById('round-indicator');
-  if (indicator) indicator.textContent = `Ronda ${round} de 8`;
+  if (indicator) indicator.textContent = `Ronda ${round} de ${totalRounds}`;
 
   const roundPredicted = countPredictedInRound(round);
   const roundTotal = roundMatches.length;
@@ -3068,11 +3107,11 @@ function renderRoundMatches() {
   }
 
   // Actualizar barra de progreso global
-  const totalPredicted = countPredicted();
-  const totalMatches = AppState.matches.length;
+  const totalPredicted = countPredictedInPhase(phaseMatches);
+  const totalMatches = phaseMatches.length;
   const globalPct = Math.round((totalPredicted / totalMatches) * 100);
   const progressFill = document.querySelector('.wizard-progress-fill');
-  const progressText = document.querySelector('.pronosticos-header .wizard-progress-text');
+  const progressText = document.querySelector('.wizard-progress-text');
   if (progressFill) progressFill.style.width = `${globalPct}%`;
   if (progressText) {
     progressText.innerHTML = `<strong>${totalPredicted}</strong> de <strong>${totalMatches}</strong> partidos pronosticados`;
@@ -3082,7 +3121,7 @@ function renderRoundMatches() {
   const prevBtn = document.getElementById('btn-round-prev');
   const nextBtn = document.getElementById('btn-round-next');
   if (prevBtn) prevBtn.disabled = round <= 1;
-  if (nextBtn) nextBtn.disabled = round >= 8;
+  if (nextBtn) nextBtn.disabled = round >= totalRounds;
 
   container.innerHTML = roundMatches.map(match => {
     const pred = AppState.scorePredictions[match.id];
@@ -3134,8 +3173,9 @@ function renderRoundMatches() {
 }
 
 function handleGoalButtonClick(e) {
-  if (isLigaFrozen()) {
-    showToast('Los pronósticos están bloqueados<br>la competición ha comenzado');
+  const { fase } = getMatchesForCurrentPhase();
+  if (isPhaseFrozen(fase)) {
+    showToast('Los pronósticos están bloqueados<br>esta fase ha comenzado');
     return;
   }
   const btn = e.target.closest('.goals-btn-round');
@@ -3184,8 +3224,9 @@ function handleGoalButtonClick(e) {
 
 function updateProgressCounts() {
   const round = AppState.currentRound;
+  const phaseMatches = AppState.currentPhaseMatches || [];
   const roundPredicted = countPredictedInRound(round);
-  const roundMatches = AppState.matches.filter(m => m.ronda === round);
+  const roundMatches = phaseMatches.filter(m => m.ronda === round);
   const roundTotal = roundMatches.length;
 
   const roundProgressEl = document.getElementById('round-progress-text');
@@ -3193,11 +3234,11 @@ function updateProgressCounts() {
     roundProgressEl.innerHTML = `Ronda ${round}: <strong>${roundPredicted}</strong> de <strong>${roundTotal}</strong> pronosticados`;
   }
 
-  const totalPredicted = countPredicted();
-  const totalMatches = AppState.matches.length;
+  const totalPredicted = countPredictedInPhase(phaseMatches);
+  const totalMatches = phaseMatches.length;
   const globalPct = Math.round((totalPredicted / totalMatches) * 100);
   const progressFill = document.querySelector('.wizard-progress-fill');
-  const progressText = document.querySelector('.pronosticos-header .wizard-progress-text');
+  const progressText = document.querySelector('.wizard-progress-text');
   if (progressFill) progressFill.style.width = `${globalPct}%`;
   if (progressText) {
     progressText.innerHTML = `<strong>${totalPredicted}</strong> de <strong>${totalMatches}</strong> partidos pronosticados`;
@@ -3213,7 +3254,8 @@ function setupRoundNavigation() {
   });
 
   document.getElementById('btn-round-next')?.addEventListener('click', () => {
-    if (AppState.currentRound < 8) {
+    const totalRounds = AppState.currentPhaseRounds || 1;
+    if (AppState.currentRound < totalRounds) {
       AppState.currentRound++;
       renderRoundMatches();
     }
