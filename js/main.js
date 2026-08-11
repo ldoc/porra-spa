@@ -361,6 +361,7 @@ function buildMatchFromCalendar(m) {
   return {
     id: m.id,
     ronda: m.ronda,
+    fase: m.fase,
     fechaTs: m.fecha,
     fecha: formatDate(m.fecha),
     journey: `Jornada ${m.ronda}`,
@@ -3029,6 +3030,21 @@ function renderPronosticosTab() {
     matchesContainer.removeEventListener('click', handleGoalButtonClick);
     matchesContainer.addEventListener('click', handleGoalButtonClick);
   }
+}
+
+/**
+ * Returns matches filtered by the current phase's `fase` value.
+ * Also returns the number of rounds for the current phase.
+ */
+function getMatchesForCurrentPhase() {
+  const fase = getFaseForCurrentPhase();
+  const phaseMatches = AppState.matches.filter(m => m.fase === fase);
+
+  const rounds = phaseMatches.length > 0
+    ? Math.max(...phaseMatches.map(m => m.ronda))
+    : 1;
+
+  return { matches: phaseMatches, rounds, fase };
 }
 
 function renderRoundMatches() {
