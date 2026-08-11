@@ -401,7 +401,7 @@ La aplicación utiliza una estructura de navegación con:
    - **Clasificación**: Tabla de posiciones de todos los participantes (obtenidos de `GET /api/players`)
    - **Pronósticos**: Wizard para introducir marcadores de los 144 partidos
    - **Plantilla**: Selección de 25 jugadores para la plantilla ideal (3G, 8D, 8M, 6F)
-   - **Fase Final**: Predicciones de la fase de eliminatorias (campeón a dieciseisavos)
+   - **Eliminatorias**: Predicciones de la fase de eliminatorias (campeón a dieciseisavos). Solo accesible tras confirmar los 144 pronósticos de liga
 
 **Pestañas disponibles:**
 - `tab-inicio`: Pantalla de bienvenida con resumen de estado del usuario
@@ -409,14 +409,14 @@ La aplicación utiliza una estructura de navegación con:
 - `tab-resultados`: Resultados de partidos por jornada y puntos de usuarios
 - `tab-pronosticos`: Wizard de predicciones de partidos
 - `tab-plantilla`: Selección de plantilla ideal (25 jugadores: 3G, 8D, 8M, 6F)
-- `tab-final-predictions`: Predicciones de la fase final (24 equipos asignados a rondas)
+- `tab-final-predictions`: Predicciones de eliminatorias (24 equipos asignados a rondas). Solo accesible tras confirmar pronósticos
 
 **Flujo de usuario:**
 1. Tras registro/login → entra directamente a pestaña Inicio
 2. Los pronósticos y plantilla se guardan localmente en `localStorage`
 3. Los datos se persisten automáticamente al modificar marcadores o selección
 4. Desde Inicio se puede navegar a Pronósticos o Plantilla pulsando en las tarjetas de aviso
-5. Desde Pronósticos se puede acceder a la Fase Final pulsando el botón "Fase Final"
+5. Desde Pronósticos se puede acceder a Eliminatorias pulsando el botón "🏆 Eliminatorias" (solo visible tras confirmar los 144 pronósticos)
 
 ### 5.2. Datos y APIs (`data/`, `api/`, `extract/`)
 
@@ -1019,11 +1019,13 @@ const SQUAD_FORMATION = {
 - **Backend**: Endpoint `PUT /api/squad` para persistencia en servidor
 - **Sincronización**: Al cargar la app, se obtiene plantilla del backend si existe
 
-### 5.5. Fase Final (Predicciones de Eliminatorias)
+### 5.5. Eliminatorias (Predicciones de Eliminatorias)
 
 #### Descripción
 
 Pestaña que permite al usuario predecir el cuadro completo de eliminatorias de la Champions League, asignando los 24 equipos clasificados de la fase de liga a cada ronda: campeón, subcampeón, semifinalistas, cuartos de final, octavos de final y dieciseisavos.
+
+**Importante:** Los equipos disponibles se calculan a partir de la **clasificación pronosticada** por el usuario (no la clasificación real). La pestaña solo es accesible tras confirmar los 144 pronósticos de liga.
 
 #### Distribución de Equipos
 
@@ -1039,10 +1041,11 @@ Pestaña que permite al usuario predecir el cuadro completo de eliminatorias de 
 
 #### Restricciones
 
-1. **24 equipos**: Se asignan los 24 equipos de la clasificación de la fase de liga (puestos 1-24)
-2. **Sin repetir equipos**: Cada equipo solo puede asignarse a una ronda
-3. **Freeze date**: Las predicciones se bloquean cuando comienza la fase de eliminatorias (`finalsFreezeDate` en config.json)
-4. **Edición**: Los usuarios pueden modificar sus predicciones libremente hasta la fecha de freeze
+1. **Requiere confirmación**: La pestaña solo es accesible tras confirmar los 144 pronósticos de liga (`predictionsConfirmed = true`)
+2. **24 equipos**: Se asignan los 24 equipos de la clasificación pronosticada por el usuario (puestos 1-24)
+3. **Sin repetir equipos**: Cada equipo solo puede asignarse a una ronda
+4. **Congelación**: Las predicciones de eliminatorias se pueden guardar mientras `predictionsConfirmed` sea true. Una vez confirmado, los pronósticos de liga no se pueden editar
+5. **Edición**: Los usuarios pueden modificar sus predicciones de eliminatorias libremente
 
 #### Interfaz de Selección (UI)
 
@@ -1050,7 +1053,7 @@ La pantalla utiliza un sistema de **selección por toque** (tap-to-place):
 
 ```
 ┌─────────────────────────────────────────┐
-│  ← Volver  [Guardar]    🏆 FASE FINAL   │
+│  ← Volver  [Guardar]    🏆 ELIMINATORIAS │
 ├─────────────────────────────────────────┤
 │  Selecciona un equipo y toca una casilla │
 ├─────────────────────────────────────────┤
