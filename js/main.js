@@ -45,6 +45,7 @@ const AppState = {
   hasUnsavedFinalChanges: false, // flag de cambios sin guardar en fase final
   selectedFinalTeam: null, // teamId seleccionado para colocar en zona
   hasTop8InRoundOf32: false, // flag: hay equipos top-8 en deciseisavos (bloquea save)
+  predictionsConfirmed: false, // flag: pronósticos confirmados (bloquea edición)
 };
 
 const SQUAD_SIZE = 25;
@@ -1430,27 +1431,28 @@ async function renderResultadosTab() {
     <div class="resultados-scroll">${scrollHtml}</div>
   `;
 
-  // Eventos de expand/collapse para partidos y jugadores
-  container.addEventListener('click', e => {
-    const expandBtn = e.target.closest('.resultados-expand-btn');
-    if (expandBtn) {
-      const matchId = expandBtn.dataset.matchId;
+  // Eventos de expand/collapse para partidos (directamente en cada botón)
+  container.querySelectorAll('.resultados-expand-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const matchId = btn.dataset.matchId;
       const target = document.getElementById(`match-expand-${matchId}`);
       if (target) {
         target.classList.toggle('collapsed');
-        expandBtn.querySelector('.expand-icon').textContent = target.classList.contains('collapsed') ? '▼' : '▲';
+        btn.querySelector('.expand-icon').textContent = target.classList.contains('collapsed') ? '▼' : '▲';
       }
-      return;
-    }
-    const playerBtn = e.target.closest('.resultados-player-expand-btn');
-    if (playerBtn) {
-      const targetId = playerBtn.dataset.playerTarget;
+    });
+  });
+
+  // Eventos de expand/collapse para jugadores (directamente en cada botón)
+  container.querySelectorAll('.resultados-player-expand-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const targetId = btn.dataset.playerTarget;
       const target = document.getElementById(targetId);
       if (target) {
         target.classList.toggle('collapsed');
-        playerBtn.textContent = target.classList.contains('collapsed') ? '▸' : '▾';
+        btn.textContent = target.classList.contains('collapsed') ? '▸' : '▾';
       }
-    }
+    });
   });
 
   // Eventos de tabs (comunes a ambos modos)
@@ -1684,6 +1686,7 @@ function checkAuthStatus() {
       if (payload.exp * 1000 > Date.now()) {
         AppState.currentUser = JSON.parse(savedUser);
         AppState.sessionToken = token;
+        AppState.predictionsConfirmed = AppState.currentUser?.predictionsConfirmed || false;
         enterApp();
         return;
       }
@@ -1810,12 +1813,14 @@ async function handleAuthSubmit(e) {
       AppState.sessionToken = data.token;
 
       if (data.user && data.user.avatar) {
+        AppState.predictionsConfirmed = data.user?.predictionsConfirmed || false;
         const user = {
           username: data.user.username,
           name: data.user.username,
           avatar: data.user.avatar,
           points: 0,
           hits: 0,
+          predictionsConfirmed: AppState.predictionsConfirmed,
         };
         localStorage.setItem('porra_ucl_user', JSON.stringify(user));
         AppState.currentUser = user;
@@ -2258,6 +2263,11 @@ function navigateToTab(tabName) {
     return;
   }
 
+  if (tabName === 'final-predictions' && !AppState.predictionsConfirmed) {
+    showToast('Debes confirmar tus pronósticos de liga primero');
+    return;
+  }
+
   // Resetear ronda de resultados al salir de la pestaña
   if (tabName !== 'resultados') {
     AppState.resultadosRound = null;
@@ -2387,8 +2397,8 @@ function showUnsavedFinalChangesModal(targetTab) {
   overlay.innerHTML = `
     <div class="unsaved-modal">
       <div class="unsaved-modal-icon">⚠️</div>
-      <h3 class="unsaved-modal-title">Fase final sin guardar</h3>
-      <p class="unsaved-modal-text">Has modificado tus predicciones de fase final pero no las has guardado. Si sales, los cambios se perderán.</p>
+      <h3 class="unsaved-modal-title">Eliminatorias sin guardar</h3>
+      <p class="unsaved-modal-text">Has modificado tus predicciones de eliminatorias pero no las has guardado. Si sales, los cambios se perderán.</p>
       <div class="unsaved-modal-actions">
         <button class="unsaved-modal-btn unsaved-modal-btn-save" id="modal-save-final">Guardar y salir</button>
         <button class="unsaved-modal-btn unsaved-modal-btn-discard" id="modal-discard-final">Salir sin guardar</button>
@@ -2932,9 +2942,10 @@ function renderPronosticosTab() {
     <div class="pronosticos-top-fixed">
       ${frozen ? '<div style="background:rgba(239,68,68,0.15);color:#ef4444;padding:8px 12px;border-radius:8px;margin-bottom:8px;font-size:13px;text-align:center;">🔒 Pronósticos bloqueados — la competición ha comenzado</div>' : ''}
       <div class="pronosticos-actions-row">
-        <button class="save-predictions-btn" id="btn-save-predictions" disabled ${frozen ? 'style="opacity:0.5;pointer-events:none"' : ''}>💾 Guardar en servidor</button>
-        <button class="standings-btn" id="btn-show-standings" onclick="showPredictedStandings()">📊 Ver Clasificación</button>
-        <button class="standings-btn" id="btn-show-final" onclick="navigateToTab('final-predictions')" style="background: linear-gradient(135deg, #8B5CF6, #EC4899);">🏆 Fase Final</button>
+        <button class="save-predictions-btn" id="btn-save-predictions" disabled ${frozen || AppState.predictionsConfirmed ? 'style="opacity:0.5;pointer-events:none"' : ''}>💾 Guardar</button>
+        <button class="confirm-predictions-btn" id="btn-confirm-predictions" ${frozen || AppState.predictionsConfirmed || predicted < total ? 'disabled' : ''}>✅ Confirmar</button>
+        <button class="standings-btn" id="btn-show-standings" onclick="showPredictedStandings()">📊 Clasificación</button>
+        ${AppState.predictionsConfirmed ? '<button class="standings-btn" id="btn-show-final" onclick="navigateToTab(\'final-predictions\')" style="background: linear-gradient(135deg, #8B5CF6, #EC4899);">🏆 Eliminatorias</button>' : ''}
       </div>
       <div class="wizard-progress-bar">
         <div class="wizard-progress-fill" style="width: ${pct}%"></div>
@@ -2956,6 +2967,11 @@ function renderPronosticosTab() {
   renderRoundMatches();
   setupRoundNavigation();
   setupSaveButton();
+
+  const confirmBtn = document.getElementById('btn-confirm-predictions');
+  if (confirmBtn) {
+    confirmBtn.addEventListener('click', () => confirmPredictions());
+  }
 
   // Delegacion de eventos para botones +/- (una sola vez)
   const matchesContainer = document.getElementById('round-matches-container');
@@ -3158,6 +3174,53 @@ function setupSaveButton() {
 function updateSaveButton() {
   const btn = document.getElementById('btn-save-predictions');
   if (btn) btn.disabled = isFaseLiga() || !AppState.hasUnsavedChanges;
+}
+
+async function confirmPredictions() {
+  const token = AppState.sessionToken || localStorage.getItem('session_token');
+  if (!token) {
+    showToast('Debes iniciar sesión para confirmar');
+    return;
+  }
+
+  if (AppState.predictionsConfirmed) {
+    showToast('Ya has confirmado tus pronósticos');
+    return;
+  }
+
+  const total = AppState.matches.length;
+  const predicted = countPredicted();
+  if (predicted < total) {
+    showToast(`Faltan pronósticos. Has completado ${predicted} de ${total} partidos`);
+    return;
+  }
+
+  try {
+    const response = await fetchWithPhase(`${API_BASE}/api/predictions/confirm`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      }
+    });
+
+    const data = await response.json();
+
+    if (data.ok) {
+      AppState.predictionsConfirmed = true;
+      AppState.hasUnsavedChanges = false;
+      const userData = JSON.parse(localStorage.getItem('porra_ucl_user') || '{}');
+      userData.predictionsConfirmed = true;
+      localStorage.setItem('porra_ucl_user', JSON.stringify(userData));
+      showToast('✅ Pronósticos confirmados correctamente');
+      renderPronosticosTab();
+    } else {
+      showToast('❌ ' + (data.error || 'Error al confirmar'));
+    }
+  } catch (error) {
+    console.error('Error confirming predictions:', error);
+    showToast('❌ Error de conexión al confirmar');
+  }
 }
 
 // ============================================================
@@ -4217,6 +4280,12 @@ function isTop8Team(teamId) {
   return AppState.realStandings.slice(0, 8).some(t => t.teamId === teamId);
 }
 
+function isTop8Predicted(teamId) {
+  const standings = calculatePredictedStandings();
+  if (!standings || standings.length === 0) return false;
+  return standings.slice(0, 8).some(t => t.teamId === teamId);
+}
+
 /**
  * Calcula la clasificación pronosticada por un usuario
  * basada en sus predicciones de marcadores
@@ -4349,6 +4418,104 @@ function calculateUserPredictedStandings(username) {
   }));
 }
 
+function calculatePredictedStandings() {
+  const predictions = AppState.scorePredictions;
+  if (!predictions || Object.keys(predictions).length === 0) return [];
+
+  const teamIds = Object.keys(AppState.teamsMap).map(Number);
+  const teams = [];
+  const statsCache = new Map();
+
+  for (const teamId of teamIds) {
+    const stats = {
+      teamId,
+      played: 0,
+      wins: 0,
+      draws: 0,
+      losses: 0,
+      gf: 0,
+      gc: 0,
+      gd: 0,
+      points: 0,
+      awayWins: 0,
+      awayGoals: 0
+    };
+
+    const teamMatches = AppState.matches.filter(m =>
+      m.homeTeamId === teamId || m.awayTeamId === teamId
+    );
+
+    for (const match of teamMatches) {
+      const pred = predictions[match.id];
+      if (!pred || typeof pred.home !== 'number' || typeof pred.away !== 'number') continue;
+
+      stats.played++;
+      const isHome = match.homeTeamId === teamId;
+      const goalsFor = isHome ? pred.home : pred.away;
+      const goalsAgainst = isHome ? pred.away : pred.home;
+
+      stats.gf += goalsFor;
+      stats.gc += goalsAgainst;
+
+      if (goalsFor > goalsAgainst) {
+        stats.wins++;
+        stats.points += 3;
+        if (!isHome) stats.awayWins++;
+      } else if (goalsFor === goalsAgainst) {
+        stats.draws++;
+        stats.points += 1;
+      } else {
+        stats.losses++;
+      }
+
+      if (!isHome) stats.awayGoals += goalsFor;
+    }
+
+    stats.gd = stats.gf - stats.gc;
+
+    const teamInfo = AppState.teamsMap[teamId];
+    teams.push({
+      ...stats,
+      name: teamInfo?.name || 'Desconocido',
+      badgeExt: teamInfo?.ext || 'png'
+    });
+    statsCache.set(teamId, stats);
+  }
+
+  function compareTeams(a, b) {
+    if (b.points !== a.points) return b.points - a.points;
+    if (b.gd !== a.gd) return b.gd - a.gd;
+    if (b.gf !== a.gf) return b.gf - a.gf;
+    if (b.awayGoals !== a.awayGoals) return b.awayGoals - a.awayGoals;
+    if (b.wins !== a.wins) return b.wins - a.wins;
+    if (b.awayWins !== a.awayWins) return b.awayWins - a.awayWins;
+
+    const aRivals = getRealRivalsStats(a.teamId, statsCache);
+    const bRivals = getRealRivalsStats(b.teamId, statsCache);
+
+    if (bRivals.rivalPointsSum !== aRivals.rivalPointsSum) {
+      return bRivals.rivalPointsSum - aRivals.rivalPointsSum;
+    }
+    if (bRivals.rivalGDSum !== aRivals.rivalGDSum) {
+      return bRivals.rivalGDSum - aRivals.rivalGDSum;
+    }
+    if (bRivals.rivalGFSum !== aRivals.rivalGFSum) {
+      return bRivals.rivalGFSum - aRivals.rivalGFSum;
+    }
+
+    const aName = AppState.teamsMap[a.teamId]?.name || '';
+    const bName = AppState.teamsMap[b.teamId]?.name || '';
+    return aName.localeCompare(bName);
+  }
+
+  const sorted = teams.sort(compareTeams);
+
+  return sorted.map((team, index) => ({
+    ...team,
+    position: index + 1
+  }));
+}
+
 /**
  * Calcula los puntos por pronóstico de clasificación para un usuario
  * Regla: solo se reciben puntos por el valor más bajo de posición
@@ -4447,27 +4614,25 @@ async function renderFinalPredictionsTab() {
   const container = document.getElementById('final-predictions-container');
   if (!container) return;
 
-  const frozen = isFaseLiga();
+  const frozen = AppState.predictionsConfirmed;
   
-  if (AppState.matchStats.length === 0) {
-    await fetchMatchStats();
-  }
-  
-  if (AppState.realStandings.length === 0) {
-    calculateRealStandings();
-  }
-  
-  const standings = AppState.realStandings;
+  const standings = calculatePredictedStandings();
   
   if (!standings || standings.length === 0) {
     container.innerHTML = `
       <div class="final-predictions-empty">
         <div class="empty-icon">📊</div>
-        <div class="empty-text">Clasificación no disponible</div>
-        <div class="empty-subtext">La fase de liga debe finalizar para acceder a esta funcionalidad</div>
+        <div class="empty-text">Clasificación pronosticada no disponible</div>
+        <div class="empty-subtext">Debes completar los 144 pronósticos de liga primero</div>
       </div>
     `;
     return;
+  }
+
+  const predictedTop8 = new Set(standings.slice(0, 8).map(t => t.teamId));
+
+  function isTop8Predicted(teamId) {
+    return predictedTop8.has(teamId);
   }
 
   const qualifiedTeams = standings.slice(0, 24).map(s => ({
@@ -4491,7 +4656,7 @@ async function renderFinalPredictionsTab() {
 
   // Comprobar si hay equipos top-8 en deciseisavos (restricción de fase final)
   if (fp.roundOf32 && fp.roundOf32.length > 0) {
-    const top8InRoundOf32 = fp.roundOf32.filter(teamId => isTop8Team(teamId));
+    const top8InRoundOf32 = fp.roundOf32.filter(teamId => isTop8Predicted(teamId));
     if (top8InRoundOf32.length > 0) {
       showToast('Hay equipos top-8 en deciseisavos que deben moverse a octavos o superior. No podrás guardar hasta corregirlo.');
       AppState.hasTop8InRoundOf32 = true;
@@ -4560,8 +4725,8 @@ async function renderFinalPredictionsTab() {
         ${frozen ? `
           <div class="final-predictions-frozen">
             <div class="frozen-icon">🔒</div>
-            <div class="frozen-text">Predicciones bloqueadas</div>
-            <div class="frozen-subtext">La fase de dieciseisavos ha comenzado</div>
+            <div class="frozen-text">Pronósticos confirmados</div>
+            <div class="frozen-subtext">Los pronósticos han sido confirmados</div>
           </div>
         ` : ''}
 
@@ -4571,7 +4736,7 @@ async function renderFinalPredictionsTab() {
           <div class="teams-pool-header">Equipos disponibles (${availableTeams.length})</div>
           <div class="teams-pool-scroll" id="teams-pool-scroll">
             ${availableTeams.map(team => {
-              const top8 = isTop8Team(team.id);
+              const top8 = isTop8Predicted(team.id);
               return `
               <div class="team-chip ${top8 ? 'top-8' : ''} ${AppState.selectedFinalTeam === team.id ? 'selected' : ''}" data-team-id="${team.id}">
                 <img class="team-chip-img" src="${getTeamImg(team.id)}" alt="${team.name}" onerror="this.src='data/imgEquipos/default.png'">
@@ -4724,7 +4889,7 @@ async function addTeamToZone(teamId, zoneId, index) {
   if (!fp) return;
 
   // Validación: los 8 primeros clasificados no pueden ir a deciseisavos
-  if (zoneId === 'roundOf32' && isTop8Team(teamId)) {
+  if (zoneId === 'roundOf32' && isTop8Predicted(teamId)) {
     showToast('Top 8 no va a dieciseisavos.<br>Pásalos a octavos o superior.');
     return;
   }
@@ -4834,6 +4999,7 @@ async function saveFinalPredictionsToBackend() {
  * Obtiene las predicciones de fase final del backend
  */
 async function fetchFinalPredictionsFromBackend() {
+  if (!AppState.predictionsConfirmed) return;
   const token = AppState.sessionToken || localStorage.getItem('session_token');
   if (!token) return;
 

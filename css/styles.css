@@ -2058,6 +2058,29 @@ html, body {
   color: var(--text-muted);
 }
 
+.confirm-predictions-btn {
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: none;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  background: linear-gradient(135deg, #10B981, #059669);
+  color: white;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.confirm-predictions-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  background: #374151;
+}
+
+.confirm-predictions-btn:not(:disabled):active {
+  transform: scale(0.95);
+}
+
 /* ==========================================================================
    MODAL CAMBIOS SIN GUARDAR
    ========================================================================== */
@@ -2669,6 +2692,9 @@ html, body {
 .resultados-players {
   border-top: 1px solid var(--border-color);
   padding-top: 12px;
+  max-height: 2000px;
+  transition: max-height 0.3s ease, opacity 0.2s ease, padding 0.3s ease;
+  overflow: hidden;
 }
 
 .resultados-players-title {
@@ -2811,11 +2837,6 @@ html, body {
 .resultados-expand-btn .expand-icon {
   font-size: 0.7rem;
   transition: transform 0.2s;
-}
-
-.resultados-players {
-  transition: max-height 0.3s ease, opacity 0.2s ease, padding 0.3s ease;
-  overflow: hidden;
 }
 
 .resultados-players.collapsed {
