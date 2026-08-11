@@ -207,6 +207,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   setupNavigation();
 });
 
+// Delegación de eventos global para el botón guardar pronósticos
+document.addEventListener('click', (e) => {
+  if (e.target.id === 'btn-save-predictions' || e.target.closest('#btn-save-predictions')) {
+    onSavePredictionsClick();
+  }
+});
+
 // ============================================================
 // CARGA DE DATOS JSON
 // ============================================================
@@ -318,10 +325,6 @@ async function fetchPredictionsFromBackend() {
 /** Guarda predicciones en el backend */
 async function savePredictionsToBackend() {
   if (!AppState.currentUser) return false;
-  if (isLigaFrozen()) {
-    showToast('Los pronósticos están bloqueados');
-    return false;
-  }
   try {
     const res = await fetchWithPhase(`${API_BASE}/api/predictions`, {
       method: 'PUT',
@@ -1381,27 +1384,51 @@ async function renderResultadosTab() {
     // Mostrar clasificación real
     scrollHtml = renderRealStandingsTable();
   } else {
-    // Mostrar jornadas (código existente)
-    // Obtener todas las rondas disponibles
-    const availableRounds = [...new Set(AppState.matches.map(m => m.ronda))].sort((a, b) => a - b);
+    // Mostrar jornadas - incluir todas las fases con resultados
+    const faseOrder = ['liga', '16', '8', '4', 'semis', 'final'];
+    const currentFase = getFaseForCurrentPhase();
+    const currentFaseIdx = faseOrder.indexOf(currentFase);
 
-    if (!availableRounds.length) {
+    // Construir lista de rondas disponibles: todas las fases hasta la actual
+    const availableRoundList = [];
+    for (const match of AppState.matches) {
+      const fIdx = faseOrder.indexOf(match.fase);
+      if (fIdx <= currentFaseIdx) {
+        const key = `${match.fase}:${match.ronda}`;
+        if (!availableRoundList.find(r => r.key === key)) {
+          const faseLabel = match.fase === 'liga' ? 'Liga' :
+            match.fase === '16' ? 'Dieciseisavos' :
+            match.fase === '8' ? 'Octavos' :
+            match.fase === '4' ? 'Cuartos' :
+            match.fase === 'semis' ? 'Semifinal' :
+            match.fase === 'final' ? 'Final' : match.fase;
+          availableRoundList.push({
+            key,
+            fase: match.fase,
+            ronda: match.ronda,
+            label: match.fase === 'liga' ? `Liga - Jornada ${match.ronda}` : `${faseLabel}`
+          });
+        }
+      }
+    }
+    availableRoundList.sort((a, b) => {
+      const fi = faseOrder.indexOf(a.fase) - faseOrder.indexOf(b.fase);
+      if (fi !== 0) return fi;
+      return a.ronda - b.ronda;
+    });
+
+    if (!availableRoundList.length) {
       scrollHtml = `<div style="padding: 24px; text-align: center; color: var(--text-muted);">No hay resultados disponibles aún.</div>`;
       container.innerHTML = headerHtml + scrollHtml;
       return;
     }
 
-    // Determinar ronda por defecto: la última con resultados, o la última en general
-    if (!AppState.resultadosRound || !availableRounds.includes(AppState.resultadosRound)) {
-      const roundsWithResults = [...new Set(AppState.matchStats.map(ms => {
-        const match = AppState.matches.find(m => m.id === ms.eventId);
-        return match?.ronda;
-      }).filter(Boolean))];
-      AppState.resultadosRound = roundsWithResults.length ? roundsWithResults[roundsWithResults.length - 1] : availableRounds[availableRounds.length - 1];
-    }
+    // Determinar ronda por defecto
+    const currentKey = AppState.resultadosRoundKey || availableRoundList[availableRoundList.length - 1].key;
+    const currentEntry = availableRoundList.find(r => r.key === currentKey) || availableRoundList[availableRoundList.length - 1];
+    AppState.resultadosRoundKey = currentEntry.key;
 
-    const currentRound = AppState.resultadosRound;
-    const roundMatches = AppState.matches.filter(m => m.ronda === currentRound);
+    const roundMatches = AppState.matches.filter(m => m.fase === currentEntry.fase && m.ronda === currentEntry.ronda);
 
     // Todos los partidos de la jornada
     const allRoundMatches = [];
@@ -1423,14 +1450,14 @@ async function renderResultadosTab() {
       return b.match.fechaTs - a.match.fechaTs;
     });
 
-    const roundIndex = availableRounds.indexOf(currentRound);
+    const roundIndex = availableRoundList.findIndex(r => r.key === currentEntry.key);
     const hasPrev = roundIndex > 0;
-    const hasNext = roundIndex < availableRounds.length - 1;
+    const hasNext = roundIndex < availableRoundList.length - 1;
 
     headerHtml += `
       <div class="resultados-round-nav">
         <button class="resultados-round-btn" id="btn-resultados-round-prev" ${!hasPrev ? 'disabled' : ''}>◀</button>
-        <span class="resultados-round-label">Jornada ${currentRound} <span class="resultados-round-count">(${allRoundMatches.length} partidos)</span></span>
+        <span class="resultados-round-label">${currentEntry.label} <span class="resultados-round-count">(${allRoundMatches.length} partidos)</span></span>
         <button class="resultados-round-btn" id="btn-resultados-round-next" ${!hasNext ? 'disabled' : ''}>▶</button>
       </div>
     `;
@@ -1449,13 +1476,13 @@ async function renderResultadosTab() {
     setTimeout(() => {
       document.getElementById('btn-resultados-round-prev')?.addEventListener('click', () => {
         if (roundIndex > 0) {
-          AppState.resultadosRound = availableRounds[roundIndex - 1];
+          AppState.resultadosRoundKey = availableRoundList[roundIndex - 1].key;
           renderResultadosTab();
         }
       });
       document.getElementById('btn-resultados-round-next')?.addEventListener('click', () => {
-        if (roundIndex < availableRounds.length - 1) {
-          AppState.resultadosRound = availableRounds[roundIndex + 1];
+        if (roundIndex < availableRoundList.length - 1) {
+          AppState.resultadosRoundKey = availableRoundList[roundIndex + 1].key;
           renderResultadosTab();
         }
       });
@@ -3025,13 +3052,14 @@ function renderPronosticosTab() {
   const predicted = countPredictedInPhase(phaseMatches);
   const pct = Math.round((predicted / total) * 100);
   const frozen = isPhaseFrozen(fase);
+  const confirmedForFase = AppState.predictionsConfirmed && fase === 'liga';
 
   container.innerHTML = `
     <div class="pronosticos-top-fixed">
       ${frozen ? '<div style="background:rgba(239,68,68,0.15);color:#ef4444;padding:8px 12px;border-radius:8px;margin-bottom:8px;font-size:13px;text-align:center;">🔒 Pronósticos bloqueados — esta fase ha comenzado</div>' : ''}
       <div class="pronosticos-actions-row">
-        <button class="save-predictions-btn" id="btn-save-predictions" disabled ${frozen || AppState.predictionsConfirmed ? 'style="opacity:0.5;pointer-events:none"' : ''}>💾 Guardar</button>
-        <button class="confirm-predictions-btn" id="btn-confirm-predictions" ${frozen || AppState.predictionsConfirmed || predicted < total ? 'disabled' : ''}>✅ Confirmar</button>
+        <button class="save-predictions-btn" id="btn-save-predictions" ${frozen || confirmedForFase ? 'disabled' : ''}>💾 Guardar</button>
+        <button class="confirm-predictions-btn" id="btn-confirm-predictions" ${frozen || confirmedForFase || predicted < total ? 'disabled' : ''}>✅ Confirmar</button>
         <button class="standings-btn" id="btn-show-standings" onclick="showPredictedStandings()">📊 Clasificación</button>
         ${AppState.predictionsConfirmed ? '<button class="standings-btn" id="btn-show-final" onclick="navigateToTab(\'final-predictions\')" style="background: linear-gradient(135deg, #8B5CF6, #EC4899);">🏆 Eliminatorias</button>' : ''}
       </div>
@@ -3092,6 +3120,8 @@ function renderRoundMatches() {
   const phaseMatches = AppState.currentPhaseMatches || [];
   const roundMatches = phaseMatches.filter(m => m.ronda === round);
   const totalRounds = AppState.currentPhaseRounds || 1;
+  const { fase } = getMatchesForCurrentPhase();
+  const frozen = isPhaseFrozen(fase);
 
   // Actualizar indicadores
   const indicator = document.getElementById('round-indicator');
@@ -3134,6 +3164,8 @@ function renderRoundMatches() {
     const checkIcon = isComplete
       ? '<span class="match-done-check">✓</span>'
       : '';
+    const { fase: currentFase } = getMatchesForCurrentPhase();
+    const inputsDisabled = (frozen || (AppState.predictionsConfirmed && currentFase === 'liga')) ? 'disabled' : '';
 
     return `
       <div class="${cardClass}" data-match-id="${match.id}">
@@ -3148,15 +3180,15 @@ function renderRoundMatches() {
 
           <div class="match-card-round-controls">
             <div class="match-card-round-score">
-              <button class="goals-btn-round goals-btn-round-plus" data-side="home" data-match="${match.id}" aria-label="Anadir gol local">+</button>
+              <button class="goals-btn-round goals-btn-round-plus" data-side="home" data-match="${match.id}" aria-label="Anadir gol local" ${inputsDisabled}>+</button>
               <span class="goals-value-round" id="home-${match.id}">${homeDisplay}</span>
-              <button class="goals-btn-round goals-btn-round-minus" data-side="home" data-match="${match.id}" aria-label="Restar gol local">&minus;</button>
+              <button class="goals-btn-round goals-btn-round-minus" data-side="home" data-match="${match.id}" aria-label="Restar gol local" ${inputsDisabled}>&minus;</button>
             </div>
             <span class="match-card-round-vs">VS</span>
             <div class="match-card-round-score">
-              <button class="goals-btn-round goals-btn-round-plus" data-side="away" data-match="${match.id}" aria-label="Anadir gol visitante">+</button>
+              <button class="goals-btn-round goals-btn-round-plus" data-side="away" data-match="${match.id}" aria-label="Anadir gol visitante" ${inputsDisabled}>+</button>
               <span class="goals-value-round" id="away-${match.id}">${awayDisplay}</span>
-              <button class="goals-btn-round goals-btn-round-minus" data-side="away" data-match="${match.id}" aria-label="Restar gol visitante">&minus;</button>
+              <button class="goals-btn-round goals-btn-round-minus" data-side="away" data-match="${match.id}" aria-label="Restar gol visitante" ${inputsDisabled}>&minus;</button>
             </div>
           </div>
 
@@ -3176,6 +3208,10 @@ function handleGoalButtonClick(e) {
   const { fase } = getMatchesForCurrentPhase();
   if (isPhaseFrozen(fase)) {
     showToast('Los pronósticos están bloqueados<br>esta fase ha comenzado');
+    return;
+  }
+  if (AppState.predictionsConfirmed && fase === 'liga') {
+    showToast('Tus pronósticos de liga ya están confirmados');
     return;
   }
   const btn = e.target.closest('.goals-btn-round');
@@ -3265,25 +3301,37 @@ function setupRoundNavigation() {
 function setupSaveButton() {
   const btn = document.getElementById('btn-save-predictions');
   if (!btn) return;
-  btn.disabled = !AppState.hasUnsavedChanges;
-  btn.addEventListener('click', async () => {
-    btn.disabled = true;
-    btn.textContent = 'Guardando...';
-    const ok = await savePredictionsToBackend();
-    btn.textContent = 'Guardar en servidor';
-    updateSaveButton();
-    if (ok) {
-      renderRoundMatches();
-      updateProgressCounts();
-    }
-  });
+  const { fase } = getMatchesForCurrentPhase();
+  const frozen = isPhaseFrozen(fase);
+  const confirmedForFase = AppState.predictionsConfirmed && fase === 'liga';
+  btn.disabled = frozen || confirmedForFase || !AppState.hasUnsavedChanges;
+  btn.style.pointerEvents = '';
+  btn.style.opacity = '';
+}
+
+async function onSavePredictionsClick() {
+  const btn = document.getElementById('btn-save-predictions');
+  if (!btn || btn.disabled) return;
+  btn.disabled = true;
+  btn.textContent = 'Guardando...';
+  const ok = await savePredictionsToBackend();
+  btn.textContent = 'Guardar en servidor';
+  updateSaveButton();
+  if (ok) {
+    renderRoundMatches();
+    updateProgressCounts();
+  }
 }
 
 function updateSaveButton() {
   const btn = document.getElementById('btn-save-predictions');
   if (btn) {
     const { fase } = getMatchesForCurrentPhase();
-    btn.disabled = isPhaseFrozen(fase) || !AppState.hasUnsavedChanges;
+    const frozen = isPhaseFrozen(fase);
+    const confirmedForFase = AppState.predictionsConfirmed && fase === 'liga';
+    btn.disabled = frozen || confirmedForFase || !AppState.hasUnsavedChanges;
+    btn.style.pointerEvents = '';
+    btn.style.opacity = '';
   }
 }
 

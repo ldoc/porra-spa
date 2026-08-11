@@ -1,6 +1,7 @@
 [
   {
     "ronda": 1,
+    "fase": "liga",
     "id": 14566909,
     "fecha": 1758041100,
     "equipoLocal": {
@@ -14,6 +15,7 @@
   },
   {
     "ronda": 1,
+    "fase": "liga",
     "id": 14566894,
     "fecha": 1758041100,
     "equipoLocal": {
@@ -27,6 +29,7 @@
   },
   {
     "ronda": 1,
+    "fase": "liga",
     "id": 14566738,
     "fecha": 1758049200,
     "equipoLocal": {
@@ -40,6 +43,7 @@
   },
   {
     "ronda": 1,
+    "fase": "liga",
     "id": 14566764,
     "fecha": 1758049200,
     "equipoLocal": {
@@ -53,6 +57,7 @@
   },
   {
     "ronda": 1,
+    "fase": "liga",
     "id": 14566597,
     "fecha": 1758049200,
     "equipoLocal": {
@@ -66,6 +71,7 @@
   },
   {
     "ronda": 1,
+    "fase": "liga",
     "id": 14566827,
     "fecha": 1758049200,
     "equipoLocal": {
@@ -79,6 +85,7 @@
   },
   {
     "ronda": 1,
+    "fase": "liga",
     "id": 14566868,
     "fecha": 1758127500,
     "equipoLocal": {
@@ -92,6 +99,7 @@
   },
   {
     "ronda": 1,
+    "fase": "liga",
     "id": 14566884,
     "fecha": 1758127500,
     "equipoLocal": {
@@ -105,6 +113,7 @@
   },
   {
     "ronda": 1,
+    "fase": "liga",
     "id": 14566873,
     "fecha": 1758135600,
     "equipoLocal": {
@@ -118,6 +127,7 @@
   },
   {
     "ronda": 1,
+    "fase": "liga",
     "id": 14566570,
     "fecha": 1758135600,
     "equipoLocal": {
@@ -131,6 +141,7 @@
   },
   {
     "ronda": 1,
+    "fase": "liga",
     "id": 14566637,
     "fecha": 1758135600,
     "equipoLocal": {
@@ -144,6 +155,7 @@
   },
   {
     "ronda": 1,
+    "fase": "liga",
     "id": 14566657,
     "fecha": 1758135600,
     "equipoLocal": {
@@ -157,6 +169,7 @@
   },
   {
     "ronda": 1,
+    "fase": "liga",
     "id": 14566748,
     "fecha": 1758213900,
     "equipoLocal": {
@@ -170,6 +183,7 @@
   },
   {
     "ronda": 1,
+    "fase": "liga",
     "id": 14566972,
     "fecha": 1758213900,
     "equipoLocal": {
@@ -183,6 +197,7 @@
   },
   {
     "ronda": 1,
+    "fase": "liga",
     "id": 14566757,
     "fecha": 1758222000,
     "equipoLocal": {
@@ -196,6 +211,7 @@
   },
   {
     "ronda": 1,
+    "fase": "liga",
     "id": 14566664,
     "fecha": 1758222000,
     "equipoLocal": {
@@ -209,6 +225,7 @@
   },
   {
     "ronda": 1,
+    "fase": "liga",
     "id": 14566955,
     "fecha": 1758222000,
     "equipoLocal": {
@@ -222,6 +239,7 @@
   },
   {
     "ronda": 1,
+    "fase": "liga",
     "id": 14566857,
     "fecha": 1758222000,
     "equipoLocal": {
@@ -235,6 +253,7 @@
   },
   {
     "ronda": 2,
+    "fase": "liga",
     "id": 14566727,
     "fecha": 1759250700,
     "equipoLocal": {
@@ -248,6 +267,7 @@
   },
   {
     "ronda": 2,
+    "fase": "liga",
     "id": 14566983,
     "fecha": 1759250700,
     "equipoLocal": {
@@ -261,6 +281,7 @@
   },
   {
     "ronda": 2,
+    "fase": "liga",
     "id": 14566775,
     "fecha": 1759258800,
     "equipoLocal": {
@@ -274,6 +295,7 @@
   },
   {
     "ronda": 2,
+    "fase": "liga",
     "id": 14566843,
     "fecha": 1759258800,
     "equipoLocal": {
@@ -287,6 +309,7 @@
   },
   {
     "ronda": 2,
+    "fase": "liga",
     "id": 14566581,
     "fecha": 1759258800,
     "equipoLocal": {
@@ -300,6 +323,7 @@
   },
   {
     "ronda": 2,
+    "fase": "liga",
     "id": 14566934,
     "fecha": 1759258800,
     "equipoLocal": {
@@ -313,6 +337,7 @@
   },
   {
     "ronda": 2,
+    "fase": "liga",
     "id": 14566613,
     "fecha": 1759258800,
     "equipoLocal": {
@@ -326,6 +351,7 @@
   },
   {
     "ronda": 2,
+    "fase": "liga",
     "id": 14566823,
     "fecha": 1759258800,
     "equipoLocal": {
@@ -339,6 +365,7 @@
   },
   {
     "ronda": 2,
+    "fase": "liga",
     "id": 14566965,
     "fecha": 1759258800,
     "equipoLocal": {
@@ -352,6 +379,7 @@
   },
   {
     "ronda": 2,
+    "fase": "liga",
     "id": 14566922,
     "fecha": 1759337100,
     "equipoLocal": {
@@ -365,6 +393,7 @@
   },
   {
     "ronda": 2,
+    "fase": "liga",
     "id": 14566952,
     "fecha": 1759337100,
     "equipoLocal": {
@@ -378,6 +407,7 @@
   },
   {
     "ronda": 2,
+    "fase": "liga",
     "id": 14566925,
     "fecha": 1759345200,
     "equipoLocal": {
@@ -391,6 +421,7 @@
   },
   {
     "ronda": 2,
+    "fase": "liga",
     "id": 14566719,
     "fecha": 1759345200,
     "equipoLocal": {
@@ -404,6 +435,7 @@
   },
   {
     "ronda": 2,
+    "fase": "liga",
     "id": 14566706,
     "fecha": 1759345200,
     "equipoLocal": {
@@ -417,6 +449,7 @@
   },
   {
     "ronda": 2,
+    "fase": "liga",
     "id": 14566622,
     "fecha": 1759345200,
     "equipoLocal": {
@@ -430,6 +463,7 @@
   },
   {
     "ronda": 2,
+    "fase": "liga",
     "id": 14566650,
     "fecha": 1759345200,
     "equipoLocal": {
@@ -443,6 +477,7 @@
   },
   {
     "ronda": 2,
+    "fase": "liga",
     "id": 14566901,
     "fecha": 1759345200,
     "equipoLocal": {
@@ -456,6 +491,7 @@
   },
   {
     "ronda": 2,
+    "fase": "liga",
     "id": 14566782,
     "fecha": 1759345200,
     "equipoLocal": {
@@ -469,6 +505,7 @@
   },
   {
     "ronda": 3,
+    "fase": "liga",
     "id": 14566652,
     "fecha": 1761065100,
     "equipoLocal": {
@@ -482,6 +519,7 @@
   },
   {
     "ronda": 3,
+    "fase": "liga",
     "id": 14566986,
     "fecha": 1761065100,
     "equipoLocal": {
@@ -495,6 +533,7 @@
   },
   {
     "ronda": 3,
+    "fase": "liga",
     "id": 14566718,
     "fecha": 1761073200,
     "equipoLocal": {
@@ -508,6 +547,7 @@
   },
   {
     "ronda": 3,
+    "fase": "liga",
     "id": 14566704,
     "fecha": 1761073200,
     "equipoLocal": {
@@ -521,6 +561,7 @@
   },
   {
     "ronda": 3,
+    "fase": "liga",
     "id": 14566971,
     "fecha": 1761073200,
     "equipoLocal": {
@@ -534,6 +575,7 @@
   },
   {
     "ronda": 3,
+    "fase": "liga",
     "id": 14566956,
     "fecha": 1761073200,
     "equipoLocal": {
@@ -547,6 +589,7 @@
   },
   {
     "ronda": 3,
+    "fase": "liga",
     "id": 14566893,
     "fecha": 1761073200,
     "equipoLocal": {
@@ -560,6 +603,7 @@
   },
   {
     "ronda": 3,
+    "fase": "liga",
     "id": 14566949,
     "fecha": 1761073200,
     "equipoLocal": {
@@ -573,6 +617,7 @@
   },
   {
     "ronda": 3,
+    "fase": "liga",
     "id": 14566781,
     "fecha": 1761073200,
     "equipoLocal": {
@@ -586,6 +631,7 @@
   },
   {
     "ronda": 3,
+    "fase": "liga",
     "id": 14566911,
     "fecha": 1761151500,
     "equipoLocal": {
@@ -599,6 +645,7 @@
   },
   {
     "ronda": 3,
+    "fase": "liga",
     "id": 14566936,
     "fecha": 1761151500,
     "equipoLocal": {
@@ -612,6 +659,7 @@
   },
   {
     "ronda": 3,
+    "fase": "liga",
     "id": 14566927,
     "fecha": 1761159600,
     "equipoLocal": {
@@ -625,6 +673,7 @@
   },
   {
     "ronda": 3,
+    "fase": "liga",
     "id": 14566728,
     "fecha": 1761159600,
     "equipoLocal": {
@@ -638,6 +687,7 @@
   },
   {
     "ronda": 3,
+    "fase": "liga",
     "id": 14566582,
     "fecha": 1761159600,
     "equipoLocal": {
@@ -651,6 +701,7 @@
   },
   {
     "ronda": 3,
+    "fase": "liga",
     "id": 14566754,
     "fecha": 1761159600,
     "equipoLocal": {
@@ -664,6 +715,7 @@
   },
   {
     "ronda": 3,
+    "fase": "liga",
     "id": 14566571,
     "fecha": 1761159600,
     "equipoLocal": {
@@ -677,6 +729,7 @@
   },
   {
     "ronda": 3,
+    "fase": "liga",
     "id": 14566596,
     "fecha": 1761159600,
     "equipoLocal": {
@@ -690,6 +743,7 @@
   },
   {
     "ronda": 3,
+    "fase": "liga",
     "id": 14566856,
     "fecha": 1761159600,
     "equipoLocal": {
@@ -703,6 +757,7 @@
   },
   {
     "ronda": 4,
+    "fase": "liga",
     "id": 14566883,
     "fecha": 1762278300,
     "equipoLocal": {
@@ -716,6 +771,7 @@
   },
   {
     "ronda": 4,
+    "fase": "liga",
     "id": 14566900,
     "fecha": 1762278300,
     "equipoLocal": {
@@ -729,6 +785,7 @@
   },
   {
     "ronda": 4,
+    "fase": "liga",
     "id": 14566777,
     "fecha": 1762286400,
     "equipoLocal": {
@@ -742,6 +799,7 @@
   },
   {
     "ronda": 4,
+    "fase": "liga",
     "id": 14566844,
     "fecha": 1762286400,
     "equipoLocal": {
@@ -755,6 +813,7 @@
   },
   {
     "ronda": 4,
+    "fase": "liga",
     "id": 14566766,
     "fecha": 1762286400,
     "equipoLocal": {
@@ -768,6 +827,7 @@
   },
   {
     "ronda": 4,
+    "fase": "liga",
     "id": 14566636,
     "fecha": 1762286400,
     "equipoLocal": {
@@ -781,6 +841,7 @@
   },
   {
     "ronda": 4,
+    "fase": "liga",
     "id": 14566867,
     "fecha": 1762286400,
     "equipoLocal": {
@@ -794,6 +855,7 @@
   },
   {
     "ronda": 4,
+    "fase": "liga",
     "id": 14566656,
     "fecha": 1762286400,
     "equipoLocal": {
@@ -807,6 +869,7 @@
   },
   {
     "ronda": 4,
+    "fase": "liga",
     "id": 14566829,
     "fecha": 1762286400,
     "equipoLocal": {
@@ -820,6 +883,7 @@
   },
   {
     "ronda": 4,
+    "fase": "liga",
     "id": 14566966,
     "fecha": 1762364700,
     "equipoLocal": {
@@ -833,6 +897,7 @@
   },
   {
     "ronda": 4,
+    "fase": "liga",
     "id": 14566919,
     "fecha": 1762364700,
     "equipoLocal": {
@@ -846,6 +911,7 @@
   },
   {
     "ronda": 4,
+    "fase": "liga",
     "id": 14566876,
     "fecha": 1762372800,
     "equipoLocal": {
@@ -859,6 +925,7 @@
   },
   {
     "ronda": 4,
+    "fase": "liga",
     "id": 14566736,
     "fecha": 1762372800,
     "equipoLocal": {
@@ -872,6 +939,7 @@
   },
   {
     "ronda": 4,
+    "fase": "liga",
     "id": 14566745,
     "fecha": 1762372800,
     "equipoLocal": {
@@ -885,6 +953,7 @@
   },
   {
     "ronda": 4,
+    "fase": "liga",
     "id": 14566614,
     "fecha": 1762372800,
     "equipoLocal": {
@@ -898,6 +967,7 @@
   },
   {
     "ronda": 4,
+    "fase": "liga",
     "id": 14566662,
     "fecha": 1762372800,
     "equipoLocal": {
@@ -911,6 +981,7 @@
   },
   {
     "ronda": 4,
+    "fase": "liga",
     "id": 14566958,
     "fecha": 1762372800,
     "equipoLocal": {
@@ -924,6 +995,7 @@
   },
   {
     "ronda": 4,
+    "fase": "liga",
     "id": 14566822,
     "fecha": 1762372800,
     "equipoLocal": {
@@ -937,6 +1009,7 @@
   },
   {
     "ronda": 5,
+    "fase": "liga",
     "id": 14566874,
     "fecha": 1764092700,
     "equipoLocal": {
@@ -950,6 +1023,7 @@
   },
   {
     "ronda": 5,
+    "fase": "liga",
     "id": 14566937,
     "fecha": 1764092700,
     "equipoLocal": {
@@ -963,6 +1037,7 @@
   },
   {
     "ronda": 5,
+    "fase": "liga",
     "id": 14566842,
     "fecha": 1764100800,
     "equipoLocal": {
@@ -976,6 +1051,7 @@
   },
   {
     "ronda": 5,
+    "fase": "liga",
     "id": 14566620,
     "fecha": 1764100800,
     "equipoLocal": {
@@ -989,6 +1065,7 @@
   },
   {
     "ronda": 5,
+    "fase": "liga",
     "id": 14566580,
     "fecha": 1764100800,
     "equipoLocal": {
@@ -1002,6 +1079,7 @@
   },
   {
     "ronda": 5,
+    "fase": "liga",
     "id": 14566663,
     "fecha": 1764100800,
     "equipoLocal": {
@@ -1015,6 +1093,7 @@
   },
   {
     "ronda": 5,
+    "fase": "liga",
     "id": 14566835,
     "fecha": 1764100800,
     "equipoLocal": {
@@ -1028,6 +1107,7 @@
   },
   {
     "ronda": 5,
+    "fase": "liga",
     "id": 14566885,
     "fecha": 1764100800,
     "equipoLocal": {
@@ -1041,6 +1121,7 @@
   },
   {
     "ronda": 5,
+    "fase": "liga",
     "id": 14566902,
     "fecha": 1764100800,
     "equipoLocal": {
@@ -1054,6 +1135,7 @@
   },
   {
     "ronda": 5,
+    "fase": "liga",
     "id": 14566974,
     "fecha": 1764179100,
     "equipoLocal": {
@@ -1067,6 +1149,7 @@
   },
   {
     "ronda": 5,
+    "fase": "liga",
     "id": 14566968,
     "fecha": 1764179100,
     "equipoLocal": {
@@ -1080,6 +1163,7 @@
   },
   {
     "ronda": 5,
+    "fase": "liga",
     "id": 14566717,
     "fecha": 1764187200,
     "equipoLocal": {
@@ -1093,6 +1177,7 @@
   },
   {
     "ronda": 5,
+    "fase": "liga",
     "id": 14566774,
     "fecha": 1764187200,
     "equipoLocal": {
@@ -1106,6 +1191,7 @@
   },
   {
     "ronda": 5,
+    "fase": "liga",
     "id": 14566755,
     "fecha": 1764187200,
     "equipoLocal": {
@@ -1119,6 +1205,7 @@
   },
   {
     "ronda": 5,
+    "fase": "liga",
     "id": 14566638,
     "fecha": 1764187200,
     "equipoLocal": {
@@ -1132,6 +1219,7 @@
   },
   {
     "ronda": 5,
+    "fase": "liga",
     "id": 14566865,
     "fecha": 1764187200,
     "equipoLocal": {
@@ -1145,6 +1233,7 @@
   },
   {
     "ronda": 5,
+    "fase": "liga",
     "id": 14566658,
     "fecha": 1764187200,
     "equipoLocal": {
@@ -1158,6 +1247,7 @@
   },
   {
     "ronda": 5,
+    "fase": "liga",
     "id": 14566855,
     "fecha": 1764187200,
     "equipoLocal": {
@@ -1171,6 +1261,7 @@
   },
   {
     "ronda": 6,
+    "fase": "liga",
     "id": 14566985,
     "fecha": 1765294200,
     "equipoLocal": {
@@ -1184,6 +1275,7 @@
   },
   {
     "ronda": 6,
+    "fase": "liga",
     "id": 14566572,
     "fecha": 1765302300,
     "equipoLocal": {
@@ -1197,6 +1289,7 @@
   },
   {
     "ronda": 6,
+    "fase": "liga",
     "id": 14566928,
     "fecha": 1765310400,
     "equipoLocal": {
@@ -1210,6 +1303,7 @@
   },
   {
     "ronda": 6,
+    "fase": "liga",
     "id": 14566726,
     "fecha": 1765310400,
     "equipoLocal": {
@@ -1223,6 +1317,7 @@
   },
   {
     "ronda": 6,
+    "fase": "liga",
     "id": 14566651,
     "fecha": 1765310400,
     "equipoLocal": {
@@ -1236,6 +1331,7 @@
   },
   {
     "ronda": 6,
+    "fase": "liga",
     "id": 14566611,
     "fecha": 1765310400,
     "equipoLocal": {
@@ -1249,6 +1345,7 @@
   },
   {
     "ronda": 6,
+    "fase": "liga",
     "id": 14566892,
     "fecha": 1765310400,
     "equipoLocal": {
@@ -1262,6 +1359,7 @@
   },
   {
     "ronda": 6,
+    "fase": "liga",
     "id": 14566951,
     "fecha": 1765310400,
     "equipoLocal": {
@@ -1275,6 +1373,7 @@
   },
   {
     "ronda": 6,
+    "fase": "liga",
     "id": 14566828,
     "fecha": 1765310400,
     "equipoLocal": {
@@ -1288,6 +1387,7 @@
   },
   {
     "ronda": 6,
+    "fase": "liga",
     "id": 14566921,
     "fecha": 1765388700,
     "equipoLocal": {
@@ -1301,6 +1401,7 @@
   },
   {
     "ronda": 6,
+    "fase": "liga",
     "id": 14566784,
     "fecha": 1765388700,
     "equipoLocal": {
@@ -1314,6 +1415,7 @@
   },
   {
     "ronda": 6,
+    "fase": "liga",
     "id": 14566908,
     "fecha": 1765396800,
     "equipoLocal": {
@@ -1327,6 +1429,7 @@
   },
   {
     "ronda": 6,
+    "fase": "liga",
     "id": 14566707,
     "fecha": 1765396800,
     "equipoLocal": {
@@ -1340,6 +1443,7 @@
   },
   {
     "ronda": 6,
+    "fase": "liga",
     "id": 14566737,
     "fecha": 1765396800,
     "equipoLocal": {
@@ -1353,6 +1457,7 @@
   },
   {
     "ronda": 6,
+    "fase": "liga",
     "id": 14566621,
     "fecha": 1765396800,
     "equipoLocal": {
@@ -1366,6 +1471,7 @@
   },
   {
     "ronda": 6,
+    "fase": "liga",
     "id": 14566746,
     "fecha": 1765396800,
     "equipoLocal": {
@@ -1379,6 +1485,7 @@
   },
   {
     "ronda": 6,
+    "fase": "liga",
     "id": 14566767,
     "fecha": 1765396800,
     "equipoLocal": {
@@ -1392,6 +1499,7 @@
   },
   {
     "ronda": 6,
+    "fase": "liga",
     "id": 14566595,
     "fecha": 1765396800,
     "equipoLocal": {
@@ -1405,6 +1513,7 @@
   },
   {
     "ronda": 7,
+    "fase": "liga",
     "id": 14566984,
     "fecha": 1768923000,
     "equipoLocal": {
@@ -1418,6 +1527,7 @@
   },
   {
     "ronda": 7,
+    "fase": "liga",
     "id": 14566841,
     "fecha": 1768931100,
     "equipoLocal": {
@@ -1431,6 +1541,7 @@
   },
   {
     "ronda": 7,
+    "fase": "liga",
     "id": 14566973,
     "fecha": 1768939200,
     "equipoLocal": {
@@ -1444,6 +1555,7 @@
   },
   {
     "ronda": 7,
+    "fase": "liga",
     "id": 14566612,
     "fecha": 1768939200,
     "equipoLocal": {
@@ -1457,6 +1569,7 @@
   },
   {
     "ronda": 7,
+    "fase": "liga",
     "id": 14566866,
     "fecha": 1768939200,
     "equipoLocal": {
@@ -1470,6 +1583,7 @@
   },
   {
     "ronda": 7,
+    "fase": "liga",
     "id": 14566598,
     "fecha": 1768939200,
     "equipoLocal": {
@@ -1483,6 +1597,7 @@
   },
   {
     "ronda": 7,
+    "fase": "liga",
     "id": 14566854,
     "fecha": 1768939200,
     "equipoLocal": {
@@ -1496,6 +1611,7 @@
   },
   {
     "ronda": 7,
+    "fase": "liga",
     "id": 14566826,
     "fecha": 1768939200,
     "equipoLocal": {
@@ -1509,6 +1625,7 @@
   },
   {
     "ronda": 7,
+    "fase": "liga",
     "id": 14566783,
     "fecha": 1768939200,
     "equipoLocal": {
@@ -1522,6 +1639,7 @@
   },
   {
     "ronda": 7,
+    "fase": "liga",
     "id": 14566935,
     "fecha": 1769017500,
     "equipoLocal": {
@@ -1535,6 +1653,7 @@
   },
   {
     "ronda": 7,
+    "fase": "liga",
     "id": 14566920,
     "fecha": 1769017500,
     "equipoLocal": {
@@ -1548,6 +1667,7 @@
   },
   {
     "ronda": 7,
+    "fase": "liga",
     "id": 14566729,
     "fecha": 1769025600,
     "equipoLocal": {
@@ -1561,6 +1681,7 @@
   },
   {
     "ronda": 7,
+    "fase": "liga",
     "id": 14566583,
     "fecha": 1769025600,
     "equipoLocal": {
@@ -1574,6 +1695,7 @@
   },
   {
     "ronda": 7,
+    "fase": "liga",
     "id": 14566573,
     "fecha": 1769025600,
     "equipoLocal": {
@@ -1587,6 +1709,7 @@
   },
   {
     "ronda": 7,
+    "fase": "liga",
     "id": 14566765,
     "fecha": 1769025600,
     "equipoLocal": {
@@ -1600,6 +1723,7 @@
   },
   {
     "ronda": 7,
+    "fase": "liga",
     "id": 14566957,
     "fecha": 1769025600,
     "equipoLocal": {
@@ -1613,6 +1737,7 @@
   },
   {
     "ronda": 7,
+    "fase": "liga",
     "id": 14566821,
     "fecha": 1769025600,
     "equipoLocal": {
@@ -1626,6 +1751,7 @@
   },
   {
     "ronda": 7,
+    "fase": "liga",
     "id": 14566882,
     "fecha": 1769025600,
     "equipoLocal": {
@@ -1639,6 +1765,7 @@
   },
   {
     "ronda": 8,
+    "fase": "liga",
     "id": 14566875,
     "fecha": 1769630400,
     "equipoLocal": {
@@ -1652,6 +1779,7 @@
   },
   {
     "ronda": 8,
+    "fase": "liga",
     "id": 14566926,
     "fecha": 1769630400,
     "equipoLocal": {
@@ -1665,6 +1793,7 @@
   },
   {
     "ronda": 8,
+    "fase": "liga",
     "id": 14566720,
     "fecha": 1769630400,
     "equipoLocal": {
@@ -1678,6 +1807,7 @@
   },
   {
     "ronda": 8,
+    "fase": "liga",
     "id": 14566910,
     "fecha": 1769630400,
     "equipoLocal": {
@@ -1691,6 +1821,7 @@
   },
   {
     "ronda": 8,
+    "fase": "liga",
     "id": 14566776,
     "fecha": 1769630400,
     "equipoLocal": {
@@ -1704,6 +1835,7 @@
   },
   {
     "ronda": 8,
+    "fase": "liga",
     "id": 14566705,
     "fecha": 1769630400,
     "equipoLocal": {
@@ -1717,6 +1849,7 @@
   },
   {
     "ronda": 8,
+    "fase": "liga",
     "id": 14566735,
     "fecha": 1769630400,
     "equipoLocal": {
@@ -1730,6 +1863,7 @@
   },
   {
     "ronda": 8,
+    "fase": "liga",
     "id": 14566619,
     "fecha": 1769630400,
     "equipoLocal": {
@@ -1743,6 +1877,7 @@
   },
   {
     "ronda": 8,
+    "fase": "liga",
     "id": 14566747,
     "fecha": 1769630400,
     "equipoLocal": {
@@ -1756,6 +1891,7 @@
   },
   {
     "ronda": 8,
+    "fase": "liga",
     "id": 14566756,
     "fecha": 1769630400,
     "equipoLocal": {
@@ -1769,6 +1905,7 @@
   },
   {
     "ronda": 8,
+    "fase": "liga",
     "id": 14566653,
     "fecha": 1769630400,
     "equipoLocal": {
@@ -1782,6 +1919,7 @@
   },
   {
     "ronda": 8,
+    "fase": "liga",
     "id": 14566639,
     "fecha": 1769630400,
     "equipoLocal": {
@@ -1795,6 +1933,7 @@
   },
   {
     "ronda": 8,
+    "fase": "liga",
     "id": 14566665,
     "fecha": 1769630400,
     "equipoLocal": {
@@ -1808,6 +1947,7 @@
   },
   {
     "ronda": 8,
+    "fase": "liga",
     "id": 14566891,
     "fecha": 1769630400,
     "equipoLocal": {
@@ -1821,6 +1961,7 @@
   },
   {
     "ronda": 8,
+    "fase": "liga",
     "id": 14566967,
     "fecha": 1769630400,
     "equipoLocal": {
@@ -1834,6 +1975,7 @@
   },
   {
     "ronda": 8,
+    "fase": "liga",
     "id": 14566659,
     "fecha": 1769630400,
     "equipoLocal": {
@@ -1847,6 +1989,7 @@
   },
   {
     "ronda": 8,
+    "fase": "liga",
     "id": 14566950,
     "fecha": 1769630400,
     "equipoLocal": {
@@ -1860,6 +2003,7 @@
   },
   {
     "ronda": 8,
+    "fase": "liga",
     "id": 14566899,
     "fecha": 1769630400,
     "equipoLocal": {
@@ -1869,6 +2013,230 @@
     "equipoVisitante": {
       "id": 38,
       "name": "Chelsea"
+    }
+  },
+  {
+    "ronda": 1,
+    "fase": "16",
+    "id": 15452736,
+    "fecha": 1771350300,
+    "equipoLocal": {
+      "id": 3061,
+      "name": "Galatasaray"
+    },
+    "equipoVisitante": {
+      "id": 2687,
+      "name": "Juventus"
+    }
+  },
+  {
+    "ronda": 1,
+    "fase": "16",
+    "id": 15452739,
+    "fecha": 1771358400,
+    "equipoLocal": {
+      "id": 1653,
+      "name": "AS Monaco"
+    },
+    "equipoVisitante": {
+      "id": 1644,
+      "name": "Paris Saint-Germain"
+    }
+  },
+  {
+    "ronda": 1,
+    "fase": "16",
+    "id": 15452742,
+    "fecha": 1771358400,
+    "equipoLocal": {
+      "id": 3006,
+      "name": "Benfica"
+    },
+    "equipoVisitante": {
+      "id": 2829,
+      "name": "Real Madrid"
+    }
+  },
+  {
+    "ronda": 1,
+    "fase": "16",
+    "id": 15452731,
+    "fecha": 1771359300,
+    "equipoLocal": {
+      "id": 2673,
+      "name": "Borussia Dortmund"
+    },
+    "equipoVisitante": {
+      "id": 2686,
+      "name": "Atalanta"
+    }
+  },
+  {
+    "ronda": 1,
+    "fase": "16",
+    "id": 15452740,
+    "fecha": 1771436700,
+    "equipoLocal": {
+      "id": 5962,
+      "name": "Qarabağ FK"
+    },
+    "equipoVisitante": {
+      "id": 39,
+      "name": "Newcastle United"
+    }
+  },
+  {
+    "ronda": 1,
+    "fase": "16",
+    "id": 15452744,
+    "fecha": 1771444800,
+    "equipoLocal": {
+      "id": 656,
+      "name": "Bodø/Glimt"
+    },
+    "equipoVisitante": {
+      "id": 2697,
+      "name": "Inter"
+    }
+  },
+  {
+    "ronda": 1,
+    "fase": "16",
+    "id": 15452738,
+    "fecha": 1771444800,
+    "equipoLocal": {
+      "id": 2888,
+      "name": "Club Brugge KV"
+    },
+    "equipoVisitante": {
+      "id": 2836,
+      "name": "Atlético Madrid"
+    }
+  },
+  {
+    "ronda": 1,
+    "fase": "16",
+    "id": 15452735,
+    "fecha": 1771444800,
+    "equipoLocal": {
+      "id": 3245,
+      "name": "Olympiacos FC"
+    },
+    "equipoVisitante": {
+      "id": 2681,
+      "name": "Bayer 04 Leverkusen"
+    }
+  },
+  {
+    "ronda": 1,
+    "fase": "16",
+    "id": 15452779,
+    "fecha": 1771955100,
+    "equipoLocal": {
+      "id": 2836,
+      "name": "Atlético Madrid"
+    },
+    "equipoVisitante": {
+      "id": 2888,
+      "name": "Club Brugge KV"
+    }
+  },
+  {
+    "ronda": 1,
+    "fase": "16",
+    "id": 15452786,
+    "fecha": 1771963200,
+    "equipoLocal": {
+      "id": 2681,
+      "name": "Bayer 04 Leverkusen"
+    },
+    "equipoVisitante": {
+      "id": 3245,
+      "name": "Olympiacos FC"
+    }
+  },
+  {
+    "ronda": 1,
+    "fase": "16",
+    "id": 15452764,
+    "fecha": 1771963200,
+    "equipoLocal": {
+      "id": 2697,
+      "name": "Inter"
+    },
+    "equipoVisitante": {
+      "id": 656,
+      "name": "Bodø/Glimt"
+    }
+  },
+  {
+    "ronda": 1,
+    "fase": "16",
+    "id": 15452758,
+    "fecha": 1771963200,
+    "equipoLocal": {
+      "id": 39,
+      "name": "Newcastle United"
+    },
+    "equipoVisitante": {
+      "id": 5962,
+      "name": "Qarabağ FK"
+    }
+  },
+  {
+    "ronda": 1,
+    "fase": "16",
+    "id": 15452774,
+    "fecha": 1772041500,
+    "equipoLocal": {
+      "id": 2686,
+      "name": "Atalanta"
+    },
+    "equipoVisitante": {
+      "id": 2673,
+      "name": "Borussia Dortmund"
+    }
+  },
+  {
+    "ronda": 1,
+    "fase": "16",
+    "id": 15452770,
+    "fecha": 1772049600,
+    "equipoLocal": {
+      "id": 2687,
+      "name": "Juventus"
+    },
+    "equipoVisitante": {
+      "id": 3061,
+      "name": "Galatasaray"
+    }
+  },
+  {
+    "ronda": 1,
+    "fase": "16",
+    "id": 15452749,
+    "fecha": 1772049600,
+    "equipoLocal": {
+      "id": 1644,
+      "name": "Paris Saint-Germain"
+    },
+    "equipoVisitante": {
+      "id": 1653,
+      "name": "AS Monaco"
+    }
+  },
+  {
+    "ronda": 1,
+    "fase": "16",
+    "id": 15452752,
+    "fecha": 1772049600,
+    "equipoLocal": {
+      "id": 2829,
+      "name": "Real Madrid"
+    },
+    "equipoVisitante": {
+      "id": 3006,
+      "name": "Benfica"
     }
   }
 ]

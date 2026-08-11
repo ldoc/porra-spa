@@ -11,6 +11,10 @@ Este documento establece las normas de desarrollo, la arquitectura de código y 
 
 ---
 
+> **Fases de la competición**: Ver [`data/fases.json`](data/fases.json) para la definición completa de las 13 fases (instrucciones, reglas-app).
+
+---
+
 ## 1. Visión del Producto
 
 **Porra SPA** es una aplicación web (Single Page Application) orientada a la participación en una porra para la **UEFA Champions League de la temporada 2026/2027**.
@@ -1046,6 +1050,28 @@ Pestaña que permite al usuario predecir el cuadro completo de eliminatorias de 
 3. **Sin repetir equipos**: Cada equipo solo puede asignarse a una ronda
 4. **Congelación**: Las predicciones de eliminatorias se pueden guardar mientras `predictionsConfirmed` sea true. Una vez confirmado, los pronósticos de liga no se pueden editar
 5. **Edición**: Los usuarios pueden modificar sus predicciones de eliminatorias libremente
+6. **Top-8 restriction**: Los 8 equipos clasificados en los puestos 1-8 de la clasificación pronosticada NO pueden colocarse en dieciseisavos (roundOf32). Deben ir a octavos o superior
+7. **Restricciones por grupos de posiciones**: Para limitar la concentración de equipos de ciertos rangos en una misma ronda, se aplican los siguientes límites máximos (2 equipos por grupo por caja):
+
+   **En la caja de DIECISEISAVOS (roundOf32):**
+   - Máximo 2 equipos de los que acabaron en posiciones 9, 10, 23 y 24
+   - Máximo 2 equipos de los que acabaron en posiciones 11, 12, 21 y 22
+   - Máximo 2 equipos de los que acabaron en posiciones 13, 14, 19 y 20
+   - Máximo 2 equipos de los que acabaron en posiciones 15, 16, 17 y 18
+
+   **En el resto de las cajas (campeón, subcampeón, semifinalistas, cuartos, octavos):**
+   - Máximo 2 equipos de los que acabaron en posiciones 9, 10, 23 y 24
+   - Máximo 2 equipos de los que acabaron en posiciones 11, 12, 21 y 22
+   - Máximo 2 equipos de los que acabaron en posiciones 13, 14, 19 y 20
+   - Máximo 2 equipos de los que acabaron en posiciones 15, 16, 17 y 18
+
+   **Grupos de restricción:**
+   | Grupo | Posiciones |
+   |-------|------------|
+   | A | 9, 10, 23, 24 |
+   | B | 11, 12, 21, 22 |
+   | C | 13, 14, 19, 20 |
+   | D | 15, 16, 17, 18 |
 
 #### Interfaz de Selección (UI)
 

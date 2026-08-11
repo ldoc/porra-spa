@@ -2010,6 +2010,12 @@ html, body {
   color: #021319;
 }
 
+.goals-btn-round:disabled {
+  opacity: 0.25;
+  cursor: default;
+  pointer-events: none;
+}
+
 .goals-value-round {
   font-size: 1rem;
   font-weight: 900;
