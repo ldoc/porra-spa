@@ -3299,8 +3299,9 @@ async function confirmPredictions() {
     return;
   }
 
-  const total = AppState.matches.length;
-  const predicted = countPredicted();
+  const { matches: phaseMatches } = getMatchesForCurrentPhase();
+  const total = phaseMatches.length;
+  const predicted = countPredictedInPhase(phaseMatches);
   if (predicted < total) {
     showToast(`Faltan pronósticos. Has completado ${predicted} de ${total} partidos`);
     return;
@@ -4725,7 +4726,7 @@ async function renderFinalPredictionsTab() {
   const container = document.getElementById('final-predictions-container');
   if (!container) return;
 
-  const frozen = isLigaFrozen();
+  const frozen = AppState.predictionsConfirmed;
   
   const standings = calculatePredictedStandings();
   
