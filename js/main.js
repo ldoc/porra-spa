@@ -46,6 +46,7 @@ const AppState = {
   selectedFinalTeam: null, // teamId seleccionado para colocar en zona
   hasTop8InRoundOf32: false, // flag: hay equipos top-8 en deciseisavos (bloquea save)
   predictionsConfirmed: false, // flag: pronósticos confirmados (bloquea edición)
+  fases: [],             // fases de la competición desde fases.json
 };
 
 const SQUAD_SIZE = 25;
@@ -154,13 +155,40 @@ function isFasePretemporada() {
   return getFaseJuego() === 'FASE_PRETEMPORADA';
 }
 
-function isFaseLiga() {
-  const fase = getFaseJuego();
-  return fase === 'FASE_LIGA' || fase === 'FASE_PRE16';
+function isLigaFrozen() {
+  return !isFasePretemporada();
 }
 
-function isFasePre16() {
-  return getFaseJuego() === 'FASE_PRE16';
+function isSquadFrozen() {
+  return !isFasePretemporada();
+}
+
+function isPublicPhase() {
+  return !isFasePretemporada();
+}
+
+/**
+ * Returns the calendar `fase` value for the current competition phase.
+ * Used to filter matches in the predictions screen.
+ */
+function getFaseForCurrentPhase() {
+  const phase = getFaseJuego();
+  const faseMap = {
+    'FASE_PRETEMPORADA': 'liga',
+    'FASE_LIGA': 'liga',
+    'FASE_PRE16': '16',
+    'FASE_16': '16',
+    'FASE_PRE8': '8',
+    'FASE_8': '8',
+    'FASE_PRE4': '4',
+    'FASE_4': '4',
+    'FASE_PRESEMIS': 'semis',
+    'FASE_SEMIS': 'semis',
+    'FASE_PREFINAL': 'final',
+    'FASE_FINAL': 'final',
+    'FASE_POSTFINAL': 'final'
+  };
+  return faseMap[phase] || 'liga';
 }
 
 const SQUAD_FORMATION = {
@@ -184,11 +212,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 // ============================================================
 async function loadInitialData() {
   try {
-    const [codesRes, calendarRes, jugadoresRes, teamsRes] = await Promise.all([
+    const [codesRes, calendarRes, jugadoresRes, teamsRes, fasesRes] = await Promise.all([
       fetch('data/codes.json').catch(() => null),
       fetch('data/calendar.json').catch(() => null),
       fetch('data/jugadores.json').catch(() => null),
       fetch('data/teams.json').catch(() => null),
+      fetch('data/fases.json').catch(() => null),
     ]);
 
     // Codigos de acceso
@@ -216,6 +245,12 @@ async function loadInitialData() {
     // Jugadores
     if (jugadoresRes?.ok) {
       AppState.allPlayers = await jugadoresRes.json();
+    }
+
+    // Fases de la competición
+    if (fasesRes?.ok) {
+      const fasesJson = await fasesRes.json();
+      AppState.fases = fasesJson.fases || [];
     }
 
     // Configuración del torneo desde backend
@@ -283,7 +318,7 @@ async function fetchPredictionsFromBackend() {
 /** Guarda predicciones en el backend */
 async function savePredictionsToBackend() {
   if (!AppState.currentUser) return false;
-  if (isFaseLiga()) {
+  if (isLigaFrozen()) {
     showToast('Los pronósticos están bloqueados');
     return false;
   }
@@ -1928,6 +1963,22 @@ async function checkAdminStatus() {
 
 function showAdminModal() {
   const fase = getFaseJuego();
+  const fases = AppState.fases || [];
+
+  // Buscar fase actual y obtener adyacentes
+  const currentFase = fases.find(f => f.nombre === fase);
+  const adjacentFases = [];
+  if (currentFase) {
+    const prev = fases.find(f => f.id === currentFase.id - 1);
+    const next = fases.find(f => f.id === currentFase.id + 1);
+    if (prev) adjacentFases.push(prev);
+    if (next) adjacentFases.push(next);
+  }
+
+  // Generar opciones del dropdown
+  const optionsHtml = adjacentFases.length > 0
+    ? adjacentFases.map(f => `<option value="${f.nombre}">${f.nombre}</option>`).join('')
+    : `<option value="${fase}" selected>${fase}</option>`;
 
   const modal = document.createElement('div');
   modal.className = 'profile-modal';
@@ -1939,12 +1990,10 @@ function showAdminModal() {
       <span class="admin-badge" style="background: rgba(102,126,234,0.2); color: #667eea; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 700;">ADMIN</span>
 
       <div style="width: 100%; margin-top: 20px; text-align: left;">
-        <label style="font-size: 11px; color: var(--text-muted); font-weight: 700; display: block; margin-bottom: 8px;">Fase Actual:</label>
+        <label style="font-size: 11px; color: var(--text-muted); font-weight: 700; display: block; margin-bottom: 8px;">Cambiar a:</label>
         <div style="display: flex; gap: 10px;">
           <select id="admin-phase-select" style="flex: 1; padding: 12px; border-radius: var(--radius-md); border: 1px solid var(--ucl-border); background: var(--ucl-surface); color: var(--text-primary); font-size: 14px;">
-            <option value="FASE_PRETEMPORADA" ${fase === 'FASE_PRETEMPORADA' ? 'selected' : ''}>FASE_PRETEMPORADA</option>
-            <option value="FASE_LIGA" ${fase === 'FASE_LIGA' ? 'selected' : ''}>FASE_LIGA</option>
-            <option value="FASE_PRE16" ${fase === 'FASE_PRE16' ? 'selected' : ''}>FASE_PRE16</option>
+            ${optionsHtml}
           </select>
         </div>
       </div>
@@ -1953,7 +2002,7 @@ function showAdminModal() {
         <p style="font-size: 12px; color: var(--text-muted); margin: 0;">Fase actual: <strong style="color: var(--text-primary);">${fase}</strong></p>
       </div>
 
-      <button id="btn-admin-change-phase" class="btn-primary" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #fff; margin-top: 16px; width: 100%;">
+      <button id="btn-admin-change-phase" class="btn-primary" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #fff; margin-top: 16px; width: 100%;" ${adjacentFases.length === 0 ? 'disabled' : ''}>
         Cambiar Fase
       </button>
 
@@ -2536,36 +2585,37 @@ function renderInicioTab() {
 
   // Información de la fase de juego actual
   const fase = getFaseJuego();
-  const faseInfo = {
-    'FASE_PRETEMPORADA': {
-      titulo: 'Pretemporada',
-      descripcion: 'Estamos en pretemporada. Puedes hacer tus predicciones y plantilla.',
-      icono: '📝',
-      color: '#4CAF50'
-    },
-    'FASE_LIGA': {
-      titulo: 'Fase de Liga',
-      descripcion: 'La competición ha comenzado. Predicciones y plantilla bloqueadas.',
-      icono: '⚽',
-      color: '#FF9800'
-    },
-    'FASE_PRE16': {
-      titulo: 'Fase de Dieciseisavos',
-      descripcion: 'Fase de dieciseisavos. Predicciones bloqueadas.',
-      icono: '🏆',
-      color: '#F44336'
-    }
+  const fases = AppState.fases || [];
+  const currentFase = fases.find(f => f.nombre === fase);
+
+  // Iconos y colores por fase (auxiliar, no está en fases.json)
+  const faseVisual = {
+    'FASE_PRETEMPORADA': { icono: '📝', color: '#4CAF50' },
+    'FASE_LIGA': { icono: '⚽', color: '#FF9800' },
+    'FASE_PRE16': { icono: '📝', color: '#2196F3' },
+    'FASE_16': { icono: '🏆', color: '#F44336' },
+    'FASE_PRE8': { icono: '📝', color: '#2196F3' },
+    'FASE_8': { icono: '🏆', color: '#F44336' },
+    'FASE_PRE4': { icono: '📝', color: '#2196F3' },
+    'FASE_4': { icono: '🏆', color: '#F44336' },
+    'FASE_PRESEMIS': { icono: '📝', color: '#2196F3' },
+    'FASE_SEMIS': { icono: '🏆', color: '#F44336' },
+    'FASE_PREFINAL': { icono: '📝', color: '#2196F3' },
+    'FASE_FINAL': { icono: '🏆', color: '#F44336' },
+    'FASE_POSTFINAL': { icono: '🏁', color: '#9E9E9E' }
   };
 
-  const info = faseInfo[fase] || faseInfo['FASE_PRETEMPORADA'];
+  const visual = faseVisual[fase] || faseVisual['FASE_PRETEMPORADA'];
+  const descripcion = currentFase?.instrucciones || 'Cargando fase...';
+  const titulo = currentFase?.nombre || fase;
 
   const faseHtml = `
-    <div class="inicio-card inicio-fase" style="border-left: 4px solid ${info.color}">
-      <div class="inicio-card-icon">${info.icono}</div>
+    <div class="inicio-card inicio-fase" style="border-left: 4px solid ${visual.color}">
+      <div class="inicio-card-icon">${visual.icono}</div>
       <div class="inicio-card-content">
-        <div class="inicio-card-title">${info.titulo}</div>
-        <div class="inicio-card-desc">${info.descripcion}</div>
-        <span class="fase-badge" style="background: ${info.color}">${fase}</span>
+        <div class="inicio-card-title">${titulo}</div>
+        <div class="inicio-card-desc">${descripcion}</div>
+        <span class="fase-badge" style="background: ${visual.color}">${fase}</span>
       </div>
     </div>
   `;
@@ -2936,7 +2986,7 @@ function renderPronosticosTab() {
   const total = AppState.matches.length;
   const predicted = countPredicted();
   const pct = Math.round((predicted / total) * 100);
-  const frozen = isFaseLiga();
+  const frozen = isLigaFrozen();
 
   container.innerHTML = `
     <div class="pronosticos-top-fixed">
@@ -3068,7 +3118,7 @@ function renderRoundMatches() {
 }
 
 function handleGoalButtonClick(e) {
-  if (isFaseLiga()) {
+  if (isLigaFrozen()) {
     showToast('Los pronósticos están bloqueados<br>la competición ha comenzado');
     return;
   }
@@ -3173,7 +3223,7 @@ function setupSaveButton() {
 
 function updateSaveButton() {
   const btn = document.getElementById('btn-save-predictions');
-  if (btn) btn.disabled = isFaseLiga() || !AppState.hasUnsavedChanges;
+  if (btn) btn.disabled = isLigaFrozen() || !AppState.hasUnsavedChanges;
 }
 
 async function confirmPredictions() {
@@ -3240,7 +3290,7 @@ function getSlotPlayer(position, index) {
 
 /** Abre el panel de búsqueda para una casilla */
 function openSlotSearch(position, index) {
-  if (isFaseLiga()) {
+  if (isSquadFrozen()) {
     showToast('La plantilla está bloqueada<br>la competición ha comenzado');
     return;
   }
@@ -3342,7 +3392,7 @@ function renderSearchResults(query) {
 
 /** Selecciona un jugador para la casilla activa */
 function selectPlayerForSlot(playerId) {
-  if (isFaseLiga()) {
+  if (isSquadFrozen()) {
     showToast('La plantilla está bloqueada');
     return;
   }
@@ -3377,7 +3427,7 @@ function selectPlayerForSlot(playerId) {
 }
 
 function removePlayerFromSquad(position, index) {
-  if (isFaseLiga()) {
+  if (isSquadFrozen()) {
     showToast('La plantilla está bloqueada');
     return;
   }
@@ -3450,7 +3500,7 @@ function renderPlantillaTab() {
   if (!container) return;
 
   const totalSelected = AppState.squadPicks.length;
-  const frozen = isFaseLiga();
+  const frozen = isSquadFrozen();
 
   container.innerHTML = `
     <div class="squad-picker-wrapper">
@@ -3542,7 +3592,7 @@ function renderPlantillaTab() {
 
 async function saveSquadToBackend() {
   if (!AppState.currentUser) return false;
-  if (isFaseLiga()) {
+  if (isSquadFrozen()) {
     showToast('La plantilla está bloqueada');
     return false;
   }
@@ -4614,7 +4664,7 @@ async function renderFinalPredictionsTab() {
   const container = document.getElementById('final-predictions-container');
   if (!container) return;
 
-  const frozen = AppState.predictionsConfirmed;
+  const frozen = isLigaFrozen();
   
   const standings = calculatePredictedStandings();
   
@@ -4892,6 +4942,65 @@ async function addTeamToZone(teamId, zoneId, index) {
   if (zoneId === 'roundOf32' && isTop8Predicted(teamId)) {
     showToast('Top 8 no va a dieciseisavos.<br>Pásalos a octavos o superior.');
     return;
+  }
+
+  // Validación: restricciones por grupos de posiciones
+  const POSITION_GROUPS = {
+    A: [9, 10, 23, 24],
+    B: [11, 12, 21, 22],
+    C: [13, 14, 19, 20],
+    D: [15, 16, 17, 18]
+  };
+  const MAX_TEAMS_PER_GROUP = 2;
+
+  // Usar calculatePredictedStandings que es la función correcta
+  const standings = calculatePredictedStandings();
+  if (standings && standings.length >= 24) {
+    const teamPositionMap = new Map();
+    standings.forEach(team => {
+      teamPositionMap.set(team.teamId, team.position);
+    });
+
+    const teamPosition = teamPositionMap.get(teamId);
+    if (teamPosition) {
+      // Determinar a qué grupo pertenece el equipo
+      let teamGroup = null;
+      for (const [groupName, positions] of Object.entries(POSITION_GROUPS)) {
+        if (positions.includes(teamPosition)) {
+          teamGroup = groupName;
+          break;
+        }
+      }
+
+      if (teamGroup) {
+        // Obtener los equipos ya asignados a la zona
+        let zoneTeams = [];
+        if (zoneId === 'champion') {
+          zoneTeams = fp.champion ? [fp.champion] : [];
+        } else if (zoneId === 'runnerUp') {
+          zoneTeams = fp.runnerUp ? [fp.runnerUp] : [];
+        } else if (Array.isArray(fp[zoneId])) {
+          zoneTeams = [...fp[zoneId]];
+        }
+
+        // Si estamos reemplazando un equipo, quitarlo del conteo
+        if (index < zoneTeams.length) {
+          zoneTeams.splice(index, 1);
+        }
+
+        // Contar cuántos equipos del mismo grupo ya hay en la zona
+        const groupPositions = POSITION_GROUPS[teamGroup];
+        const countInGroup = zoneTeams.filter(id => {
+          const pos = teamPositionMap.get(id);
+          return pos && groupPositions.includes(pos);
+        }).length;
+
+        if (countInGroup >= MAX_TEAMS_PER_GROUP) {
+          showToast(`Máximo ${MAX_TEAMS_PER_GROUP} equipos de posiciones ${groupPositions.join(',')} en esta zona.`);
+          return;
+        }
+      }
+    }
   }
 
   // Si es zona individual (champion, runnerUp)
