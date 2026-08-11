@@ -3281,7 +3281,10 @@ function setupSaveButton() {
 
 function updateSaveButton() {
   const btn = document.getElementById('btn-save-predictions');
-  if (btn) btn.disabled = isLigaFrozen() || !AppState.hasUnsavedChanges;
+  if (btn) {
+    const { fase } = getMatchesForCurrentPhase();
+    btn.disabled = isPhaseFrozen(fase) || !AppState.hasUnsavedChanges;
+  }
 }
 
 async function confirmPredictions() {

@@ -242,6 +242,79 @@ function test_countPredictedInRound_ignores_non_phase_matches() {
   assert.strictEqual(count, 1, 'Should only count phase matches');
 }
 
+// ── shouldSaveButtonBeDisabled (Task 4: phase-aware save) ──────
+function shouldSaveButtonBeDisabled() {
+  const { fase } = getMatchesForCurrentPhase();
+  return isPhaseFrozen(fase) || !AppState.hasUnsavedChanges;
+}
+
+// ══════════════════════════════════════════════════════════════
+// RED: Tests for shouldSaveButtonBeDisabled (Task 4)
+// ══════════════════════════════════════════════════════════════
+
+function test_saveButton_disabled_when_phase_frozen_even_with_changes() {
+  resetState();
+  AppState.appConfig.faseJuego = 'FASE_LIGA';
+  AppState.matches = [
+    { id: 1, ronda: 1, fase: 'liga' },
+  ];
+  AppState.hasUnsavedChanges = true;
+
+  const disabled = shouldSaveButtonBeDisabled();
+  assert.strictEqual(disabled, true, 'Save button should be disabled when phase is frozen, even with unsaved changes');
+}
+
+function test_saveButton_enabled_when_phase_not_frozen_and_has_changes() {
+  resetState();
+  AppState.appConfig.faseJuego = 'FASE_PRETEMPORADA';
+  AppState.matches = [
+    { id: 1, ronda: 1, fase: 'liga' },
+  ];
+  AppState.hasUnsavedChanges = true;
+
+  const disabled = shouldSaveButtonBeDisabled();
+  assert.strictEqual(disabled, false, 'Save button should be enabled when phase not frozen and has unsaved changes');
+}
+
+function test_saveButton_disabled_when_no_unsaved_changes() {
+  resetState();
+  AppState.appConfig.faseJuego = 'FASE_PRETEMPORADA';
+  AppState.matches = [
+    { id: 1, ronda: 1, fase: 'liga' },
+  ];
+  AppState.hasUnsavedChanges = false;
+
+  const disabled = shouldSaveButtonBeDisabled();
+  assert.strictEqual(disabled, true, 'Save button should be disabled when no unsaved changes');
+}
+
+function test_saveButton_respects_current_phase_fase() {
+  resetState();
+  AppState.appConfig.faseJuego = 'FASE_PRE16';
+  AppState.matches = [
+    { id: 1, ronda: 1, fase: 'liga' },
+    { id: 2, ronda: 1, fase: '16' },
+  ];
+  AppState.hasUnsavedChanges = true;
+
+  // In PRE16, fase '16' is not frozen, so save should be enabled
+  const disabled = shouldSaveButtonBeDisabled();
+  assert.strictEqual(disabled, false, 'Save button should be enabled when current phase (16) is not frozen in PRE16');
+}
+
+function test_saveButton_disabled_for_frozen_phase_in_later_phase() {
+  resetState();
+  AppState.appConfig.faseJuego = 'FASE_16';
+  AppState.matches = [
+    { id: 1, ronda: 1, fase: '16' },
+  ];
+  AppState.hasUnsavedChanges = true;
+
+  // In FASE_16, fase '16' is frozen, so save should be disabled
+  const disabled = shouldSaveButtonBeDisabled();
+  assert.strictEqual(disabled, true, 'Save button should be disabled when current phase is frozen in FASE_16');
+}
+
 // ══════════════════════════════════════════════════════════════
 // Run tests (RED phase - these will fail until implementation)
 // ══════════════════════════════════════════════════════════════
@@ -259,6 +332,11 @@ const tests = [
   test_isPhaseFrozen_ordering,
   test_countPredictedInRound_uses_phase_matches,
   test_countPredictedInRound_ignores_non_phase_matches,
+  test_saveButton_disabled_when_phase_frozen_even_with_changes,
+  test_saveButton_enabled_when_phase_not_frozen_and_has_changes,
+  test_saveButton_disabled_when_no_unsaved_changes,
+  test_saveButton_respects_current_phase_fase,
+  test_saveButton_disabled_for_frozen_phase_in_later_phase,
 ];
 
 let passed = 0;
