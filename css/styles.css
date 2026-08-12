@@ -4470,3 +4470,43 @@ html, body {
 .drop-zone[data-zone="runnerUp"] {
   border-left-color: #CBD5E1;
 }
+
+/* Rediseño vista Eliminatorias en Resultados (read-only) */
+.eliminatorias-view .drop-zone[data-zone="roundOf32"] .drop-zone-slots,
+.eliminatorias-view .drop-zone[data-zone="roundOf16"] .drop-zone-slots,
+.eliminatorias-view .drop-zone[data-zone="quarterFinalists"] .drop-zone-slots {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+.eliminatorias-view .drop-zone[data-zone="roundOf32"] .drop-slot-img,
+.eliminatorias-view .drop-zone[data-zone="roundOf16"] .drop-slot-img,
+.eliminatorias-view .drop-zone[data-zone="quarterFinalists"] .drop-slot-img {
+  width: 20px;
+  height: 20px;
+}
+
+.eliminatorias-view .drop-zone[data-zone="semiFinalists"] .drop-zone-slots {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+}
+
+.eliminatorias-view .drop-zone[data-zone="semiFinalists"] .drop-slot {
+  flex: 0 1 100px;
+}
+
+.eliminatorias-view .drop-zone[data-zone="semiFinalists"] .drop-slot-img {
+  width: 22px;
+  height: 22px;
+}
+
+.eliminatorias-final-row {
+  display: flex;
+  flex-direction: row;
+  gap: 6px;
+}
+
+.eliminatorias-final-row .drop-zone {
+  flex: 1;
+  min-width: 0;
+}
