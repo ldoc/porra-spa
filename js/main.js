@@ -362,13 +362,22 @@ function buildMatchFromCalendar(m) {
   const localTeam = AppState.teamsMap[localId] || { name: m.equipoLocal.name, ext: 'png' };
   const visitTeam = AppState.teamsMap[visitId] || { name: m.equipoVisitante.name, ext: 'png' };
 
+  const faseLabels = {
+    'liga': `Liga - Jornada ${m.ronda}`,
+    '16': 'Dieciseisavos',
+    '8': 'Octavos',
+    '4': 'Cuartos',
+    'semis': 'Semifinal',
+    'final': 'Final'
+  };
+
   return {
     id: m.id,
     ronda: m.ronda,
     fase: m.fase,
     fechaTs: m.fecha,
     fecha: formatDate(m.fecha),
-    journey: `Jornada ${m.ronda}`,
+    journey: faseLabels[m.fase] || m.fase,
     homeTeam: localTeam.name,
     homeTeamId: localId,
     homeBadgeExt: localTeam.ext,
@@ -1023,7 +1032,7 @@ function showUserProfileModal(username) {
 
   function activateTab(tabName) {
     tabs.forEach(t => t.classList.toggle('active', t.dataset.tab === tabName));
-    if (tabName === 'predictions') renderPredictionsTab(tabContent, userData);
+    if (tabName === 'predictions') renderPredictionsTab(tabContent, userData, username);
     else if (tabName === 'squad') renderSquadTab(tabContent, username);
     else if (tabName === 'classification') renderClassificationTab(tabContent, username);
   }
@@ -1035,7 +1044,7 @@ function showUserProfileModal(username) {
 
 /** Devuelve la jornada relevante para el acordeón: última con resultados, o la última presente */
 function getRelevantJourney(matchesByJourney, hasResult) {
-  const journeys = Object.keys(matchesByJourney);
+  const journeys = sortJourneys(Object.keys(matchesByJourney), matchesByJourney);
   if (journeys.length === 0) return null;
   for (let i = journeys.length - 1; i >= 0; i--) {
     if (matchesByJourney[journeys[i]].some(m => hasResult(m.match))) {
@@ -1045,21 +1054,40 @@ function getRelevantJourney(matchesByJourney, hasResult) {
   return journeys[journeys.length - 1];
 }
 
+/** Ordena las jornadas por fase (liga → 16 → 8 → 4 → semis → final) y por ronda */
+function sortJourneys(journeys, matchesByJourney) {
+  const faseOrder = ['liga', '16', '8', '4', 'semis', 'final'];
+  return [...journeys].sort((a, b) => {
+    const faseA = matchesByJourney[a]?.[0]?.match?.fase;
+    const faseB = matchesByJourney[b]?.[0]?.match?.fase;
+    const fi = faseOrder.indexOf(faseA) - faseOrder.indexOf(faseB);
+    if (fi !== 0) return fi;
+    const rondaA = matchesByJourney[a]?.[0]?.match?.ronda || 0;
+    const rondaB = matchesByJourney[b]?.[0]?.match?.ronda || 0;
+    return rondaA - rondaB;
+  });
+}
+
 /** Renderiza la tab de pronósticos en el modal de perfil */
-function renderPredictionsTab(container, userData) {
+function renderPredictionsTab(container, userData, username) {
   let matchesByJourney = {};
+
+  // En fase PRE, ocultar los pronósticos de otros usuarios de la fase en edición
+  const hiddenFase = (username !== AppState.currentUser?.name) ? getHiddenFaseForOthers() : null;
+
   for (const detail of userData.matchDetails) {
+    if (hiddenFase && detail.match.fase === hiddenFase) continue;
     const journey = detail.match.journey;
     if (!matchesByJourney[journey]) matchesByJourney[journey] = [];
     matchesByJourney[journey].push(detail);
   }
 
   // Also include matches the user predicted but don't have results yet
-  const username = Object.keys(AppState.userPoints).find(u => AppState.userPoints[u] === userData);
   const predictions = AppState.allPredictions[username] || {};
   for (const match of AppState.matches) {
     const prediction = predictions[match.id];
     if (!prediction) continue;
+    if (hiddenFase && match.fase === hiddenFase) continue;
     const hasResult = AppState.matchStats.some(ms => ms.eventId === match.id);
     if (hasResult) continue; // already included
     const journey = match.journey;
@@ -1072,7 +1100,7 @@ function renderPredictionsTab(container, userData) {
     });
   }
 
-  const journeys = Object.keys(matchesByJourney);
+  const journeys = sortJourneys(Object.keys(matchesByJourney), matchesByJourney);
   const hasResult = (match) => AppState.matchStats.some(ms => ms.eventId === match.id);
   AppState.openProfileJourney = getRelevantJourney(matchesByJourney, hasResult);
 
@@ -1138,11 +1166,22 @@ function renderPredictionsTab(container, userData) {
   }
 
   if (!contentHtml) {
-    contentHtml = '<div style="padding: 24px; text-align: center; color: var(--text-muted);">No hay pronósticos para mostrar</div>';
+    if (hiddenFase) {
+      contentHtml = `<div style="padding: 24px; text-align: center; color: var(--text-muted);">🔒 Los pronósticos de esta fase se mostrarán cuando comience la competición</div>`;
+    } else {
+      contentHtml = '<div style="padding: 24px; text-align: center; color: var(--text-muted);">No hay pronósticos para mostrar</div>';
+    }
   }
+
+  const hiddenNotice = hiddenFase ? `
+    <div style="padding: 10px 12px; margin-bottom: 8px; background: rgba(239,68,68,0.1); color: var(--text-muted); border-radius: 8px; font-size: 12px; text-align: center;">
+      🔒 Pronósticos de otros jugadores de esta fase ocultos hasta que comience
+    </div>
+  ` : '';
 
   container.innerHTML = `
     <div class="profile-total-points">Puntos totales: <strong>${userData.totalPoints}</strong></div>
+    ${hiddenNotice}
     ${contentHtml}
   `;
 
@@ -2707,6 +2746,16 @@ function countFinalPredictions() {
     if (Array.isArray(fp[key])) count += fp[key].filter(Boolean).length;
   }
   return count;
+}
+
+/**
+ * Devuelve la fase del calendario cuyos pronósticos de otros usuarios deben ocultarse
+ * durante una fase PRE (en edición). Devuelve null si no aplica.
+ */
+function getHiddenFaseForOthers() {
+  const phase = getFaseJuego();
+  if (phase === 'FASE_PRETEMPORADA' || !phase.startsWith('FASE_PRE')) return null;
+  return getFaseForCurrentPhase();
 }
 
 function renderInicioTab() {
