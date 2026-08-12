@@ -1013,8 +1013,10 @@ function showUserProfileModal(username) {
       const body = section.querySelector('.breakdown-journey-body');
       const isOpen = h.dataset.journey === AppState.openProfileJourney;
       h.classList.toggle('active', isOpen);
+      h.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
       body.classList.toggle('accordion-open', isOpen);
       body.classList.toggle('accordion-closed', !isOpen);
+      body.style.maxHeight = isOpen ? (body.scrollHeight + 'px') : '0';
     });
   });
   const tabs = overlay.querySelectorAll('.profile-tab');
@@ -1075,7 +1077,8 @@ function renderPredictionsTab(container, userData) {
   AppState.openProfileJourney = getRelevantJourney(matchesByJourney, hasResult);
 
   let contentHtml = '';
-  for (const journey of journeys) {
+  for (let journeyIndex = 0; journeyIndex < journeys.length; journeyIndex++) {
+    const journey = journeys[journeyIndex];
     const matches = matchesByJourney[journey];
     const journeyPoints = matches.reduce((sum, m) => sum + (m.points || 0), 0);
     const isOpen = AppState.openProfileJourney === journey;
@@ -1083,12 +1086,12 @@ function renderPredictionsTab(container, userData) {
 
     contentHtml += `
       <div class="breakdown-journey">
-        <div class="breakdown-journey-header ${isOpen ? 'active' : ''}" data-journey="${journey}">
+        <div class="breakdown-journey-header ${isOpen ? 'active' : ''}" data-journey="${journey}" role="button" tabindex="0" aria-expanded="${isOpen ? 'true' : 'false'}" aria-controls="journey-body-${journeyIndex}">
           <span class="breakdown-journey-title">${journey}</span>
           <span class="breakdown-journey-points">${journeyPoints} pts</span>
           <span class="breakdown-journey-arrow">▸</span>
         </div>
-        <div class="breakdown-journey-body ${bodyClass}">
+        <div class="breakdown-journey-body ${bodyClass}" id="journey-body-${journeyIndex}">
           ${matches.map(m => {
             const matchStats = AppState.matchStats.find(ms => ms.eventId === m.match.id);
             const prediction = m.predicted || AppState.allPredictions[username]?.[m.match.id];
@@ -1142,6 +1145,10 @@ function renderPredictionsTab(container, userData) {
     <div class="profile-total-points">Puntos totales: <strong>${userData.totalPoints}</strong></div>
     ${contentHtml}
   `;
+
+  container.querySelectorAll('.breakdown-journey-body').forEach(body => {
+    body.style.maxHeight = body.classList.contains('accordion-open') ? (body.scrollHeight + 'px') : '0';
+  });
 }
 
 /** Renderiza la tab de plantilla en el modal de perfil */
