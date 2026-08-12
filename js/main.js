@@ -46,6 +46,7 @@ const AppState = {
   selectedFinalTeam: null, // teamId seleccionado para colocar en zona
   hasTop8InRoundOf32: false, // flag: hay equipos top-8 en deciseisavos (bloquea save)
   predictionsConfirmed: false, // flag: pronósticos confirmados (bloquea edición)
+  openProfileJourney: null, // string: jornada desplegada en el modal de perfil (tab Pronósticos)
   fases: [],             // fases de la competición desde fases.json
 };
 
@@ -1054,51 +1055,66 @@ function renderPredictionsTab(container, userData) {
     });
   }
 
+  const journeys = Object.keys(matchesByJourney);
+  const hasResult = (match) => AppState.matchStats.some(ms => ms.eventId === match.id);
+  AppState.openProfileJourney = getRelevantJourney(matchesByJourney, hasResult);
+
   let contentHtml = '';
-  for (const [journey, matches] of Object.entries(matchesByJourney)) {
+  for (const journey of journeys) {
+    const matches = matchesByJourney[journey];
+    const journeyPoints = matches.reduce((sum, m) => sum + (m.points || 0), 0);
+    const isOpen = AppState.openProfileJourney === journey;
+    const bodyClass = isOpen ? 'accordion-open' : 'accordion-closed';
+
     contentHtml += `
       <div class="breakdown-journey">
-        <div class="breakdown-journey-title">${journey}</div>
-        ${matches.map(m => {
-          const matchStats = AppState.matchStats.find(ms => ms.eventId === m.match.id);
-          const prediction = m.predicted || AppState.allPredictions[username]?.[m.match.id];
-          const hasResult = !!matchStats;
-          const realHome = hasResult ? matchStats.stats[m.match.homeTeamId]?.goles : null;
-          const realAway = hasResult ? matchStats.stats[m.match.awayTeamId]?.goles : null;
-          const predHome = prediction?.home;
-          const predAway = prediction?.away;
-          const isPending = !hasResult;
-          const homeCorrect = hasResult && predHome === realHome;
-          const awayCorrect = hasResult && predAway === realAway;
+        <div class="breakdown-journey-header ${isOpen ? 'active' : ''}" data-journey="${journey}">
+          <span class="breakdown-journey-title">${journey}</span>
+          <span class="breakdown-journey-points">${journeyPoints} pts</span>
+          <span class="breakdown-journey-arrow">▸</span>
+        </div>
+        <div class="breakdown-journey-body ${bodyClass}">
+          ${matches.map(m => {
+            const matchStats = AppState.matchStats.find(ms => ms.eventId === m.match.id);
+            const prediction = m.predicted || AppState.allPredictions[username]?.[m.match.id];
+            const hasResultMatch = !!matchStats;
+            const realHome = hasResultMatch ? matchStats.stats[m.match.homeTeamId]?.goles : null;
+            const realAway = hasResultMatch ? matchStats.stats[m.match.awayTeamId]?.goles : null;
+            const predHome = prediction?.home;
+            const predAway = prediction?.away;
+            const isPending = !hasResultMatch;
+            const homeCorrect = hasResultMatch && predHome === realHome;
+            const awayCorrect = hasResultMatch && predAway === realAway;
 
-          return `
-            <div class="profile-match">
-              <div class="profile-match-teams">
-                <div class="profile-match-team">
-                  <img class="profile-match-badge" src="data/imgEquipos/${m.match.homeTeamId}.${m.match.homeBadgeExt}" alt="${m.match.homeTeam}" loading="lazy" onerror="this.style.display='none'">
-                  <span>${m.match.homeTeam}</span>
+            return `
+              <div class="profile-match">
+                <div class="profile-match-teams">
+                  <div class="profile-match-team">
+                    <img class="profile-match-badge" src="data/imgEquipos/${m.match.homeTeamId}.${m.match.homeBadgeExt}" alt="${m.match.homeTeam}" loading="lazy" onerror="this.style.display='none'">
+                    <span>${m.match.homeTeam}</span>
+                  </div>
+                  <div class="profile-match-score">
+                    <span class="profile-score-pred ${homeCorrect ? 'correct' : ''}">${predHome !== null && predHome !== undefined ? predHome : '-'}</span>
+                    <span class="profile-score-sep">-</span>
+                    <span class="profile-score-pred ${awayCorrect ? 'correct' : ''}">${predAway !== null && predAway !== undefined ? predAway : '-'}</span>
+                  </div>
+                  <div class="profile-match-team">
+                    <span>${m.match.awayTeam}</span>
+                    <img class="profile-match-badge" src="data/imgEquipos/${m.match.awayTeamId}.${m.match.awayBadgeExt}" alt="${m.match.awayTeam}" loading="lazy" onerror="this.style.display='none'">
+                  </div>
                 </div>
-                <div class="profile-match-score">
-                  <span class="profile-score-pred ${homeCorrect ? 'correct' : ''}">${predHome !== null && predHome !== undefined ? predHome : '-'}</span>
-                  <span class="profile-score-sep">-</span>
-                  <span class="profile-score-pred ${awayCorrect ? 'correct' : ''}">${predAway !== null && predAway !== undefined ? predAway : '-'}</span>
+                <div class="profile-match-real">
+                  ${isPending ? '<span class="profile-pending">⏳ Pendiente</span>' : `Real: ${realHome} - ${realAway}`}
                 </div>
-                <div class="profile-match-team">
-                  <span>${m.match.awayTeam}</span>
-                  <img class="profile-match-badge" src="data/imgEquipos/${m.match.awayTeamId}.${m.match.awayBadgeExt}" alt="${m.match.awayTeam}" loading="lazy" onerror="this.style.display='none'">
-                </div>
+                ${hasResultMatch ? `
+                  <div class="profile-match-points ${m.points > 0 ? 'has-points' : 'no-points'}">
+                    → ${m.points} pts${m.breakdown.length ? ' (' + m.breakdown.join(', ') + ')' : ''}
+                  </div>
+                ` : ''}
               </div>
-              <div class="profile-match-real">
-                ${isPending ? '<span class="profile-pending">⏳ Pendiente</span>' : `Real: ${realHome} - ${realAway}`}
-              </div>
-              ${hasResult ? `
-                <div class="profile-match-points ${m.points > 0 ? 'has-points' : 'no-points'}">
-                  → ${m.points} pts${m.breakdown.length ? ' (' + m.breakdown.join(', ') + ')' : ''}
-                </div>
-              ` : ''}
-            </div>
-          `;
-        }).join('')}
+            `;
+          }).join('')}
+        </div>
       </div>
     `;
   }
