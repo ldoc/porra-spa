@@ -1669,7 +1669,7 @@ function renderElimZona(title, emoji, zoneId, teamIds, max) {
       const ext = AppState.teamsMap[teamId]?.ext || 'png';
       slots.push(`
         <div class="drop-slot filled">
-          <img class="drop-slot-img" src="data/imgEquipos/${teamId}.${ext}" alt="${teamName(teamId)}" onerror="this.src='data/imgEquipos/default.png'">
+          <img class="drop-slot-img" src="data/imgEquipos/${teamId}.${ext}" alt="${teamName(teamId)}" onerror="this.onerror=null;this.src='data/imgEquipos/default.png'">
           <span class="drop-slot-name">${teamName(teamId)}</span>
         </div>
       `);

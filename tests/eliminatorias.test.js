@@ -56,6 +56,13 @@ function test_resolveTie_sin_resultado_no_resuelto() {
   assert.strictEqual(r.resuelto, false);
 }
 
+function test_resolveTie_cruce_con_menos_de_dos_partidos_no_resuelto() {
+  const tie = { teamA: 100, teamB: 200, matches: [partido(1, '16', 100, 200)] };
+  const r = resolveTie(tie, new Map([[1, ms(1, { 100: 1, 200: 0 })]]));
+  assert.strictEqual(r.resuelto, false);
+  assert.strictEqual(r.eliminado, null);
+}
+
 // ---- Tests de computeEliminatorias ----
 // Nota: mini-cuadro ilustrativo. La función procesa cada fase de forma
 // independiente; no valida coherencia entre rondas.
@@ -115,14 +122,24 @@ function test_computeEliminatorias_final_resuelta() {
   assert.deepStrictEqual(r.zonas['semis'], [200]);
 }
 
+function test_computeEliminatorias_final_empatada_no_resuelta() {
+  const matches = [partido(1, 'final', 100, 200)];
+  const matchStats = [ms(1, { 100: 2, 200: 2 })]; // gA === gB
+  const r = computeEliminatorias(matches, matchStats);
+  assert.deepStrictEqual(r.final, { campeon: null, subcampeon: null });
+  assert.strictEqual(r.rondasResueltas.includes('final'), false);
+}
+
 // ---- Runner (mismo patrón que el resto de tests) ----
 const tests = [
   test_groupTies_agrupa_ida_vuelta,
   test_resolveTie_agregado_decide_eliminado,
   test_resolveTie_agregado_empate_pendiente,
   test_resolveTie_sin_resultado_no_resuelto,
+  test_resolveTie_cruce_con_menos_de_dos_partidos_no_resuelto,
   test_computeEliminatorias_rondas_completas_y_parciales,
   test_computeEliminatorias_final_resuelta,
+  test_computeEliminatorias_final_empatada_no_resuelta,
 ];
 let passed = 0, failed = 0;
 for (const t of tests) {
