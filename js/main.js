@@ -1015,6 +1015,18 @@ function showUserProfileModal(username) {
   activateTab('predictions');
 }
 
+/** Devuelve la jornada relevante para el acordeón: última con resultados, o la última presente */
+function getRelevantJourney(matchesByJourney, hasResult) {
+  const journeys = Object.keys(matchesByJourney);
+  if (journeys.length === 0) return null;
+  for (let i = journeys.length - 1; i >= 0; i--) {
+    if (matchesByJourney[journeys[i]].some(m => hasResult(m.match))) {
+      return journeys[i];
+    }
+  }
+  return journeys[journeys.length - 1];
+}
+
 /** Renderiza la tab de pronósticos en el modal de perfil */
 function renderPredictionsTab(container, userData) {
   let matchesByJourney = {};
