@@ -903,6 +903,10 @@ async function renderClasificacionTab() {
     calculateRealStandings();
   }
 
+  // Precargar finalPredictions de todos los usuarios (con caché) para puntos de eliminatorias
+  const reachedPhases = computeReachedPhases(AppState.matches, AppState.matchStats);
+  await Promise.all(players.map(p => fetchFinalPredictionsForUser(p.name)));
+
   const playersWithPoints = players.map(p => {
     const userData = calculateUserTotalPoints(p.name);
     AppState.userPoints[p.name] = userData;
@@ -922,12 +926,20 @@ async function renderClasificacionTab() {
       classificationPts = classData.totalPoints;
     }
 
+    // Puntos por predicciones de eliminatorias (fase final)
+    let eliminatoriasPoints = 0;
+    const userFp = AppState.finalPredictionsCache[p.name];
+    if (userFp) {
+      eliminatoriasPoints = calculateEliminatoriasPoints(userFp, reachedPhases).totalPoints;
+    }
+
     return {
       ...p,
       predictionPoints: userData.totalPoints,
       squadPoints,
       classificationPoints: classificationPts,
-      realPoints: userData.totalPoints + squadPoints + classificationPts
+      eliminatoriasPoints,
+      realPoints: userData.totalPoints + squadPoints + classificationPts + eliminatoriasPoints
     };
   });
 
@@ -941,6 +953,7 @@ async function renderClasificacionTab() {
     if (p.predictionPoints) breakdownParts.push(`${p.predictionPoints} pronósticos`);
     if (p.squadPoints) breakdownParts.push(`${p.squadPoints} plantilla`);
     if (p.classificationPoints) breakdownParts.push(`${p.classificationPoints} clasificación`);
+    if (p.eliminatoriasPoints) breakdownParts.push(`${p.eliminatoriasPoints} eliminatorias`);
     const breakdownStr = breakdownParts.length ? ` (${breakdownParts.join(' + ')})` : '';
     return `
       <div class="leaderboard-row ${isMe ? 'current-user' : ''}" onclick="showUserProfileModal('${p.name}')">
