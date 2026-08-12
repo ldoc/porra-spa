@@ -15,184 +15,134 @@
 - **Cache-busting obligatorio**: al tocar `css/styles.css` o `js/main.js`, incrementar la versión `?v=` en `index.html` (AGENTS.md). En `main`: `css/styles.css?v=41` → `?v=42` y `js/main.js?v=57` → `?v=58`.
 - **Tanda de penaltis fuera de alcance**: si el agregado de un cruce es empate, el cruce queda sin resolver (nunca se decide por penaltis).
 - **Solo rondas completas**: la zona de una ronda se muestra únicamente cuando todos sus cruces están resueltos por agregado.
-- Tests: ficheros `.test.js` en `tests/` ejecutados con `node tests/<fichero>.test.js` (sin package.json; runner manual con `process.exit`). Las funciones puras se copian en el test (patrón de `journeySort.test.js`).
+- Tests: ficheros `.test.js` en `tests/` ejecutados con `node tests/<fichero>.test.js` (sin package.json; runner manual con `process.exit`). Los tests de la lógica pura hacen `require('../js/eliminatorias.js')` (código real, no copia).
 - No añadir comentarios innecesarios al código.
 
 ---
 
-### Task 1: Lógica pura de eliminatorias (`groupTies`, `resolveTie`, `computeEliminatorias`)
+### Task 1: Lógica pura de eliminatorias (`js/eliminatorias.js` + tests)
 
 **Files:**
-- Modify: `js/main.js` (añadir bloque justo después de `renderResultadosTab`, tras la línea 1613, antes de `renderRealStandingsTable`)
+- Create: `js/eliminatorias.js`
+- Modify: `index.html` (añadir `<script src="js/eliminatorias.js?v=1">` antes de `main.js`)
 - Create: `tests/eliminatorias.test.js`
 
 **Interfaces:**
 - Consumes: `AppState.matches` (formato de `buildMatchFromCalendar`: `{ id, fase, homeTeamId, awayTeamId, ... }`), `AppState.matchStats` (array de `{ eventId, stats: { [teamId]: { goles } } }`).
-- Produces: funciones globales (main.js es script clásico, las declaraciones `function` ya son globales):
+- Produces: `js/eliminatorias.js` expone tres funciones puras:
   - `groupTies(matches) => [{ teamA, teamB, matches }]`
   - `resolveTie(tie, matchStatsById) => { resuelto: boolean, eliminado: number|null }`
   - `computeEliminatorias(matches, matchStats) => { zonas, final, rondasResueltas }`
+  - En el navegador se exponen como globales (`window.groupTies`, `window.resolveTie`, `window.computeEliminatorias`); en Node se exportan vía `module.exports` (guard UMD-lite). `main.js` las consume como globales.
 
-- [ ] **Step 1: Añadir las funciones puras en `js/main.js`**
+- [ ] **Step 1: Crear `js/eliminatorias.js`**
 
-Insertar tras la línea 1613 (final de `renderResultadosTab`):
+Contenido completo del fichero:
 
 ```javascript
-// ============================================================
-// TAB ELIMINATORIAS EN RESULTADOS
-// ============================================================
-
-/** Agrupa los partidos de una fase en cruces por par desordenado de equipos */
-function groupTies(matches) {
-  const byPair = new Map();
-  for (const m of matches || []) {
-    const tA = Math.min(m.homeTeamId, m.awayTeamId);
-    const tB = Math.max(m.homeTeamId, m.awayTeamId);
-    const key = `${tA}:${tB}`;
-    if (!byPair.has(key)) byPair.set(key, { teamA: tA, teamB: tB, matches: [] });
-    byPair.get(key).matches.push(m);
-  }
-  return [...byPair.values()];
-}
-
-/**
- * Resuelve un cruce a doble partido por agregado.
- * Devuelve { resuelto, eliminado }. resuelto=false si falta algún resultado
- * o si el agregado queda empatado (tanda de penaltis no implementada).
- */
-function resolveTie(tie, matchStatsById) {
-  if (!tie.matches || tie.matches.length < 2) return { resuelto: false, eliminado: null };
-  let totA = 0;
-  let totB = 0;
-  for (const m of tie.matches) {
-    const ms = matchStatsById.get(m.id);
-    if (!ms) return { resuelto: false, eliminado: null };
-    const gA = ms.stats?.[m.homeTeamId]?.goles;
-    const gB = ms.stats?.[m.awayTeamId]?.goles;
-    if (gA === undefined || gB === undefined) return { resuelto: false, eliminado: null };
-    if (m.homeTeamId === tie.teamA) { totA += gA; totB += gB; }
-    else { totA += gB; totB += gA; }
-  }
-  if (totA === totB) return { resuelto: false, eliminado: null };
-  return { resuelto: true, eliminado: totA > totB ? tie.teamB : tie.teamA };
-}
-
-/**
- * Calcula los equipos eliminados en cada ronda de eliminatorias.
- * Devuelve { zonas, final, rondasResueltas }:
- *  - zonas: { '16': [teamId,...], '8': [...], '4': [...], 'semis': [...] } (solo rondas completas)
- *  - final: { campeon: teamId|null, subcampeon: teamId|null }
- *  - rondasResueltas: fases dobles completas + 'final' si la final tiene resultado
- */
-function computeEliminatorias(matches, matchStats) {
-  const matchStatsById = new Map((matchStats || []).map(ms => [ms.eventId, ms]));
-  const zonas = {};
-  const rondasResueltas = [];
-  const fasesDobles = ['16', '8', '4', 'semis'];
-
-  for (const fase of fasesDobles) {
-    const ties = groupTies((matches || []).filter(m => m.fase === fase));
-    if (ties.length === 0) continue; // fase sin cruces aún (no está en el calendario) → no resuelta
-    const eliminados = [];
-    let completa = true;
-    for (const tie of ties) {
-      const { resuelto, eliminado } = resolveTie(tie, matchStatsById);
-      if (!resuelto) { completa = false; break; }
-      eliminados.push(eliminado);
+(function (global) {
+  /** Agrupa los partidos de una fase en cruces por par desordenado de equipos */
+  function groupTies(matches) {
+    const byPair = new Map();
+    for (const m of matches || []) {
+      const tA = Math.min(m.homeTeamId, m.awayTeamId);
+      const tB = Math.max(m.homeTeamId, m.awayTeamId);
+      const key = `${tA}:${tB}`;
+      if (!byPair.has(key)) byPair.set(key, { teamA: tA, teamB: tB, matches: [] });
+      byPair.get(key).matches.push(m);
     }
-    if (completa) { zonas[fase] = eliminados; rondasResueltas.push(fase); }
+    return [...byPair.values()];
   }
 
-  const final = { campeon: null, subcampeon: null };
-  const finalMatches = (matches || []).filter(m => m.fase === 'final');
-  if (finalMatches.length === 1) {
-    const f = finalMatches[0];
-    const ms = matchStatsById.get(f.id);
-    const gA = ms?.stats?.[f.homeTeamId]?.goles;
-    const gB = ms?.stats?.[f.awayTeamId]?.goles;
-    if (gA !== undefined && gB !== undefined && gA !== gB) {
-      final.campeon = gA > gB ? f.homeTeamId : f.awayTeamId;
-      final.subcampeon = gA > gB ? f.awayTeamId : f.homeTeamId;
-      rondasResueltas.push('final');
+  /**
+   * Resuelve un cruce a doble partido por agregado.
+   * Devuelve { resuelto, eliminado }. resuelto=false si falta algún resultado
+   * o si el agregado queda empatado (tanda de penaltis no implementada).
+   */
+  function resolveTie(tie, matchStatsById) {
+    if (!tie.matches || tie.matches.length < 2) return { resuelto: false, eliminado: null };
+    let totA = 0;
+    let totB = 0;
+    for (const m of tie.matches) {
+      const ms = matchStatsById.get(m.id);
+      if (!ms) return { resuelto: false, eliminado: null };
+      const gA = ms.stats?.[m.homeTeamId]?.goles;
+      const gB = ms.stats?.[m.awayTeamId]?.goles;
+      if (gA === undefined || gB === undefined) return { resuelto: false, eliminado: null };
+      if (m.homeTeamId === tie.teamA) { totA += gA; totB += gB; }
+      else { totA += gB; totB += gA; }
     }
+    if (totA === totB) return { resuelto: false, eliminado: null };
+    return { resuelto: true, eliminado: totA > totB ? tie.teamB : tie.teamA };
   }
 
-  return { zonas, final, rondasResueltas };
-}
+  /**
+   * Calcula los equipos eliminados en cada ronda de eliminatorias.
+   * Devuelve { zonas, final, rondasResueltas }:
+   *  - zonas: { '16': [teamId,...], '8': [...], '4': [...], 'semis': [...] } (solo rondas completas)
+   *  - final: { campeon: teamId|null, subcampeon: teamId|null }
+   *  - rondasResueltas: fases dobles completas + 'final' si la final tiene resultado
+   */
+  function computeEliminatorias(matches, matchStats) {
+    const matchStatsById = new Map((matchStats || []).map(ms => [ms.eventId, ms]));
+    const zonas = {};
+    const rondasResueltas = [];
+    const fasesDobles = ['16', '8', '4', 'semis'];
+
+    for (const fase of fasesDobles) {
+      const ties = groupTies((matches || []).filter(m => m.fase === fase));
+      if (ties.length === 0) continue; // fase sin cruces aún (no está en el calendario) → no resuelta
+      const eliminados = [];
+      let completa = true;
+      for (const tie of ties) {
+        const { resuelto, eliminado } = resolveTie(tie, matchStatsById);
+        if (!resuelto) { completa = false; break; }
+        eliminados.push(eliminado);
+      }
+      if (completa) { zonas[fase] = eliminados; rondasResueltas.push(fase); }
+    }
+
+    const final = { campeon: null, subcampeon: null };
+    const finalMatches = (matches || []).filter(m => m.fase === 'final');
+    if (finalMatches.length === 1) {
+      const f = finalMatches[0];
+      const ms = matchStatsById.get(f.id);
+      const gA = ms?.stats?.[f.homeTeamId]?.goles;
+      const gB = ms?.stats?.[f.awayTeamId]?.goles;
+      if (gA !== undefined && gB !== undefined && gA !== gB) {
+        final.campeon = gA > gB ? f.homeTeamId : f.awayTeamId;
+        final.subcampeon = gA > gB ? f.awayTeamId : f.homeTeamId;
+        rondasResueltas.push('final');
+      }
+    }
+
+    return { zonas, final, rondasResueltas };
+  }
+
+  global.groupTies = groupTies;
+  global.resolveTie = resolveTie;
+  global.computeEliminatorias = computeEliminatorias;
+  if (typeof module !== 'undefined' && module.exports) {
+    module.exports = { groupTies, resolveTie, computeEliminatorias };
+  }
+})(typeof window !== 'undefined' ? window : globalThis);
 ```
 
-- [ ] **Step 2: Escribir el test con las funciones copiadas**
+- [ ] **Step 2: Añadir la etiqueta script en `index.html`**
 
-Crear `tests/eliminatorias.test.js`. Copiar **exactamente** las tres funciones del Step 1 dentro del fichero (patrón de `journeySort.test.js`) y añadir los casos de prueba:
+Insertar la línea antes de `<script src="js/main.js?v=57">`:
+
+```html
+<script src="js/eliminatorias.js?v=1"></script>
+```
+
+- [ ] **Step 3: Escribir el test**
+
+Crear `tests/eliminatorias.test.js`. Hace `require('../js/eliminatorias.js')` (prueba el código real, no una copia):
 
 ```javascript
 const assert = require('assert');
-
-// ---- Copia de las funciones puras (deben coincidir con js/main.js) ----
-function groupTies(matches) {
-  const byPair = new Map();
-  for (const m of matches || []) {
-    const tA = Math.min(m.homeTeamId, m.awayTeamId);
-    const tB = Math.max(m.homeTeamId, m.awayTeamId);
-    const key = `${tA}:${tB}`;
-    if (!byPair.has(key)) byPair.set(key, { teamA: tA, teamB: tB, matches: [] });
-    byPair.get(key).matches.push(m);
-  }
-  return [...byPair.values()];
-}
-
-function resolveTie(tie, matchStatsById) {
-  if (!tie.matches || tie.matches.length < 2) return { resuelto: false, eliminado: null };
-  let totA = 0;
-  let totB = 0;
-  for (const m of tie.matches) {
-    const ms = matchStatsById.get(m.id);
-    if (!ms) return { resuelto: false, eliminado: null };
-    const gA = ms.stats?.[m.homeTeamId]?.goles;
-    const gB = ms.stats?.[m.awayTeamId]?.goles;
-    if (gA === undefined || gB === undefined) return { resuelto: false, eliminado: null };
-    if (m.homeTeamId === tie.teamA) { totA += gA; totB += gB; }
-    else { totA += gB; totB += gA; }
-  }
-  if (totA === totB) return { resuelto: false, eliminado: null };
-  return { resuelto: true, eliminado: totA > totB ? tie.teamB : tie.teamA };
-}
-
-function computeEliminatorias(matches, matchStats) {
-  const matchStatsById = new Map((matchStats || []).map(ms => [ms.eventId, ms]));
-  const zonas = {};
-  const rondasResueltas = [];
-  const fasesDobles = ['16', '8', '4', 'semis'];
-
-  for (const fase of fasesDobles) {
-    const ties = groupTies((matches || []).filter(m => m.fase === fase));
-    if (ties.length === 0) continue; // fase sin cruces aún (no está en el calendario) → no resuelta
-    const eliminados = [];
-    let completa = true;
-    for (const tie of ties) {
-      const { resuelto, eliminado } = resolveTie(tie, matchStatsById);
-      if (!resuelto) { completa = false; break; }
-      eliminados.push(eliminado);
-    }
-    if (completa) { zonas[fase] = eliminados; rondasResueltas.push(fase); }
-  }
-
-  const final = { campeon: null, subcampeon: null };
-  const finalMatches = (matches || []).filter(m => m.fase === 'final');
-  if (finalMatches.length === 1) {
-    const f = finalMatches[0];
-    const ms = matchStatsById.get(f.id);
-    const gA = ms?.stats?.[f.homeTeamId]?.goles;
-    const gB = ms?.stats?.[f.awayTeamId]?.goles;
-    if (gA !== undefined && gB !== undefined && gA !== gB) {
-      final.campeon = gA > gB ? f.homeTeamId : f.awayTeamId;
-      final.subcampeon = gA > gB ? f.awayTeamId : f.homeTeamId;
-      rondasResueltas.push('final');
-    }
-  }
-
-  return { zonas, final, rondasResueltas };
-}
+const { groupTies, resolveTie, computeEliminatorias } = require('../js/eliminatorias.js');
 
 // ---- Helpers de test ----
 function partido(id, fase, home, away) {
@@ -326,20 +276,20 @@ console.log(`\n${passed} passing, ${failed} failing`);
 process.exit(failed > 0 ? 1 : 0);
 ```
 
-- [ ] **Step 3: Ejecutar el test y comprobar que pasa**
+- [ ] **Step 4: Ejecutar el test y comprobar que pasa**
 
 Run: `node tests/eliminatorias.test.js`
 Expected: 6 ✓, `6 passing, 0 failing`, exit code 0.
 
-- [ ] **Step 4: Verificar que `js/main.js` no tiene errores de sintaxis**
+- [ ] **Step 5: Verificar sintaxis de los ficheros JS tocados**
 
-Run: `node --check js/main.js`
+Run: `node --check js/eliminatorias.js && node --check js/main.js`
 Expected: sin salida (éxito).
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 6: Commit**
 
 ```bash
-git add js/main.js tests/eliminatorias.test.js
+git add js/eliminatorias.js index.html tests/eliminatorias.test.js
 git commit -m "feat: lógica de equipos eliminados por ronda en eliminatorias"
 ```
 
@@ -384,7 +334,7 @@ Sustituir el inicio del `if/else` de renderizado (línea 1467):
 
 - [ ] **Step 3: Añadir `renderEliminatoriasView()` y `renderElimZona()`**
 
-Insertar justo después de la función `computeEliminatorias` (bloque de la Task 1):
+Insertar en `js/main.js` justo después de `renderResultadosTab` (tras la línea 1613, antes de `renderRealStandingsTable`):
 
 ```javascript
 /** Renderiza la vista de eliminatorias resueltas (read-only) */
