@@ -44,6 +44,7 @@ const AppState = {
   finalPredictions: null, // { champion, runnerUp, semiFinalists, quarterFinalists, roundOf16, roundOf32 }
   hasUnsavedFinalChanges: false, // flag de cambios sin guardar en fase final
   selectedFinalTeam: null, // teamId seleccionado para colocar en zona
+  finalPredictionsCache: {}, // { username: finalPredictions|null } - caché para tab Eliminatorias
   hasTop8InRoundOf32: false, // flag: hay equipos top-8 en deciseisavos (bloquea save)
   predictionsConfirmed: false, // flag: pronósticos confirmados (bloquea edición)
   openProfileJourney: null, // string: jornada desplegada en el modal de perfil (tab Pronósticos)
@@ -989,6 +990,7 @@ function showUserProfileModal(username) {
         <button class="profile-tab active" data-tab="predictions">Pronósticos</button>
         <button class="profile-tab" data-tab="squad">Plantilla</button>
         <button class="profile-tab" data-tab="classification">Clasificación</button>
+        <button class="profile-tab" data-tab="eliminatorias">Eliminatorias</button>
       </div>
       <div class="breakdown-modal-content" id="profile-tab-content">
         <div style="padding: 24px; text-align: center; color: var(--text-muted);">Cargando...</div>
@@ -1030,6 +1032,7 @@ function showUserProfileModal(username) {
     if (tabName === 'predictions') renderPredictionsTab(tabContent, userData, username);
     else if (tabName === 'squad') renderSquadTab(tabContent, username);
     else if (tabName === 'classification') renderClassificationTab(tabContent, username);
+    else if (tabName === 'eliminatorias') renderEliminatoriasTab(tabContent, username);
   }
 
   tabs.forEach(t => t.addEventListener('click', () => activateTab(t.dataset.tab)));
@@ -1365,6 +1368,74 @@ function renderClassificationTab(container, username) {
     html += '</div></div>';
   }
 
+  container.innerHTML = html;
+}
+
+/** Renderiza el tab Eliminatorias del modal de perfil (predicciones + puntos) */
+async function renderEliminatoriasTab(container, username) {
+  container.innerHTML = '<div style="padding: 24px; text-align: center; color: var(--text-muted);">Cargando eliminatorias...</div>';
+
+  const fp = await fetchFinalPredictionsForUser(username);
+  if (!fp) {
+    container.innerHTML = '<div style="padding: 24px; text-align: center; color: var(--text-muted);">No hay predicciones de eliminatorias.</div>';
+    return;
+  }
+
+  const reachedPhases = computeReachedPhases(AppState.matches, AppState.matchStats);
+  const { totalPoints, teamDetails } = calculateEliminatoriasPoints(fp, reachedPhases);
+  const pointsByTeam = {};
+  for (const d of teamDetails) pointsByTeam[d.teamId] = d.points;
+
+  const zonaConfig = [
+    { key: 'roundOf32', title: 'Dieciseisavos', emoji: '📋', max: 8 },
+    { key: 'roundOf16', title: 'Octavos', emoji: '⚡', max: 8 },
+    { key: 'quarterFinalists', title: 'Cuartos', emoji: '🏅', max: 4 },
+    { key: 'semiFinalists', title: 'Semifinales', emoji: '⚔️', max: 2 },
+  ];
+
+  const renderZone = (cfg) => {
+    const raw = fp[cfg.key];
+    const ids = (Array.isArray(raw) ? raw : [raw]).filter(Boolean);
+    const slots = [];
+    for (let i = 0; i < cfg.max; i++) {
+      const teamId = ids[i];
+      if (!teamId) {
+        slots.push('<div class="drop-slot"></div>');
+        continue;
+      }
+      const ext = AppState.teamsMap[teamId]?.ext || 'png';
+      const pts = pointsByTeam[teamId] || 0;
+      slots.push(`
+        <div class="drop-slot filled">
+          <img class="drop-slot-img" src="data/imgEquipos/${teamId}.${ext}" alt="${teamName(teamId)}" onerror="this.onerror=null;this.src='data/imgEquipos/default.png'">
+          <span class="drop-slot-name">${teamName(teamId)}</span>
+          <span class="drop-slot-points ${pts > 0 ? 'earned' : ''}">${pts > 0 ? '🎯 ' + pts + ' pts' : '—'}</span>
+        </div>
+      `);
+    }
+    return `
+      <div class="drop-zone" data-zone="${cfg.key}">
+        <div class="drop-zone-header">
+          <span class="drop-zone-title"><span class="round-emoji">${cfg.emoji}</span>${cfg.title}</span>
+          <span class="drop-zone-count ${ids.length === cfg.max ? 'complete' : ''}">${ids.length}/${cfg.max}</span>
+        </div>
+        <div class="drop-zone-slots">${slots.join('')}</div>
+      </div>
+    `;
+  };
+
+  let html = `
+    <div class="eliminatorias-tab-total">
+      Puntos totales eliminatorias: <strong>${totalPoints}</strong>
+    </div>
+    <div class="eliminatorias-view">
+  `;
+  for (const cfg of zonaConfig) html += renderZone(cfg);
+  html += '<div class="eliminatorias-final-row">';
+  html += renderZone({ key: 'runnerUp', title: 'Subcampeón', emoji: '🥈', max: 1 });
+  html += renderZone({ key: 'champion', title: 'Campeón', emoji: '🏆', max: 1 });
+  html += '</div>';
+  html += '</div>';
   container.innerHTML = html;
 }
 
@@ -5556,5 +5627,31 @@ async function fetchFinalPredictionsFromBackend() {
     }
   } catch (error) {
     console.error('Error fetching final predictions:', error);
+  }
+}
+
+/**
+ * Obtiene las finalPredictions de un usuario concreto con caché (30s).
+ * Devuelve null si el usuario no tiene predicciones o hay error.
+ */
+async function fetchFinalPredictionsForUser(username) {
+  if (AppState.finalPredictionsCache &&
+      Object.prototype.hasOwnProperty.call(AppState.finalPredictionsCache, username) &&
+      AppState._finalPredictionsCacheTime &&
+      Date.now() - AppState._finalPredictionsCacheTime[username] < CACHE_TTL) {
+    return AppState.finalPredictionsCache[username];
+  }
+
+  try {
+    const res = await fetchWithPhase(`${API_BASE}/api/final-predictions?username=${encodeURIComponent(username)}`, { headers: authHeaders() });
+    const data = await res.json();
+    const fp = (data.ok && data.finalPredictions) ? data.finalPredictions : null;
+    if (!AppState.finalPredictionsCache) AppState.finalPredictionsCache = {};
+    if (!AppState._finalPredictionsCacheTime) AppState._finalPredictionsCacheTime = {};
+    AppState.finalPredictionsCache[username] = fp;
+    AppState._finalPredictionsCacheTime[username] = Date.now();
+    return fp;
+  } catch (e) {
+    return null;
   }
 }
