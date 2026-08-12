@@ -4511,6 +4511,15 @@ html, body {
   min-width: 0;
 }
 
+.eliminatorias-final-row .drop-zone-slots {
+  display: flex;
+  justify-content: center;
+}
+
+.eliminatorias-final-row .drop-slot {
+  flex: 0 1 100px;
+}
+
 /* Cajas fijas con nombre en varias líneas (vista read-only) */
 .eliminatorias-view .drop-slot {
   min-width: 0;
