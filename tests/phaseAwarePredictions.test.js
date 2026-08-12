@@ -245,7 +245,8 @@ function test_countPredictedInRound_ignores_non_phase_matches() {
 // ── shouldSaveButtonBeDisabled (Task 4: phase-aware save) ──────
 function shouldSaveButtonBeDisabled() {
   const { fase } = getMatchesForCurrentPhase();
-  return isPhaseFrozen(fase) || !AppState.hasUnsavedChanges;
+  const confirmedForFase = AppState.predictionsConfirmed && fase === 'liga';
+  return isPhaseFrozen(fase) || confirmedForFase || !AppState.hasUnsavedChanges;
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -315,6 +316,35 @@ function test_saveButton_disabled_for_frozen_phase_in_later_phase() {
   assert.strictEqual(disabled, true, 'Save button should be disabled when current phase is frozen in FASE_16');
 }
 
+function test_saveButton_enabled_in_pre16_even_when_liga_confirmed() {
+  resetState();
+  AppState.appConfig.faseJuego = 'FASE_PRE16';
+  AppState.matches = [
+    { id: 1, ronda: 1, fase: 'liga' },
+    { id: 2, ronda: 1, fase: '16' },
+  ];
+  AppState.predictionsConfirmed = true; // liga confirmada en PRETEMPORADA
+  AppState.hasUnsavedChanges = true;
+
+  // PRE16: fase '16' no está congelada y la confirmación de liga no debe bloquear el guardado de 16avos
+  const disabled = shouldSaveButtonBeDisabled();
+  assert.strictEqual(disabled, false, 'Save button should be enabled in PRE16 even when predictionsConfirmed=true');
+}
+
+function test_saveButton_disabled_in_liga_when_confirmed() {
+  resetState();
+  AppState.appConfig.faseJuego = 'FASE_PRETEMPORADA';
+  AppState.matches = [
+    { id: 1, ronda: 1, fase: 'liga' },
+  ];
+  AppState.predictionsConfirmed = true; // liga confirmada
+  AppState.hasUnsavedChanges = true;
+
+  // En fase liga, una vez confirmada, el guardado debe estar bloqueado
+  const disabled = shouldSaveButtonBeDisabled();
+  assert.strictEqual(disabled, true, 'Save button should be disabled for confirmed liga phase');
+}
+
 // ══════════════════════════════════════════════════════════════
 // Run tests (RED phase - these will fail until implementation)
 // ══════════════════════════════════════════════════════════════
@@ -337,6 +367,8 @@ const tests = [
   test_saveButton_disabled_when_no_unsaved_changes,
   test_saveButton_respects_current_phase_fase,
   test_saveButton_disabled_for_frozen_phase_in_later_phase,
+  test_saveButton_enabled_in_pre16_even_when_liga_confirmed,
+  test_saveButton_disabled_in_liga_when_confirmed,
 ];
 
 let passed = 0;

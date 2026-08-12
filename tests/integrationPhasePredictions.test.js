@@ -87,7 +87,8 @@ function countPredictedInRound(round) {
 
 function shouldSaveButtonBeDisabled() {
   const { fase } = getMatchesForCurrentPhase();
-  return isPhaseFrozen(fase) || !AppState.hasUnsavedChanges;
+  const confirmedForFase = AppState.predictionsConfirmed && fase === 'liga';
+  return isPhaseFrozen(fase) || confirmedForFase || !AppState.hasUnsavedChanges;
 }
 
 function buildMatchFromCalendar(entry) {
@@ -209,6 +210,25 @@ function test_pre16_save_button_enabled_with_changes() {
 
   const disabled = shouldSaveButtonBeDisabled();
   assert.strictEqual(disabled, false, 'Save button should be enabled in PRE16');
+}
+
+function test_pre16_save_button_enabled_even_when_liga_confirmed() {
+  resetState();
+  AppState.appConfig.faseJuego = 'FASE_PRE16';
+  AppState.predictionsConfirmed = true; // liga confirmada en PRETEMPORADA
+  AppState.hasUnsavedChanges = true;
+
+  const disabled = shouldSaveButtonBeDisabled();
+  assert.strictEqual(disabled, false, 'Save button should be enabled in PRE16 even when liga confirmed');
+}
+
+function test_pre16_save_button_disabled_when_no_changes() {
+  resetState();
+  AppState.appConfig.faseJuego = 'FASE_PRE16';
+  AppState.hasUnsavedChanges = false;
+
+  const disabled = shouldSaveButtonBeDisabled();
+  assert.strictEqual(disabled, true, 'Save button should be disabled in PRE16 without changes');
 }
 
 function test_pre16_liga_matches_not_shown() {
@@ -411,6 +431,8 @@ const tests = [
   test_pre16_shows_16_round_of_16_matches,
   test_pre16_can_edit_predictions,
   test_pre16_save_button_enabled_with_changes,
+  test_pre16_save_button_enabled_even_when_liga_confirmed,
+  test_pre16_save_button_disabled_when_no_changes,
   test_pre16_liga_matches_not_shown,
   // Step 4: FASE_16
   test_fase16_shows_16_round_of_16_matches,

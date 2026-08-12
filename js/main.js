@@ -314,12 +314,12 @@ async function fetchPredictionsFromBackend() {
     const data = await res.json();
     if (data.ok && data.predictions) {
       AppState.scorePredictions = data.predictions;
+      localStorage.setItem('porra_ucl_scores', JSON.stringify(AppState.scorePredictions));
     }
   } catch (e) {
     console.error('Error cargando predicciones del backend:', e);
   }
   AppState.hasUnsavedChanges = false;
-  localStorage.removeItem('porra_ucl_scores');
 }
 
 /** Guarda predicciones en el backend */
@@ -1796,6 +1796,16 @@ function setupAuthFlow() {
 
   document.getElementById('btn-complete-register')?.addEventListener('click', completeProfile);
 
+  // Ocultar registro si la fase no es PRETEMPORADA
+  const fase = getFaseJuego();
+  if (fase !== 'FASE_PRETEMPORADA') {
+    if (toggleBtn) toggleBtn.style.display = 'none';
+    AppState.isRegisterMode = false;
+    formTitle.textContent = 'Iniciar Sesión';
+    submitBtn.textContent = 'Entrar';
+    invitationGroup.style.display = 'none';
+  }
+
   // Capturar código de invitación de URL
   const urlParams = new URLSearchParams(window.location.search);
   const codeFromUrl = urlParams.get('invitation');
@@ -1953,10 +1963,36 @@ function showAuthError(msg, el) {
 // ============================================================
 // ENTRAR A LA APP (tras login/registro)
 // ============================================================
+
+/** Refresca el perfil del usuario desde el backend y sincroniza localStorage */
+async function refreshUserProfile() {
+  const token = AppState.sessionToken || localStorage.getItem('session_token');
+  if (!token || !AppState.currentUser) return;
+  try {
+    const res = await fetchWithPhase(`${API_BASE}/api/auth/profile`, { headers: { 'Authorization': `Bearer ${token}` } });
+    const data = await res.json();
+    if (data.ok) {
+      const updatedUser = {
+        ...AppState.currentUser,
+        avatar: data.avatar ?? AppState.currentUser.avatar,
+        isAdmin: data.isAdmin === true,
+        predictionsConfirmed: data.predictionsConfirmed === true,
+      };
+      AppState.currentUser = updatedUser;
+      AppState.predictionsConfirmed = updatedUser.predictionsConfirmed;
+      localStorage.setItem('porra_ucl_user', JSON.stringify(updatedUser));
+      updateUserHeader();
+    }
+  } catch (e) {
+    console.error('Error refrescando perfil:', e);
+  }
+}
+
 async function enterApp() {
   const overlay = document.getElementById('auth-overlay');
   if (overlay) overlay.style.display = 'none';
 
+  await refreshUserProfile();
   updateUserHeader();
   setupHeaderClick();
   fetchPlayers();
@@ -2598,6 +2634,31 @@ function forceNavigateToTab(tabName) {
   if (tabName === 'pronosticos') renderPronosticosTab();
   if (tabName === 'plantilla') renderPlantillaTab();
 }
+
+function getFaseLabel(fase) {
+  const labels = {
+    'FASE_PRE16': '16avos',
+    'FASE_PRE8': 'octavos',
+    'FASE_PRE4': 'cuartos',
+    'FASE_PRESEMIS': 'semifinales',
+    'FASE_PREFINAL': 'final'
+  };
+  return labels[fase] || fase;
+}
+
+/** Cuenta cuántos equipos están colocados en el cuadro de eliminatorias (máx 24) */
+function countFinalPredictions() {
+  const fp = AppState.finalPredictions;
+  if (!fp) return 0;
+  let count = 0;
+  if (fp.champion) count++;
+  if (fp.runnerUp) count++;
+  for (const key of ['semiFinalists', 'quarterFinalists', 'roundOf16', 'roundOf32']) {
+    if (Array.isArray(fp[key])) count += fp[key].filter(Boolean).length;
+  }
+  return count;
+}
+
 function renderInicioTab() {
   const container = document.getElementById('inicio-container');
   if (!container || !AppState.currentUser) return;
@@ -2657,26 +2718,66 @@ function renderInicioTab() {
 
     ${faseHtml}
 
-    ${pending > 0 ? `
-      <div class="inicio-card inicio-pending" onclick="navigateToTab('pronosticos')">
-        <div class="inicio-card-icon">⚽</div>
-        <div class="inicio-card-content">
-          <div class="inicio-card-title">${pending} partidos pendientes</div>
-          <div class="inicio-card-desc">Te quedan ${pending} de ${totalMatches} partidos por pronosticar.</div>
-        </div>
-        <div class="inicio-card-arrow">→</div>
-      </div>
-    ` : `
-      <div class="inicio-card inicio-done">
-        <div class="inicio-card-icon">✅</div>
-        <div class="inicio-card-content">
-          <div class="inicio-card-title">Todos pronosticados</div>
-          <div class="inicio-card-desc">Ya has predicho los ${totalMatches} partidos. ¡Buena suerte!</div>
-        </div>
-      </div>
-    `}
+    ${(() => {
+      const isPreFase = fase.startsWith('FASE_PRE');
+      const isPretemporada = fase === 'FASE_PRETEMPORADA';
+      
+      if (isPretemporada) {
+        if (pending > 0) {
+          return `
+            <div class="inicio-card inicio-pending" onclick="navigateToTab('pronosticos')">
+              <div class="inicio-card-icon">⚽</div>
+              <div class="inicio-card-content">
+                <div class="inicio-card-title">${pending} partidos pendientes</div>
+                <div class="inicio-card-desc">Te quedan ${pending} de ${totalMatches} partidos por pronosticar.</div>
+              </div>
+              <div class="inicio-card-arrow">→</div>
+            </div>
+          `;
+        } else {
+          return `
+            <div class="inicio-card inicio-done">
+              <div class="inicio-card-icon">✅</div>
+              <div class="inicio-card-content">
+                <div class="inicio-card-title">Todos pronosticados</div>
+                <div class="inicio-card-desc">Ya has predicho los ${totalMatches} partidos. ¡Buena suerte!</div>
+              </div>
+            </div>
+          `;
+        }
+      } else if (isPreFase) {
+        const { matches: phaseMatches } = getMatchesForCurrentPhase();
+        const phasePredicted = countPredictedInPhase(phaseMatches);
+        const phasePending = phaseMatches.length - phasePredicted;
+        const faseLabel = getFaseLabel(fase);
+        
+        if (phasePending > 0) {
+          return `
+            <div class="inicio-card inicio-pending" onclick="navigateToTab('pronosticos')">
+              <div class="inicio-card-icon">📝</div>
+              <div class="inicio-card-content">
+                <div class="inicio-card-title">Pronósticos de ${faseLabel} pendientes</div>
+                <div class="inicio-card-desc">Te quedan ${phasePending} partidos de ${faseLabel} por pronosticar.</div>
+              </div>
+              <div class="inicio-card-arrow">→</div>
+            </div>
+          `;
+        } else {
+          return `
+            <div class="inicio-card inicio-done">
+              <div class="inicio-card-icon">✅</div>
+              <div class="inicio-card-content">
+                <div class="inicio-card-title">Fase de ${faseLabel} completada</div>
+                <div class="inicio-card-desc">Has pronosticado todos los partidos de ${faseLabel}.</div>
+              </div>
+            </div>
+          `;
+        }
+      }
+      return '';
+    })()}
 
-    ${squadPending > 0 ? `
+    ${fase === 'FASE_PRETEMPORADA' ? (squadPending > 0 ? `
       <div class="inicio-card inicio-pending" onclick="navigateToTab('plantilla')">
         <div class="inicio-card-icon">🌟</div>
         <div class="inicio-card-content">
@@ -2693,7 +2794,34 @@ function renderInicioTab() {
           <div class="inicio-card-desc">Ya tienes los ${squadSize} jugadores seleccionados.</div>
         </div>
       </div>
-    `}
+    `) : ''}
+
+    ${(fase === 'FASE_PRETEMPORADA' && AppState.predictionsConfirmed) ? (() => {
+      const finalCount = countFinalPredictions();
+      const finalTotal = 24;
+      const finalPending = finalTotal - finalCount;
+      if (finalPending > 0) {
+        return `
+          <div class="inicio-card inicio-pending" onclick="navigateToTab('final-predictions')">
+            <div class="inicio-card-icon">🏆</div>
+            <div class="inicio-card-content">
+              <div class="inicio-card-title">Eliminatorias incompletas</div>
+              <div class="inicio-card-desc">Te quedan ${finalPending} de ${finalTotal} equipos por colocar en el cuadro final.</div>
+            </div>
+            <div class="inicio-card-arrow">→</div>
+          </div>
+        `;
+      }
+      return `
+        <div class="inicio-card inicio-done">
+          <div class="inicio-card-icon">✅</div>
+          <div class="inicio-card-content">
+            <div class="inicio-card-title">Eliminatorias completas</div>
+            <div class="inicio-card-desc">Has colocado los ${finalTotal} equipos del cuadro final.</div>
+          </div>
+        </div>
+      `;
+    })() : ''}
   `;
 }
 
@@ -2758,9 +2886,17 @@ async function loadAvatars() {
 // ============================================================
 async function fetchPlayers() {
   try {
-    const res = await fetchWithPhase(`${API_BASE}/api/players`);
+    const res = await fetchWithPhase(`${API_BASE}/api/players?t=${Date.now()}`);
     const data = await res.json();
-    if (data.ok) AppState.players = data.players || [];
+    if (data.ok) {
+      AppState.players = data.players || [];
+      const mine = (data.players || []).find(p => p.name === AppState.currentUser?.name);
+      if (mine && AppState.currentUser) {
+        AppState.currentUser.points = mine.points;
+        AppState.currentUser.hits = mine.hits;
+        localStorage.setItem('porra_ucl_user', JSON.stringify(AppState.currentUser));
+      }
+    }
   } catch (e) {
     AppState.players = [];
   }
@@ -3059,7 +3195,7 @@ function renderPronosticosTab() {
       ${frozen ? '<div style="background:rgba(239,68,68,0.15);color:#ef4444;padding:8px 12px;border-radius:8px;margin-bottom:8px;font-size:13px;text-align:center;">🔒 Pronósticos bloqueados — esta fase ha comenzado</div>' : ''}
       <div class="pronosticos-actions-row">
         <button class="save-predictions-btn" id="btn-save-predictions" ${frozen || confirmedForFase ? 'disabled' : ''}>💾 Guardar</button>
-        <button class="confirm-predictions-btn" id="btn-confirm-predictions" ${frozen || confirmedForFase || predicted < total ? 'disabled' : ''}>✅ Confirmar</button>
+        ${!confirmedForFase ? `<button class="confirm-predictions-btn" id="btn-confirm-predictions" ${frozen || predicted < total ? 'disabled' : ''}>✅ Confirmar</button>` : ''}
         <button class="standings-btn" id="btn-show-standings" onclick="showPredictedStandings()">📊 Clasificación</button>
         ${AppState.predictionsConfirmed ? '<button class="standings-btn" id="btn-show-final" onclick="navigateToTab(\'final-predictions\')" style="background: linear-gradient(135deg, #8B5CF6, #EC4899);">🏆 Eliminatorias</button>' : ''}
       </div>
@@ -3254,6 +3390,9 @@ function handleGoalButtonClick(e) {
   // Actualizar boton guardar
   updateSaveButton();
 
+  // Actualizar boton confirmar
+  updateConfirmButton();
+
   // Actualizar contadores de ronda y global
   updateProgressCounts();
 }
@@ -3317,6 +3456,7 @@ async function onSavePredictionsClick() {
   const ok = await savePredictionsToBackend();
   btn.textContent = 'Guardar en servidor';
   updateSaveButton();
+  updateConfirmButton();
   if (ok) {
     renderRoundMatches();
     updateProgressCounts();
@@ -3333,6 +3473,19 @@ function updateSaveButton() {
     btn.style.pointerEvents = '';
     btn.style.opacity = '';
   }
+}
+
+/** Actualiza el estado del botón Confirmar según los pronósticos completos de la fase */
+function updateConfirmButton() {
+  const btn = document.getElementById('btn-confirm-predictions');
+  if (!btn) return;
+  const { matches: phaseMatches, fase } = getMatchesForCurrentPhase();
+  const frozen = isPhaseFrozen(fase);
+  const total = phaseMatches.length;
+  const predicted = countPredictedInPhase(phaseMatches);
+  btn.disabled = frozen || predicted < total;
+  btn.style.pointerEvents = '';
+  btn.style.opacity = '';
 }
 
 async function confirmPredictions() {
@@ -4774,7 +4927,7 @@ async function renderFinalPredictionsTab() {
   const container = document.getElementById('final-predictions-container');
   if (!container) return;
 
-  const frozen = AppState.predictionsConfirmed;
+  const frozen = !(AppState.predictionsConfirmed && getFaseJuego() === 'FASE_PRETEMPORADA');
   
   const standings = calculatePredictedStandings();
   
