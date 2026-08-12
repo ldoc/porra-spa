@@ -1002,6 +1002,21 @@ function showUserProfileModal(username) {
   });
 
   const tabContent = overlay.querySelector('#profile-tab-content');
+  // Acordeón de jornadas en tab Pronósticos: una abierta a la vez
+  tabContent.addEventListener('click', (e) => {
+    const header = e.target.closest('.breakdown-journey-header');
+    if (!header) return;
+    const journey = header.dataset.journey;
+    AppState.openProfileJourney = (AppState.openProfileJourney === journey) ? null : journey;
+    tabContent.querySelectorAll('.breakdown-journey').forEach(section => {
+      const h = section.querySelector('.breakdown-journey-header');
+      const body = section.querySelector('.breakdown-journey-body');
+      const isOpen = h.dataset.journey === AppState.openProfileJourney;
+      h.classList.toggle('active', isOpen);
+      body.classList.toggle('accordion-open', isOpen);
+      body.classList.toggle('accordion-closed', !isOpen);
+    });
+  });
   const tabs = overlay.querySelectorAll('.profile-tab');
 
   function activateTab(tabName) {
