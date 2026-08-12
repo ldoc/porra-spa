@@ -1460,6 +1460,7 @@ async function renderResultadosTab() {
     <div class="resultados-tabs">
       <button class="resultados-tab ${currentTab === 'jornadas' ? 'active' : ''}" data-tab="jornadas">Jornadas</button>
       <button class="resultados-tab ${currentTab === 'clasificacion' ? 'active' : ''}" data-tab="clasificacion">Clasificación Real</button>
+      <button class="resultados-tab ${currentTab === 'eliminatorias' ? 'active' : ''}" data-tab="eliminatorias">Eliminatorias</button>
     </div>
   `;
   let scrollHtml = '';
@@ -1467,6 +1468,9 @@ async function renderResultadosTab() {
   if (currentTab === 'clasificacion') {
     // Mostrar clasificación real
     scrollHtml = renderRealStandingsTable();
+  } else if (currentTab === 'eliminatorias') {
+    // Mostrar equipos eliminados por ronda
+    scrollHtml = renderEliminatoriasView();
   } else {
     // Mostrar jornadas - incluir todas las fases con resultados
     const faseOrder = ['liga', '16', '8', '4', 'semis', 'final'];
@@ -1609,6 +1613,77 @@ async function renderResultadosTab() {
       renderResultadosTab();
     });
   });
+}
+
+/** Renderiza la vista de eliminatorias resueltas (read-only) */
+function renderEliminatoriasView() {
+  const result = computeEliminatorias(AppState.matches, AppState.matchStats);
+  const totalFases = 5;
+  const resueltas = result.rondasResueltas.length;
+
+  if (resueltas === 0) {
+    return `
+      <div style="padding: 24px; text-align: center; color: var(--text-muted);">
+        Aún no hay eliminatorias resueltas.
+      </div>
+    `;
+  }
+
+  const zonaConfig = [
+    { fase: '16', title: 'Eliminados en dieciseisavos', emoji: '📋', zoneId: 'roundOf32', max: 8 },
+    { fase: '8', title: 'Eliminados en octavos', emoji: '⚡', zoneId: 'roundOf16', max: 8 },
+    { fase: '4', title: 'Eliminados en cuartos', emoji: '🏅', zoneId: 'quarterFinalists', max: 4 },
+    { fase: 'semis', title: 'Eliminados en semifinales', emoji: '⚔️', zoneId: 'semiFinalists', max: 2 },
+  ];
+
+  let html = `
+    <div class="eliminatorias-progress">
+      <span class="eliminatorias-progress-text">Eliminatorias resueltas: <strong>${resueltas}/${totalFases}</strong></span>
+      <div class="eliminatorias-progress-bar">
+        <div class="eliminatorias-progress-fill" style="width: ${(resueltas / totalFases) * 100}%"></div>
+      </div>
+    </div>
+    <div class="eliminatorias-view">
+  `;
+
+  for (const cfg of zonaConfig) {
+    if (!result.rondasResueltas.includes(cfg.fase)) continue;
+    html += renderElimZona(cfg.title, cfg.emoji, cfg.zoneId, result.zonas[cfg.fase] || [], cfg.max);
+  }
+
+  if (result.rondasResueltas.includes('final')) {
+    html += renderElimZona('Subcampeón', '🥈', 'runnerUp', result.final.subcampeon ? [result.final.subcampeon] : [], 1);
+    html += renderElimZona('Campeón', '🏆', 'champion', result.final.campeon ? [result.final.campeon] : [], 1);
+  }
+
+  html += '</div>';
+  return html;
+}
+
+/** Renderiza una zona con los equipos eliminados (read-only) */
+function renderElimZona(title, emoji, zoneId, teamIds, max) {
+  const slots = [];
+  for (let i = 0; i < max; i++) {
+    const teamId = teamIds[i];
+    if (teamId) {
+      const ext = AppState.teamsMap[teamId]?.ext || 'png';
+      slots.push(`
+        <div class="drop-slot filled">
+          <img class="drop-slot-img" src="data/imgEquipos/${teamId}.${ext}" alt="${teamName(teamId)}" onerror="this.src='data/imgEquipos/default.png'">
+          <span class="drop-slot-name">${teamName(teamId)}</span>
+        </div>
+      `);
+    }
+  }
+  return `
+    <div class="drop-zone" data-zone="${zoneId}">
+      <div class="drop-zone-header">
+        <span class="drop-zone-title"><span class="round-emoji">${emoji}</span>${title}</span>
+        <span class="drop-zone-count complete">${teamIds.length}/${max}</span>
+      </div>
+      <div class="drop-zone-slots">${slots.join('')}</div>
+    </div>
+  `;
 }
 
 /** Renderiza la tabla de clasificación real en la pestaña de resultados */
