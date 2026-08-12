@@ -1652,8 +1652,10 @@ function renderEliminatoriasView() {
   }
 
   if (result.rondasResueltas.includes('final')) {
+    html += '<div class="eliminatorias-final-row">';
     html += renderElimZona('Subcampeón', '🥈', 'runnerUp', result.final.subcampeon ? [result.final.subcampeon] : [], 1);
     html += renderElimZona('Campeón', '🏆', 'champion', result.final.campeon ? [result.final.campeon] : [], 1);
+    html += '</div>';
   }
 
   html += '</div>';
