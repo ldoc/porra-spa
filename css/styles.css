@@ -4510,3 +4510,18 @@ html, body {
   flex: 1;
   min-width: 0;
 }
+
+/* Cajas fijas con nombre en varias líneas (vista read-only) */
+.eliminatorias-view .drop-slot {
+  min-width: 0;
+}
+
+.eliminatorias-view .drop-slot-name {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+}
