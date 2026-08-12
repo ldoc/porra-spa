@@ -148,3 +148,6 @@ extract/
 # Local dev server (replaces python -m http.server)
 server.mjs
 
+
+# Superpowers (brainstorm mockups, plans, specs workspace)
+.superpowers/
