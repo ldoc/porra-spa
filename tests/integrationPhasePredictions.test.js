@@ -390,13 +390,25 @@ function test_predictions_from_previous_phase_remain_frozen() {
 // ══════════════════════════════════════════════════════════════
 
 function test_calendar_has_correct_structure() {
-  assert.strictEqual(calendarData.length, 160, 'Calendar should have 160 total matches');
+  assert.strictEqual(calendarData.length, 189, 'Calendar should have 189 total matches');
 
   const ligaMatches = calendarData.filter(m => m.fase === 'liga');
   assert.strictEqual(ligaMatches.length, 144, 'Should have 144 liga matches');
 
   const r16Matches = calendarData.filter(m => m.fase === '16');
   assert.strictEqual(r16Matches.length, 16, 'Should have 16 round of 16 matches');
+
+  const r8Matches = calendarData.filter(m => m.fase === '8');
+  assert.strictEqual(r8Matches.length, 16, 'Should have 16 round of 8 matches');
+
+  const qfMatches = calendarData.filter(m => m.fase === '4');
+  assert.strictEqual(qfMatches.length, 8, 'Should have 8 quarter final matches');
+
+  const sfMatches = calendarData.filter(m => m.fase === 'semis');
+  assert.strictEqual(sfMatches.length, 4, 'Should have 4 semi final matches');
+
+  const finalMatches = calendarData.filter(m => m.fase === 'final');
+  assert.strictEqual(finalMatches.length, 1, 'Should have 1 final match');
 }
 
 function test_buildMatchFromCalendar_preserves_fase() {
@@ -410,7 +422,7 @@ function test_buildMatchFromCalendar_preserves_fase() {
 function test_all_matches_have_fase_field() {
   for (const m of calendarData) {
     assert.ok(m.fase, `Match ${m.id} should have a fase field`);
-    assert.ok(['liga', '16'].includes(m.fase), `Match ${m.id} fase should be 'liga' or '16'`);
+    assert.ok(['liga', '16', '8', '4', 'semis', 'final'].includes(m.fase), `Match ${m.id} fase should be 'liga', '16', '8', '4', 'semis' or 'final'`);
   }
 }
 

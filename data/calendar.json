@@ -2238,5 +2238,411 @@
       "id": 3006,
       "name": "Benfica"
     }
+  },
+  {
+    "ronda": 1,
+    "fase": "8",
+    "id": 15631351,
+    "fecha": 1773164700,
+    "equipoLocal": {
+      "id": 3061,
+      "name": "Galatasaray"
+    },
+    "equipoVisitante": {
+      "id": 44,
+      "name": "Liverpool FC"
+    }
+  },
+  {
+    "ronda": 1,
+    "fase": "8",
+    "id": 15631361,
+    "fecha": 1773172800,
+    "equipoLocal": {
+      "id": 2686,
+      "name": "Atalanta"
+    },
+    "equipoVisitante": {
+      "id": 2672,
+      "name": "FC Bayern München"
+    }
+  },
+  {
+    "ronda": 1,
+    "fase": "8",
+    "id": 15631356,
+    "fecha": 1773172800,
+    "equipoLocal": {
+      "id": 2836,
+      "name": "Atlético Madrid"
+    },
+    "equipoVisitante": {
+      "id": 33,
+      "name": "Tottenham Hotspur"
+    }
+  },
+  {
+    "ronda": 1,
+    "fase": "8",
+    "id": 15631347,
+    "fecha": 1773172800,
+    "equipoLocal": {
+      "id": 39,
+      "name": "Newcastle United"
+    },
+    "equipoVisitante": {
+      "id": 2817,
+      "name": "FC Barcelona"
+    }
+  },
+  {
+    "ronda": 1,
+    "fase": "8",
+    "id": 15631363,
+    "fecha": 1773251100,
+    "equipoLocal": {
+      "id": 2681,
+      "name": "Bayer 04 Leverkusen"
+    },
+    "equipoVisitante": {
+      "id": 42,
+      "name": "Arsenal"
+    }
+  },
+  {
+    "ronda": 1,
+    "fase": "8",
+    "id": 15631335,
+    "fecha": 1773259200,
+    "equipoLocal": {
+      "id": 656,
+      "name": "Bodø/Glimt"
+    },
+    "equipoVisitante": {
+      "id": 3001,
+      "name": "Sporting CP"
+    }
+  },
+  {
+    "ronda": 1,
+    "fase": "8",
+    "id": 15631341,
+    "fecha": 1773259200,
+    "equipoLocal": {
+      "id": 1644,
+      "name": "Paris Saint-Germain"
+    },
+    "equipoVisitante": {
+      "id": 38,
+      "name": "Chelsea"
+    }
+  },
+  {
+    "ronda": 1,
+    "fase": "8",
+    "id": 15631329,
+    "fecha": 1773259200,
+    "equipoLocal": {
+      "id": 2829,
+      "name": "Real Madrid"
+    },
+    "equipoVisitante": {
+      "id": 17,
+      "name": "Manchester City"
+    }
+  },
+  {
+    "ronda": 1,
+    "fase": "8",
+    "id": 15631366,
+    "fecha": 1773769500,
+    "equipoLocal": {
+      "id": 3001,
+      "name": "Sporting CP"
+    },
+    "equipoVisitante": {
+      "id": 656,
+      "name": "Bodø/Glimt"
+    }
+  },
+  {
+    "ronda": 1,
+    "fase": "8",
+    "id": 15631372,
+    "fecha": 1773777600,
+    "equipoLocal": {
+      "id": 42,
+      "name": "Arsenal"
+    },
+    "equipoVisitante": {
+      "id": 2681,
+      "name": "Bayer 04 Leverkusen"
+    }
+  },
+  {
+    "ronda": 1,
+    "fase": "8",
+    "id": 15631367,
+    "fecha": 1773777600,
+    "equipoLocal": {
+      "id": 38,
+      "name": "Chelsea"
+    },
+    "equipoVisitante": {
+      "id": 1644,
+      "name": "Paris Saint-Germain"
+    }
+  },
+  {
+    "ronda": 1,
+    "fase": "8",
+    "id": 15631365,
+    "fecha": 1773777600,
+    "equipoLocal": {
+      "id": 17,
+      "name": "Manchester City"
+    },
+    "equipoVisitante": {
+      "id": 2829,
+      "name": "Real Madrid"
+    }
+  },
+  {
+    "ronda": 1,
+    "fase": "8",
+    "id": 15631368,
+    "fecha": 1773855900,
+    "equipoLocal": {
+      "id": 2817,
+      "name": "FC Barcelona"
+    },
+    "equipoVisitante": {
+      "id": 39,
+      "name": "Newcastle United"
+    }
+  },
+  {
+    "ronda": 1,
+    "fase": "8",
+    "id": 15631371,
+    "fecha": 1773864000,
+    "equipoLocal": {
+      "id": 2672,
+      "name": "FC Bayern München"
+    },
+    "equipoVisitante": {
+      "id": 2686,
+      "name": "Atalanta"
+    }
+  },
+  {
+    "ronda": 1,
+    "fase": "8",
+    "id": 15631369,
+    "fecha": 1773864000,
+    "equipoLocal": {
+      "id": 44,
+      "name": "Liverpool FC"
+    },
+    "equipoVisitante": {
+      "id": 3061,
+      "name": "Galatasaray"
+    }
+  },
+  {
+    "ronda": 1,
+    "fase": "8",
+    "id": 15631370,
+    "fecha": 1773864000,
+    "equipoLocal": {
+      "id": 33,
+      "name": "Tottenham Hotspur"
+    },
+    "equipoVisitante": {
+      "id": 2836,
+      "name": "Atlético Madrid"
+    }
+  },
+  {
+    "ronda": 1,
+    "fase": "4",
+    "id": 15632084,
+    "fecha": 1775588400,
+    "equipoLocal": {
+      "id": 2829,
+      "name": "Real Madrid"
+    },
+    "equipoVisitante": {
+      "id": 2672,
+      "name": "FC Bayern München"
+    }
+  },
+  {
+    "ronda": 1,
+    "fase": "4",
+    "id": 15632086,
+    "fecha": 1775588400,
+    "equipoLocal": {
+      "id": 3001,
+      "name": "Sporting CP"
+    },
+    "equipoVisitante": {
+      "id": 42,
+      "name": "Arsenal"
+    }
+  },
+  {
+    "ronda": 1,
+    "fase": "4",
+    "id": 15632085,
+    "fecha": 1775674800,
+    "equipoLocal": {
+      "id": 2817,
+      "name": "FC Barcelona"
+    },
+    "equipoVisitante": {
+      "id": 2836,
+      "name": "Atlético Madrid"
+    }
+  },
+  {
+    "ronda": 1,
+    "fase": "4",
+    "id": 15632083,
+    "fecha": 1775674800,
+    "equipoLocal": {
+      "id": 1644,
+      "name": "Paris Saint-Germain"
+    },
+    "equipoVisitante": {
+      "id": 44,
+      "name": "Liverpool FC"
+    }
+  },
+  {
+    "ronda": 1,
+    "fase": "4",
+    "id": 15632089,
+    "fecha": 1776193200,
+    "equipoLocal": {
+      "id": 2836,
+      "name": "Atlético Madrid"
+    },
+    "equipoVisitante": {
+      "id": 2817,
+      "name": "FC Barcelona"
+    }
+  },
+  {
+    "ronda": 1,
+    "fase": "4",
+    "id": 15632087,
+    "fecha": 1776193200,
+    "equipoLocal": {
+      "id": 44,
+      "name": "Liverpool FC"
+    },
+    "equipoVisitante": {
+      "id": 1644,
+      "name": "Paris Saint-Germain"
+    }
+  },
+  {
+    "ronda": 1,
+    "fase": "4",
+    "id": 15632631,
+    "fecha": 1776279600,
+    "equipoLocal": {
+      "id": 42,
+      "name": "Arsenal"
+    },
+    "equipoVisitante": {
+      "id": 3001,
+      "name": "Sporting CP"
+    }
+  },
+  {
+    "ronda": 1,
+    "fase": "4",
+    "id": 15632088,
+    "fecha": 1776279600,
+    "equipoLocal": {
+      "id": 2672,
+      "name": "FC Bayern München"
+    },
+    "equipoVisitante": {
+      "id": 2829,
+      "name": "Real Madrid"
+    }
+  },
+  {
+    "ronda": 1,
+    "fase": "semis",
+    "id": 15632632,
+    "fecha": 1777402800,
+    "equipoLocal": {
+      "id": 1644,
+      "name": "Paris Saint-Germain"
+    },
+    "equipoVisitante": {
+      "id": 2672,
+      "name": "FC Bayern München"
+    }
+  },
+  {
+    "ronda": 1,
+    "fase": "semis",
+    "id": 15632633,
+    "fecha": 1777489200,
+    "equipoLocal": {
+      "id": 2836,
+      "name": "Atlético Madrid"
+    },
+    "equipoVisitante": {
+      "id": 42,
+      "name": "Arsenal"
+    }
+  },
+  {
+    "ronda": 1,
+    "fase": "semis",
+    "id": 15632635,
+    "fecha": 1778007600,
+    "equipoLocal": {
+      "id": 42,
+      "name": "Arsenal"
+    },
+    "equipoVisitante": {
+      "id": 2836,
+      "name": "Atlético Madrid"
+    }
+  },
+  {
+    "ronda": 1,
+    "fase": "semis",
+    "id": 15632634,
+    "fecha": 1778094000,
+    "equipoLocal": {
+      "id": 2672,
+      "name": "FC Bayern München"
+    },
+    "equipoVisitante": {
+      "id": 1644,
+      "name": "Paris Saint-Germain"
+    }
+  },
+  {
+    "ronda": 1,
+    "fase": "final",
+    "id": 15632636,
+    "fecha": 1780156800,
+    "equipoLocal": {
+      "id": 1644,
+      "name": "Paris Saint-Germain"
+    },
+    "equipoVisitante": {
+      "id": 42,
+      "name": "Arsenal"
+    }
   }
 ]
