@@ -417,8 +417,8 @@ La aplicación utiliza una estructura de navegación con:
 
 **Flujo de usuario:**
 1. Tras registro/login → entra directamente a pestaña Inicio
-2. Los pronósticos y plantilla se guardan localmente en `localStorage`
-3. Los datos se persisten automáticamente al modificar marcadores o selección
+2. La plantilla se guarda localmente en `localStorage` (hasta que el usuario pulsa Guardar)
+3. Los pronósticos se mantienen en memoria y se sincronizan con el backend al guardar
 4. Desde Inicio se puede navegar a Pronósticos o Plantilla pulsando en las tarjetas de aviso
 5. Desde Pronósticos se puede acceder a Eliminatorias pulsando el botón "🏆 Eliminatorias" (solo visible tras confirmar los 144 pronósticos)
 

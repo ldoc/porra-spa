@@ -282,9 +282,6 @@ async function loadInitialData() {
       };
     }
 
-    // Recuperar predicciones del backend (localStorage se limpia al cargar)
-    localStorage.removeItem('porra_ucl_scores');
-
     const savedSquad = localStorage.getItem('porra_ucl_squad');
     if (savedSquad) {
       const parsed = JSON.parse(savedSquad);
@@ -315,7 +312,6 @@ async function fetchPredictionsFromBackend() {
     const data = await res.json();
     if (data.ok && data.predictions) {
       AppState.scorePredictions = data.predictions;
-      localStorage.setItem('porra_ucl_scores', JSON.stringify(AppState.scorePredictions));
     }
   } catch (e) {
     console.error('Error cargando predicciones del backend:', e);
@@ -338,7 +334,6 @@ async function savePredictionsToBackend() {
     const data = await res.json();
     if (data.ok) {
       AppState.hasUnsavedChanges = false;
-      localStorage.removeItem('porra_ucl_scores');
       // Invalidar caché para que se refresquen los datos
       AppState._allPredictionsTime = 0;
       AppState._matchStatsTime = 0;
@@ -2532,7 +2527,6 @@ function showUnsavedChangesModal(targetTab) {
   overlay.querySelector('#modal-discard-exit').addEventListener('click', () => {
     overlay.remove();
     AppState.hasUnsavedChanges = false;
-    localStorage.removeItem('porra_ucl_scores');
     forceNavigateToTab(targetTab);
   });
 
@@ -2682,7 +2676,6 @@ function showLogoutWithUnsavedModal() {
     overlay.remove();
     localStorage.removeItem('porra_ucl_user');
     localStorage.removeItem('session_token');
-    localStorage.removeItem('porra_ucl_scores');
     AppState.currentUser = null;
     AppState.sessionToken = null;
     AppState.hasUnsavedChanges = false;
@@ -3087,7 +3080,6 @@ function showProfileModal() {
     }
     localStorage.removeItem('porra_ucl_user');
     localStorage.removeItem('session_token');
-    localStorage.removeItem('porra_ucl_scores');
     AppState.currentUser = null;
     AppState.sessionToken = null;
     AppState.hasUnsavedChanges = false;
@@ -3482,8 +3474,7 @@ function handleGoalButtonClick(e) {
     card.classList.toggle('match-card-round-pending', !bothNumbers);
   }
 
-  // Guardar en localStorage y marcar cambios
-  localStorage.setItem('porra_ucl_scores', JSON.stringify(AppState.scorePredictions));
+  // Marcar cambios
   AppState.hasUnsavedChanges = true;
 
   // Actualizar boton guardar
