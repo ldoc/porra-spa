@@ -4436,7 +4436,7 @@ html, body {
 
 .eliminatorias-progress-bar {
   height: 6px;
-  background: var(--bg-input);
+  background: var(--ucl-surface);
   border-radius: var(--radius-full);
   overflow: hidden;
 }
