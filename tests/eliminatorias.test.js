@@ -1,5 +1,5 @@
 const assert = require('assert');
-const { groupTies, resolveTie, computeEliminatorias } = require('../js/eliminatorias.js');
+const { groupTies, resolveTie, computeEliminatorias, computeReachedPhases, calculateEliminatoriasPoints } = require('../js/eliminatorias.js');
 
 // ---- Helpers de test ----
 function partido(id, fase, home, away) {
@@ -130,6 +130,103 @@ function test_computeEliminatorias_final_empatada_no_resuelta() {
   assert.strictEqual(r.rondasResueltas.includes('final'), false);
 }
 
+// ---- Tests de computeReachedPhases ----
+function test_reachedPhases_eliminados_y_vivos() {
+  const matches = [
+    partido(1, '16', 100, 200), partido(2, '16', 200, 100),
+    partido(3, '16', 300, 400), partido(4, '16', 400, 300),
+    partido(5, '8', 100, 500), partido(6, '8', 500, 100),
+    partido(7, '8', 600, 700), partido(8, '8', 700, 600),
+    partido(9, '4', 100, 600), partido(10, '4', 600, 100),
+    partido(11, 'semis', 100, 800), partido(12, 'semis', 800, 100),
+    partido(13, 'final', 100, 900),
+  ];
+  const matchStats = [
+    // 16avos: eliminan 200 y 400 (100 y 300 avanzan → octavos)
+    ms(1, { 100: 2, 200: 0 }), ms(2, { 200: 1, 100: 2 }),
+    ms(3, { 300: 2, 400: 1 }), ms(4, { 400: 0, 300: 1 }),
+    // 8avos: eliminan 500 y 700 (100 y 600 avanzan → cuartos)
+    ms(5, { 100: 1, 500: 1 }), ms(6, { 500: 1, 100: 2 }),
+    ms(7, { 600: 2, 700: 1 }), ms(8, { 700: 1, 600: 2 }),
+    // Cuartos: elimina 600 (100 avanza → semis)
+    ms(9, { 100: 2, 600: 1 }), ms(10, { 600: 1, 100: 1 }),
+    // Semis: elimina 800 (100 avanza → final)
+    ms(11, { 100: 2, 800: 1 }), ms(12, { 800: 1, 100: 1 }),
+    // Final: 100 gana → campeón
+    ms(13, { 100: 2, 900: 1 }),
+  ];
+  const r = computeReachedPhases(matches, matchStats);
+  assert.strictEqual(r[100], 6);   // campeón
+  assert.strictEqual(r[900], 5);   // subcampeón
+  assert.strictEqual(r[800], 4);   // eliminado en semis
+  assert.strictEqual(r[600], 3);   // eliminado en cuartos
+  assert.strictEqual(r[500], 2);   // eliminado en octavos
+  assert.strictEqual(r[700], 2);   // eliminado en octavos
+  assert.strictEqual(r[200], 1);   // eliminado en dieciseisavos
+  assert.strictEqual(r[400], 1);   // eliminado en dieciseisavos
+  assert.strictEqual(r[300], 2);   // avanzó de 16avos y su cruce de octavos no tiene matchStats → provisional octavos
+}
+
+function test_reachedPhases_sin_resultados_rango_0() {
+  const matches = [partido(1, '16', 100, 200), partido(2, '16', 200, 100)];
+  const r = computeReachedPhases(matches, []);
+  assert.strictEqual(r[100], 1);   // vive en dieciseisavos (provisional fase mínima)
+  assert.strictEqual(r[200], 1);
+  assert.strictEqual(r[999], undefined); // equipo ajeno no aparece
+}
+
+function test_reachedPhases_final_pendiente_ambos_5() {
+  const matches = [partido(1, 'final', 100, 200)];
+  const r = computeReachedPhases(matches, []); // sin resultado
+  assert.strictEqual(r[100], 5);
+  assert.strictEqual(r[200], 5);
+}
+
+// ---- Tests de calculateEliminatoriasPoints ----
+function test_points_acierto_exacto_por_ronda() {
+  const reachedPhases = {
+    1: 6, 2: 5, 3: 4, 4: 4, 5: 3, 6: 3, 7: 3, 8: 3,
+    9: 2, 10: 2, 11: 2, 12: 2, 13: 2, 14: 2, 15: 2, 16: 2,
+    17: 1, 18: 1, 19: 1, 20: 1, 21: 1, 22: 1, 23: 1, 24: 1
+  };
+  const fp = {
+    champion: 1, runnerUp: 2,
+    semiFinalists: [3, 4], quarterFinalists: [5, 6, 7, 8],
+    roundOf16: [9, 10, 11, 12, 13, 14, 15, 16],
+    roundOf32: [17, 18, 19, 20, 21, 22, 23, 24]
+  };
+  const { totalPoints } = calculateEliminatoriasPoints(fp, reachedPhases);
+  assert.strictEqual(totalPoints, 575); // máximo
+}
+
+function test_points_regla_del_minimo() {
+  const reachedPhases = { 1: 6, 2: 1, 3: 4 };
+  // 1: pronosticado octavos (2), alcanza campeón (6) → min(2,6)=2 → 15
+  // 2: pronosticado semis (4), alcanza play-off (1) → min(4,1)=1 → 10
+  // 3: pronosticado cuartos (3), alcanza semis (4) → min(3,4)=3 → 25
+  const fp = {
+    champion: null, runnerUp: null,
+    semiFinalists: [2], quarterFinalists: [3], roundOf16: [1], roundOf32: []
+  };
+  const { totalPoints, teamDetails } = calculateEliminatoriasPoints(fp, reachedPhases);
+  assert.strictEqual(totalPoints, 50);
+  const t1 = teamDetails.find(t => t.teamId === 1);
+  assert.deepStrictEqual({ predictedRank: t1.predictedRank, reachedRank: t1.reachedRank, points: t1.points }, { predictedRank: 2, reachedRank: 6, points: 15 });
+  const t2 = teamDetails.find(t => t.teamId === 2);
+  assert.deepStrictEqual({ predictedRank: t2.predictedRank, reachedRank: t2.reachedRank, points: t2.points }, { predictedRank: 4, reachedRank: 1, points: 10 });
+  const t3 = teamDetails.find(t => t.teamId === 3);
+  assert.deepStrictEqual({ predictedRank: t3.predictedRank, reachedRank: t3.reachedRank, points: t3.points }, { predictedRank: 3, reachedRank: 4, points: 25 });
+}
+
+function test_points_sin_prediccion_y_sin_datos() {
+  assert.deepStrictEqual(calculateEliminatoriasPoints(null, {}), { totalPoints: 0, teamDetails: [] });
+  const fp = { champion: 1, runnerUp: 2, semiFinalists: [3], quarterFinalists: [], roundOf16: [], roundOf32: [] };
+  const { totalPoints, teamDetails } = calculateEliminatoriasPoints(fp, {}); // sin reachedPhases → rango 0
+  assert.strictEqual(totalPoints, 0);
+  assert.strictEqual(teamDetails.length, 3);
+  assert.strictEqual(teamDetails.every(t => t.points === 0), true);
+}
+
 // ---- Runner (mismo patrón que el resto de tests) ----
 const tests = [
   test_groupTies_agrupa_ida_vuelta,
@@ -140,6 +237,12 @@ const tests = [
   test_computeEliminatorias_rondas_completas_y_parciales,
   test_computeEliminatorias_final_resuelta,
   test_computeEliminatorias_final_empatada_no_resuelta,
+  test_reachedPhases_eliminados_y_vivos,
+  test_reachedPhases_sin_resultados_rango_0,
+  test_reachedPhases_final_pendiente_ambos_5,
+  test_points_acierto_exacto_por_ronda,
+  test_points_regla_del_minimo,
+  test_points_sin_prediccion_y_sin_datos,
 ];
 let passed = 0, failed = 0;
 for (const t of tests) {

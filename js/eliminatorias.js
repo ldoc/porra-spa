@@ -77,10 +77,102 @@
     return { zonas, final, rondasResueltas };
   }
 
+  /**
+   * Calcula el rango de fase final alcanzado por cada equipo del cuadro real.
+   * Rangos: 0=no llega, 1=dieciseisavos, 2=octavos, 3=cuartos, 4=semis,
+   * 5=final(subcampeón), 6=campeón.
+   * Provisional con fase mínima: un equipo que avanza de ronda o cuyo cruce
+   * está pendiente se queda en el rango de la fase en la que está.
+   */
+  function computeReachedPhases(matches, matchStats) {
+    const matchStatsById = new Map((matchStats || []).map(ms => [ms.eventId, ms]));
+    const reached = {};
+    const fasesDobles = ['16', '8', '4', 'semis'];
+    const rankByFase = { '16': 1, '8': 2, '4': 3, 'semis': 4 };
+
+    for (const fase of fasesDobles) {
+      const ties = groupTies((matches || []).filter(m => m.fase === fase));
+      for (const tie of ties) {
+        const { resuelto, eliminado } = resolveTie(tie, matchStatsById);
+        if (resuelto) {
+          // Eliminado en esta ronda → rango definitivo de esta fase
+          reached[eliminado] = rankByFase[fase];
+          // El ganador avanza a la siguiente fase (rango +1) de forma provisional
+          const ganador = eliminado === tie.teamA ? tie.teamB : tie.teamA;
+          if (!reached[ganador] || reached[ganador] <= rankByFase[fase]) {
+            reached[ganador] = rankByFase[fase] + 1;
+          }
+        } else {
+          // Cruce pendiente: ambos siguen vivos en esta fase (fase mínima)
+          if (!reached[tie.teamA]) reached[tie.teamA] = rankByFase[fase];
+          if (!reached[tie.teamB]) reached[tie.teamB] = rankByFase[fase];
+        }
+      }
+    }
+
+    const finalMatches = (matches || []).filter(m => m.fase === 'final');
+    for (const f of finalMatches) {
+      const ms = matchStatsById.get(f.id);
+      const gA = ms?.stats?.[f.homeTeamId]?.goles;
+      const gB = ms?.stats?.[f.awayTeamId]?.goles;
+      if (gA !== undefined && gB !== undefined && gA !== gB) {
+        reached[gA > gB ? f.homeTeamId : f.awayTeamId] = 6;
+        reached[gA > gB ? f.awayTeamId : f.homeTeamId] = 5;
+      } else {
+        // Final pendiente o empatada: ambos alcanzaron la final (provisional)
+        reached[f.homeTeamId] = 5;
+        reached[f.awayTeamId] = 5;
+      }
+    }
+
+    return reached;
+  }
+
+  const PUNTOS_ELIMINATORIAS = [0, 10, 15, 25, 50, 75, 100]; // index = rango
+
+  /**
+   * Calcula los puntos de eliminatorias de un usuario.
+   * Regla: puntos = PUNTOS[min(rangoPronosticado, rangoAlcanzado)].
+   * max = 100+75+2*50+4*25+8*15+8*10 = 575.
+   */
+  function calculateEliminatoriasPoints(finalPredictions, reachedPhases) {
+    if (!finalPredictions) return { totalPoints: 0, teamDetails: [] };
+    const reached = reachedPhases || {};
+    const teamDetails = [];
+    let totalPoints = 0;
+
+    const zones = [
+      { key: 'champion', rank: 6 },
+      { key: 'runnerUp', rank: 5 },
+      { key: 'semiFinalists', rank: 4 },
+      { key: 'quarterFinalists', rank: 3 },
+      { key: 'roundOf16', rank: 2 },
+      { key: 'roundOf32', rank: 1 },
+    ];
+
+    for (const zone of zones) {
+      const ids = Array.isArray(finalPredictions[zone.key])
+        ? finalPredictions[zone.key]
+        : [finalPredictions[zone.key]];
+      for (const teamId of ids) {
+        if (!teamId) continue;
+        const reachedRank = reached[teamId] || 0;
+        const rank = Math.min(zone.rank, reachedRank);
+        const points = PUNTOS_ELIMINATORIAS[rank] || 0;
+        totalPoints += points;
+        teamDetails.push({ teamId, predictedRank: zone.rank, reachedRank, points });
+      }
+    }
+
+    return { totalPoints, teamDetails };
+  }
+
   global.groupTies = groupTies;
   global.resolveTie = resolveTie;
   global.computeEliminatorias = computeEliminatorias;
+  global.computeReachedPhases = computeReachedPhases;
+  global.calculateEliminatoriasPoints = calculateEliminatoriasPoints;
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { groupTies, resolveTie, computeEliminatorias };
+    module.exports = { groupTies, resolveTie, computeEliminatorias, computeReachedPhases, calculateEliminatoriasPoints };
   }
 })(typeof window !== 'undefined' ? window : globalThis);
