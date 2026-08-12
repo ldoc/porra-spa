@@ -2275,6 +2275,61 @@ html, body {
   letter-spacing: 0.5px;
 }
 
+/* Acordeón de jornadas (tab Pronósticos) */
+.breakdown-journey-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 4px;
+  min-height: 44px;
+  cursor: pointer;
+  border-bottom: 1px solid var(--border-color);
+  transition: background var(--transition-fast);
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.breakdown-journey-header:active {
+  background: rgba(139, 92, 246, 0.08);
+}
+
+.breakdown-journey-title {
+  margin-bottom: 0;
+  flex: 1;
+}
+
+.breakdown-journey-points {
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.breakdown-journey-arrow {
+  display: inline-block;
+  color: var(--accent-cyan);
+  font-size: var(--font-size-sm);
+  transition: transform var(--transition-fast);
+}
+
+.breakdown-journey-header.active .breakdown-journey-arrow {
+  transform: rotate(90deg);
+}
+
+.breakdown-journey-body {
+  overflow: hidden;
+  transition: max-height var(--transition-fast);
+}
+
+.breakdown-journey-body.accordion-open {
+  max-height: 3000px;
+}
+
+.breakdown-journey-body.accordion-closed {
+  max-height: 0;
+}
+
 .breakdown-match {
   background: var(--ucl-surface);
   border-radius: var(--radius-sm);
