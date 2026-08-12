@@ -431,7 +431,7 @@ git commit -m "feat: sub-tab Eliminatorias en pantalla de Resultados"
 - Modify: `css/styles.css` (añadir bloque al final del fichero)
 
 **Interfaces:**
-- Consumes: clases existentes `.drop-zone`, `.drop-zone-header`, `.drop-zone-title`, `.round-emoji`, `.drop-zone-count`, `.drop-slot`, `.drop-slot-img`, `.drop-slot-name`, `.drop-zone-slots` (ya definidas en `styles.css:3637-3756`). Variables de `:root` (`--accent-primary`, `--accent-purple`, `--accent-gold`, `--bg-input`, `--radius-full`, `--text-muted`, `--text-secondary`, `--border-color`).
+- Consumes: clases existentes `.drop-zone`, `.drop-zone-header`, `.drop-zone-title`, `.round-emoji`, `.drop-zone-count`, `.drop-slot`, `.drop-slot-img`, `.drop-slot-name`, `.drop-zone-slots` (ya definidas en `styles.css`). Variables de `:root` (`--accent-primary`, `--accent-purple`, `--accent-gold`, `--ucl-surface`, `--radius-full`, `--text-muted`, `--text-secondary`, `--border-color`). La pista de la barra de progreso usa `--ucl-surface`, igual que `.wizard-progress-bar` y `.standings-progress-bar` (el patrón del repo; `--bg-input` no está definido).
 - Produces: clases `.eliminatorias-progress`, `.eliminatorias-progress-text`, `.eliminatorias-progress-bar`, `.eliminatorias-progress-fill`, `.eliminatorias-view`, y colores de borde para `[data-zone="champion"]` y `[data-zone="runnerUp"]`.
 
 - [ ] **Step 1: Añadir los estilos al final de `css/styles.css`**
@@ -457,7 +457,7 @@ git commit -m "feat: sub-tab Eliminatorias en pantalla de Resultados"
 
 .eliminatorias-progress-bar {
   height: 6px;
-  background: var(--bg-input);
+  background: var(--ucl-surface);
   border-radius: var(--radius-full);
   overflow: hidden;
 }
