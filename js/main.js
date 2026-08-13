@@ -3406,6 +3406,45 @@ function isPhaseFrozen(fase) {
   return faseIndex <= currentFaseIndex;
 }
 
+function getFasePillInfo(fase) {
+  const map = {
+    liga:  { label: 'Liga',        icono: '⚽',  color: '#FF9800' },
+    '16':  { label: 'Dieciseisavos', icono: '⚔️', color: '#2196F3' },
+    '8':   { label: 'Octavos',     icono: '⚔️',  color: '#F44336' },
+    '4':   { label: 'Cuartos',     icono: '⚔️',  color: '#F44336' },
+    semis: { label: 'Semifinal',   icono: '⚔️',  color: '#F44336' },
+    final: { label: 'Final',       icono: '🏆',  color: '#F44336' }
+  };
+  return map[fase] || { label: fase, icono: '⚽', color: '#FF9800' };
+}
+
+function buildRoundFasePill(fase, round, totalRounds, predicted, total) {
+  const info = getFasePillInfo(fase);
+  if (totalRounds <= 1) return `${info.icono} ${info.label}`;
+  return `${info.icono} ${info.label} · Jornada <span class="round-fase-jornada">${round}</span>/${totalRounds} <span class="round-fase-progress">${predicted}/${total}</span>`;
+}
+
+function renderRoundNav() {
+  const phaseMatches = AppState.currentPhaseMatches || [];
+  const round = AppState.currentRound;
+  const totalRounds = AppState.currentPhaseRounds || 1;
+  const { fase } = getMatchesForCurrentPhase();
+  const roundMatches = phaseMatches.filter(m => m.ronda === round);
+  const roundTotal = roundMatches.length;
+  const roundPredicted = countPredictedInRound(round);
+
+  const pill = document.getElementById('round-fase-pill');
+  if (pill) {
+    pill.style.setProperty('--fc', getFasePillInfo(fase).color);
+    pill.innerHTML = buildRoundFasePill(fase, round, totalRounds, roundPredicted, roundTotal);
+  }
+
+  const prevBtn = document.getElementById('btn-round-prev');
+  const nextBtn = document.getElementById('btn-round-next');
+  if (prevBtn) prevBtn.disabled = round <= 1;
+  if (nextBtn) nextBtn.disabled = round >= totalRounds;
+}
+
 function renderPronosticosTab() {
   const container = document.getElementById('pronosticos-container');
   if (!container) return;
