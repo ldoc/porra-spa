@@ -62,6 +62,11 @@ function getFaseJuego() {
   return AppState.appConfig?.faseJuego || 'FASE_PRETEMPORADA';
 }
 
+function getFaseDesc(codigo) {
+  const f = (AppState.fases || []).find(f => f.nombre === codigo);
+  return f?.desc || codigo;
+}
+
 async function fetchWithPhase(url, options = {}) {
   const headers = { ...options.headers };
   if (AppState.appConfig) {
