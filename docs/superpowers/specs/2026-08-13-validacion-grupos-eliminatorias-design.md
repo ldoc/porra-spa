@@ -1,4 +1,4 @@
-# Diseño: Validación de grupos de posiciones en Eliminatorias
+# Diseño: Validación de grupos de posiciones y espacio libre para top-8 en Eliminatorias
 
 ## Contexto
 
@@ -27,14 +27,22 @@ Con esa lectura, un usuario podría colocar el 23º en cuartos, el 24º en semif
 
 Con el cuadro completo, cada grupo queda repartido 2 en dieciseisavos y 2 fuera de él. Los equipos de posiciones 1-8 (fuera de los grupos A-D) no pueden ir a dieciseisavos (regla Top-8, ya implementada) y completan las cajas restantes.
 
+Además se añade una **regla nueva de espacio libre para los 8 primeros**: mientras queden equipos de los puestos 1-8 sin colocar, la región de cajas de **octavos a la final** (octavos + cuartos + semifinales + subcampeón + campeón, 16 cajas) debe reservarles sitio. Formalmente:
+
+- `top8Remaining` = nº de equipos de posiciones 1-8 que aún no aparecen en ninguna caja de `finalPredictions`.
+- `regionFree` = nº de cajas vacías en `roundOf16` + `quarterFinalists` + `semiFinalists` + `runnerUp` + `champion`.
+- **Regla**: `regionFree >= top8Remaining`. Si `regionFree < top8Remaining`, violación.
+
+Es decir, no se puede llenar esa región con equipos que no son top-8 dejando sin sitio a los que faltan. Ejemplo: si quedan 4 top-8 por colocar, la región debe tener al menos 4 cajas libres. Colocar un top-8 consume una caja pero también reduce `top8Remaining` (invariante se mantiene); colocar un no-top-8 en la región solo consume caja (por eso se bloquea si no hay hueco reservado).
+
 ## Cambio propuesto
 
-Extraer la validación de grupos a una **función pura y testeable** en cada proyecto, con la misma semántica, y usarla tanto en el frontend (feedback en el tap) como en el backend (rechazo autoritativo al guardar).
+Extraer la validación de las predicciones de eliminatorias (grupos de posiciones + espacio libre para top-8) a una **función pura y testeable** en cada proyecto, con la misma semántica, y usarla tanto en el frontend (feedback en el tap) como en el backend (rechazo autoritativo al guardar).
 
 ### Semántica del validador
 
 ```
-getFinalPredictionsGroupViolations(finalPredictions, teamPositionMap)
+getFinalPredictionsViolations(finalPredictions, teamPositionMap)
   → Array<string>   (vacío = válido)
 ```
 
@@ -45,17 +53,24 @@ Comprobaciones por cada grupo A-D:
 1. **Dieciseisavos**: contar equipos de `finalPredictions.roundOf32` cuya posición pertenezca al grupo. Si `> 2`, violación.
 2. **Resto combinado**: contar equipos en `champion` + `runnerUp` + `semiFinalists` + `quarterFinalists` + `roundOf16` cuya posición pertenezca al grupo. Si `> 2`, violación.
 
-Manejo de valores nulos/vacíos: `champion`/`runnerUp` pueden ser `null` (se omiten), los arrays pueden ser `null`/`undefined` (se tratan como `[]`).
+Comprobación de espacio libre para los 8 primeros:
+
+3. **Espacio libre top-8**: con las posiciones 1-8 de `teamPositionMap` como top-8:
+   - `top8Remaining` = top-8 que no están en ninguna caja.
+   - `regionFree` = `16 - (roundOf16 + quarterFinalists + semiFinalists + runnerUp + champion)` contando solo IDs válidos (truthy).
+   - Si `regionFree < top8Remaining`, violación.
+
+Manejo de valores nulos/vacíos: `champion`/`runnerUp` pueden ser `null` (se omiten), los arrays pueden contener placeholders falsy (se filtran con `Boolean`) o ser `null`/`undefined` (se tratan como `[]`).
 
 ### Cambios en porra-spa
 
-1. `js/eliminatorias.js`: añadir `getFinalPredictionsGroupViolations` exportada por `global` y `module.exports` (patrón existente del módulo, cargado ya en `index.html` antes de `main.js`). No hace falta script nuevo.
-2. `js/main.js` (`addTeamToZone`, líneas 5514-5571): sustituir la lógica de grupos en línea por una llamada al validador sobre una **copia provisional** de `finalPredictions` con el equipo candidato ya colocado (mismo tratamiento de `index` para reemplazo o append que el código actual). Si el validador devuelve violaciones → `showToast` con el primer mensaje y no se aplica el cambio. El check Top-8 de dieciseisavos se mantiene intacto.
+1. `js/eliminatorias.js`: añadir `getFinalPredictionsViolations` exportada por `global` y `module.exports` (patrón existente del módulo, cargado ya en `index.html` antes de `main.js`). No hace falta script nuevo.
+2. `js/main.js` (`addTeamToZone`, líneas 5514-5571): sustituir la lógica de grupos en línea por una llamada al validador sobre una **copia provisional** de `finalPredictions` con el equipo candidato ya colocado (mismo tratamiento de `index` para reemplazo o append que el código actual). Si el validador devuelve violaciones → `showToast` con el primer mensaje y no se aplica el cambio. El check Top-8 de dieciseisavos (`isTop8Predicted`, línea 5509) se mantiene intacto; el `teamPositionMap` se construye igual que hoy con `calculatePredictedStandings()`.
 3. `index.html`: cache-busting (norma AGENTS.md) — `js/main.js?v=72` → `v=73` y `js/eliminatorias.js?v=2` → `v=3`.
 
 ### Cambios en api-porra
 
-1. Nuevo módulo `api/finalPredictions.js` con `POSITION_GROUPS`, `MAX_TEAMS_PER_GROUP_PER_ZONE` y `getFinalPredictionsGroupViolations` (misma semántica que el SPA).
+1. Nuevo módulo `api/finalPredictions.js` con `POSITION_GROUPS`, `MAX_TEAMS_PER_GROUP_PER_ZONE` y `getFinalPredictionsViolations` (misma semántica que el SPA).
 2. `server.js`: en PUT `/api/final-predictions` (líneas 864-897), sustituir el bucle por caja por la llamada al validador; si hay violaciones → `400` con el primer mensaje. Mover `POSITION_GROUPS` y `MAX_TEAMS_PER_GROUP_PER_ZONE` (líneas 28-34) al módulo e importarlos.
 
 ### AGENTS.md (ambos repos)
@@ -66,6 +81,8 @@ Reescribir la restricción de grupos para que diga explícitamente:
 - Máximo 2 equipos por grupo **en el conjunto** de las cajas de campeón, subcampeón, semifinalistas, cuartos y octavos (no por caja individual).
 
 Incluir el ejemplo aclaratorio: con los equipos de posiciones 9, 10, 23 y 24 (grupo A), no se puede poner el 23 en cuartos, el 24 en semifinales y el 10 en octavos; 2 de ellos deben ir obligatoriamente a dieciseisavos.
+
+Añadir la nueva regla **"Espacio libre para los 8 primeros"**: dejar libres tantas cajas de octavos a la final como equipos de los 8 primeros queden por introducir (`regionFree >= top8Remaining`).
 
 ## Tests
 
@@ -79,19 +96,22 @@ Nuevo `tests/finalPredictionsValidation.test.js` (estilo `node` + `assert`, como
 - Válido parcial: 2 fuera + 1 sin colocar → sin violaciones.
 - Límites: exactamente 2 en el resto combinado → ok; 3 → error.
 - `champion`/`runnerUp` nulos se ignoran.
+- Espacio libre top-8: con 8 top-8 sin colocar y 11 no-top-8 en la región (5 libres) → violación; con 8 top-8 sin colocar y solo 8 no-top-8 en la región (8 libres) → ok.
+- Espacio libre top-8: 4 top-8 colocados en la región y 4 sin colocar, con 8 no-top-8 también en la región (4 libres) → ok; añadir un 9º no-top-8 en la región (3 libres) → violación.
+- Espacio libre top-8 con todo completo: 8 top-8 + 8 no-top-8 en la región (0 libres, 0 pendientes) → ok.
 
 ### api-porra
 
-Nuevo `tests/finalPredictions.test.js` con `node:test` (estilo `tests/matchStats.test.js`), mismos casos.
+Nuevo `tests/finalPredictions.test.js` con `node:test` (estilo `tests/matchStats.test.js`), mismos casos (grupos + espacio libre top-8).
 
 ## Verificación
 
 - porra-spa: `node tests/finalPredictionsValidation.test.js` (y el resto de tests del repo sin regresiones).
 - api-porra: `node --test tests/finalPredictions.test.js`.
-- Manual en navegador: intentar el ejemplo reportado → tostada bloqueando el tercer equipo del grupo fuera de dieciseisavos; el backend rechaza un payload manipulado con `400`.
+- Manual en navegador: intentar el ejemplo reportado → tostada bloqueando el tercer equipo del grupo fuera de dieciseisavos; llenar octavos→final con no-top-8 teniendo top-8 pendientes → tostada bloqueando; el backend rechaza un payload manipulado con `400`.
 
 ## Fuera de alcance
 
 - Cambio en el modelo de datos o en la UI de eliminatorias.
-- Reglas Top-8 (se mantienen como están).
+- La restricción Top-8 ya existente (los top-8 no van a dieciseisavos) se mantiene como está.
 - Restricciones por caja en dieciseisavos (máximo 2 por grupo se conserva).
