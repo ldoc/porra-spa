@@ -1950,9 +1950,11 @@ function renderMatchResult({ match, homeGoals, awayGoals, hasResult }) {
     </div>
     ${hasPens ? `<span class="resultados-pens">(${pensHome} - ${pensAway})</span>` : ''}
   ` : `
-    <span class="resultados-goals pending">-</span>
-    <span class="resultados-separator">-</span>
-    <span class="resultados-goals pending">-</span>
+    <div class="resultados-score-line">
+      <span class="resultados-goals pending">-</span>
+      <span class="resultados-separator">-</span>
+      <span class="resultados-goals pending">-</span>
+    </div>
   `;
 
   return `
