@@ -3439,9 +3439,9 @@ function renderPronosticosTab() {
         <strong>${predicted}</strong> de <strong>${total}</strong> partidos pronosticados
       </p>
       <div class="round-nav">
-        <button class="round-nav-btn" id="btn-round-prev" disabled>&larr; Ronda anterior</button>
-        <span class="round-indicator" id="round-indicator">Ronda 1 de ${rounds}</span>
-        <button class="round-nav-btn" id="btn-round-next">Siguiente ronda &rarr;</button>
+        <button class="round-nav-btn" id="btn-round-prev" disabled>&larr; Jornada anterior</button>
+        <span class="round-indicator" id="round-indicator">Jornada 1 de ${rounds}</span>
+        <button class="round-nav-btn" id="btn-round-next">Siguiente jornada &rarr;</button>
       </div>
       <div class="round-progress-text" id="round-progress-text"></div>
     </div>
@@ -3494,7 +3494,7 @@ function renderRoundMatches() {
 
   // Actualizar indicadores
   const indicator = document.getElementById('round-indicator');
-  if (indicator) indicator.textContent = `Ronda ${round} de ${totalRounds}`;
+  if (indicator) indicator.textContent = `Jornada ${round} de ${totalRounds}`;
 
   const roundPredicted = countPredictedInRound(round);
   const roundTotal = roundMatches.length;
@@ -3502,7 +3502,7 @@ function renderRoundMatches() {
 
   const roundProgressEl = document.getElementById('round-progress-text');
   if (roundProgressEl) {
-    roundProgressEl.innerHTML = `Ronda ${round}: <strong>${roundPredicted}</strong> de <strong>${roundTotal}</strong> pronosticados`;
+    roundProgressEl.innerHTML = `Jornada ${round}: <strong>${roundPredicted}</strong> de <strong>${roundTotal}</strong> pronosticados`;
   }
 
   // Actualizar barra de progreso global
@@ -3638,7 +3638,7 @@ function updateProgressCounts() {
 
   const roundProgressEl = document.getElementById('round-progress-text');
   if (roundProgressEl) {
-    roundProgressEl.innerHTML = `Ronda ${round}: <strong>${roundPredicted}</strong> de <strong>${roundTotal}</strong> pronosticados`;
+    roundProgressEl.innerHTML = `Jornada ${round}: <strong>${roundPredicted}</strong> de <strong>${roundTotal}</strong> pronosticados`;
   }
 
   const totalPredicted = countPredictedInPhase(phaseMatches);
