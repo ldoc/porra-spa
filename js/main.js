@@ -1778,9 +1778,11 @@ function renderRealStandingsTable() {
     return '<div style="padding: 24px; text-align: center; color: var(--text-muted);">No hay clasificación disponible.</div>';
   }
 
-  // Contar partidos disputados
-  const totalMatches = AppState.matches.length;
-  const playedMatches = AppState.matchStats.length;
+  // Contar partidos disputados (solo fase liga)
+  const totalMatches = AppState.leagueMatches.length;
+  const playedMatches = AppState.matchStats.filter(ms =>
+    AppState.leagueMatches.some(m => m.id === ms.eventId)
+  ).length;
   const pct = totalMatches > 0 ? Math.round((playedMatches / totalMatches) * 100) : 0;
 
   let html = `
@@ -4617,8 +4619,8 @@ function renderPredictedStandings() {
   if (!container) return;
 
   const standings = calculateStandings();
-  const totalMatches = AppState.matches.length;
-  const predicted = countPredicted();
+  const totalMatches = AppState.leagueMatches.length;
+  const predicted = countPredictedInPhase(AppState.leagueMatches);
   const pct = Math.round((predicted / totalMatches) * 100);
 
   const rows = standings.map(team => {
