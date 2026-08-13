@@ -67,6 +67,12 @@ function getFaseDesc(codigo) {
   return f?.desc || codigo;
 }
 
+function buildPhaseOptionsHtml(fases, faseActual) {
+  return (fases || [])
+    .map(f => `<option value="${f.nombre}"${f.nombre === faseActual ? ' selected' : ''}>${f.desc || f.nombre}</option>`)
+    .join('');
+}
+
 async function fetchWithPhase(url, options = {}) {
   const headers = { ...options.headers };
   if (AppState.appConfig) {
@@ -2279,20 +2285,8 @@ function showAdminModal() {
   const fase = getFaseJuego();
   const fases = AppState.fases || [];
 
-  // Buscar fase actual y obtener adyacentes
-  const currentFase = fases.find(f => f.nombre === fase);
-  const adjacentFases = [];
-  if (currentFase) {
-    const prev = fases.find(f => f.id === currentFase.id - 1);
-    const next = fases.find(f => f.id === currentFase.id + 1);
-    if (prev) adjacentFases.push(prev);
-    if (next) adjacentFases.push(next);
-  }
-
-  // Generar opciones del dropdown
-  const optionsHtml = adjacentFases.length > 0
-    ? adjacentFases.map(f => `<option value="${f.nombre}">${f.desc || f.nombre}</option>`).join('')
-    : `<option value="${fase}" selected>${getFaseDesc(fase)}</option>`;
+  // Generar opciones del dropdown con todas las fases, ordenadas de más antigua a más nueva
+  const optionsHtml = buildPhaseOptionsHtml(fases, fase);
 
   const modal = document.createElement('div');
   modal.className = 'profile-modal';
@@ -2316,7 +2310,7 @@ function showAdminModal() {
         <p style="font-size: 12px; color: var(--text-muted); margin: 0;">Fase actual: <strong style="color: var(--text-primary);">${getFaseDesc(fase)}</strong></p>
       </div>
 
-      <button id="btn-admin-change-phase" class="btn-primary" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #fff; margin-top: 16px; width: 100%;" ${adjacentFases.length === 0 ? 'disabled' : ''}>
+      <button id="btn-admin-change-phase" class="btn-primary" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #fff; margin-top: 16px; width: 100%;">
         Cambiar Fase
       </button>
 
