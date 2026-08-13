@@ -4112,6 +4112,7 @@ async function saveSquadToBackend() {
       if (!AppState.squadsCache) AppState.squadsCache = {};
       AppState.squadsCache[AppState.currentUser.name] = AppState.squadPicks;
       AppState._squadsCacheTime = 0;
+      AppState._allPredictionsTime = 0;
       showToast('Plantilla guardada');
       return true;
     } else {
@@ -5587,6 +5588,13 @@ async function saveFinalPredictionsToBackend() {
 
     if (data.ok) {
       AppState.hasUnsavedFinalChanges = false;
+      if (AppState.currentUser) {
+        if (!AppState.finalPredictionsCache) AppState.finalPredictionsCache = {};
+        AppState.finalPredictionsCache[AppState.currentUser.name] = AppState.finalPredictions;
+        if (!AppState._finalPredictionsCacheTime) AppState._finalPredictionsCacheTime = {};
+        AppState._finalPredictionsCacheTime[AppState.currentUser.name] = Date.now();
+      }
+      AppState._allPredictionsTime = 0;
       showToast('✅ Predicciones guardadas correctamente');
     } else {
       showToast('❌ Error al guardar: ' + (data.error || 'Error desconocido'));
