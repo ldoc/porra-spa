@@ -867,6 +867,39 @@ function getMatchName(eventId) {
   return `${match.homeTeam} vs ${match.awayTeam}`;
 }
 
+/** Devuelve el class del badge de posición */
+function getRankBadgeClass(rank) {
+  if (rank === 1) return 'rank-1';
+  if (rank === 2) return 'rank-2';
+  if (rank === 3) return 'rank-3';
+  return 'rank-n';
+}
+
+/** Cabecera de la tabla de clasificación (6 columnas) */
+function buildClasificacionHeader() {
+  return `
+    <div class="clasificacion-header">
+      <span>Jugador</span><span>Pron</span><span>Plant</span><span>Clas</span><span>Elim</span><span>Total</span>
+    </div>`;
+}
+
+/** Fila de usuario con desglose: identidad + 5 valores alineados */
+function buildClasificacionRow(p, rank, isMe) {
+  return `
+    <div class="clasificacion-row ${isMe ? 'current-user' : ''}" onclick="showUserProfileModal('${p.name}')">
+      <div class="clasificacion-id">
+        <div class="rank-pill ${getRankBadgeClass(rank)}">${rank}</div>
+        <span class="player-avatar">${p.avatar}</span>
+        <span class="clasificacion-name">${p.name}${isMe ? ' <span class="clasificacion-you">(Tu)</span>' : ''}</span>
+      </div>
+      <span class="clasificacion-val">${p.predictionPoints}</span>
+      <span class="clasificacion-val">${p.squadPoints}</span>
+      <span class="clasificacion-val">${p.classificationPoints}</span>
+      <span class="clasificacion-val">${p.eliminatoriasPoints}</span>
+      <span class="clasificacion-val clasificacion-total">${p.realPoints}</span>
+    </div>`;
+}
+
 /** Renderiza la pestaña de clasificación con puntos reales */
 async function renderClasificacionTab() {
   const container = document.getElementById('clasificacion-container');
@@ -954,27 +987,13 @@ async function renderClasificacionTab() {
   // Ordenar por puntos descendente
   playersWithPoints.sort((a, b) => b.realPoints - a.realPoints);
 
-  container.innerHTML = playersWithPoints.map((p, i) => {
-    const rank = i + 1;
-    const isMe = AppState.currentUser && p.name === AppState.currentUser.name;
-    const breakdownParts = [];
-    if (p.predictionPoints) breakdownParts.push(`${p.predictionPoints} pronósticos`);
-    if (p.squadPoints) breakdownParts.push(`${p.squadPoints} plantilla`);
-    if (p.classificationPoints) breakdownParts.push(`${p.classificationPoints} clasificación`);
-    if (p.eliminatoriasPoints) breakdownParts.push(`${p.eliminatoriasPoints} eliminatorias`);
-    const breakdownStr = breakdownParts.length ? ` (${breakdownParts.join(' + ')})` : '';
-    return `
-      <div class="leaderboard-row ${isMe ? 'current-user' : ''}" onclick="showUserProfileModal('${p.name}')">
-        <div class="rank-badge rank-${rank}">${rank}</div>
-        <div class="player-avatar">${p.avatar}</div>
-        <div class="player-info">
-          <div class="player-name">${p.name}${isMe ? ' <span style="color:var(--accent-primary)">(Tu)</span>' : ''}</div>
-          <div class="player-breakdown" style="font-size:10px;color:var(--text-muted)">${breakdownStr}</div>
-        </div>
-        <div class="player-points">${p.realPoints} <span style="font-size:10px;color:var(--text-muted)">pts</span></div>
-      </div>
-    `;
-  }).join('');
+  container.innerHTML =
+    buildClasificacionHeader() +
+    playersWithPoints.map((p, i) => {
+      const rank = i + 1;
+      const isMe = AppState.currentUser && p.name === AppState.currentUser.name;
+      return buildClasificacionRow(p, rank, isMe);
+    }).join('');
 }
 
 /** Renderiza la tab de pronósticos en el modal de perfil */
