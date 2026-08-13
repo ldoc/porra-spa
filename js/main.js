@@ -512,7 +512,6 @@ async function fetchMatchStats(force = false) {
 
 /** Obtiene las predicciones de todos los usuarios del backend */
 async function fetchAllPredictions() {
-  // Usar caché si tiene menos de 30 segundos
   if (AppState._allPredictionsTime && Date.now() - AppState._allPredictionsTime < CACHE_TTL) {
     return;
   }
@@ -520,12 +519,18 @@ async function fetchAllPredictions() {
     const res = await fetchWithPhase(`${API_BASE}/api/predictions/all`, { headers: authHeaders() });
     const data = await res.json();
     if (data.ok && data.predictions) {
-      const unwrapped = {};
-      for (const [username, userData] of Object.entries(data.predictions)) {
-        unwrapped[username] = userData.predictions || {};
+      const { allPredictions, finalPredictionsCache, squadsCache } = unwrapAllPredictions(data);
+      AppState.allPredictions = allPredictions;
+      if (!AppState.finalPredictionsCache) AppState.finalPredictionsCache = {};
+      Object.assign(AppState.finalPredictionsCache, finalPredictionsCache);
+      if (!AppState.squadsCache) AppState.squadsCache = {};
+      Object.assign(AppState.squadsCache, squadsCache);
+      if (!AppState._finalPredictionsCacheTime) AppState._finalPredictionsCacheTime = {};
+      const now = Date.now();
+      for (const username of Object.keys(finalPredictionsCache)) {
+        AppState._finalPredictionsCacheTime[username] = now;
       }
-      AppState.allPredictions = unwrapped;
-      AppState._allPredictionsTime = Date.now();
+      AppState._allPredictionsTime = now;
     }
   } catch (e) {
     console.error('Error cargando todas las predicciones:', e);
