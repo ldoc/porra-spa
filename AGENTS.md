@@ -228,7 +228,7 @@ POST /api/auth/change-password   // Body: { currentPassword, newPassword }
 // ─── Pronósticos de partidos ──────────────────────────────────
 GET  /api/predictions            // Query: ?username=xxx (pre-freeze: solo propio)
 PUT  /api/predictions            // Body: { predictions } (bloqueado tras freeze)
-GET  /api/predictions/all        // Post-freeze: todos. Pre-freeze: solo propio
+GET  /api/predictions/all        // Post-freeze: todos (predictions + finalPredictions + squad). Pre-freeze: solo propio
 
 // ─── Fase Final ───────────────────────────────────────────────
 GET  /api/final-predictions      // Query: ?username=xxx (pre-freeze: solo propio)
