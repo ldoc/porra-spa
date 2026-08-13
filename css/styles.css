@@ -4600,3 +4600,82 @@ html, body {
 .eliminatorias-view .drop-slot-points.earned {
   color: var(--accent-primary);
 }
+
+/* Tabla de desglose en Clasificación (C2) */
+.clasificacion-header {
+  display: grid;
+  grid-template-columns: 1fr repeat(5, 40px);
+  gap: 4px;
+  align-items: center;
+  padding: 8px 10px;
+  background: var(--ucl-card);
+  border-bottom: 1px solid var(--border-color);
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+.clasificacion-header span {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--text-muted);
+  text-align: right;
+}
+.clasificacion-header span:first-child { text-align: left; }
+
+.clasificacion-row {
+  display: grid;
+  grid-template-columns: 1fr repeat(5, 40px);
+  gap: 4px;
+  align-items: center;
+  padding: 9px 10px;
+  border-bottom: 1px solid var(--border-color);
+  cursor: pointer;
+}
+.clasificacion-row:last-child { border-bottom: none; }
+.clasificacion-row.current-user {
+  background: rgba(16, 185, 129, 0.12);
+  border-left: 4px solid var(--accent-primary);
+}
+
+.clasificacion-id {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.clasificacion-name {
+  font-weight: 600;
+  font-size: 10.5px;
+  line-height: 1.25;
+  overflow-wrap: break-word;
+  word-break: break-all;
+}
+.clasificacion-you { color: var(--accent-primary); }
+.clasificacion-val {
+  text-align: right;
+  font-weight: 700;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+.clasificacion-total {
+  color: var(--accent-primary);
+  font-weight: 800;
+  font-size: 12px;
+}
+
+.rank-pill {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 10px;
+}
+.rank-1 { background: #F59E0B; color: #000; }
+.rank-2 { background: #94A3B8; color: #000; }
+.rank-3 { background: #B45309; color: #fff; }
+.rank-n { background: rgba(148, 163, 184, 0.15); color: var(--text-secondary); }
