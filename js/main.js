@@ -1142,6 +1142,9 @@ function renderPredictionsTab(container, userData, username) {
             const hasResultMatch = !!matchStats;
             const realHome = hasResultMatch ? matchStats.stats[m.match.homeTeamId]?.goles : null;
             const realAway = hasResultMatch ? matchStats.stats[m.match.awayTeamId]?.goles : null;
+            const pensHome = hasResultMatch ? matchStats.stats[m.match.homeTeamId]?.tandaPenaltis : undefined;
+            const pensAway = hasResultMatch ? matchStats.stats[m.match.awayTeamId]?.tandaPenaltis : undefined;
+            const hasPens = pensHome !== undefined && pensAway !== undefined;
             const predHome = prediction?.home;
             const predAway = prediction?.away;
             const isPending = !hasResultMatch;
@@ -1166,7 +1169,7 @@ function renderPredictionsTab(container, userData, username) {
                   </div>
                 </div>
                 <div class="profile-match-real">
-                  ${isPending ? '<span class="profile-pending">⏳ Pendiente</span>' : `Real: ${realHome} - ${realAway}`}
+                  ${isPending ? '<span class="profile-pending">⏳ Pendiente</span>' : `Real: ${realHome} - ${realAway}${hasPens ? ` <span class="profile-pens">(${pensHome} - ${pensAway})</span>` : ''}`}
                 </div>
                 ${hasResultMatch ? `
                   <div class="profile-match-points ${m.points > 0 ? 'has-points' : 'no-points'}">
@@ -1935,10 +1938,17 @@ function renderMatchResult({ match, homeGoals, awayGoals, hasResult }) {
     }
   });
 
+  const pensHome = matchStats?.stats?.[match.homeTeamId]?.tandaPenaltis;
+  const pensAway = matchStats?.stats?.[match.awayTeamId]?.tandaPenaltis;
+  const hasPens = hasResult && pensHome !== undefined && pensAway !== undefined;
+
   const scoreDisplay = hasResult ? `
-    <span class="resultados-goals">${homeGoals}</span>
-    <span class="resultados-separator">-</span>
-    <span class="resultados-goals">${awayGoals}</span>
+    <div class="resultados-score-line">
+      <span class="resultados-goals">${homeGoals}</span>
+      <span class="resultados-separator">-</span>
+      <span class="resultados-goals">${awayGoals}</span>
+    </div>
+    ${hasPens ? `<span class="resultados-pens">(${pensHome} - ${pensAway})</span>` : ''}
   ` : `
     <span class="resultados-goals pending">-</span>
     <span class="resultados-separator">-</span>

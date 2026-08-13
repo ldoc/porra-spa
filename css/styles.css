@@ -2496,6 +2496,11 @@ html, body {
   margin-bottom: 4px;
 }
 
+.profile-pens {
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+}
+
 .profile-pending {
   color: var(--text-muted);
   font-style: italic;
@@ -2744,8 +2749,21 @@ html, body {
 
 .resultados-score {
   display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.resultados-score-line {
+  display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.resultados-pens {
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+  font-weight: 400;
 }
 
 .resultados-goals {
