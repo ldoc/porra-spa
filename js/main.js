@@ -4374,7 +4374,7 @@ function showToast(message) {
  * @returns {Array} Array de partidos del equipo
  */
 function findTeamMatches(teamId) {
-  return AppState.matches.filter(m => m.homeTeamId === teamId || m.awayTeamId === teamId);
+  return AppState.leagueMatches.filter(m => m.homeTeamId === teamId || m.awayTeamId === teamId);
 }
 
 /**
@@ -4728,7 +4728,7 @@ const CLASSIFICATION_POINTS = {
  * @returns {Array} Array de partidos con resultado del equipo
  */
 function findRealTeamMatches(teamId) {
-  return AppState.matches.filter(m => {
+  return AppState.leagueMatches.filter(m => {
     const matchStat = AppState.matchStats.find(ms => ms.eventId === m.id);
     return matchStat && matchStat.stats &&
            matchStat.stats[m.homeTeamId] !== undefined &&
@@ -4940,7 +4940,7 @@ function calculateUserPredictedStandings(username) {
       awayGoals: 0
     };
 
-    const teamMatches = AppState.matches.filter(m =>
+    const teamMatches = AppState.leagueMatches.filter(m =>
       m.homeTeamId === teamId || m.awayTeamId === teamId
     );
 
@@ -5066,7 +5066,7 @@ function calculatePredictedStandings() {
       awayGoals: 0
     };
 
-    const teamMatches = AppState.matches.filter(m =>
+    const teamMatches = AppState.leagueMatches.filter(m =>
       m.homeTeamId === teamId || m.awayTeamId === teamId
     );
 
