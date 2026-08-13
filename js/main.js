@@ -17,6 +17,7 @@ const AppState = {
   validCodes: [],
   teamsMap: {},         // { teamId: { name, image } }
   matches: [],          // partidos transformados para la app
+  leagueMatches: [],    // solo partidos de fase liga (144)
   allPlayers: [],       // array plano de jugadores desde jugadores.json
   scorePredictions: {}, // { matchId: { home: 0, away: 0 } }
   squadPicks: [],       // array de 25 jugadores seleccionados
@@ -262,6 +263,8 @@ async function loadInitialData() {
       AppState.matches = rawCalendar.map(m => buildMatchFromCalendar(m));
       // Ordenar por ronda y luego por fecha
       AppState.matches.sort((a, b) => a.ronda - b.ronda || a.fechaTs - b.fechaTs);
+      // Solo partidos de fase de liga (144) — fuente para las clasificaciones
+      AppState.leagueMatches = AppState.matches.filter(m => m.fase === 'liga');
     }
 
     // Jugadores
