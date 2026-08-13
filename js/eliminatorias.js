@@ -258,6 +258,43 @@
     return violations;
   }
 
+  /** Selectores de los contenedores con scroll de la pestaña de fase final */
+  const FINAL_SCROLL_SELECTORS = ['.final-predictions-fixed', '.final-predictions-scroll', '#teams-pool-scroll'];
+
+  /**
+   * Guarda el scrollTop de los contenedores con scroll de la pestaña de fase final.
+   * Devuelve { selector: scrollTop } solo para los contenedores presentes en el DOM.
+   * @param {Document} [doc] - Documento inyectable para tests (default: document).
+   */
+  function saveFinalScrollPositions(doc) {
+    const d = doc || globalThis.document;
+    const positions = {};
+    for (const sel of FINAL_SCROLL_SELECTORS) {
+      const el = d.querySelector(sel);
+      if (el) positions[sel] = el.scrollTop;
+    }
+    return positions;
+  }
+
+  /**
+   * Restaura el scrollTop guardado en los contenedores con scroll de la pestaña
+   * de fase final. Anula temporalmente el `scroll-behavior: smooth` (inline) para
+   * que la restauración sea instantánea y no se perciba el salto "sube y baja".
+   * @param {Object<string,number>} positions - Mapa selector -> scrollTop (de saveFinalScrollPositions).
+   * @param {Document} [doc] - Documento inyectable para tests (default: document).
+   */
+  function restoreFinalScrollPositions(positions, doc) {
+    const d = doc || globalThis.document;
+    for (const sel of Object.keys(positions || {})) {
+      const el = d.querySelector(sel);
+      if (!el) continue;
+      const prevBehavior = el.style.scrollBehavior;
+      el.style.scrollBehavior = 'auto';
+      el.scrollTop = positions[sel];
+      el.style.scrollBehavior = prevBehavior;
+    }
+  }
+
   global.groupTies = groupTies;
   global.resolveTie = resolveTie;
   global.computeEliminatorias = computeEliminatorias;
@@ -265,7 +302,9 @@
   global.calculateEliminatoriasPoints = calculateEliminatoriasPoints;
   global.getShootoutWinner = getShootoutWinner;
   global.getFinalPredictionsViolations = getFinalPredictionsViolations;
+  global.saveFinalScrollPositions = saveFinalScrollPositions;
+  global.restoreFinalScrollPositions = restoreFinalScrollPositions;
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { groupTies, resolveTie, computeEliminatorias, computeReachedPhases, calculateEliminatoriasPoints, getShootoutWinner, getFinalPredictionsViolations };
+    module.exports = { groupTies, resolveTie, computeEliminatorias, computeReachedPhases, calculateEliminatoriasPoints, getShootoutWinner, getFinalPredictionsViolations, saveFinalScrollPositions, restoreFinalScrollPositions };
   }
 })(typeof window !== 'undefined' ? window : globalThis);
