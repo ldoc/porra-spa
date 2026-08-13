@@ -91,6 +91,23 @@ function shouldSaveButtonBeDisabled() {
   return isPhaseFrozen(fase) || confirmedForFase || !AppState.hasUnsavedChanges;
 }
 
+function isFasePretemporada() {
+  return getFaseJuego() === 'FASE_PRETEMPORADA';
+}
+
+function shouldShowConfirmButton() {
+  const { fase } = getMatchesForCurrentPhase();
+  const confirmedForFase = AppState.predictionsConfirmed && fase === 'liga';
+  return isFasePretemporada() && !confirmedForFase;
+}
+
+function shouldConfirmButtonBeDisabled() {
+  const { matches: phaseMatches, fase } = getMatchesForCurrentPhase();
+  const total = phaseMatches.length;
+  const predicted = countPredictedInPhase(phaseMatches);
+  return isPhaseFrozen(fase) || predicted < total || AppState.hasUnsavedChanges;
+}
+
 function buildMatchFromCalendar(entry) {
   return {
     id: entry.id,
@@ -427,6 +444,60 @@ function test_all_matches_have_fase_field() {
 }
 
 // ══════════════════════════════════════════════════════════════
+// Confirm button: visibility y disabled
+// ══════════════════════════════════════════════════════════════
+
+function test_confirm_button_visible_in_pretemporada() {
+  resetState();
+  AppState.appConfig.faseJuego = 'FASE_PRETEMPORADA';
+  assert.strictEqual(shouldShowConfirmButton(), true, 'Confirm button should show in PRETEMPORADA');
+}
+
+function test_confirm_button_hidden_when_confirmed() {
+  resetState();
+  AppState.appConfig.faseJuego = 'FASE_PRETEMPORADA';
+  AppState.predictionsConfirmed = true;
+  assert.strictEqual(shouldShowConfirmButton(), false, 'Confirm button should hide after confirming');
+}
+
+function test_confirm_button_hidden_in_other_phases() {
+  const fases = ['FASE_LIGA', 'FASE_PRE16', 'FASE_16', 'FASE_PRE8', 'FASE_8', 'FASE_PRE4', 'FASE_4', 'FASE_PRESEMIS', 'FASE_SEMIS', 'FASE_PREFINAL', 'FASE_FINAL', 'FASE_POSTFINAL'];
+  for (const fase of fases) {
+    resetState();
+    AppState.appConfig.faseJuego = fase;
+    assert.strictEqual(shouldShowConfirmButton(), false, `Confirm button should not show in ${fase}`);
+  }
+}
+
+function test_confirm_button_disabled_when_incomplete() {
+  resetState();
+  AppState.appConfig.faseJuego = 'FASE_PRETEMPORADA';
+  assert.strictEqual(shouldConfirmButtonBeDisabled(), true, 'Confirm disabled when predictions incomplete');
+}
+
+function test_confirm_button_disabled_with_unsaved_changes() {
+  resetState();
+  AppState.appConfig.faseJuego = 'FASE_PRETEMPORADA';
+  const { matches } = getMatchesForCurrentPhase();
+  for (const m of matches) {
+    AppState.scorePredictions[m.id] = { home: 2, away: 1 };
+  }
+  AppState.hasUnsavedChanges = true;
+  assert.strictEqual(shouldConfirmButtonBeDisabled(), true, 'Confirm disabled when there are unsaved changes');
+}
+
+function test_confirm_button_enabled_when_complete_and_saved() {
+  resetState();
+  AppState.appConfig.faseJuego = 'FASE_PRETEMPORADA';
+  const { matches } = getMatchesForCurrentPhase();
+  for (const m of matches) {
+    AppState.scorePredictions[m.id] = { home: 2, away: 1 };
+  }
+  AppState.hasUnsavedChanges = false;
+  assert.strictEqual(shouldConfirmButtonBeDisabled(), false, 'Confirm enabled when complete and saved');
+}
+
+// ══════════════════════════════════════════════════════════════
 // Run all tests
 // ══════════════════════════════════════════════════════════════
 
@@ -435,6 +506,10 @@ const tests = [
   test_pretemporada_shows_144_liga_matches,
   test_pretemporada_can_edit_predictions,
   test_pretemporada_save_button_enabled_with_changes,
+  test_confirm_button_visible_in_pretemporada,
+  test_confirm_button_disabled_when_incomplete,
+  test_confirm_button_disabled_with_unsaved_changes,
+  test_confirm_button_enabled_when_complete_and_saved,
   // Step 2: FASE_LIGA
   test_liga_shows_144_liga_matches,
   test_liga_predictions_frozen,
@@ -467,6 +542,9 @@ const tests = [
   test_calendar_has_correct_structure,
   test_buildMatchFromCalendar_preserves_fase,
   test_all_matches_have_fase_field,
+  // Confirm button
+  test_confirm_button_hidden_when_confirmed,
+  test_confirm_button_hidden_in_other_phases,
 ];
 
 let passed = 0;
