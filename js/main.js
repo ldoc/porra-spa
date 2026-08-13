@@ -82,17 +82,19 @@ async function fetchWithPhase(url, options = {}) {
 
   if (res.status === 409) {
     try {
-      const data = await res.json();
+      const clone = res.clone();
+      const data = await clone.json();
       if (data.error === 'PHASE_CHANGED') {
         showPhaseChangeModal(data.previousPhase, data.currentPhase);
+        return new Response(JSON.stringify({ ok: false, error: 'PHASE_CHANGED' }), {
+          status: 409,
+          headers: { 'Content-Type': 'application/json' }
+        });
       }
     } catch (e) {
       // Ignore JSON parse errors
     }
-    return new Response(JSON.stringify({ ok: false, error: 'PHASE_CHANGED' }), {
-      status: 409,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return res;
   }
 
   return res;
