@@ -4993,7 +4993,7 @@ function calculateUserPredictedStandings(username) {
 
     // Para la pronosticada, calcular stats de rivales usando el caché local
     function getLocalRivalsStats(teamId) {
-      const teamMatches = AppState.matches.filter(m =>
+      const teamMatches = AppState.leagueMatches.filter(m =>
         m.homeTeamId === teamId || m.awayTeamId === teamId
       );
       const rivalIds = new Set();
