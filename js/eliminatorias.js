@@ -13,9 +13,29 @@
   }
 
   /**
+   * Devuelve el teamId ganador de la tanda de penaltis de un conjunto de
+   * partidos, o null si ningún partido tiene tanda completa.
+   */
+  function getShootoutWinner(matches, matchStatsById) {
+    for (const m of matches) {
+      const ms = matchStatsById.get(m.id);
+      if (!ms) continue;
+      const pHome = ms.stats?.[m.homeTeamId]?.tandaPenaltis;
+      const pAway = ms.stats?.[m.awayTeamId]?.tandaPenaltis;
+      if (pHome !== undefined && pAway !== undefined) {
+        if (pHome > pAway) return m.homeTeamId;
+        if (pAway > pHome) return m.awayTeamId;
+        return null;
+      }
+    }
+    return null;
+  }
+
+  /**
    * Resuelve un cruce a doble partido por agregado.
-   * Devuelve { resuelto, eliminado }. resuelto=false si falta algún resultado
-   * o si el agregado queda empatado (tanda de penaltis no implementada).
+   * Devuelve { resuelto, eliminado }. resuelto=false si falta algún resultado.
+   * Si el agregado queda empatado, se desempata por tanda de penaltis
+   * (getShootoutWinner); sin tanda, el cruce queda sin resolver.
    */
   function resolveTie(tie, matchStatsById) {
     if (!tie.matches || tie.matches.length < 2) return { resuelto: false, eliminado: null };
@@ -30,7 +50,11 @@
       if (m.homeTeamId === tie.teamA) { totA += gA; totB += gB; }
       else { totA += gB; totB += gA; }
     }
-    if (totA === totB) return { resuelto: false, eliminado: null };
+    if (totA === totB) {
+      const winner = getShootoutWinner(tie.matches, matchStatsById);
+      if (winner === null) return { resuelto: false, eliminado: null };
+      return { resuelto: true, eliminado: winner === tie.teamA ? tie.teamB : tie.teamA };
+    }
     return { resuelto: true, eliminado: totA > totB ? tie.teamB : tie.teamA };
   }
 
@@ -67,10 +91,19 @@
       const ms = matchStatsById.get(f.id);
       const gA = ms?.stats?.[f.homeTeamId]?.goles;
       const gB = ms?.stats?.[f.awayTeamId]?.goles;
-      if (gA !== undefined && gB !== undefined && gA !== gB) {
-        final.campeon = gA > gB ? f.homeTeamId : f.awayTeamId;
-        final.subcampeon = gA > gB ? f.awayTeamId : f.homeTeamId;
-        rondasResueltas.push('final');
+      if (gA !== undefined && gB !== undefined) {
+        if (gA !== gB) {
+          final.campeon = gA > gB ? f.homeTeamId : f.awayTeamId;
+          final.subcampeon = gA > gB ? f.awayTeamId : f.homeTeamId;
+          rondasResueltas.push('final');
+        } else {
+          const winner = getShootoutWinner([f], matchStatsById);
+          if (winner !== null) {
+            final.campeon = winner;
+            final.subcampeon = winner === f.homeTeamId ? f.awayTeamId : f.homeTeamId;
+            rondasResueltas.push('final');
+          }
+        }
       }
     }
 
@@ -118,8 +151,18 @@
       if (gA !== undefined && gB !== undefined && gA !== gB) {
         reached[gA > gB ? f.homeTeamId : f.awayTeamId] = 6;
         reached[gA > gB ? f.awayTeamId : f.homeTeamId] = 5;
+      } else if (gA !== undefined && gB !== undefined) {
+        const winner = getShootoutWinner([f], matchStatsById);
+        if (winner !== null) {
+          reached[winner] = 6;
+          reached[winner === f.homeTeamId ? f.awayTeamId : f.homeTeamId] = 5;
+        } else {
+          // Final empatada sin tanda: ambos alcanzaron la final (provisional)
+          reached[f.homeTeamId] = 5;
+          reached[f.awayTeamId] = 5;
+        }
       } else {
-        // Final pendiente o empatada: ambos alcanzaron la final (provisional)
+        // Final pendiente: ambos alcanzaron la final (provisional)
         reached[f.homeTeamId] = 5;
         reached[f.awayTeamId] = 5;
       }
@@ -172,7 +215,8 @@
   global.computeEliminatorias = computeEliminatorias;
   global.computeReachedPhases = computeReachedPhases;
   global.calculateEliminatoriasPoints = calculateEliminatoriasPoints;
+  global.getShootoutWinner = getShootoutWinner;
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { groupTies, resolveTie, computeEliminatorias, computeReachedPhases, calculateEliminatoriasPoints };
+    module.exports = { groupTies, resolveTie, computeEliminatorias, computeReachedPhases, calculateEliminatoriasPoints, getShootoutWinner };
   }
 })(typeof window !== 'undefined' ? window : globalThis);

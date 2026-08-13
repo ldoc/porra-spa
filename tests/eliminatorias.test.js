@@ -1,14 +1,20 @@
 const assert = require('assert');
-const { groupTies, resolveTie, computeEliminatorias, computeReachedPhases, calculateEliminatoriasPoints } = require('../js/eliminatorias.js');
+const { groupTies, resolveTie, computeEliminatorias, computeReachedPhases, calculateEliminatoriasPoints, getShootoutWinner } = require('../js/eliminatorias.js');
 
 // ---- Helpers de test ----
 function partido(id, fase, home, away) {
   return { id, fase, homeTeamId: home, awayTeamId: away };
 }
 
-function ms(eventId, goles) {
+function ms(eventId, goles, tanda) {
   const stats = {};
   for (const [teamId, g] of Object.entries(goles)) stats[teamId] = { goles: g };
+  if (tanda) {
+    for (const [teamId, p] of Object.entries(tanda)) {
+      if (stats[teamId]) stats[teamId].tandaPenaltis = p;
+      else stats[teamId] = { tandaPenaltis: p };
+    }
+  }
   return { eventId, stats };
 }
 
@@ -43,7 +49,7 @@ function test_resolveTie_agregado_empate_pendiente() {
     [1, ms(1, { 100: 1, 200: 0 })],
     [2, ms(2, { 200: 1, 100: 0 })]
   ]);
-  // Agregado: 1-1 → pendiente (penaltis no implementados)
+  // Agregado 1-1 sin tanda → pendiente
   const r = resolveTie(tie, byId);
   assert.strictEqual(r.resuelto, false);
   assert.strictEqual(r.eliminado, null);
@@ -61,6 +67,54 @@ function test_resolveTie_cruce_con_menos_de_dos_partidos_no_resuelto() {
   const r = resolveTie(tie, new Map([[1, ms(1, { 100: 1, 200: 0 })]]));
   assert.strictEqual(r.resuelto, false);
   assert.strictEqual(r.eliminado, null);
+}
+
+function test_getShootoutWinner_gana_visitante() {
+  const tie = groupTies([partido(1, '16', 100, 200), partido(2, '16', 200, 100)])[0];
+  const byId = new Map([
+    [1, ms(1, { 100: 1, 200: 0 })],
+    [2, ms(2, { 200: 3, 100: 4 }, { 200: 3, 100: 4 })]
+  ]);
+  // La vuelta tiene tanda: local 200 anota 3, visitante 100 anota 4 → gana 100
+  assert.strictEqual(getShootoutWinner(tie.matches, byId), 100);
+}
+
+function test_getShootoutWinner_sin_tanda_devuelve_null() {
+  const tie = groupTies([partido(1, '16', 100, 200), partido(2, '16', 200, 100)])[0];
+  const byId = new Map([
+    [1, ms(1, { 100: 1, 200: 0 })],
+    [2, ms(2, { 200: 1, 100: 0 })]
+  ]);
+  assert.strictEqual(getShootoutWinner(tie.matches, byId), null);
+}
+
+function test_resolveTie_agregado_empate_tanda_decide_eliminado() {
+  const tie = groupTies([partido(1, '16', 100, 200), partido(2, '16', 200, 100)])[0];
+  const byId = new Map([
+    [1, ms(1, { 100: 1, 200: 0 })],
+    [2, ms(2, { 200: 1, 100: 0 }, { 200: 3, 100: 4 })]
+  ]);
+  // Agregado 1-1. Tanda en la vuelta: 100 gana 4-3 → avanza 100, eliminado 200
+  const r = resolveTie(tie, byId);
+  assert.strictEqual(r.resuelto, true);
+  assert.strictEqual(r.eliminado, 200);
+}
+
+function test_computeEliminatorias_final_empatada_tanda_resuelta() {
+  const matches = [partido(1, 'final', 100, 200)];
+  const matchStats = [ms(1, { 100: 1, 200: 1 }, { 100: 4, 200: 3 })];
+  const r = computeEliminatorias(matches, matchStats);
+  assert.strictEqual(r.rondasResueltas.includes('final'), true);
+  assert.strictEqual(r.final.campeon, 100);
+  assert.strictEqual(r.final.subcampeon, 200);
+}
+
+function test_reachedPhases_final_tanda_campeon() {
+  const matches = [partido(1, 'final', 100, 200)];
+  const matchStats = [ms(1, { 100: 1, 200: 1 }, { 100: 4, 200: 3 })];
+  const r = computeReachedPhases(matches, matchStats);
+  assert.strictEqual(r[100], 6);
+  assert.strictEqual(r[200], 5);
 }
 
 // ---- Tests de computeEliminatorias ----
@@ -234,6 +288,11 @@ const tests = [
   test_resolveTie_agregado_empate_pendiente,
   test_resolveTie_sin_resultado_no_resuelto,
   test_resolveTie_cruce_con_menos_de_dos_partidos_no_resuelto,
+  test_getShootoutWinner_gana_visitante,
+  test_getShootoutWinner_sin_tanda_devuelve_null,
+  test_resolveTie_agregado_empate_tanda_decide_eliminado,
+  test_computeEliminatorias_final_empatada_tanda_resuelta,
+  test_reachedPhases_final_tanda_campeon,
   test_computeEliminatorias_rondas_completas_y_parciales,
   test_computeEliminatorias_final_resuelta,
   test_computeEliminatorias_final_empatada_no_resuelta,
