@@ -3370,16 +3370,6 @@ function updateUserHeader() {
 // TAB: PRONÓSTICOS
 // ============================================================
 
-/** Cuenta predicciones completas (home y away son números) */
-function countPredicted() {
-  let count = 0;
-  for (const id of Object.keys(AppState.scorePredictions)) {
-    const p = AppState.scorePredictions[id];
-    if (typeof p.home === 'number' && typeof p.away === 'number') count++;
-  }
-  return count;
-}
-
 /** Cuenta predicciones completas de una ronda */
 function countPredictedInRound(round) {
   const phaseMatches = AppState.currentPhaseMatches || [];
@@ -4621,7 +4611,7 @@ function renderPredictedStandings() {
   const standings = calculateStandings();
   const totalMatches = AppState.leagueMatches.length;
   const predicted = countPredictedInPhase(AppState.leagueMatches);
-  const pct = Math.round((predicted / totalMatches) * 100);
+  const pct = totalMatches > 0 ? Math.round((predicted / totalMatches) * 100) : 0;
 
   const rows = standings.map(team => {
     const gdSign = team.gd > 0 ? '+' : '';

@@ -159,6 +159,16 @@ function test_getRealTeamStats_counts_only_liga_matchstats() {
   assert.strictEqual(stats.gf, 2, 'getRealTeamStats gf should be 2 (KO goal ignored)');
 }
 
+function test_countPredictedInPhase_counts_only_liga_predictions() {
+  resetState();
+  AppState.scorePredictions = { 100: { home: 2, away: 1 } };   // fase 16
+  assert.strictEqual(countPredictedInPhase(AppState.leagueMatches), 0,
+    'KO-only prediction should not count');
+  AppState.scorePredictions = { 1: { home: 2, away: 1 } };     // liga
+  assert.strictEqual(countPredictedInPhase(AppState.leagueMatches), 1,
+    'liga prediction should count as 1');
+}
+
 function test_counter_denominator_is_144() {
   resetState();
   // Simular que el calendario real tiene 189 con 144 liga
@@ -178,6 +188,7 @@ const tests = [
   test_getTeamStats_ignores_ko_predictions,
   test_getTeamStats_counts_only_liga_predictions,
   test_getRealTeamStats_counts_only_liga_matchstats,
+  test_countPredictedInPhase_counts_only_liga_predictions,
   test_counter_denominator_is_144,
 ];
 
