@@ -104,9 +104,9 @@ function showPhaseChangeModal(previousPhase, currentPhase) {
       <h3 class="phase-change-title">Cambio de Fase</h3>
       <p class="phase-change-text">
         La fase del juego ha cambiado de<br>
-        <strong>${previousPhase}</strong><br>
+        <strong>${getFaseDesc(previousPhase)}</strong><br>
         a<br>
-        <strong>${currentPhase}</strong>
+        <strong>${getFaseDesc(currentPhase)}</strong>
       </p>
       <p class="phase-change-subtext">La página se recargará automáticamente...</p>
     </div>
@@ -2291,8 +2291,8 @@ function showAdminModal() {
 
   // Generar opciones del dropdown
   const optionsHtml = adjacentFases.length > 0
-    ? adjacentFases.map(f => `<option value="${f.nombre}">${f.nombre}</option>`).join('')
-    : `<option value="${fase}" selected>${fase}</option>`;
+    ? adjacentFases.map(f => `<option value="${f.nombre}">${f.desc || f.nombre}</option>`).join('')
+    : `<option value="${fase}" selected>${getFaseDesc(fase)}</option>`;
 
   const modal = document.createElement('div');
   modal.className = 'profile-modal';
@@ -2313,7 +2313,7 @@ function showAdminModal() {
       </div>
 
       <div style="width: 100%; margin-top: 16px; background: var(--ucl-surface); padding: 12px; border-radius: var(--radius-md);">
-        <p style="font-size: 12px; color: var(--text-muted); margin: 0;">Fase actual: <strong style="color: var(--text-primary);">${fase}</strong></p>
+        <p style="font-size: 12px; color: var(--text-muted); margin: 0;">Fase actual: <strong style="color: var(--text-primary);">${getFaseDesc(fase)}</strong></p>
       </div>
 
       <button id="btn-admin-change-phase" class="btn-primary" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #fff; margin-top: 16px; width: 100%;" ${adjacentFases.length === 0 ? 'disabled' : ''}>
@@ -2523,7 +2523,7 @@ function showPhaseConfirmModal(targetPhase) {
       <h2 style="font-size: 1.2rem; font-weight: 800; margin-bottom: 12px;">Cambiar Fase del Juego</h2>
 
       <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">
-        ¿Estás seguro de cambiar a <strong style="color: var(--text-primary);">${targetPhase}</strong>?
+        ¿Estás seguro de cambiar a <strong style="color: var(--text-primary);">${getFaseDesc(targetPhase)}</strong>?
       </p>
 
       <div style="width: 100%; background: rgba(255,193,7,0.1); border: 1px solid rgba(255,193,7,0.3); border-radius: var(--radius-md); padding: 12px; margin-bottom: 16px;">
@@ -2574,7 +2574,7 @@ function showPhaseConfirmModal(targetPhase) {
       const data = await response.json();
 
       if (data.ok) {
-        showToast(`Fase cambiada a ${targetPhase}`);
+        showToast(`Fase cambiada a ${getFaseDesc(targetPhase)}`);
         modal.remove();
 
         try {
@@ -2954,7 +2954,7 @@ function renderInicioTab() {
 
   const visual = faseVisual[fase] || faseVisual['FASE_PRETEMPORADA'];
   const descripcion = currentFase?.instrucciones || 'Cargando fase...';
-  const titulo = currentFase?.nombre || fase;
+  const titulo = currentFase?.desc || currentFase?.nombre || fase;
 
   const faseHtml = `
     <div class="inicio-card inicio-fase" style="border-left: 4px solid ${visual.color}">
@@ -2962,7 +2962,7 @@ function renderInicioTab() {
       <div class="inicio-card-content">
         <div class="inicio-card-title">${titulo}</div>
         <div class="inicio-card-desc">${descripcion}</div>
-        <span class="fase-badge" style="background: ${visual.color}">${fase}</span>
+        <span class="fase-badge" style="background: ${visual.color}">${getFaseDesc(fase)}</span>
       </div>
     </div>
   `;
