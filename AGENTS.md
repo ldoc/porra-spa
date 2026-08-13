@@ -1051,7 +1051,7 @@ Pestaña que permite al usuario predecir el cuadro completo de eliminatorias de 
 4. **Congelación**: Las predicciones de eliminatorias se pueden guardar mientras `predictionsConfirmed` sea true. Una vez confirmado, los pronósticos de liga no se pueden editar
 5. **Edición**: Los usuarios pueden modificar sus predicciones de eliminatorias libremente
 6. **Top-8 restriction**: Los 8 equipos clasificados en los puestos 1-8 de la clasificación pronosticada NO pueden colocarse en dieciseisavos (roundOf32). Deben ir a octavos o superior
-7. **Restricciones por grupos de posiciones**: Para limitar la concentración de equipos de ciertos rangos en una misma ronda, se aplican los siguientes límites máximos (2 equipos por grupo por caja):
+7. **Restricciones por grupos de posiciones**: Para limitar la concentración de equipos de ciertos rangos en una misma ronda, se aplican los siguientes límites máximos (2 equipos por grupo):
 
    **En la caja de DIECISEISAVOS (roundOf32):**
    - Máximo 2 equipos de los que acabaron en posiciones 9, 10, 23 y 24
@@ -1059,11 +1059,13 @@ Pestaña que permite al usuario predecir el cuadro completo de eliminatorias de 
    - Máximo 2 equipos de los que acabaron en posiciones 13, 14, 19 y 20
    - Máximo 2 equipos de los que acabaron en posiciones 15, 16, 17 y 18
 
-   **En el resto de las cajas (campeón, subcampeón, semifinalistas, cuartos, octavos):**
+   **En el conjunto de las cajas fuera de dieciseisavos (campeón, subcampeón, semifinalistas, cuartos y octavos combinadas):**
    - Máximo 2 equipos de los que acabaron en posiciones 9, 10, 23 y 24
    - Máximo 2 equipos de los que acabaron en posiciones 11, 12, 21 y 22
    - Máximo 2 equipos de los que acabaron en posiciones 13, 14, 19 y 20
    - Máximo 2 equipos de los que acabaron en posiciones 15, 16, 17 y 18
+
+   > El límite de las cajas fuera de dieciseisavos se aplica al CONJUNTO de todas ellas (no por caja individual). Ejemplo: con los equipos de posiciones 9, 10, 23 y 24, no se puede poner el 23 en cuartos, el 24 en semifinales y el 10 en octavos; 2 de ellos deben ir obligatoriamente a dieciseisavos.
 
    **Grupos de restricción:**
    | Grupo | Posiciones |
