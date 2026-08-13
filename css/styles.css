@@ -3880,13 +3880,14 @@ html, body {
 
 .drop-zone-slots {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 6px;
 }
 
 /* --- Drop slots --- */
 .drop-slot {
   aspect-ratio: 1;
+  min-width: 0;
   background: var(--bg-input);
   border: 1.5px dashed rgba(255, 255, 255, 0.12);
   border-radius: var(--radius-sm);
@@ -3925,9 +3926,13 @@ html, body {
   margin-top: 3px;
   max-width: 100%;
   padding: 0 2px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
   line-height: 1.2;
 }
 
@@ -4518,21 +4523,6 @@ html, body {
 
 .eliminatorias-final-row .drop-slot {
   flex: 0 1 100px;
-}
-
-/* Cajas fijas con nombre en varias líneas (vista read-only) */
-.eliminatorias-view .drop-slot {
-  min-width: 0;
-}
-
-.eliminatorias-view .drop-slot-name {
-  white-space: normal;
-  overflow-wrap: anywhere;
-  word-break: break-word;
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 3;
-  overflow: hidden;
 }
 
 /* --- Tab Eliminatorias en modal de perfil (predicciones + puntos) --- */
