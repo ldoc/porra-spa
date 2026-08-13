@@ -2245,7 +2245,7 @@ async function enterApp() {
   fetchSquadFromBackend();
   fetchMatchStats();
   fetchAllPredictions();
-  fetchFinalPredictionsFromBackend();
+  await fetchFinalPredictionsFromBackend();
   startMatchStatsPolling();
   navigateToTab('inicio');
 }
