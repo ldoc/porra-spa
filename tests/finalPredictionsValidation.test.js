@@ -87,3 +87,4 @@ for (const t of tests) {
   catch (e) { failed++; console.log(`  ✗ ${t.name}\n    ${e.message}`); }
 }
 console.log(`\n${passed} passing, ${failed} failing`);
+process.exit(failed > 0 ? 1 : 0);
