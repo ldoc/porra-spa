@@ -60,10 +60,11 @@ function test_cabecera_etiquetas() {
 function test_fila_incluye_identidad_y_valores() {
   const html = buildClasificacionRow(user(), 1, false);
   assert.ok(html.includes('clasificacion-row'), 'clase fila');
-  assert.ok(html.includes('juan.antonio_pvz'), 'nombre');
-  assert.ok(html.includes('⚽'), 'avatar');
+  assert.ok(/<span class="clasificacion-name">juan\.antonio_pvz/.test(html), 'nombre');
+  assert.ok(/<span class="player-avatar">⚽<\/span>/.test(html), 'avatar');
   assert.ok(html.includes('rank-pill rank-1'), 'badge rank 1');
   assert.ok(html.includes('clasificacion-total'), 'clase total');
+  assert.ok(html.includes("showUserProfileModal('juan.antonio_pvz')"), 'handler de perfil');
   for (const val of ['145', '181', '60', '12', '398']) {
     assert.ok(html.includes(`>${val}</span>`), `valor ${val}`);
   }
@@ -81,7 +82,7 @@ function test_fila_usuario_actual() {
 function test_fila_ceros_siempre_visibles() {
   const html = buildClasificacionRow(user({ predictionPoints: 0, squadPoints: 0,
     classificationPoints: 0, eliminatoriasPoints: 0, realPoints: 0 }), 4, false);
-  assert.ok(html.includes('>0</span>'), 'ceros presentes');
+  assert.strictEqual((html.match(/>0<\/span>/g) || []).length, 5, 'cinco ceros presentes');
   assert.ok(html.includes('rank-pill rank-n'), 'badge gris para rank > 3');
 }
 

@@ -740,7 +740,7 @@ html, body {
   background: var(--ucl-card);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
-  overflow: hidden;
+  overflow: clip;
   box-shadow: var(--shadow-card);
 }
 
@@ -4604,7 +4604,7 @@ html, body {
 /* Tabla de desglose en Clasificación (C2) */
 .clasificacion-header {
   display: grid;
-  grid-template-columns: 1fr repeat(5, 40px);
+  grid-template-columns: 1fr repeat(5, minmax(26px, 40px));
   gap: 4px;
   align-items: center;
   padding: 8px 10px;
@@ -4625,7 +4625,7 @@ html, body {
 
 .clasificacion-row {
   display: grid;
-  grid-template-columns: 1fr repeat(5, 40px);
+  grid-template-columns: 1fr repeat(5, minmax(26px, 40px));
   gap: 4px;
   align-items: center;
   padding: 9px 10px;
@@ -4675,6 +4675,7 @@ html, body {
   font-weight: 800;
   font-size: 10px;
 }
+/* Re-definición intencionada: agrupar con .rank-pill (ver plan C2) */
 .rank-1 { background: #F59E0B; color: #000; }
 .rank-2 { background: #94A3B8; color: #000; }
 .rank-3 { background: #B45309; color: #fff; }
