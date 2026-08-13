@@ -4604,8 +4604,8 @@ html, body {
 /* Tabla de desglose en Clasificación (C2) */
 .clasificacion-header {
   display: grid;
-  grid-template-columns: 1fr repeat(5, minmax(26px, 40px));
-  gap: 4px;
+  grid-template-columns: 1fr repeat(5, minmax(22px, 32px));
+  gap: 3px;
   align-items: center;
   padding: 8px 10px;
   background: var(--ucl-card);
@@ -4625,8 +4625,8 @@ html, body {
 
 .clasificacion-row {
   display: grid;
-  grid-template-columns: 1fr repeat(5, minmax(26px, 40px));
-  gap: 4px;
+  grid-template-columns: 1fr repeat(5, minmax(22px, 32px));
+  gap: 3px;
   align-items: center;
   padding: 9px 10px;
   border-bottom: 1px solid var(--border-color);
