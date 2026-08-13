@@ -5314,8 +5314,7 @@ async function renderFinalPredictionsTab() {
 
   const availableTeams = qualifiedTeams.filter(t => !assignedTeams.has(t.id));
 
-  const savedScrollLeft = document.querySelector('.final-predictions-fixed')?.scrollTop || 0;
-  const savedScrollRight = document.querySelector('.final-predictions-scroll')?.scrollTop || 0;
+  const savedScrollPositions = saveFinalScrollPositions();
 
   function getTeamImg(teamId) {
     const ext = AppState.teamsMap[teamId]?.ext || 'png';
@@ -5399,12 +5398,7 @@ async function renderFinalPredictionsTab() {
     </div>
   `;
 
-  requestAnimationFrame(() => {
-    const left = document.querySelector('.final-predictions-fixed');
-    const right = document.querySelector('.final-predictions-scroll');
-    if (left) left.scrollTop = savedScrollLeft;
-    if (right) right.scrollTop = savedScrollRight;
-  });
+  restoreFinalScrollPositions(savedScrollPositions);
 
   if (!frozen) {
     setupFinalPredictionsTapToPlace();
