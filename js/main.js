@@ -5498,6 +5498,18 @@ function setupFinalPredictionsTapToPlace() {
   });
 }
 
+/** Copia profunda (1 nivel) de finalPredictions para validar sin mutar el estado */
+function cloneFinalPredictions(fp) {
+  return {
+    champion: fp.champion,
+    runnerUp: fp.runnerUp,
+    semiFinalists: [...(fp.semiFinalists || [])],
+    quarterFinalists: [...(fp.quarterFinalists || [])],
+    roundOf16: [...(fp.roundOf16 || [])],
+    roundOf32: [...(fp.roundOf32 || [])]
+  };
+}
+
 /**
  * Añade un equipo a una zona específica
  */
@@ -5511,16 +5523,7 @@ async function addTeamToZone(teamId, zoneId, index) {
     return;
   }
 
-  // Validación: restricciones por grupos de posiciones
-  const POSITION_GROUPS = {
-    A: [9, 10, 23, 24],
-    B: [11, 12, 21, 22],
-    C: [13, 14, 19, 20],
-    D: [15, 16, 17, 18]
-  };
-  const MAX_TEAMS_PER_GROUP = 2;
-
-  // Usar calculatePredictedStandings que es la función correcta
+  // Validación: restricciones por grupos de posiciones (validador puro, copia provisional)
   const standings = calculatePredictedStandings();
   if (standings && standings.length >= 24) {
     const teamPositionMap = new Map();
@@ -5528,45 +5531,26 @@ async function addTeamToZone(teamId, zoneId, index) {
       teamPositionMap.set(team.teamId, team.position);
     });
 
-    const teamPosition = teamPositionMap.get(teamId);
-    if (teamPosition) {
-      // Determinar a qué grupo pertenece el equipo
-      let teamGroup = null;
-      for (const [groupName, positions] of Object.entries(POSITION_GROUPS)) {
-        if (positions.includes(teamPosition)) {
-          teamGroup = groupName;
-          break;
+    const trial = cloneFinalPredictions(fp);
+    if (zoneId === 'champion') {
+      trial.champion = teamId;
+    } else if (zoneId === 'runnerUp') {
+      trial.runnerUp = teamId;
+    } else {
+      const arr = trial[zoneId];
+      if (Array.isArray(arr)) {
+        if (index < arr.length) {
+          arr[index] = teamId;
+        } else {
+          arr.push(teamId);
         }
       }
+    }
 
-      if (teamGroup) {
-        // Obtener los equipos ya asignados a la zona
-        let zoneTeams = [];
-        if (zoneId === 'champion') {
-          zoneTeams = fp.champion ? [fp.champion] : [];
-        } else if (zoneId === 'runnerUp') {
-          zoneTeams = fp.runnerUp ? [fp.runnerUp] : [];
-        } else if (Array.isArray(fp[zoneId])) {
-          zoneTeams = [...fp[zoneId]];
-        }
-
-        // Si estamos reemplazando un equipo, quitarlo del conteo
-        if (index < zoneTeams.length) {
-          zoneTeams.splice(index, 1);
-        }
-
-        // Contar cuántos equipos del mismo grupo ya hay en la zona
-        const groupPositions = POSITION_GROUPS[teamGroup];
-        const countInGroup = zoneTeams.filter(id => {
-          const pos = teamPositionMap.get(id);
-          return pos && groupPositions.includes(pos);
-        }).length;
-
-        if (countInGroup >= MAX_TEAMS_PER_GROUP) {
-          showToast(`Máximo ${MAX_TEAMS_PER_GROUP} equipos de posiciones ${groupPositions.join(',')} en esta zona.`);
-          return;
-        }
-      }
+    const violations = getFinalPredictionsViolations(trial, teamPositionMap);
+    if (violations.length > 0) {
+      showToast(violations[0]);
+      return;
     }
   }
 
