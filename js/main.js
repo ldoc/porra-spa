@@ -3477,12 +3477,15 @@ function renderPronosticosTab() {
       <p class="wizard-progress-text">
         <strong>${predicted}</strong> de <strong>${total}</strong> partidos pronosticados
       </p>
-      <div class="round-nav">
-        <button class="round-nav-btn" id="btn-round-prev" disabled>&larr; Jornada anterior</button>
-        <span class="round-indicator" id="round-indicator">Jornada 1 de ${rounds}</span>
-        <button class="round-nav-btn" id="btn-round-next">Siguiente jornada &rarr;</button>
+      <div class="round-nav ${rounds > 1 ? '' : 'round-nav-single'}" id="round-nav">
+        ${rounds > 1 ? `
+          <button class="round-nav-arrow" id="btn-round-prev" disabled>&lsaquo;</button>
+          <span class="round-fase-pill" id="round-fase-pill"></span>
+          <button class="round-nav-arrow" id="btn-round-next">&rsaquo;</button>
+        ` : `
+          <span class="round-fase-pill round-fase-pill-single" id="round-fase-pill"></span>
+        `}
       </div>
-      <div class="round-progress-text" id="round-progress-text"></div>
     </div>
 
     <div id="round-matches-container" class="round-matches-scroll"></div>
@@ -3527,22 +3530,11 @@ function renderRoundMatches() {
   const round = AppState.currentRound;
   const phaseMatches = AppState.currentPhaseMatches || [];
   const roundMatches = phaseMatches.filter(m => m.ronda === round);
-  const totalRounds = AppState.currentPhaseRounds || 1;
   const { fase } = getMatchesForCurrentPhase();
   const frozen = isPhaseFrozen(fase);
 
-  // Actualizar indicadores
-  const indicator = document.getElementById('round-indicator');
-  if (indicator) indicator.textContent = `Jornada ${round} de ${totalRounds}`;
-
-  const roundPredicted = countPredictedInRound(round);
-  const roundTotal = roundMatches.length;
-  const roundPct = Math.round((roundPredicted / roundTotal) * 100);
-
-  const roundProgressEl = document.getElementById('round-progress-text');
-  if (roundProgressEl) {
-    roundProgressEl.innerHTML = `Jornada ${round}: <strong>${roundPredicted}</strong> de <strong>${roundTotal}</strong> pronosticados`;
-  }
+  // Píldora de fase + estado de flechas
+  renderRoundNav();
 
   // Actualizar barra de progreso global
   const totalPredicted = countPredictedInPhase(phaseMatches);
@@ -3554,12 +3546,6 @@ function renderRoundMatches() {
   if (progressText) {
     progressText.innerHTML = `<strong>${totalPredicted}</strong> de <strong>${totalMatches}</strong> partidos pronosticados`;
   }
-
-  // Botones prev/next de ronda
-  const prevBtn = document.getElementById('btn-round-prev');
-  const nextBtn = document.getElementById('btn-round-next');
-  if (prevBtn) prevBtn.disabled = round <= 1;
-  if (nextBtn) nextBtn.disabled = round >= totalRounds;
 
   container.innerHTML = roundMatches.map(match => {
     const pred = AppState.scorePredictions[match.id];
@@ -3669,16 +3655,9 @@ function handleGoalButtonClick(e) {
 }
 
 function updateProgressCounts() {
-  const round = AppState.currentRound;
   const phaseMatches = AppState.currentPhaseMatches || [];
-  const roundPredicted = countPredictedInRound(round);
-  const roundMatches = phaseMatches.filter(m => m.ronda === round);
-  const roundTotal = roundMatches.length;
 
-  const roundProgressEl = document.getElementById('round-progress-text');
-  if (roundProgressEl) {
-    roundProgressEl.innerHTML = `Jornada ${round}: <strong>${roundPredicted}</strong> de <strong>${roundTotal}</strong> pronosticados`;
-  }
+  renderRoundNav();
 
   const totalPredicted = countPredictedInPhase(phaseMatches);
   const totalMatches = phaseMatches.length;
