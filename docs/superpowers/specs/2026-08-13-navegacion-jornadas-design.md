@@ -62,11 +62,10 @@ function getFasePillInfo(fase) {
 }
 ```
 
-- `buildRoundFasePill(fase, round, totalRounds, predicted, total)` → devuelve el HTML de la píldora:
+- `buildRoundFasePill(fase, round, totalRounds, predicted, total)` → devuelve el **contenido** HTML de la píldora:
   - Si `totalRounds > 1`: `⚽ Liga · Jornada <span class="round-fase-jornada">1</span>/8 <span class="round-fase-progress">3/18</span>`.
   - Si `totalRounds === 1` (eliminatorias): solo `⚔️ Octavos` (sin jornada ni contador).
-  - La píldora lleva `style="--fc: <color>"` para el borde/fondo.
-- `renderRoundNav()` → actualiza el contenido de `#round-fase-pill` y el estado `disabled` de `#btn-round-prev`/`#btn-round-next`. Reutilizada por `renderPronosticosTab`, `renderRoundMatches` y `updateProgressCounts`.
+- `renderRoundNav()` → aplica el color de fase como `--fc` sobre el contenedor `#round-fase-pill` (borde/fondo), sustituye su contenido con `buildRoundFasePill(...)` y actualiza `disabled` de `#btn-round-prev`/`#btn-round-next`. Reutilizada por `renderPronosticosTab`, `renderRoundMatches` y `updateProgressCounts`.
 
 ### 2. JavaScript — template de `renderPronosticosTab` (js/main.js:3441-3446)
 
@@ -181,7 +180,7 @@ Nuevo fichero `tests/roundNav.test.js` (patrón de espejo de función pura + ass
 - `getFasePillInfo(fase)` devuelve label, icono y color correctos para `liga`, `16`, `8`, `4`, `semis`, `final` (y fallback).
 - `buildRoundFasePill('liga', 1, 8, 3, 18)` incluye "Liga", "Jornada", "1", "8", "3/18" y la clase `round-fase-progress`.
 - `buildRoundFasePill('8', 1, 1, 0, 0)` devuelve solo el label de la fase sin contador ni "Jornada".
-- `buildRoundFasePill` incluye el color correcto en `--fc` por fase.
+- `getFasePillInfo(fase)` devuelve el color correcto por fase (contrato de `--fc` aplicado por `renderRoundNav`).
 
 Ejecución: `node tests/roundNav.test.js`.
 
