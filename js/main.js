@@ -3426,7 +3426,7 @@ function renderPronosticosTab() {
       ${frozen ? '<div style="background:rgba(239,68,68,0.15);color:#ef4444;padding:8px 12px;border-radius:8px;margin-bottom:8px;font-size:13px;text-align:center;">🔒 Pronósticos bloqueados — esta fase ha comenzado</div>' : ''}
       <div class="pronosticos-actions-row">
         <button class="save-predictions-btn" id="btn-save-predictions" ${frozen || confirmedForFase ? 'disabled' : ''}>💾 Guardar</button>
-        ${!confirmedForFase ? `<button class="confirm-predictions-btn" id="btn-confirm-predictions" ${frozen || predicted < total ? 'disabled' : ''}>✅ Confirmar</button>` : ''}
+        ${shouldShowConfirmButton() ? `<button class="confirm-predictions-btn" id="btn-confirm-predictions" ${shouldConfirmButtonBeDisabled() ? 'disabled' : ''}>✅ Confirmar</button>` : ''}
         <button class="standings-btn" id="btn-show-standings" onclick="showPredictedStandings()">📊 Clasificación</button>
         ${AppState.predictionsConfirmed ? '<button class="standings-btn" id="btn-show-final" onclick="navigateToTab(\'final-predictions\')" style="background: linear-gradient(135deg, #8B5CF6, #EC4899);">🏆 Eliminatorias</button>' : ''}
       </div>
@@ -3453,7 +3453,7 @@ function renderPronosticosTab() {
 
   const confirmBtn = document.getElementById('btn-confirm-predictions');
   if (confirmBtn) {
-    confirmBtn.addEventListener('click', () => confirmPredictions());
+    confirmBtn.addEventListener('click', () => showConfirmPredictionsModal());
   }
 
   // Delegacion de eventos para botones +/- (una sola vez)
@@ -3705,17 +3705,63 @@ function updateSaveButton() {
   }
 }
 
+/** El botón Confirmar solo se muestra en FASE_PRETEMPORADA mientras no se haya confirmado */
+function shouldShowConfirmButton() {
+  const { fase } = getMatchesForCurrentPhase();
+  const confirmedForFase = AppState.predictionsConfirmed && fase === 'liga';
+  return isFasePretemporada() && !confirmedForFase;
+}
+
+/** Confirmar queda deshabilitado si la fase está congelada, falta algún pronóstico o hay cambios sin guardar */
+function shouldConfirmButtonBeDisabled() {
+  const { matches: phaseMatches, fase } = getMatchesForCurrentPhase();
+  const total = phaseMatches.length;
+  const predicted = countPredictedInPhase(phaseMatches);
+  return isPhaseFrozen(fase) || predicted < total || AppState.hasUnsavedChanges;
+}
+
 /** Actualiza el estado del botón Confirmar según los pronósticos completos de la fase */
 function updateConfirmButton() {
   const btn = document.getElementById('btn-confirm-predictions');
   if (!btn) return;
-  const { matches: phaseMatches, fase } = getMatchesForCurrentPhase();
-  const frozen = isPhaseFrozen(fase);
-  const total = phaseMatches.length;
-  const predicted = countPredictedInPhase(phaseMatches);
-  btn.disabled = frozen || predicted < total;
+  btn.disabled = shouldConfirmButtonBeDisabled();
   btn.style.pointerEvents = '';
   btn.style.opacity = '';
+}
+
+/** Modal de aviso antes de confirmar los pronósticos de liga */
+function showConfirmPredictionsModal() {
+  const existing = document.querySelector('.unsaved-modal-overlay');
+  if (existing) existing.remove();
+
+  const overlay = document.createElement('div');
+  overlay.className = 'unsaved-modal-overlay';
+  overlay.innerHTML = `
+    <div class="unsaved-modal">
+      <div class="unsaved-modal-icon">⚠️</div>
+      <h3 class="unsaved-modal-title">Confirmar pronósticos</h3>
+      <p class="unsaved-modal-text">Al confirmar los pronósticos de los partidos <strong>ya no podrás volver a cambiarlos</strong>. Al confirmar desbloquearás el acceso a la pantalla de <strong>Eliminatorias</strong>.</p>
+      <div class="unsaved-modal-actions">
+        <button class="unsaved-modal-btn unsaved-modal-btn-save" id="modal-confirm-accept">✅ Confirmar pronósticos</button>
+        <button class="unsaved-modal-btn unsaved-modal-btn-cancel" id="modal-confirm-cancel">Cancelar</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+
+  overlay.querySelector('#modal-confirm-accept').addEventListener('click', () => {
+    overlay.remove();
+    confirmPredictions();
+  });
+
+  overlay.querySelector('#modal-confirm-cancel').addEventListener('click', () => {
+    overlay.remove();
+  });
+
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) overlay.remove();
+  });
 }
 
 async function confirmPredictions() {
