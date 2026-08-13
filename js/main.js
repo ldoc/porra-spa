@@ -2929,7 +2929,7 @@ function renderInicioTab() {
   };
 
   const visual = faseVisual[fase] || faseVisual['FASE_PRETEMPORADA'];
-  const descripcion = currentFase?.instrucciones || 'Cargando fase...';
+  const descripcion = (currentFase?.instrucciones || 'Cargando fase...').replace(/\{usuario\}/g, user.name);
   const titulo = currentFase?.desc || currentFase?.nombre || fase;
 
   const faseHtml = `
