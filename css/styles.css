@@ -3278,7 +3278,11 @@ html, body {
   flex: 1 1 auto;
   min-width: 0;
   padding: 8px 12px;
+  border-radius: 8px;
   font-size: 13px;
+  line-height: 1.2;
+  height: 36px;
+  box-sizing: border-box;
   margin-bottom: 0;
 }
 
