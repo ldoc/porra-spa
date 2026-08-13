@@ -3,6 +3,7 @@
     {
       "id": 1,
       "nombre": "FASE_PRETEMPORADA",
+      "desc": "Pretemporada",
       "instrucciones": "Hola {usuario}. Estamos de pretemporada, recuerda que antes de que empiece el primer partido de la jornada 1 debes tener pronosticados todos los partidos y tu plantilla ideal. Cuando termines de pronosticar los partidos valida tus resultados y podrás acceder a la pantalla de \"Eliminatorias\" donde debes elegir los puestos finales de cada equipo (de los 24 clasificados que hayas considerado de acuerdo a tus pronósticos). ¡Buena suerte!",
       "reglas-app": [
         "El usuario no puede ver los pronósticos de otros usuarios",
@@ -15,6 +16,7 @@
     {
       "id": 2,
       "nombre": "FASE_LIGA",
+      "desc": "Liga",
       "instrucciones": "¡La fase de liga ha comenzado, mucha suerte!",
       "reglas-app": [
         "Durante esta fase se disputan los partidos de la FASE_LIGA en calendar.js los marcados como fase:\"liga\"",
@@ -25,6 +27,7 @@
     {
       "id": 3,
       "nombre": "FASE_PRE16",
+      "desc": "Previa Knockouts",
       "instrucciones": "La fase de liga ha terminado. ¡Ahora tienes que rellenar los pronósticos para los partidos de knockout!",
       "reglas-app": [
         "FASE_LIGA ha terminado",
@@ -36,6 +39,7 @@
     {
       "id": 4,
       "nombre": "FASE_16",
+      "desc": "Knockouts",
       "instrucciones": "¡La fase de knockout ha comenzado, mucha suerte!",
       "reglas-app": [
         "Durante esta fase se disputan los partidos de la FASE_16 en calendar.js los marcados como fase:\"16\"",
@@ -46,6 +50,7 @@
     {
       "id": 5,
       "nombre": "FASE_PRE8",
+      "desc": "Previa Octavos",
       "instrucciones": "La fase de 16avos ha terminado. ¡Ahora tienes que rellenar los pronósticos para los partidos de octavos de final!",
       "reglas-app": [
         "FASE_16 ha terminado",
@@ -57,6 +62,7 @@
     {
       "id": 6,
       "nombre": "FASE_8",
+      "desc": "Octavos de final",
       "instrucciones": "¡La fase de octavos de final ha comenzado, mucha suerte!",
       "reglas-app": [
         "Durante esta fase se disputan los partidos de la FASE_8 en calendar.js los marcados como fase:\"8\"",
@@ -67,6 +73,7 @@
     {
       "id": 7,
       "nombre": "FASE_PRE4",
+      "desc": "Previa Cuartos",
       "instrucciones": "La fase de octavos de final ha terminado. ¡Ahora tienes que rellenar los pronósticos para los partidos de cuartos de final!",
       "reglas-app": [
         "FASE_8 ha terminado",
@@ -78,6 +85,7 @@
     {
       "id": 8,
       "nombre": "FASE_4",
+      "desc": "Cuartos de final",
       "instrucciones": "¡La fase de cuartos de final ha comenzado, mucha suerte!",
       "reglas-app": [
         "Durante esta fase se disputan los partidos de la FASE_4 en calendar.js los marcados como fase:\"4\"",
@@ -88,6 +96,7 @@
     {
       "id": 9,
       "nombre": "FASE_PRESEMIS",
+      "desc": "Previa Semifinales",
       "instrucciones": "La fase de cuartos de final ha terminado. ¡Ahora tienes que rellenar los pronósticos para los partidos de semifinales!",
       "reglas-app": [
         "FASE_4 ha terminado",
@@ -99,6 +108,7 @@
     {
       "id": 10,
       "nombre": "FASE_SEMIS",
+      "desc": "Semifinales",
       "instrucciones": "¡La fase de semifinales ha comenzado, mucha suerte!",
       "reglas-app": [
         "Durante esta fase se disputan los partidos de la FASE_SEMIS en calendar.js los marcados como fase:\"semis\"",
@@ -109,6 +119,7 @@
     {
       "id": 11,
       "nombre": "FASE_PREFINAL",
+      "desc": "Previa Final",
       "instrucciones": "La fase de semifinales ha terminado. ¡Ahora tienes que rellenar el pronóstico para la final, atina bien que ya solo queda este partido!",
       "reglas-app": [
         "FASE_SEMIS ha terminado",
@@ -120,6 +131,7 @@
     {
       "id": 12,
       "nombre": "FASE_FINAL",
+      "desc": "Final",
       "instrucciones": "¡Se va a disputar la final, ha sido un viaje duro pero ha merecido la pena, mucha suerte!",
       "reglas-app": [
         "Durante esta fase se disputa el partido de la FASE_FINAL en calendar.js el marcado como fase:\"final\"",
@@ -130,6 +142,7 @@
     {
       "id": 13,
       "nombre": "FASE_POSTFINAL",
+      "desc": "Fin de porra",
       "instrucciones": "¡La porra ha terminado, gracias por participar, hasta el año que viene!",
       "reglas-app": [
         "La porra ha terminado",
