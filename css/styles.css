@@ -2065,11 +2065,16 @@ html, body {
 }
 
 .confirm-predictions-btn {
+  flex: 1 1 auto;
+  min-width: 0;
   padding: 8px 12px;
   border-radius: 8px;
   border: none;
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 700;
+  line-height: 1.2;
+  height: 36px;
+  box-sizing: border-box;
   cursor: pointer;
   background: linear-gradient(135deg, #10B981, #059669);
   color: white;
@@ -3261,35 +3266,42 @@ html, body {
   color: var(--text-muted);
 }
 
-/* Botón de clasificación en pronósticos */
+/* Botones de cabecera en pronósticos */
 .pronosticos-actions-row {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
+  align-items: center;
 }
 
 .pronosticos-actions-row .save-predictions-btn {
-  flex: 1;
-  padding: 10px 12px;
-  font-size: var(--font-size-sm);
-  margin-bottom: 8px;
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 8px 12px;
+  font-size: 13px;
+  margin-bottom: 0;
 }
 
 .standings-btn {
-  flex: 0 0 auto;
+  flex: 1 1 auto;
+  min-width: 0;
   background: linear-gradient(135deg, #8B5CF6 0%, #6366F1 50%, #3B82F6 100%);
   border: none;
   color: #fff;
-  border-radius: var(--radius-md);
-  padding: 10px 14px;
+  border-radius: 8px;
+  padding: 8px 12px;
   font-family: var(--font-family);
-  font-size: var(--font-size-sm);
+  font-size: 13px;
   font-weight: 700;
+  line-height: 1.2;
+  height: 36px;
+  box-sizing: border-box;
   cursor: pointer;
   transition: all var(--transition-fast);
   white-space: nowrap;
   box-shadow: 0 2px 8px rgba(139, 92, 246, 0.3);
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
-  margin-bottom: 8px;
+  margin-bottom: 0;
 }
 
 .standings-btn:active {
