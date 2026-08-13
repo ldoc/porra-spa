@@ -901,17 +901,6 @@ async function renderClasificacionTab() {
   }
 
    // Post-freeze: puntos reales + perfil clickable
-   // Obtener todas las plantillas en una sola petición (con caché)
-   if (!AppState.squadsCache || !Object.keys(AppState.squadsCache).length || !AppState._squadsCacheTime || Date.now() - AppState._squadsCacheTime >= CACHE_TTL) {
-     try {
-       const res = await fetchWithPhase(`${API_BASE}/api/squad/all`, { headers: authHeaders() });
-       const data = await res.json();
-       if (data.ok && data.squads) {
-         AppState.squadsCache = { ...AppState.squadsCache, ...data.squads };
-         AppState._squadsCacheTime = Date.now();
-       }
-    } catch (e) { /* ignore */ }
-  }
 
   // Pre-calcular clasificación real una sola vez
   const hasMatchStats = AppState.matchStats.length > 0;
@@ -919,9 +908,7 @@ async function renderClasificacionTab() {
     calculateRealStandings();
   }
 
-  // Precargar finalPredictions de todos los usuarios (con caché) para puntos de eliminatorias
   const reachedPhases = computeReachedPhases(AppState.matches, AppState.matchStats);
-  await Promise.all(players.map(p => fetchFinalPredictionsForUser(p.name)));
 
   const playersWithPoints = players.map(p => {
     const userData = calculateUserTotalPoints(p.name);
@@ -1537,18 +1524,6 @@ async function renderResultadosTab() {
   if (!AppState.matchStats.length) {
     container.innerHTML = `<div style="padding: 24px; text-align: center; color: var(--text-muted);">No hay resultados disponibles aún.</div>`;
     return;
-  }
-
-   // Precargar plantillas de todos los usuarios (una sola petición, con caché)
-   if (!AppState.squadsCache || !Object.keys(AppState.squadsCache).length || !AppState._squadsCacheTime || Date.now() - AppState._squadsCacheTime >= CACHE_TTL) {
-     try {
-       const res = await fetchWithPhase(`${API_BASE}/api/squad/all`, { headers: authHeaders() });
-       const data = await res.json();
-       if (data.ok && data.squads) {
-         AppState.squadsCache = { ...AppState.squadsCache, ...data.squads };
-         AppState._squadsCacheTime = Date.now();
-       }
-    } catch (e) { /* ignore */ }
   }
 
   // Pre-calcular clasificación real
