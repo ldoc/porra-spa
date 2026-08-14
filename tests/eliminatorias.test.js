@@ -340,6 +340,12 @@ function test_status_eliminado_subcampeon() {
   assert.strictEqual(getTeamEliminatoriasStatus(2829, elim, []), 'vivo');
 }
 
+function test_status_vivo_en_posicion_24() {
+  const elim = { zonas: {}, final: { campeon: null, subcampeon: null } };
+  const standings = [{ teamId: 42, position: 24 }];
+  assert.strictEqual(getTeamEliminatoriasStatus(42, elim, standings), 'vivo');
+}
+
 function test_status_no_clasificado_posicion_25() {
   const elim = { zonas: {}, final: { campeon: null, subcampeon: null } };
   const standings = [{ teamId: 3006, position: 25 }];
@@ -378,6 +384,7 @@ const tests = [
   test_status_eliminado_en_semis,
   test_status_eliminado_subcampeon,
   test_status_no_clasificado_posicion_25,
+  test_status_vivo_en_posicion_24,
   test_status_vivo_sin_datos,
 ];
 let passed = 0, failed = 0;
