@@ -2,6 +2,16 @@
 
 Este documento establece las normas de desarrollo, la arquitectura de código y las especificaciones del producto para la aplicación **Porra SPA**. Todos los agentes de IA (incluyendo Gemini) deben consultar y cumplir estas pautas en cada interacción o cambio en la base de código.
 
+## Índice
+
+1. [Visión del Producto](#1-visión-del-producto) (reglas de la porra: fase de liga, plantilla, puntuación)
+2. [Pautas Generales de Diseño](#2-pautas-generales-de-diseño-mobile-vertical-first)
+3. [Stack Tecnológico y Reglas de Código](#3-stack-tecnológico-y-reglas-de-código)
+4. [Normas para los Agentes de IA](#4-normas-para-los-agentes-de-ia)
+5. [Especificaciones del Producto](#5-especificaciones-del-producto)
+6. [Estado Global (AppState)](#estado-global-appstate)
+7. [Reglas básicas de la porra](#reglas-básicas-de-la-porra)
+
 ---
 
 > **⚠️ IMPORTANTE - Cache-busting**: Cuando se suban cambios a GitHub que afecten a `css/styles.css` o a cualquier fichero JS (`js/main.js`, `js/eliminatorias.js`, `js/apiData.js`, `js/stats.js`), **SIEMPRE** incrementar la versión en `index.html`:
@@ -12,6 +22,39 @@ Este documento establece las normas de desarrollo, la arquitectura de código y 
 ---
 
 > **Fases de la competición**: Ver [`data/fases.json`](data/fases.json) para la definición completa de las 13 fases (instrucciones, reglas-app).
+
+---
+
+## Estado Global (AppState)
+
+Definido en `js/main.js` (objeto `AppState`, líneas 17-55). Es la **fuente de verdad en memoria** de la SPA. Fuera de él se declaran constantes como `API_BASE`, `SQUAD_SIZE`, `SQUAD_FORMATION`, `CLASSIFICATION_POINTS`.
+
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| `sessionToken` | string\|null | Token JWT en memoria (persistido en `localStorage` como `session_token`) |
+| `currentUser` | object\|null | Usuario actual `{ name, avatar, ... }` |
+| `validCodes` | array | Códigos de acceso (LEGACY, no usado; se cargan de `data/codes.json` pero la validación real es del backend) |
+| `teamsMap` | object | `{ teamId: { name, ext } }` |
+| `matches` | array | Todos los partidos transformados (liga + eliminatorias) |
+| `leagueMatches` | array | Solo los 144 partidos de fase de liga |
+| `allPlayers` | array | Jugadores planos de `jugadores.json` |
+| `scorePredictions` | object | `{ matchId: { home, away } }` (pronósticos en edición) |
+| `squadPicks` | array | 25 jugadores seleccionados |
+| `blockedTeams` | Set | IDs de equipos ya usados en plantilla |
+| `appConfig` | object\|null | Config del torneo (faseJuego, totalMatches, squadFormation) |
+| `fases` | array | 13 fases desde `fases.json` |
+| `players` | array | Usuarios registrados (para clasificación) |
+| `matchStats` | array | Todos los matchstats del backend |
+| `allPredictions` | object | `{ username: { matchId: {home, away} } }` |
+| `userPoints` | object | `{ username: { totalPoints, matchDetails } }` |
+| `squadsCache` | object | `{ username: squad[] }` |
+| `realStandings` | array | Clasificación real calculada desde matchStats |
+| `classificationPoints` | object | Puntos de clasificación por usuario |
+| `finalPredictions` | object\|null | `{ champion, runnerUp, semiFinalists, quarterFinalists, roundOf16, roundOf32 }` |
+| `predictionsConfirmed` | boolean | Bloquea edición de pronósticos de liga |
+| `hasUnsavedChanges` / `hasUnsavedSquadChanges` / `hasUnsavedFinalChanges` | boolean | Flags de cambios sin guardar |
+
+> Ver el bloque completo de declaración en `js/main.js:17-55` para todos los campos y comentarios.
 
 ---
 
@@ -164,9 +207,9 @@ Si al finalizar el partido el equipo no ha recibido goles, el portero recibirá 
 │   ├── teams.json    # 36 equipos participantes
 │   ├── jugadores.json # Jugadores para la plantilla ideal
 │   ├── calendar.json # Partidos (liga + eliminatorias)
-│   ├── imgEquipos/   # Escudos de equipos ({id}.{ext})
-│   ├── imgJugadores/ # Fotos de jugadores ({id}.png)
-│   ├── codes.json    # Códigos de acceso
+│   ├── imgEquipos/   # Escudos de equipos ({id}.webp)
+│   ├── imgJugadores/ # Fotos de jugadores ({id}.webp)
+│   ├── codes.json    # Códigos de acceso (LEGACY: los reales se gestionan en el backend/MongoDB)
 │   └── partidos/     # Datos de partidos
 ├── api/              # (Placeholder) Ficheros de integración con APIs
 ├── extract/          # (Placeholder) Documentación de extracción de SofaScore
@@ -226,7 +269,10 @@ El sistema de autenticación utiliza **JWT (JSON Web Tokens)** almacenados en **
 La SPA se comunica con el backend en `https://api-porra.vercel.app`:
 
 ```javascript
-const API_BASE = 'https://api-porra.vercel.app';
+// En localhost apunta a http://localhost:3000 (dev backend); en producción a Vercel.
+const API_BASE = window.location.hostname === 'localhost'
+  ? 'http://localhost:3000'
+  : 'https://api-porra.vercel.app';
 
 // Nota: "freeze" es un término coloquial en este doc. Técnicamente, la edición y
 // visibilidad se controlan con la fase actual del juego (`faseJuego`, ver
@@ -326,10 +372,10 @@ GET  /usuario?clave=xxxx         // Buscar usuario por clave de invitación
 {
   "eventId": "number (unique, required, indexed - Sofascore event ID)",
   "stats": {
-    "[homeTeamId]": { "goles": "number" },
-    "[awayTeamId]": { "goles": "number" },
+    "[homeTeamId]": { "goles": "number", "tandaPenaltis": "number (opcional)" },
+    "[awayTeamId]": { "goles": "number", "tandaPenaltis": "number (opcional)" },
     "jugadores": [{
-      "id": "number",
+      "id": "string (Sofascore player ID como string)",
       "nombre": "string",
       "posicion": "string (G/D/M/F)",
       "equipo": "number (team ID)",
@@ -338,8 +384,8 @@ GET  /usuario?clave=xxxx         // Buscar usuario por clave de invitación
       "minutos": "number",
       "paradas": "number (goalkeeper saves)",
       "esSuplente": "boolean",
-      "penaltiMarcado": "boolean",
-      "penaltiParado": "boolean",
+      "penaltiMarcado": "number (0/1, no boolean)",
+      "penaltiParado": "number (0/1, no boolean)",
       "golesRecibidos": "number (goalkeeper only)"
     }]
   },
@@ -415,22 +461,25 @@ Datos estáticos del torneo extraídos de SofaScore. Documentación completa en 
 
 | Fichero | Registros | Uso en la app |
 | --- | --- | --- |
-| `teams.json` | 36 | Equipos participantes (`id`, `name`, `idCompetition`) |
-| `jugadores.json` | 1 134 | Selección de plantilla ideal (`id`, `nombre`, `posicion`, `club`, `equipo`) |
-| `calendar.json` | 189 (144 de fase de liga) | Wizard de pronósticos (`id`, `ronda`, `fecha`, `equipoLocal`, `equipoVisitante`) |
-| `imgJugadores/` | 1 134 | Imágenes de jugadores en PNG, nombradas `{id}.png` |
+| `teams.json` | 36 | Equipos participantes (`id`, `name`, `idCompetition`, `extension`) |
+| `jugadores.json` | 1 134 | Selección de plantilla ideal (`id`, `nombre`, `posicion`, `club`, `equipo`, `extension`) |
+| `calendar.json` | 189 (144 de fase de liga) | Wizard de pronósticos (`id`, `ronda`, `fase`, `fecha`, `equipoLocal`, `equipoVisitante`) |
+| `imgEquipos/` | 36 | Escudos de equipos en WEBP, nombradas `{id}.webp` |
+| `imgJugadores/` | 1 220 | Fotos de jugadores en WEBP, nombradas `{id}.webp` (86 fotos sin jugador asociado) |
 
 **Relaciones entre ficheros:**
 
 ```text
-teams.json ──(id)──► jugadores.json ──(id)──► imgJugadores/{id}.png
+teams.json ──(id)──► jugadores.json ──(id)──► imgJugadores/{id}.webp
      │
      └──(id)──► calendar.json
                     ├── equipoLocal.id
                     └── equipoVisitante.id
 ```
 
-Los **códigos de acceso**, **perfiles de usuario**, **predicciones** y **clasificaciones** no residen en `data/`; se gestionan a través de `api/` (persistencia en backend o servicios externos).
+Los **perfiles de usuario**, **predicciones** y **clasificaciones** no residen en `data/`; se gestionan a través del backend (`api-porra`) en MongoDB.
+
+> **Nota `codes.json` (LEGACY)**: `data/codes.json` contiene códigos antiguos (`UCL2026`, `PORRA-CHAMPS`, `DEMO123`). Se carga en `AppState.validCodes` pero **no se usa** en el flujo de registro: los códigos reales se gestionan en el backend (colección `invitations`) y se validan en `POST /api/auth/register`. Candidato a eliminación.
 
 #### Servicios / API (`api/`)
 
@@ -452,13 +501,13 @@ Herramientas para obtener automáticamente datos y resultados actualizados de So
 
 #### Descripción
 
-Pantalla modal que se abre desde la pestaña de Pronósticos y muestra la clasificación resultante de los 36 equipos de la fase de liga, calculada dinámicamente a partir de los marcadores introducidos por el usuario. La clasificación se recalcula cada vez que el usuario accede a la pantalla.
+Pestaña que se abre desde la pestaña de Pronósticos y muestra la clasificación resultante de los 36 equipos de la fase de liga, calculada dinámicamente a partir de los marcadores introducidos por el usuario. La clasificación se recalcula cada vez que el usuario accede a la pantalla.
 
 #### Acceso
 
 - **Ubicación del botón**: Cabecera de la pestaña Pronósticos, junto al botón "Guardar en servidor"
-- **Etiqueta del botón**: "Ver Clasificación" (con icono de tabla/classificación)
-- **Comportamiento**: Al hacer clic se abre un modal overlay sobre la pantalla de pronósticos
+- **Etiqueta del botón**: "📊 Clasificación" (con icono de tabla/classificación)
+- **Comportamiento**: Al hacer clic se navega a la pestaña `tab-pred-standings` (`showPredictedStandings()` → `navigateToTab('pred-standings')`), con botón "← Volver" para regresar a Pronósticos
 
 #### Cálculo de la Clasificación
 
@@ -508,11 +557,11 @@ Los equipos se ordenan de mayor a menor puntuación, aplicando los criterios de 
 9. Suma de goles marcados por los rivales (descendente)
 ```
 
-#### Diseño de la Pantalla (Modal Overlay)
+#### Diseño de la Pantalla (Pestaña con botón Volver)
 
 ```
 ┌─────────────────────────────────────────┐
-│  ← CLASIFICACIÓN PRONOSTICADA     (X)   │
+│  ← Volver  📊 CLASIFICACIÓN PRONOSTICADA │
 ├─────────────────────────────────────────┤
 │  Partidos pronosticados: 108/144        │
 │  ████████████████░░░░ 75%               │
@@ -532,9 +581,9 @@ Los equipos se ordenan de mayor a menor puntuación, aplicando los criterios de 
 
 #### Elementos UI
 
-1. **Cabecera del modal**:
-   - Título "CLASIFICACIÓN PRONOSTICADA"
-   - Botón (X) para cerrar el modal
+1. **Cabecera de la pestaña**:
+   - Botón "← Volver" (regresa a Pronósticos)
+   - Título "📊 CLASIFICACIÓN PRONOSTICADA"
    - Barra de progreso con contador de partidos pronosticados
 
 2. **Tabla clasificatoria**:
@@ -553,8 +602,7 @@ Los equipos se ordenan de mayor a menor puntuación, aplicando los criterios de 
    - Leyenda de siglas (Pts, DG, GF, GC, V, E, D)
 
 4. **Estilos**:
-   - Modal overlay con fondo oscuro semitransparente
-   - Tabla con scroll vertical si el contenido excede la pantalla
+   - Pestaña con scroll vertical si el contenido excede la pantalla
    - Estilos consistentes con el diseño existente (modo oscuro, variables CSS)
    - Filas alternas con opacidad sutil para legibilidad
 
@@ -567,9 +615,8 @@ Los equipos se ordenan de mayor a menor puntuación, aplicando los criterios de 
 | `getRivalsStats(teamId)` | Calcula las estadísticas acumuladas de los 8 rivales de un equipo en TODOS sus partidos. Devuelve `{ rivalPointsSum, rivalGDSum, rivalGFSum }` para los criterios 6-8. Solo se invoca cuando hay empate en puntos. |
 | `findTeamMatches(teamId)` | Busca en `AppState.matches` todos los partidos donde participa un equipo (local o visitante). Usado por `getRivalsStats`. |
 | `sortTeams(teams)` | Ordena array de equipos. Primero agrupa por puntos, luego aplica criterios 1-5 a cada grupo. Si hay empates persistentes, calcula criterios 6-8 **solo para los equipos empatados**. |
-| `renderPredictedStandings()` | Genera HTML del modal con barra de progreso y tabla clasificatoria |
-| `showPredictedStandingsModal()` | Abre el modal, calcula clasificación y renderiza |
-| `closePredictedStandingsModal()` | Cierra el modal y limpia estado |
+| `renderPredictedStandings()` | Genera HTML de la pestaña con barra de progreso y tabla clasificatoria |
+| `showPredictedStandings()` | Navega a la pestaña `pred-standings`, calcula clasificación y renderiza |
 
 #### Estado de la Aplicación
 
@@ -821,93 +868,37 @@ AppState.squadsCache = {};          // { username: squad[] } - caché de plantil
 
 #### Descripción
 
-Pestaña que muestra los resultados de los partidos jugados, agrupados por jornada, y debajo de cada jornada un desglose de los puntos obtenidos por cada jugador en esos partidos.
+Pestaña que muestra los resultados de los partidos jugados, agrupados por jornada/fase, con la clasificación real y las eliminatorias resueltas. La pestaña está oculta en `FASE_PRETEMPORADA` (muestra "Los resultados estarán disponibles al comenzar la competición").
 
-#### Criterio de Visibilidad
+#### Tabs de la pestaña
 
-Solo se muestran las **jornadas que tengan al menos un partido con resultado** en `matchstats`. Las jornadas sin partidos disputados no se muestran.
+`renderResultadosTab()` renderiza 3 sub-tabs (estado `AppState.resultadosTab`, default `'jornadas'`):
 
-#### Diseño de la Pantalla
-
-```
-┌─────────────────────────────────────────┐
-│  RESULTADOS                             │
-├─────────────────────────────────────────┤
-│  JORNADA 1 (6 partidos)                 │
-├─────────────────────────────────────────┤
-│  Athletic Club  0 - 2  Arsenal          │
-│  ─────────────────────────────────────  │
-│  Puntos por jugador:                    │
-│  juan123: 11 pts (8 por acertar         │
-│           resultado, 3 por goles local) │
-│  maria456: 3 pts (3 por goles local)    │
-│  pedro789: 0 pts (Partido no            │
-│            pronosticado)                │
-│  ─────────────────────────────────────  │
-│  PSV  1 - 1  Royale Union               │
-│  ─────────────────────────────────────  │
-│  Puntos por jugador:                    │
-│  juan123: 8 pts (8 por acertar          │
-│           resultado)                    │
-│  maria456: 12 pts (8 por acertar        │
-│            resultado, 3 por goles       │
-│            local, 1 por ambos goles)    │
-│  pedro789: 0 pts (Partido no            │
-│            pronosticado)                │
-│  ...                                    │
-├─────────────────────────────────────────┤
-│  JORNADA 2 (6 partidos)                 │
-│  ...                                    │
-└─────────────────────────────────────────┘
-```
-
-#### Estructura de Datos
-
-```javascript
-// Datos procesados para renderizado
-AppState.resultsByJourney = [
-  {
-    journey: 'Jornada 1',
-    matches: [
-      {
-        match: { id: 14566909, homeTeam: 'Athletic Club', awayTeam: 'Arsenal', ... },
-        stats: { home: 0, away: 2 },
-        playerPoints: [
-          { username: 'juan123', points: 11, breakdown: ['8 por acertar resultado', '3 por goles local'] },
-          { username: 'maria456', points: 3, breakdown: ['3 por goles local'] },
-          { username: 'pedro789', points: 0, breakdown: ['Partido no pronosticado'] }
-        ]
-      },
-      // ... más partidos de la jornada
-    ]
-  },
-  // ... más jornadas
-];
-```
+1. **Jornadas**: Partidos agrupados por fase (`liga`, `16`, `8`, `4`, `semis`, `final`) y jornada, con navegación ◀/▶ entre rondas disponibles. Solo se muestran las fases hasta la fase actual del juego. Cada partido muestra su resultado y los puntos de cada jugador (colapsable).
+2. **Clasificación Real**: `renderRealStandingsTable()` con la clasificación calculada desde los resultados (`calculateRealStandings()`).
+3. **Eliminatorias**: `renderEliminatoriasView()` con las rondas de eliminatorias resueltas y equipos eliminados.
 
 #### Flujo de Datos
 
 1. **Obtener matchstats**: `GET /api/match-stats` → Array de todos los partidos con resultado
 2. **Obtener predicciones**: `GET /api/predictions/all` → Predicciones de todos los usuarios
-3. **Agrupar por jornada**: Usar `AppState.matches` para obtener la jornada de cada partido
-4. **Calcular puntos**: Para cada partido, calcular puntos de cada usuario
-5. **Renderizar**: Mostrar jornadas con partidos, partidos con resultado, puntos por usuario
+3. **Calcular clasificación real**: `calculateRealStandings()` (usa `AppState.leagueMatches` y `AppState.matchStats`)
+4. **Agrupar por jornada/fase**: Filtrar `AppState.matches` por fase y ronda según la ronda seleccionada
+5. **Renderizar**: Partidos con resultado + puntos de cada usuario (expansible)
 
 #### Funciones JavaScript
 
 | Función | Responsabilidad |
 |---------|-----------------|
-| `renderResultadosTab()` | Renderiza la pestaña completa de resultados |
-| `groupMatchesByJourney()` | Agrupa los partidos con resultado por jornada |
-| `renderJourneySection(journey)` | Renderiza una sección de jornada con sus partidos |
-| `renderMatchResult(match, stats)` | Renderiza el resultado de un partido |
-| `renderPlayerPointsForMatch(match, playerPoints)` | Renderiza los puntos de cada jugador para un partido |
+| `renderResultadosTab()` | Renderiza la pestaña completa de resultados (3 tabs + navegación de jornadas) |
+| `renderMatchResult({ match, homeGoals, awayGoals, hasResult })` | Renderiza el resultado de un partido con puntos de jugadores |
+| `renderRealStandingsTable()` | Renderiza la clasificación real de los 36 equipos |
+| `renderEliminatoriasView()` | Renderiza las eliminatorias resueltas (read-only) |
+| `calculateRealStandings()` | Calcula la clasificación real desde los matchstats |
 
 #### Diseño Visual
 
-- **Jornadas**: Encabezado con nombre de jornada y número de partidos disputados
-- **Partidos**: Tarjeta con equipos, escudos y marcador
-- **Puntos**: Lista debajo de cada partido con usuario, puntos y desglose
+- **Jornadas**: Selector de ronda (◀ Label ▶), partidos con escudos y marcador, desglose de puntos por jugador expandible
 - **Partidos no pronosticados**: Mostrar "Partido no pronosticado - 0 puntos"
 - **Colores**: Usar colores del sistema de diseño existente (verde para aciertos, gris para sin pronóstico)
 
@@ -994,13 +985,12 @@ const SQUAD_FORMATION = {
 |---------|-----------------|
 | `renderPlantillaTab()` | Renderiza toda la pestaña con casillas agrupadas |
 | `renderSquadSlots()` | Genera HTML de las 25 casillas por posición |
-| `openSlotSearch(position)` | Abre panel de búsqueda filtrado por posición |
-| `selectPlayerForSlot(playerId)` | Asigna jugador a la casilla activa |
-| `addPlayerToSquad(playerId)` | Valida y añade jugador al estado |
-| `removePlayerFromSquad(index)` | Elimina jugador y desbloquea equipo |
-| `validateSquad()` | Comprueba plantilla completa y válida |
-| `saveSquadToBackend()` | Envía plantilla al servidor via PUT /api/squad |
+| `openSlotSearch(position, index)` | Abre panel de búsqueda filtrado por posición |
+| `selectPlayerForSlot(playerId)` | Asigna jugador a la casilla activa (valida posición, duplicados y equipos bloqueados) |
+| `removePlayerFromSquad(position, index)` | Elimina jugador y desbloquea equipo |
+| `saveSquadToBackend()` | Envía plantilla al servidor via PUT /api/squad (la validación de composición la hace el backend) |
 | `refreshSquadUI()` | Refresca todas las casillas y contadores |
+| `isSquadFrozen()` | Devuelve true si la plantilla está bloqueada (fuera de `FASE_PRETEMPORADA`) |
 
 #### Persistencia
 
@@ -1033,10 +1023,9 @@ Pestaña que permite al usuario predecir el cuadro completo de eliminatorias de 
 1. **Requiere confirmación**: La pestaña solo es accesible tras confirmar los 144 pronósticos de liga (`predictionsConfirmed = true`)
 2. **24 equipos**: Se asignan los 24 equipos de la clasificación pronosticada por el usuario (puestos 1-24)
 3. **Sin repetir equipos**: Cada equipo solo puede asignarse a una ronda
-4. **Congelación**: Las predicciones de eliminatorias se pueden guardar mientras `predictionsConfirmed` sea true. Una vez confirmado, los pronósticos de liga no se pueden editar
-5. **Edición**: Los usuarios pueden modificar sus predicciones de eliminatorias libremente
-6. **Top-8 restriction**: Los 8 equipos clasificados en los puestos 1-8 de la clasificación pronosticada NO pueden colocarse en dieciseisavos (roundOf32). Deben ir a octavos o superior
-7. **Restricciones por grupos de posiciones**: Para limitar la concentración de equipos de ciertos rangos en una misma ronda, se aplican los siguientes límites máximos (2 equipos por grupo):
+4. **Edición solo en pretemporada**: La edición y guardado (`PUT /api/final-predictions`) solo están permitidos en `FASE_PRETEMPORADA`. Fuera de esa fase el backend responde 403. Una vez confirmado (`predictionsConfirmed`), los pronósticos de liga no se pueden editar.
+5. **Top-8 restriction**: Los 8 equipos clasificados en los puestos 1-8 de la clasificación pronosticada NO pueden colocarse en dieciseisavos (roundOf32). Deben ir a octavos o superior
+6. **Restricciones por grupos de posiciones**: Para limitar la concentración de equipos de ciertos rangos en una misma ronda, se aplican los siguientes límites máximos (2 equipos por grupo):
 
    **En la caja de DIECISEISAVOS (roundOf32):**
    - Máximo 2 equipos de los que acabaron en posiciones 9, 10, 23 y 24
@@ -1161,30 +1150,30 @@ AppState.hasUnsavedFinalChanges = false; // Bandera de cambios sin guardar
 | `removeTeamFromZone(zoneId, index)` | Elimina un equipo de una zona y lo devuelve al pool |
 | `saveFinalPredictionsToBackend()` | Guarda las predicciones en el servidor via PUT /api/final-predictions |
 | `fetchFinalPredictionsFromBackend()` | Obtiene las predicciones del servidor y las carga en AppState |
-| `isFinalsFrozen()` | Comprueba si las predicciones de eliminatorias están bloqueadas (`predictionsConfirmed` + fase no PRETEMPORADA) |
 | `showUnsavedFinalChangesModal()` | Muestra modal de confirmación si hay cambios sin guardar |
+
+> **Nota**: No existe una función `isFinalsFrozen()`; el bloqueo se calcula inline en `renderFinalPredictionsTab()`: `const frozen = !(AppState.predictionsConfirmed && getFaseJuego() === 'FASE_PRETEMPORADA')`.
 
 #### Persistencia
 
 - **Backend**: Endpoint `GET/PUT /api/final-predictions` para persistencia en MongoDB
-- **Campo en User schema**: `finalPredictions` (Mixed type)
-- **Bloqueo**: Controlado por `predictionsConfirmed` y la fase actual (`faseJuego`)
+- **Campo en User schema**: `finalPredictions` (objeto tipado: champion, runnerUp, semiFinalists, quarterFinalists, roundOf16, roundOf32)
+- **Bloqueo**: `PUT` solo permitido en `FASE_PRETEMPORADA` (backend devuelve 403 fuera de ella)
 
 #### Datos Requeridos
 
-- `AppState.realStandings`: Array de equipos clasificados de la fase de liga (puestos 1-24)
+- `calculatePredictedStandings()`: Clasificación pronosticada del usuario (puestos 1-24) — los equipos disponibles se calculan de aquí, no de `AppState.realStandings`
 - `AppState.teamsMap`: Mapa de equipos `{ teamId: { name, ext } }`
 - `data/imgEquipos/{id}.{ext}`: Imágenes de escudos de equipos
 
 
 
-## Reglas basicas de la porra
+## Reglas básicas de la porra
 
-- Desde la fecha actual hasta el día antes del primer partido de la jornada 1 cada usuario podra ver y modificar su plantilla y sus pronosticos de resultados
-- Los demas jugadores no podran durante este tiempo ver la plantilla ni los pronosticos de resultados de los otros, cada uno ve lo suyo (esto va por la pantalla de clasificacion donde puedes pinchar en otro jugador y ver su plantilla y resultados)
-- Una vez empezada la jornada 1 se bloqueara el acceso a la edicion de la plantilla y los pronosticos de resultados para todos los jugadores (cuando la fase actual deje de ser FASE_PRETEMPORADA, gestionado por `faseJuego`) y los demas jugadores tendran acceso a ver la plantilla y los pronosticos de resultados de los otros desde clasificacion.
-- Los partidos se iran subiendo a medida que se conozcan los resultados mediante el script de api-porra math-stats
-- Según se vayan subiendo partidos el usuario deberia poder verlos en la app (hay que ver si tenemos esto ya imlpementado, no se si al subir uno o varios partidos el usuario ya los tendria disponibles)
+- **Antes de la competición** (mientras `faseJuego === 'FASE_PRETEMPORADA'`): cada usuario puede ver y modificar su plantilla y sus pronósticos de resultados. Los demás jugadores **no** pueden ver la plantilla ni los pronósticos de otros (cada uno ve lo suyo; la pantalla de clasificación no muestra el detalle de otros jugadores durante esta fase).
+- **Una vez comenzada la competición** (cuando la fase actual deje de ser `FASE_PRETEMPORADA`): se bloquea la edición de plantilla y pronósticos de resultados para todos, y los demás jugadores tienen acceso a ver la plantilla y los pronósticos de los otros desde Clasificación.
+- **Los resultados** se van subiendo mediante el script de matchstats de api-porra (`scrapeJornadas*.js` / `scrapeRounds*.js`) o el endpoint `GET /api/match-stats/:eventId`.
+- **Refresco de resultados en la app**: el frontend hace polling de `GET /api/match-stats/updated` (contador + última actualización) y recarga matchstats y predicciones cuando detecta cambios, de modo que los partidos subidos quedan disponibles en Resultados/Clasificación/Estadísticas.
 
 
 
