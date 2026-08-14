@@ -4700,3 +4700,142 @@ html, body {
 .rank-2 { background: #94A3B8; color: #000; }
 .rank-3 { background: #B45309; color: #fff; }
 .rank-n { background: rgba(148, 163, 184, 0.15); color: var(--text-secondary); }
+/* ============================================================
+   PESTAÑA DE ESTADÍSTICAS
+   ============================================================ */
+.stats-card {
+  background: var(--ucl-card);
+  border-radius: var(--radius-md);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.stats-card-title {
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.stats-source-seg {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 4px;
+  background: var(--ucl-surface);
+  padding: 4px;
+  border-radius: 12px;
+}
+
+.stats-source {
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 10px;
+  font-weight: 700;
+  padding: 8px 0;
+  border-radius: 9px;
+  cursor: pointer;
+  min-height: 32px;
+}
+
+.stats-source.active {
+  background: var(--accent-purple);
+  color: #fff;
+}
+
+.stats-chips-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+}
+
+.stats-chips-counter {
+  flex: 1;
+}
+
+.stats-chips-action {
+  background: none;
+  border: none;
+  color: var(--accent-purple);
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  cursor: pointer;
+  padding: 6px 4px;
+  min-height: 32px;
+}
+
+.stats-chips-row {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 4px 2px 8px;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.stats-chips-row::-webkit-scrollbar {
+  display: none;
+}
+
+.stats-chip {
+  flex-shrink: 0;
+  border: 1px solid var(--border-color);
+  background: var(--ucl-surface);
+  color: var(--text-secondary);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  padding: 6px 10px;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  min-height: 32px;
+}
+
+.stats-chip.active {
+  background: rgba(16, 185, 129, 0.15);
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
+}
+
+.stats-chip.off {
+  opacity: 0.45;
+}
+
+.stats-line-chart {
+  width: 100%;
+  height: auto;
+}
+
+.stats-legend {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  font-size: 10px;
+  color: var(--text-secondary);
+}
+
+.stats-legend i {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  display: inline-block;
+}
+
+.stats-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.stats-empty {
+  padding: 20px 12px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.stats-lastpoint {
+  cursor: pointer;
+}
