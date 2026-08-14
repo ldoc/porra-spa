@@ -221,6 +221,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   await loadInitialData();
   checkAuthStatus();
   setupNavigation();
+  setupPointsMenuGlobals();
 });
 
 // Delegación de eventos global para el botón guardar pronósticos
@@ -2950,6 +2951,75 @@ function computeRealPointsTotal(components) {
     + (components.eliminatorias || 0);
 }
 
+function getUserTotalRealPoints(username) {
+  const userData = calculateUserTotalPoints(username);
+  let squadPoints = 0;
+  const userSquad = AppState.squadsCache?.[username];
+  if (userSquad && userSquad.length) {
+    squadPoints = calculateSquadPoints(userSquad, AppState.matchStats).totalPoints;
+  }
+  let classificationPoints = 0;
+  if (AppState.matchStats.length > 0) {
+    classificationPoints = calculateClassificationPoints(username).totalPoints;
+  }
+  let eliminatoriasPoints = 0;
+  const userFp = AppState.finalPredictionsCache?.[username];
+  if (userFp) {
+    eliminatoriasPoints = calculateEliminatoriasPoints(userFp, computeReachedPhases(AppState.matches, AppState.matchStats)).totalPoints;
+  }
+  return computeRealPointsTotal({
+    prediction: userData.totalPoints,
+    squad: squadPoints,
+    classification: classificationPoints,
+    eliminatorias: eliminatoriasPoints,
+  });
+}
+
+function closePointsMenu() {
+  const trigger = document.getElementById('points-trigger');
+  const dropdown = document.getElementById('points-dropdown');
+  if (trigger) { trigger.classList.remove('open'); trigger.setAttribute('aria-expanded', 'false'); }
+  if (dropdown) dropdown.hidden = true;
+}
+
+function setupPointsMenu() {
+  const trigger = document.getElementById('points-trigger');
+  const dropdown = document.getElementById('points-dropdown');
+  if (!trigger || !dropdown) return;
+
+  trigger.addEventListener('click', () => {
+    if (dropdown.hidden) {
+      trigger.classList.add('open');
+      dropdown.hidden = false;
+      trigger.setAttribute('aria-expanded', 'true');
+    } else {
+      closePointsMenu();
+    }
+  });
+
+  dropdown.querySelectorAll('.points-tile').forEach(tile => {
+    tile.addEventListener('click', () => {
+      const tab = tile.getAttribute('data-tab');
+      closePointsMenu();
+      navigateToTab(tab);
+    });
+  });
+}
+
+function setupPointsMenuGlobals() {
+  document.addEventListener('click', (e) => {
+    if (e.target.closest('.points-menu')) return;
+    const dropdown = document.getElementById('points-dropdown');
+    if (dropdown && !dropdown.hidden) closePointsMenu();
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      const dropdown = document.getElementById('points-dropdown');
+      if (dropdown && !dropdown.hidden) closePointsMenu();
+    }
+  });
+}
+
 function renderInicioTab() {
   const container = document.getElementById('inicio-container');
   if (!container || !AppState.currentUser) return;
@@ -3001,6 +3071,8 @@ function renderInicioTab() {
   `;
 
   container.innerHTML = `
+    ${buildPointsMenuHtml(getUserTotalRealPoints(user.name))}
+
     <div class="inicio-welcome">
       <div class="inicio-avatar">${user.avatar}</div>
       <h2 class="inicio-greeting">Hola, ${user.name}! 👋</h2>
@@ -3114,6 +3186,8 @@ function renderInicioTab() {
       `;
     })() : ''}
   `;
+
+  setupPointsMenu();
 }
 
 // ============================================================
