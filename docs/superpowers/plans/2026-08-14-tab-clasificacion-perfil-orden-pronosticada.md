@@ -240,14 +240,14 @@ git commit -m "feat: tabla de clasificacion del perfil unica ordenada por pronos
 
 ---
 
-### Task 3: CSS — grid de 4 columnas y wrap del nombre a 2 líneas
+### Task 3: CSS — grid de 4 columnas, wrap del nombre a 2 líneas y cabecera sticky
 
 **Files:**
 - Modify: `css/styles.css:3474-3528` (bloques `.classification-header`, `.classification-row`, `.classification-row .col-*`)
 
 **Interfaces:**
 - Consumes: las clases `col-pos`, `col-team`, `col-team-name`, `col-real`, `col-pts` emitidas en Task 2.
-- Produces: tabla de 4 columnas alineadas y nombres de equipo en 2 líneas con corte.
+- Produces: tabla de 4 columnas alineadas, nombres de equipo en 2 líneas con corte y cabecera sticky en el scroll del modal.
 
 - [ ] **Step 1: Reducir el grid a 4 columnas**
 
@@ -302,11 +302,34 @@ Tras el bloque `.classification-header .col-team { text-align: left; }` (css/sty
 }
 ```
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 5: Hacer la cabecera sticky en el scroll del modal**
+
+El scroll ocurre en `.breakdown-modal-content` (`overflow-y: auto`, css/styles.css:2278-2282). En el bloque `.classification-header` (css/styles.css:3474-3485) añadir `position: sticky; top: 0; z-index: 2; background: var(--ucl-card);` para que la cabecera se quede pegada arriba con fondo sólido (las filas no se transparentan por debajo). El total y la leyenda hacen scroll normal; solo la cabecera permanece visible:
+
+```css
+.classification-header {
+  display: grid;
+  grid-template-columns: 32px 1fr 50px 50px;
+  gap: 4px;
+  padding: 8px 8px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid var(--border-color);
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--ucl-card);
+}
+```
+
+- [ ] **Step 6: Commit**
 
 ```bash
 git add css/styles.css
-git commit -m "style: grid de 4 columnas y nombre de equipo en 2 lineas en tabla de clasificacion del perfil"
+git commit -m "style: grid de 4 columnas, nombre en 2 lineas y cabecera sticky en tabla de clasificacion del perfil"
 ```
 
 ---
@@ -361,6 +384,7 @@ Abrir `index.html` con vista móvil vertical (o `python3 -m http.server 8000`):
 4. Nombres largos (p.ej. "Royale Union Saint-Gilloise") en 2 líneas y cortados con `…` sin desalinear las columnas.
 5. Cabecera y filas alineadas (celdas numéricas centradas).
 6. Puntos positivos en verde; total y leyenda intactos.
+7. Al hacer scroll en el modal, la cabecera `Pron | Equipo | Real | Pts` queda pegada arriba y las filas pasan por debajo.
 
 - [ ] **Step 4: Commit final si quedara algún cambio suelto**
 
@@ -374,6 +398,6 @@ Solo commitear si hay cambios pendientes no commiteados (debe estar limpio tras 
 
 ## Self-Review (rellenado por el autor del plan)
 
-- **Cobertura del spec:** Orden por pronosticada → Task 2 (sort + primera columna `Pron`). Eliminar columna duplicada y secciones → Task 2. Tabla única de 36 → Task 2. Muted para real 25-36 → Task 1/2 (`muted` en `buildClassificationRowHtml`). Wrap 2 líneas + corte → Task 3 (`.col-team-name`). Cache-busting → Task 4. Tests → Task 1. Leyenda y total intactos → Task 2. Todo cubierto.
+- **Cobertura del spec:** Orden por pronosticada → Task 2 (sort + primera columna `Pron`). Eliminar columna duplicada y secciones → Task 2. Tabla única de 36 → Task 2. Muted para real 25-36 → Task 1/2 (`muted` en `buildClassificationRowHtml`). Wrap 2 líneas + corte → Task 3 (`.col-team-name`). Cabecera sticky → Task 3 Step 5. Cache-busting → Task 4. Tests → Task 1. Leyenda y total intactos → Task 2. Todo cubierto.
 - **Placeholders:** ninguno; todos los pasos llevan código concreto.
 - **Consistencia de tipos:** `sortTeamsByPredicted(teamDetails)` y `buildClassificationRowHtml(team)` definidas en Task 1 con los mismos nombres/firma usados en Task 2. Los campos de `team` (`teamId`, `name`, `badgeExt`, `predictedPos`, `realPos`, `points`) coinciden con los que emite `calculateClassificationPoints`. Clases CSS (`col-pos`, `col-team`, `col-team-name`, `col-real`, `col-pts`) coherentes entre Tasks 1-3.

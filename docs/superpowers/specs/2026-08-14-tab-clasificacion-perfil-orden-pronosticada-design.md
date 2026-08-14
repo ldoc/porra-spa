@@ -19,6 +19,7 @@ Estado actual:
 2. La primera columna pasa a llamarse **Pron** y muestra la posición pronosticada; se **elimina** la columna que duplicaba ese valor.
 3. **Tabla única** de los 36 equipos ordenada por pronosticada (se eliminan las dos secciones). Los equipos con posición real > 24 (no puntúan) se muestran atenuados en el lugar que les toque por su pronóstico.
 4. El nombre del equipo se muestra en **2 líneas** y, si no cabe, se **corta** con `…` sin empujar las columnas (fix de alineación móvil).
+5. La **cabecera de la tabla queda fija** (`position: sticky`) al hacer scroll en el modal, para saber siempre qué representa cada campo.
 
 ## Decisiones acordadas
 
@@ -27,6 +28,7 @@ Estado actual:
 - Equipos con `realPos > 24`: fila atenuada (`.muted` existente) en su posición pronosticada.
 - Equipos sin pronóstico disponible: `predictedPos` ya tiene fallback a 36 en `calculateClassificationPoints`, así que caen al final.
 - Se mantienen: el total de puntos arriba (`Puntos totales clasificación`), la leyenda "Solo puntúan equipos en posición 1-24 | Mínimo entre posición pronosticada y real", el escudo, el resaltado de puntos positivos (`.col-pts.positive`).
+- **Cabecera sticky**: `.classification-header` con `position: sticky; top: 0; z-index: 2;` y fondo sólido `var(--ucl-card)` (igual al fondo del modal) para que las filas no se transparenten por debajo al hacer scroll. El contenedor de scroll es `.breakdown-modal-content` (`overflow-y: auto`). El total y la leyenda hacen scroll normal; solo la cabecera de la tabla permanece visible.
 - El cálculo de puntos (`calculateClassificationPoints`) **no cambia**.
 
 ## Cambios propuestos
@@ -88,6 +90,16 @@ Reemplazar el cuerpo por:
   }
   ```
   (La cabecera actual no centra las celdas numéricas mientras que las filas sí, lo que también contribuye al desalineo.)
+- Cabecera sticky en el scroll del modal (`.breakdown-modal-content`):
+  ```css
+  .classification-header {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: var(--ucl-card);
+  }
+  ```
+  (Si la regla base `.classification-header` ya tiene `display: grid`, etc., solo se añaden las propiedades sticky.)
 
 ### 3. Cache-busting (norma de AGENTS.md)
 
@@ -118,6 +130,7 @@ Ejecución: `node tests/classificationProfileTable.test.js`.
 5. Equipos con posición real 25-36 atenuados.
 6. En móvil, los nombres largos se parten en 2 líneas y se cortan con `…` sin desalinear las columnas respecto a la cabecera.
 7. Puntos positivos resaltados en verde; total y leyenda intactos.
+8. Al hacer scroll en el modal, la cabecera (`Pron | Equipo | Real | Pts`) permanece visible pegada arriba; las filas pasan por debajo.
 
 ## Fuera de alcance
 
