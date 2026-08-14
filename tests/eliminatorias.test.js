@@ -1,5 +1,5 @@
 const assert = require('assert');
-const { groupTies, resolveTie, computeEliminatorias, computeReachedPhases, calculateEliminatoriasPoints, getShootoutWinner } = require('../js/eliminatorias.js');
+const { groupTies, resolveTie, computeEliminatorias, computeReachedPhases, calculateEliminatoriasPoints, getShootoutWinner, getFinalPredictionsViolations, getTeamEliminatoriasStatus } = require('../js/eliminatorias.js');
 
 // ---- Helpers de test ----
 function partido(id, fase, home, away) {
@@ -317,6 +317,39 @@ function test_points_sin_prediccion_y_sin_datos() {
   assert.strictEqual(teamDetails.every(t => t.points === 0), true);
 }
 
+// ---- Tests de getTeamEliminatoriasStatus ----
+function test_status_vivo_sin_eliminacion_y_top24() {
+  const elim = { zonas: {}, final: { campeon: null, subcampeon: null } };
+  const standings = [{ teamId: 42, position: 5 }];
+  assert.strictEqual(getTeamEliminatoriasStatus(42, elim, standings), 'vivo');
+}
+
+function test_status_eliminado_en_zona() {
+  const elim = { zonas: { '16': [42], '8': [] }, final: { campeon: null, subcampeon: null } };
+  assert.strictEqual(getTeamEliminatoriasStatus(42, elim, []), 'eliminado');
+}
+
+function test_status_eliminado_en_semis() {
+  const elim = { zonas: { '16': [], '8': [], '4': [], 'semis': [17] }, final: { campeon: null, subcampeon: null } };
+  assert.strictEqual(getTeamEliminatoriasStatus(17, elim, []), 'eliminado');
+}
+
+function test_status_eliminado_subcampeon() {
+  const elim = { zonas: {}, final: { campeon: 2829, subcampeon: 42 } };
+  assert.strictEqual(getTeamEliminatoriasStatus(42, elim, []), 'eliminado');
+  assert.strictEqual(getTeamEliminatoriasStatus(2829, elim, []), 'vivo');
+}
+
+function test_status_no_clasificado_posicion_25() {
+  const elim = { zonas: {}, final: { campeon: null, subcampeon: null } };
+  const standings = [{ teamId: 3006, position: 25 }];
+  assert.strictEqual(getTeamEliminatoriasStatus(3006, elim, standings), 'noClasificado');
+}
+
+function test_status_vivo_sin_datos() {
+  assert.strictEqual(getTeamEliminatoriasStatus(42, null, []), 'vivo');
+}
+
 // ---- Runner (mismo patrón que el resto de tests) ----
 const tests = [
   test_groupTies_agrupa_ida_vuelta,
@@ -340,6 +373,12 @@ const tests = [
   test_points_acierto_exacto_por_ronda,
   test_points_regla_del_minimo,
   test_points_sin_prediccion_y_sin_datos,
+  test_status_vivo_sin_eliminacion_y_top24,
+  test_status_eliminado_en_zona,
+  test_status_eliminado_en_semis,
+  test_status_eliminado_subcampeon,
+  test_status_no_clasificado_posicion_25,
+  test_status_vivo_sin_datos,
 ];
 let passed = 0, failed = 0;
 for (const t of tests) {

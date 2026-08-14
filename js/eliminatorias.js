@@ -199,6 +199,29 @@
     return { totalPoints, teamDetails };
   }
 
+  const FASES_ELIMINATORIAS = ['16', '8', '4', 'semis'];
+
+  /**
+   * Devuelve el estado real de un equipo en las eliminatorias:
+   * 'vivo' (sigue en juego), 'eliminado' (cayó en una eliminatoria) o
+   * 'noClasificado' (acabó fuera del top 24 real).
+   * @param {number} teamId - ID del equipo
+   * @param {Object} elimResult - Salida de computeEliminatorias ({ zonas, final })
+   * @param {Array<{teamId:number, position:number}>} realStandings - Clasificación real
+   * @returns {'vivo'|'eliminado'|'noClasificado'}
+   */
+  function getTeamEliminatoriasStatus(teamId, elimResult, realStandings) {
+    if (elimResult) {
+      for (const fase of FASES_ELIMINATORIAS) {
+        if ((elimResult.zonas?.[fase] || []).includes(teamId)) return 'eliminado';
+      }
+      if (elimResult.final?.subcampeon === teamId) return 'eliminado';
+    }
+    const entry = (realStandings || []).find(t => t.teamId === teamId);
+    if (entry && entry.position > 24) return 'noClasificado';
+    return 'vivo';
+  }
+
   const POSITION_GROUPS = {
     A: [9, 10, 23, 24],
     B: [11, 12, 21, 22],
@@ -291,9 +314,10 @@
   global.calculateEliminatoriasPoints = calculateEliminatoriasPoints;
   global.getShootoutWinner = getShootoutWinner;
   global.getFinalPredictionsViolations = getFinalPredictionsViolations;
+  global.getTeamEliminatoriasStatus = getTeamEliminatoriasStatus;
   global.saveFinalScrollPositions = saveFinalScrollPositions;
   global.restoreFinalScrollPositions = restoreFinalScrollPositions;
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { groupTies, resolveTie, computeEliminatorias, computeReachedPhases, calculateEliminatoriasPoints, getShootoutWinner, getFinalPredictionsViolations, saveFinalScrollPositions, restoreFinalScrollPositions };
+    module.exports = { groupTies, resolveTie, computeEliminatorias, computeReachedPhases, calculateEliminatoriasPoints, getShootoutWinner, getFinalPredictionsViolations, getTeamEliminatoriasStatus, saveFinalScrollPositions, restoreFinalScrollPositions };
   }
 })(typeof window !== 'undefined' ? window : globalThis);
