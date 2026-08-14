@@ -4618,6 +4618,49 @@ html, body {
   font-weight: 800;
 }
 
+/* --- Estado de equipos en eliminatorias (perfil) --- */
+.elim-status-legend {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  background: var(--ucl-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  margin-bottom: 12px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.elim-status-dot {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 1.5px solid var(--ucl-card);
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.4);
+}
+
+.elim-status-dot.vivo { background: var(--accent-primary); }
+.elim-status-dot.eliminado { background: #ef4444; }
+.elim-status-dot.noClasificado { background: var(--text-muted); }
+
+.elim-status-legend .elim-status-dot {
+  position: static;
+  border-color: transparent;
+  box-shadow: none;
+}
+
 .eliminatorias-view .drop-slot-points {
   font-size: 9px;
   font-weight: 700;
