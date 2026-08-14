@@ -1360,85 +1360,26 @@ function renderClassificationTab(container, username) {
     return;
   }
 
-  // Filtrar solo equipos con posición real 1-24 (los que puntúan)
-  const scoringTeams = classData.teamDetails.filter(t => t.realPos <= 24);
-  const nonScoringTeams = classData.teamDetails.filter(t => t.realPos > 24);
+  // Tabla única de los 36 equipos ordenada por posición pronosticada
+  const sortedTeams = sortTeamsByPredicted(classData.teamDetails);
 
-  let html = `
+  const html = `
     <div class="profile-total-points">Puntos totales clasificación: <strong>${classData.totalPoints}</strong></div>
     <div class="classification-legend" style="padding: 8px 16px; font-size: 11px; color: var(--text-muted); text-align: center;">
       Solo puntúan equipos en posición 1-24 | Mínimo entre posición pronosticada y real
     </div>
+    <div class="classification-section">
+      <div class="classification-table">
+        <div class="classification-header">
+          <span class="col-pos">Pron</span>
+          <span class="col-team">Equipo</span>
+          <span class="col-real">Real</span>
+          <span class="col-pts">Pts</span>
+        </div>
+        ${sortedTeams.map(buildClassificationRowHtml).join('')}
+      </div>
+    </div>
   `;
-
-  // Tabla de equipos que puntúan
-  if (scoringTeams.length) {
-    html += `
-      <div class="classification-section">
-        <div class="classification-section-title">Equipos que puntúan (1º-24º)</div>
-        <div class="classification-table">
-          <div class="classification-header">
-            <span class="col-pos">#</span>
-            <span class="col-team">Equipo</span>
-            <span class="col-pred">Pron.</span>
-            <span class="col-real">Real</span>
-            <span class="col-pts">Pts</span>
-          </div>
-    `;
-
-    for (const team of scoringTeams.sort((a, b) => a.realPos - b.realPos)) {
-      const predDisplay = team.predictedPos <= 36 ? team.predictedPos : '-';
-      const ptsClass = team.points > 0 ? 'positive' : '';
-      html += `
-        <div class="classification-row">
-          <span class="col-pos">${team.realPos}</span>
-          <span class="col-team">
-            <img src="data/imgEquipos/${team.teamId}.${team.badgeExt}" class="classification-badge" alt="${team.name}" loading="lazy" onerror="this.style.display='none'">
-            ${team.name}
-          </span>
-          <span class="col-pred">${predDisplay}</span>
-          <span class="col-real">${team.realPos}</span>
-          <span class="col-pts ${ptsClass}">${team.points}</span>
-        </div>
-      `;
-    }
-
-    html += '</div></div>';
-  }
-
-  // Tabla de equipos que no puntúan (resumen)
-  if (nonScoringTeams.length) {
-    html += `
-      <div class="classification-section">
-        <div class="classification-section-title">Equipos sin puntos (25º-36º)</div>
-        <div class="classification-table">
-          <div class="classification-header">
-            <span class="col-pos">#</span>
-            <span class="col-team">Equipo</span>
-            <span class="col-pred">Pron.</span>
-            <span class="col-real">Real</span>
-            <span class="col-pts">Pts</span>
-          </div>
-    `;
-
-    for (const team of nonScoringTeams.sort((a, b) => a.realPos - b.realPos)) {
-      const predDisplay = team.predictedPos <= 36 ? team.predictedPos : '-';
-      html += `
-        <div class="classification-row muted">
-          <span class="col-pos">${team.realPos}</span>
-          <span class="col-team">
-            <img src="data/imgEquipos/${team.teamId}.${team.badgeExt}" class="classification-badge" alt="${team.name}" loading="lazy" onerror="this.style.display='none'">
-            ${team.name}
-          </span>
-          <span class="col-pred">${predDisplay}</span>
-          <span class="col-real">${team.realPos}</span>
-          <span class="col-pts">0</span>
-        </div>
-      `;
-    }
-
-    html += '</div></div>';
-  }
 
   container.innerHTML = html;
 }
