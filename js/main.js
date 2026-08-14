@@ -950,38 +950,15 @@ async function renderClasificacionTab() {
   const reachedPhases = computeReachedPhases(AppState.matches, AppState.matchStats);
 
   const playersWithPoints = players.map(p => {
-    const userData = calculateUserTotalPoints(p.name);
-    AppState.userPoints[p.name] = userData;
-
-    // Obtener plantilla del caché
-    let squadPoints = 0;
-    const userSquad = AppState.squadsCache?.[p.name];
-    if (userSquad && userSquad.length) {
-      const { totalPoints } = calculateSquadPoints(userSquad, AppState.matchStats);
-      squadPoints = totalPoints;
-    }
-
-    // Calcular puntos por clasificación
-    let classificationPts = 0;
-    if (hasMatchStats) {
-      const classData = calculateClassificationPoints(p.name);
-      classificationPts = classData.totalPoints;
-    }
-
-    // Puntos por predicciones de eliminatorias (fase final)
-    let eliminatoriasPoints = 0;
-    const userFp = AppState.finalPredictionsCache[p.name];
-    if (userFp) {
-      eliminatoriasPoints = calculateEliminatoriasPoints(userFp, reachedPhases).totalPoints;
-    }
-
+    const parts = computeUserRealPoints(p.name);
+    AppState.userPoints[p.name] = parts.userData;
     return {
       ...p,
-      predictionPoints: userData.totalPoints,
-      squadPoints,
-      classificationPoints: classificationPts,
-      eliminatoriasPoints,
-      realPoints: userData.totalPoints + squadPoints + classificationPts + eliminatoriasPoints
+      predictionPoints: parts.predictionPoints,
+      squadPoints: parts.squadPoints,
+      classificationPoints: parts.classificationPoints,
+      eliminatoriasPoints: parts.eliminatoriasPoints,
+      realPoints: parts.realPoints
     };
   });
 
@@ -2951,7 +2928,7 @@ function computeRealPointsTotal(components) {
     + (components.eliminatorias || 0);
 }
 
-function getUserTotalRealPoints(username) {
+function computeUserRealPoints(username) {
   const userData = calculateUserTotalPoints(username);
   let squadPoints = 0;
   const userSquad = AppState.squadsCache?.[username];
@@ -2967,12 +2944,23 @@ function getUserTotalRealPoints(username) {
   if (userFp) {
     eliminatoriasPoints = calculateEliminatoriasPoints(userFp, computeReachedPhases(AppState.matches, AppState.matchStats)).totalPoints;
   }
-  return computeRealPointsTotal({
-    prediction: userData.totalPoints,
-    squad: squadPoints,
-    classification: classificationPoints,
-    eliminatorias: eliminatoriasPoints,
-  });
+  return {
+    predictionPoints: userData.totalPoints,
+    squadPoints,
+    classificationPoints,
+    eliminatoriasPoints,
+    realPoints: computeRealPointsTotal({
+      prediction: userData.totalPoints,
+      squad: squadPoints,
+      classification: classificationPoints,
+      eliminatorias: eliminatoriasPoints,
+    }),
+    userData,
+  };
+}
+
+function getUserTotalRealPoints(username) {
+  return computeUserRealPoints(username).realPoints;
 }
 
 function closePointsMenu() {
