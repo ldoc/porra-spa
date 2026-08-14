@@ -3296,12 +3296,6 @@ async function fetchPlayers() {
     const data = await res.json();
     if (data.ok) {
       AppState.players = data.players || [];
-      const mine = (data.players || []).find(p => p.name === AppState.currentUser?.name);
-      if (mine && AppState.currentUser) {
-        AppState.currentUser.points = mine.points;
-        AppState.currentUser.hits = mine.hits;
-        localStorage.setItem('porra_ucl_user', JSON.stringify(AppState.currentUser));
-      }
     }
   } catch (e) {
     AppState.players = [];
@@ -4407,50 +4401,7 @@ function refreshSquadUI() {
   }
 }
 
-// ============================================================
-// CLASIFICACION
-// ============================================================
-function renderLeaderboard() {
-  const container = document.getElementById('leaderboard-container');
-  if (!container) return;
 
-  let all = [...AppState.players || []];
-
-  if (AppState.currentUser) {
-    const exists = all.some(p => p.name === AppState.currentUser.name);
-    if (!exists) {
-      all.push({
-        name: AppState.currentUser.name,
-        avatar: AppState.currentUser.avatar,
-        points: AppState.currentUser.points || 0,
-        hits: AppState.currentUser.hits || 0,
-      });
-    }
-  }
-
-  all.sort((a, b) => b.points - a.points);
-
-  if (!all.length) {
-    container.innerHTML = `<div style="padding: 24px; text-align: center; color: var(--text-muted);">Aun no hay participantes registrados.</div>`;
-    return;
-  }
-
-  container.innerHTML = all.map((p, i) => {
-    const rank = i + 1;
-    const isMe = AppState.currentUser && p.name === AppState.currentUser.name;
-    return `
-      <div class="leaderboard-row ${isMe ? 'current-user' : ''}">
-        <div class="rank-badge rank-${rank}">${rank}</div>
-        <div class="player-avatar">${p.avatar}</div>
-        <div class="player-info">
-          <div class="player-name">${p.name}${isMe ? ' <span style="color:var(--accent-primary)">(Tu)</span>' : ''}</div>
-          <div class="player-stats-sub">${p.hits || 0} aciertos acumulados</div>
-        </div>
-        <div class="player-points">${p.points} <span style="font-size:10px;color:var(--text-muted)">pts</span></div>
-      </div>
-    `;
-  }).join('');
-}
 
 // ============================================================
 // NAVEGACION
