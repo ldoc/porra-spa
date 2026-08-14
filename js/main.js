@@ -14,7 +14,6 @@ const AppState = {
   currentUser: null,
   sessionToken: null,
   isRegisterMode: false,
-  validCodes: [],
   teamsMap: {},         // { teamId: { name, image } }
   matches: [],          // partidos transformados para la app
   leagueMatches: [],    // solo partidos de fase liga (144)
@@ -256,18 +255,12 @@ function loadLocalSquad() {
 
 async function loadInitialData() {
   try {
-    const [codesRes, calendarRes, jugadoresRes, teamsRes, fasesRes] = await Promise.all([
-      fetch('data/codes.json').catch(() => null),
+    const [calendarRes, jugadoresRes, teamsRes, fasesRes] = await Promise.all([
       fetch('data/calendar.json').catch(() => null),
       fetch('data/jugadores.json').catch(() => null),
       fetch('data/teams.json').catch(() => null),
       fetch('data/fases.json').catch(() => null),
     ]);
-
-    // Codigos de acceso
-    AppState.validCodes = codesRes?.ok
-      ? await codesRes.json()
-      : [{ code: 'UCL2026', used: false }, { code: 'PORRA-CHAMPS', used: false }, { code: 'DEMO123', used: false }];
 
     // Equipos → Mapa de busqueda por id
     if (teamsRes?.ok) {
