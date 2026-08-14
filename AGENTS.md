@@ -4,9 +4,9 @@ Este documento establece las normas de desarrollo, la arquitectura de código y 
 
 ---
 
-> **⚠️ IMPORTANTE - Cache-busting**: Cuando se suban cambios a GitHub que afecten a `css/styles.css` o `js/main.js`, **SIEMPRE** incrementar la versión en `index.html`:
+> **⚠️ IMPORTANTE - Cache-busting**: Cuando se suban cambios a GitHub que afecten a `css/styles.css` o a cualquier fichero JS (`js/main.js`, `js/eliminatorias.js`, `js/apiData.js`, `js/stats.js`), **SIEMPRE** incrementar la versión en `index.html`:
 > - CSS: `<link rel="stylesheet" href="css/styles.css?v=X">`
-> - JS: `<script src="js/main.js?v=X"></script>`
+> - JS: `<script src="js/main.js?v=X"></script>`, `<script src="js/eliminatorias.js?v=X"></script>`, etc.
 > Sin esto, el navegador no descargará los cambios y el usuario verá la versión anterior.
 
 ---
@@ -144,7 +144,7 @@ Si al finalizar el partido el equipo no ha recibido goles, el portero recibirá 
   - Código limpio, modular e impulsado por eventos.
   - Sin frameworks de JS pesados.
 - **Backend**: API REST en `https://api-porra.vercel.app` (repositorio separado `api-porra`)
-- **Persistencia**: GitHub como base de datos (via backend)
+- **Persistencia**: MongoDB Atlas (via backend)
 - **Autenticación**: JWT en localStorage
 
 ### Estructura de Directorios
@@ -154,16 +154,26 @@ Si al finalizar el partido el equipo no ha recibido goles, el portero recibirá 
 ├── css/
 │   └── styles.css    # Sistema de diseño, variables y estilos globales
 ├── js/
-│   └── main.js       # Lógica principal, control de navegación y autenticación
-├── assets/           # Imágenes, iconos y recursos estáticos
+│   ├── main.js       # Lógica principal, control de navegación y autenticación
+│   ├── eliminatorias.js # Lógica de predicciones de eliminatorias
+│   ├── apiData.js    # Utilidades de datos de API (unwrapAllPredictions)
+│   └── stats.js      # Cálculos y render de estadísticas/gráficos
 ├── data/             # Datos estáticos del torneo (ver data/README.md)
 │   ├── README.md     # Esquemas, relaciones y documentación de modelos
+│   ├── fases.json    # Definición de las 13 fases de la competición
 │   ├── teams.json    # 36 equipos participantes
-│   ├── jugadores.json # 1 273 jugadores para la plantilla ideal
-│   ├── calendar.json # 144 partidos de la fase de liga (8 jornadas)
-│   └── imgJugadores/ # Fotos PNG de jugadores ({id}.png)
+│   ├── jugadores.json # Jugadores para la plantilla ideal
+│   ├── calendar.json # Partidos (liga + eliminatorias)
+│   ├── imgEquipos/   # Escudos de equipos ({id}.{ext})
+│   ├── imgJugadores/ # Fotos de jugadores ({id}.png)
+│   ├── codes.json    # Códigos de acceso
+│   └── partidos/     # Datos de partidos
 ├── api/              # (Placeholder) Ficheros de integración con APIs
-├── extract/          # Scripts para obtener información de SofaScore (NO subir en despliegues)
+├── extract/          # (Placeholder) Documentación de extracción de SofaScore
+├── docs/             # Documentación de diseño y pantallas
+├── tests/            # Tests de la SPA
+├── server.mjs        # Servidor local de desarrollo
+├── vercel.json       # Configuración de despliegue en Vercel
 ├── AGENTS.md         # Este fichero de directrices y especificaciones
 └── README.md         # Documentación de inicio y uso del proyecto
 ```
@@ -193,7 +203,7 @@ El sistema de autenticación utiliza **JWT (JSON Web Tokens)** almacenados en **
 1. **Paso 1 - Login/Registro**:
    - **Login**: El usuario introduce usuario y contraseña. Se envía POST a `/api/auth/login`.
    - **Registro**: El usuario introduce usuario, contraseña y código de invitación. Se envía POST a `/api/auth/register`.
-   - El código de invitación es un fichero JSON en GitHub (`data/users/{clave}.json`) creado con GET `/nuevoUsuario`.
+   - El código de invitación lo crea un admin vía `POST /api/admin/invitations` y se valida contra MongoDB en el backend.
    - Si el código es válido y no ha sido usado, se guarda el JWT en `localStorage` como `session_token`.
    - Si el login es exitoso y el usuario ya tiene avatar, se entra directamente a la app.
    - Si el login es exitoso pero no tiene avatar, se muestra el paso 2 (selección de avatar).
@@ -218,6 +228,11 @@ La SPA se comunica con el backend en `https://api-porra.vercel.app`:
 ```javascript
 const API_BASE = 'https://api-porra.vercel.app';
 
+// Nota: "freeze" es un término coloquial en este doc. Técnicamente, la edición y
+// visibilidad se controlan con la fase actual del juego (`faseJuego`, ver
+// data/fases.json): la edición solo está disponible en FASE_PRETEMPORADA y las
+// fases PRE* ocultan los datos de otros usuarios.
+
 // ─── Autenticación ────────────────────────────────────────────
 POST /api/auth/register          // Body: { username, password, invitationCode }
 POST /api/auth/login             // Body: { username, password }
@@ -226,21 +241,22 @@ POST /api/auth/profile           // Body: { avatar }
 POST /api/auth/change-password   // Body: { currentPassword, newPassword }
 
 // ─── Pronósticos de partidos ──────────────────────────────────
-GET  /api/predictions            // Query: ?username=xxx (pre-freeze: solo propio)
-PUT  /api/predictions            // Body: { predictions } (bloqueado tras freeze)
-GET  /api/predictions/all        // Post-freeze: todos (predictions + finalPredictions + squad). Pre-freeze: solo propio
+GET  /api/predictions            // Query: ?username=xxx (solo propio en FASE_PRETEMPORADA)
+PUT  /api/predictions            // Body: { predictions } (bloqueado fuera de FASE_PRETEMPORADA)
+POST /api/predictions/confirm    // Confirmar pronósticos (permanente, requiere 144 completos)
+GET  /api/predictions/all        // Fuera de pretemporada: todos (predictions + finalPredictions + squad). En pretemporada: solo propio
 
 // ─── Fase Final ───────────────────────────────────────────────
-GET  /api/final-predictions      // Query: ?username=xxx (pre-freeze: solo propio)
-PUT  /api/final-predictions      // Body: { finalPredictions } (bloqueado tras finalsFreezeDate)
+GET  /api/final-predictions      // Query: ?username=xxx (solo propio en FASE_PRETEMPORADA)
+PUT  /api/final-predictions      // Body: { finalPredictions }
 
 // ─── Plantilla ideal ──────────────────────────────────────────
 GET  /api/squad                  // Query: ?username=xxx
-PUT  /api/squad                  // Body: { squad } (bloqueado tras freeze)
-GET  /api/squad/all              // Post-freeze: todos. Pre-freeze: solo propio
+PUT  /api/squad                  // Body: { squad } (bloqueado fuera de FASE_PRETEMPORADA)
+GET  /api/squad/all              // Fuera de pretemporada: todos. En pretemporada: solo propio
 
 // ─── Configuración y jugadores ────────────────────────────────
-GET  /api/config                 // { championsFreezeDate, finalsFreezeDate, squadSize, ... }
+GET  /api/config                 // { faseJuego, totalMatches, squadSize, squadFormation }
 GET  /api/avatars/taken          // Avatares ya cogidos
 GET  /api/players                // Todos los usuarios registrados
 
@@ -254,6 +270,8 @@ DELETE /api/match-stats/:eventId // Eliminar un matchstat
 GET    /api/admin/invitations       // Listar códigos de invitación
 POST   /api/admin/invitations       // Crear nuevo código
 DELETE /api/admin/invitations/:code // Eliminar código no usado
+PUT    /api/admin/fase-juego        // Cambiar la fase del juego
+PUT    /api/admin/config            // Actualizar configuración completa
 
 // ─── Legacy ───────────────────────────────────────────────────
 GET  /usuario?clave=xxxx         // Buscar usuario por clave de invitación
@@ -263,9 +281,11 @@ GET  /usuario?clave=xxxx         // Buscar usuario por clave de invitación
 
 | Variable         | Descripción                                    |
 |------------------|------------------------------------------------|
-| `GITHUB_TOKEN`   | Personal Access Token de GitHub                |
 | `JWT_SECRET`     | Secreto para firmar tokens JWT                 |
 | `FRONTEND_URL`   | URL del frontend para configurar CORS          |
+| `MONGODB_URI`    | URI de conexión a MongoDB Atlas                |
+
+> **Nota**: `GITHUB_TOKEN` ya no es necesaria. El backend persistía en GitHub pero migró a MongoDB (ver `api-porra/AGENTS.md`).
 
 #### Modelo de Datos de Usuario (en Backend)
 
@@ -294,6 +314,8 @@ GET  /usuario?clave=xxxx         // Buscar usuario por clave de invitación
     "roundOf16": "[number] (max 8)",
     "roundOf32": "[number] (max 8)"
   },
+  "predictionsConfirmed": "boolean (false por defecto, true tras confirmar los 144 pronósticos)",
+  "isAdmin": "boolean (false por defecto)",
   "createdAt": "Date"
 }
 ```
@@ -335,60 +357,19 @@ GET  /usuario?clave=xxxx         // Buscar usuario por clave de invitación
 }
 ```
 
-#### Configuración del Torneo (config.json)
+#### Configuración del Torneo (GET /api/config)
+
+La configuración se obtiene del backend (`GET /api/config`), se almacena en MongoDB y se controla por **fase de juego** (`faseJuego`). Las 13 fases posibles están definidas en `data/fases.json`.
 
 | Clave | Valor | Descripción |
 |-------|-------|-------------|
-| `championsStartRoundsDate` | `"2026-07-01T21:00:00Z"` | Fecha de freeze de fase de liga (bloquea predictions y squad) |
-| `championsStartRoundsLabel` | `"Fase de Grupos"` | Etiqueta legible de la fase |
-| `finalsFreezeDate` | `"2026-12-01T00:00:00Z"` | Fecha de freeze de fase final (bloquea finalPredictions) |
-| `finalsFreezeLabel` | `"Fase de Dieciseisavos"` | Etiqueta legible de la fase final |
+| `faseJuego` | `"FASE_PRETEMPORADA"` | Fase actual de la competición (controla edición/visibilidad) |
 | `totalMatches` | `144` | Total de partidos de fase de liga |
 | `squadSize` | `25` | Tamaño de la plantilla ideal |
 | `squadFormation.G` | `3` | Porteros en plantilla |
 | `squadFormation.D` | `8` | Defensas en plantilla |
 | `squadFormation.M` | `8` | Centrocampistas en plantilla |
 | `squadFormation.F` | `6` | Delanteros en plantilla |
-
-### 5.6. Scripts de Scraping (api-porra/scripts/)
-
-Scripts para obtener datos de Sofascore y poblar MongoDB. **NO subir en despliegues de producción.**
-
-| Script | Descripción | Uso |
-|--------|-------------|-----|
-| `calendario.js` | Obtiene los 144 partidos de las 8 jornadas de la fase de liga | `node scripts/calendario.js` |
-| `equipos.js` | Obtiene los 36 equipos + logos de Sofascore | `node scripts/equipos.js` |
-| `matchStats.js` | Módulo core: obtiene estadísticas de un partido por eventId (lineups, incidents, ratings) | Importado por otros scripts |
-| `scrapeRounds.js` | Scraping por lotes de jornadas 1-2 (36 partidos) | `node scripts/scrapeRounds.js` |
-| `scrapeRounds2to8.js` | Scraping por lotes de jornadas 2-8, saltando partidos existentes | `node scripts/scrapeRounds2to8.js` |
-| `migrateToMongo.js` | Migración de datos de GitHub JSON a MongoDB | `node scripts/migrateToMongo.js` |
-
-**Estructura de datos que genera matchStats:**
-
-```javascript
-{
-  stats: {
-    [homeTeamId]: { goles: 2 },
-    [awayTeamId]: { goles: 1 },
-    jugadores: [
-      {
-        id: 12345,
-        nombre: "Player Name",
-        posicion: "M",           // G/D/M/F
-        equipo: 1234,            // Team ID
-        puntos: 7.2,             // Sofascore rating
-        goles: 1,
-        minutos: 90,
-        paradas: 0,              // Solo porteros
-        esSuplente: false,
-        penaltiMarcado: false,
-        penaltiParado: false,    // Solo porteros
-        golesRecibidos: 1        // Solo porteros
-      }
-    ]
-  }
-}
-```
 
 #### Cierre de Sesión
 
@@ -400,12 +381,15 @@ Scripts para obtener datos de Sofascore y poblar MongoDB. **NO subir en desplieg
 La aplicación utiliza una estructura de navegación con:
 
 1. **Header Superior**: Muestra avatar y nombre del usuario. Al hacer clic, accede a la pestaña Perfil.
-2. **Menú Inferior (5 items)**:
-   - **Inicio**: Pantalla de bienvenida con avisos de pendientes y freeze de Champions
+2. **Menú Inferior (6 items)**:
+   - **Inicio**: Pantalla de bienvenida con avisos de pendientes y estado de la fase
    - **Clasificación**: Tabla de posiciones de todos los participantes (obtenidos de `GET /api/players`)
+   - **Resultados**: Resultados de partidos por jornada y puntos de usuarios
    - **Pronósticos**: Wizard para introducir marcadores de los 144 partidos
    - **Plantilla**: Selección de 25 jugadores para la plantilla ideal (3G, 8D, 8M, 6F)
-   - **Eliminatorias**: Predicciones de la fase de eliminatorias (campeón a dieciseisavos). Solo accesible tras confirmar los 144 pronósticos de liga
+   - **Estadísticas**: Gráfico de evolución de puntos por jornada
+
+> **Nota**: Eliminatorias no está en el menú inferior; se accede desde Pronósticos (botón "🏆 Eliminatorias").
 
 **Pestañas disponibles:**
 - `tab-inicio`: Pantalla de bienvenida con resumen de estado del usuario
@@ -432,9 +416,9 @@ Datos estáticos del torneo extraídos de SofaScore. Documentación completa en 
 | Fichero | Registros | Uso en la app |
 | --- | --- | --- |
 | `teams.json` | 36 | Equipos participantes (`id`, `name`, `idCompetition`) |
-| `jugadores.json` | 1 273 | Selección de plantilla ideal (`id`, `nombre`, `posicion`, `club`, `equipo`) |
-| `calendar.json` | 144 | Wizard de pronósticos (`id`, `ronda`, `fecha`, `equipoLocal`, `equipoVisitante`) |
-| `imgJugadores/` | 1 273 | Imágenes de jugadores en PNG, nombradas `{id}.png` |
+| `jugadores.json` | 1 134 | Selección de plantilla ideal (`id`, `nombre`, `posicion`, `club`, `equipo`) |
+| `calendar.json` | 189 (144 de fase de liga) | Wizard de pronósticos (`id`, `ronda`, `fecha`, `equipoLocal`, `equipoVisitante`) |
+| `imgJugadores/` | 1 134 | Imágenes de jugadores en PNG, nombradas `{id}.png` |
 
 **Relaciones entre ficheros:**
 
@@ -460,7 +444,7 @@ Herramientas para obtener automáticamente datos y resultados actualizados de So
 1. **Pronósticos por Jornada**: Predicciones de marcadores exactos en los 144 partidos de la fase de liga de la Champions League 2026/2027 (15 puntos máximo por partido).
 2. **Clasificación General**: Tabla acumulada de puntos y aciertos por cada jugador registrado con su avatar y plantilla ideal.
 3. **Estadísticas de Porra**: Tendencias comunitarias y desglose de predicciones.
-4. **Pestaña Inicio**: Pantalla de bienvenida con avatar del usuario, avisos de partidos/pendientes y countdown de freeze de Champions (8 septiembre 2026).
+4. **Pestaña Inicio**: Pantalla de bienvenida con avatar del usuario, avisos de partidos/pendientes y countdown hasta el inicio de la fase de liga (8 septiembre 2026).
 5. **Pronóstico de Clasificación**: Predicción de la posición final de cada equipo en la fase de liga (puntos por acertar posiciones del 1º al 24º).
 6. **Clasificación Pronosticada**: Pantalla dinámica que muestra la clasificación de los 36 equipos calculada a partir de los marcadores pronosticados por el usuario.
 
@@ -706,8 +690,8 @@ function calculateUserTotalPoints(username, allMatchStats) {
 
 #### Fuente de Datos
 
-- **Predicciones de todos los usuarios**: `GET /api/predictions/all` (nuevo endpoint necesario)
-- **Resultados de partidos**: `GET /api/match-stats` (nuevo endpoint necesario, devuelve todos los matchstats)
+- **Predicciones de todos los usuarios**: `GET /api/predictions/all`
+- **Resultados de partidos**: `GET /api/match-stats` (devuelve todos los matchstats)
 - **Lista de usuarios**: `GET /api/players`
 
 #### Diseño de la Pantalla
@@ -1177,14 +1161,14 @@ AppState.hasUnsavedFinalChanges = false; // Bandera de cambios sin guardar
 | `removeTeamFromZone(zoneId, index)` | Elimina un equipo de una zona y lo devuelve al pool |
 | `saveFinalPredictionsToBackend()` | Guarda las predicciones en el servidor via PUT /api/final-predictions |
 | `fetchFinalPredictionsFromBackend()` | Obtiene las predicciones del servidor y las carga en AppState |
-| `isFinalsFrozen()` | Comprueba si la fecha actual supera `finalsFreezeDate` |
+| `isFinalsFrozen()` | Comprueba si las predicciones de eliminatorias están bloqueadas (`predictionsConfirmed` + fase no PRETEMPORADA) |
 | `showUnsavedFinalChangesModal()` | Muestra modal de confirmación si hay cambios sin guardar |
 
 #### Persistencia
 
 - **Backend**: Endpoint `GET/PUT /api/final-predictions` para persistencia en MongoDB
 - **Campo en User schema**: `finalPredictions` (Mixed type)
-- **Freeze**: Controlado por `finalsFreezeDate` en config.json
+- **Bloqueo**: Controlado por `predictionsConfirmed` y la fase actual (`faseJuego`)
 
 #### Datos Requeridos
 
@@ -1198,7 +1182,7 @@ AppState.hasUnsavedFinalChanges = false; // Bandera de cambios sin guardar
 
 - Desde la fecha actual hasta el día antes del primer partido de la jornada 1 cada usuario podra ver y modificar su plantilla y sus pronosticos de resultados
 - Los demas jugadores no podran durante este tiempo ver la plantilla ni los pronosticos de resultados de los otros, cada uno ve lo suyo (esto va por la pantalla de clasificacion donde puedes pinchar en otro jugador y ver su plantilla y resultados)
-- Una vez enpezada la jornada 1 se bloqueara el acceso a la edicion de la plantilla y los pronosticos de resultados para todos los jugadores (la fecha estara definida en "championsFreezeDate") y los demas jugadores tendran acceso a ver la plantilla y los pronosticos de resultados de los otros desde clasificacion.
+- Una vez empezada la jornada 1 se bloqueara el acceso a la edicion de la plantilla y los pronosticos de resultados para todos los jugadores (cuando la fase actual deje de ser FASE_PRETEMPORADA, gestionado por `faseJuego`) y los demas jugadores tendran acceso a ver la plantilla y los pronosticos de resultados de los otros desde clasificacion.
 - Los partidos se iran subiendo a medida que se conozcan los resultados mediante el script de api-porra math-stats
 - Según se vayan subiendo partidos el usuario deberia poder verlos en la app (hay que ver si tenemos esto ya imlpementado, no se si al subir uno o varios partidos el usuario ya los tendria disponibles)
 
