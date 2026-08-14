@@ -1411,7 +1411,7 @@ async function renderEliminatoriasTab(container, username) {
       slots.push(`
         <div class="drop-slot filled">
           <span class="elim-status-dot ${status}"></span>
-          <img class="drop-slot-img" src="data/imgEquipos/${teamId}.${ext}" alt="${teamName(teamId)}" onerror="this.onerror=null;this.src='data/imgEquipos/default.png'">
+          <img class="drop-slot-img" src="data/imgEquipos/${teamId}.${ext}" alt="${teamName(teamId)}" onerror="this.onerror=null;this.src='data/imgEquipos/default.webp'">
           <span class="drop-slot-name">${teamName(teamId)}</span>
           <span class="drop-slot-points ${pts > 0 ? 'earned' : ''}">${pts > 0 ? '🎯 ' + pts + ' pts' : '—'}</span>
         </div>
@@ -1739,7 +1739,7 @@ function renderElimZona(title, emoji, zoneId, teamIds, max) {
       const ext = AppState.teamsMap[teamId]?.ext || 'png';
       slots.push(`
         <div class="drop-slot filled">
-          <img class="drop-slot-img" src="data/imgEquipos/${teamId}.${ext}" alt="${teamName(teamId)}" onerror="this.onerror=null;this.src='data/imgEquipos/default.png'">
+          <img class="drop-slot-img" src="data/imgEquipos/${teamId}.${ext}" alt="${teamName(teamId)}" onerror="this.onerror=null;this.src='data/imgEquipos/default.webp'">
           <span class="drop-slot-name">${teamName(teamId)}</span>
         </div>
       `);
@@ -5478,7 +5478,7 @@ async function renderFinalPredictionsTab() {
           <span class="podium-label">${label}</span>
           <span class="podium-icon">${icon}</span>
           <div class="podium-team">
-            <img class="podium-team-img" src="${getTeamImg(teamId)}" alt="${team.name}" onerror="this.src='data/imgEquipos/default.png'">
+            <img class="podium-team-img" src="${getTeamImg(teamId)}" alt="${team.name}" onerror="this.src='data/imgEquipos/default.webp'">
             <span class="podium-team-name">${team.name}</span>
           </div>
           ${!frozen ? `<div class="podium-remove" data-zone="${type}" data-action="remove-podium">✕</div>` : ''}
@@ -5517,7 +5517,7 @@ async function renderFinalPredictionsTab() {
               const top8 = isTop8Predicted(team.id);
               return `
               <div class="team-chip ${top8 ? 'top-8' : ''} ${AppState.selectedFinalTeam === team.id ? 'selected' : ''}" data-team-id="${team.id}">
-                <img class="team-chip-img" src="${getTeamImg(team.id)}" alt="${team.name}" onerror="this.src='data/imgEquipos/default.png'">
+                <img class="team-chip-img" src="${getTeamImg(team.id)}" alt="${team.name}" onerror="this.src='data/imgEquipos/default.webp'">
                 <span class="team-chip-name">${team.name}</span>
               </div>`;
             }).join('')}
@@ -5578,7 +5578,7 @@ function renderDropZone(title, zoneId, value, maxSlots, qualifiedTeams, frozen) 
         const ext = AppState.teamsMap[teamId]?.ext || 'png';
         slots.push(`
           <div class="drop-slot filled" data-zone="${zoneId}" data-index="${i}" data-team-id="${teamId}">
-            <img class="drop-slot-img" src="data/imgEquipos/${teamId}.${ext}" alt="${team.name}" onerror="this.src='data/imgEquipos/default.png'">
+            <img class="drop-slot-img" src="data/imgEquipos/${teamId}.${ext}" alt="${team.name}" onerror="this.src='data/imgEquipos/default.webp'">
             <span class="drop-slot-name">${team.name}</span>
             ${!frozen ? '<div class="drop-slot-remove" data-action="remove">✕</div>' : ''}
           </div>
