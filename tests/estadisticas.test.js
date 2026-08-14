@@ -1,5 +1,5 @@
 const assert = require('assert');
-const { buildTimeline, calcPredictionSeries, calcSquadSeries } = require('../js/stats.js');
+const { buildTimeline, emptySeries, calcPredictionSeries, calcSquadSeries, calcClassificationSeries, calcEliminatoriasSeries, sumSeries, isLeagueComplete, getSeriesBySource } = require('../js/stats.js');
 
 function test_buildTimeline_13_posiciones_ordenadas() {
   const tl = buildTimeline();
@@ -70,3 +70,95 @@ test_calcPredictionSeries_sin_datos();
 test_calcSquadSeries_por_jornada_y_fase();
 test_calcSquadSeries_evento_sin_match_ignorado();
 console.log('OK buildTimeline');
+
+function test_calcClassificationSeries_salto_en_J8_solo_liga_completa() {
+  const r = calcClassificationSeries(100, true);
+  assert.strictEqual(r.hasData, true);
+  assert.deepStrictEqual(r.series.slice(0, 7), Array(7).fill(0));
+  assert.strictEqual(r.series[7], 100);
+  assert.strictEqual(r.series[12], 100);
+}
+
+function test_calcClassificationSeries_liga_incompleta_sin_datos() {
+  const r = calcClassificationSeries(100, false);
+  assert.strictEqual(r.hasData, false);
+  assert.deepStrictEqual(r.series, Array(13).fill(0));
+}
+
+function test_calcEliminatoriasSeries_saltos_por_fase_alcanzada() {
+  const teamDetails = [
+    { teamId: 1, reachedRank: 1, points: 10 },
+    { teamId: 2, reachedRank: 4, points: 50 },
+    { teamId: 3, reachedRank: 6, points: 100 },
+    { teamId: 4, reachedRank: 5, points: 75 },
+  ];
+  const r = calcEliminatoriasSeries(teamDetails);
+  assert.strictEqual(r.hasData, true);
+  // pos 8 (16): 10 ; pos 11 (Semis): 10+50=60 ; pos 12 (Final): 60+100+75=235
+  assert.strictEqual(r.series[7], 0);
+  assert.strictEqual(r.series[8], 10);
+  assert.strictEqual(r.series[11], 60);
+  assert.strictEqual(r.series[12], 235);
+}
+
+function test_sumSeries_suma_posicion_a_posicion() {
+  const a = { series: [1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], hasData: true };
+  const b = { series: [0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], hasData: true };
+  const r = sumSeries([a, b]);
+  assert.strictEqual(r.series[0], 1);
+  assert.strictEqual(r.series[2], 2);
+  assert.strictEqual(r.hasData, true);
+}
+
+function test_sumSeries_sin_datos() {
+  const r = sumSeries([emptySeries(), emptySeries()]);
+  assert.strictEqual(r.hasData, false);
+}
+
+function test_isLeagueComplete() {
+  const matches = [{ id: 1, fase: 'liga' }, { id: 2, fase: 'liga' }, { id: 3, fase: '16' }];
+  assert.strictEqual(isLeagueComplete(matches, [{ eventId: 1 }, { eventId: 2 }]), true);
+  assert.strictEqual(isLeagueComplete(matches, [{ eventId: 1 }]), false);
+  assert.strictEqual(isLeagueComplete(matches, []), false);
+  assert.strictEqual(isLeagueComplete([], []), false);
+}
+
+function test_getSeriesBySource_total_suma_todas() {
+  const userData = {
+    matchDetails: [{ match: { id: 1, ronda: 1, fase: 'liga' }, points: 8 }],
+    squadPoints: { playerDetails: [{ jugador: {}, puntosTotal: 4, partidos: [{ eventId: 1, puntos: 4 }] }] },
+    classificationTotal: 100,
+    leagueComplete: true,
+    eliminatoriasTeamDetails: [{ teamId: 1, reachedRank: 6, points: 100 }],
+    matchesById: { 1: { id: 1, fase: 'liga', ronda: 1 } },
+  };
+  const r = getSeriesBySource('total', userData);
+  assert.strictEqual(r.hasData, true);
+  assert.strictEqual(r.series[0], 12);      // 8 + 4
+  assert.strictEqual(r.series[7], 112);     // +100 clasificación
+  assert.strictEqual(r.series[12], 212);    // +100 eliminatorias
+}
+
+function test_getSeriesBySource_pronosticos_elige_serie_correcta() {
+  const userData = {
+    matchDetails: [{ match: { id: 1, ronda: 1, fase: 'liga' }, points: 8 }],
+    squadPoints: { playerDetails: [] },
+    classificationTotal: 0,
+    leagueComplete: false,
+    eliminatoriasTeamDetails: [],
+    matchesById: {},
+  };
+  const r = getSeriesBySource('pronosticos', userData);
+  assert.strictEqual(r.hasData, true);
+  assert.strictEqual(r.series[0], 8);
+  assert.strictEqual(r.series[12], 8);
+}
+
+test_calcClassificationSeries_salto_en_J8_solo_liga_completa();
+test_calcClassificationSeries_liga_incompleta_sin_datos();
+test_calcEliminatoriasSeries_saltos_por_fase_alcanzada();
+test_sumSeries_suma_posicion_a_posicion();
+test_sumSeries_sin_datos();
+test_isLeagueComplete();
+test_getSeriesBySource_total_suma_todas();
+test_getSeriesBySource_pronosticos_elige_serie_correcta();
