@@ -2638,6 +2638,7 @@ function navigateToTab(tabName) {
   if (tabName === 'pronosticos') renderPronosticosTab();
   if (tabName === 'final-predictions') renderFinalPredictionsTab();
   if (tabName === 'plantilla') renderPlantillaTab();
+  if (tabName === 'estadisticas') renderEstadisticasTab();
 }
 
 // ============================================================
@@ -2863,6 +2864,7 @@ function forceNavigateToTab(tabName) {
   if (tabName === 'resultados') renderResultadosTab();
   if (tabName === 'pronosticos') renderPronosticosTab();
   if (tabName === 'plantilla') renderPlantillaTab();
+  if (tabName === 'estadisticas') renderEstadisticasTab();
 }
 
 function getFaseLabel(fase) {
