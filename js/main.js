@@ -2966,9 +2966,9 @@ function renderInicioTab() {
         if (pending > 0) {
           return `
             <div class="inicio-card inicio-pending" onclick="navigateToTab('pronosticos')">
-              <div class="inicio-card-icon">⚽</div>
+              <div class="inicio-card-icon">⚠️</div>
               <div class="inicio-card-content">
-                <div class="inicio-card-title">${pending} partidos pendientes</div>
+                <div class="inicio-card-title">Pronósticos pendientes</div>
                 <div class="inicio-card-desc">Te quedan ${pending} de ${totalMatches} partidos por pronosticar.</div>
               </div>
               <div class="inicio-card-arrow">→</div>
@@ -2979,7 +2979,7 @@ function renderInicioTab() {
             <div class="inicio-card inicio-done">
               <div class="inicio-card-icon">✅</div>
               <div class="inicio-card-content">
-                <div class="inicio-card-title">Todos pronosticados</div>
+                <div class="inicio-card-title">Pronósticos completados</div>
                 <div class="inicio-card-desc">Ya has predicho los ${totalMatches} partidos. ¡Buena suerte!</div>
               </div>
             </div>
@@ -2994,7 +2994,7 @@ function renderInicioTab() {
         if (phasePending > 0) {
           return `
             <div class="inicio-card inicio-pending" onclick="navigateToTab('pronosticos')">
-              <div class="inicio-card-icon">📝</div>
+              <div class="inicio-card-icon">⚠️</div>
               <div class="inicio-card-content">
                 <div class="inicio-card-title">Pronósticos de ${faseLabel} pendientes</div>
                 <div class="inicio-card-desc">Te quedan ${phasePending} partidos de ${faseLabel} por pronosticar.</div>
@@ -3007,7 +3007,7 @@ function renderInicioTab() {
             <div class="inicio-card inicio-done">
               <div class="inicio-card-icon">✅</div>
               <div class="inicio-card-content">
-                <div class="inicio-card-title">Fase de ${faseLabel} completada</div>
+                <div class="inicio-card-title">Pronósticos de ${faseLabel} completados</div>
                 <div class="inicio-card-desc">Has pronosticado todos los partidos de ${faseLabel}.</div>
               </div>
             </div>
@@ -3019,9 +3019,9 @@ function renderInicioTab() {
 
     ${fase === 'FASE_PRETEMPORADA' ? (squadPending > 0 ? `
       <div class="inicio-card inicio-pending" onclick="navigateToTab('plantilla')">
-        <div class="inicio-card-icon">🌟</div>
+        <div class="inicio-card-icon">⚠️</div>
         <div class="inicio-card-content">
-          <div class="inicio-card-title">Plantilla incompleta</div>
+          <div class="inicio-card-title">Plantilla pendiente</div>
           <div class="inicio-card-desc">Te quedan ${squadPending} de ${squadSize} jugadores por elegir.</div>
         </div>
         <div class="inicio-card-arrow">→</div>
@@ -3030,7 +3030,7 @@ function renderInicioTab() {
       <div class="inicio-card inicio-done">
         <div class="inicio-card-icon">✅</div>
         <div class="inicio-card-content">
-          <div class="inicio-card-title">Plantilla completa</div>
+          <div class="inicio-card-title">Plantilla completada</div>
           <div class="inicio-card-desc">Ya tienes los ${squadSize} jugadores seleccionados.</div>
         </div>
       </div>
@@ -3043,9 +3043,9 @@ function renderInicioTab() {
       if (finalPending > 0) {
         return `
           <div class="inicio-card inicio-pending" onclick="navigateToTab('final-predictions')">
-            <div class="inicio-card-icon">🏆</div>
+            <div class="inicio-card-icon">⚠️</div>
             <div class="inicio-card-content">
-              <div class="inicio-card-title">Eliminatorias incompletas</div>
+              <div class="inicio-card-title">Eliminatorias pendientes</div>
               <div class="inicio-card-desc">Te quedan ${finalPending} de ${finalTotal} equipos por colocar en el cuadro final.</div>
             </div>
             <div class="inicio-card-arrow">→</div>
@@ -3056,7 +3056,7 @@ function renderInicioTab() {
         <div class="inicio-card inicio-done">
           <div class="inicio-card-icon">✅</div>
           <div class="inicio-card-content">
-            <div class="inicio-card-title">Eliminatorias completas</div>
+            <div class="inicio-card-title">Eliminatorias completadas</div>
             <div class="inicio-card-desc">Has colocado los ${finalTotal} equipos del cuadro final.</div>
           </div>
         </div>
