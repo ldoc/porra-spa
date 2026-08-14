@@ -1100,12 +1100,19 @@ html, body {
   gap: 4px;
   color: var(--text-muted);
   text-decoration: none;
-  font-size: 11px;
+  font-size: 9px;
   font-weight: 600;
   padding: 8px 12px;
   border-radius: var(--radius-md);
   transition: color var(--transition-fast), transform var(--transition-fast);
   cursor: pointer;
+}
+
+.nav-item span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
 }
 
 .nav-item svg {

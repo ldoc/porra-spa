@@ -154,6 +154,52 @@ function test_getSeriesBySource_pronosticos_elige_serie_correcta() {
   assert.strictEqual(r.series[12], 8);
 }
 
+function test_calcPredictionSeries_ronda_fuera_de_rango_ignorada() {
+  // Solo partidos con ronda fuera de rango o NaN: no deben marcar hasData ni
+  // escribir en acc[NaN] (agujero que distorsionaba el resultado).
+  const matchDetails = [
+    { match: { id: 1, ronda: 9, fase: 'liga' }, points: 8 },        // ronda > 8 → ignorado
+    { match: { id: 2, ronda: 0, fase: 'liga' }, points: 4 },        // ronda < 1 → ignorado
+    { match: { id: 3, ronda: NaN, fase: 'liga' }, points: 5 },      // ronda NaN → ignorado
+    { match: { id: 4, ronda: undefined, fase: 'liga' }, points: 6 }, // sin ronda → ignorado
+  ];
+  const r = calcPredictionSeries(matchDetails);
+  assert.strictEqual(r.hasData, false);
+  assert.deepStrictEqual(r.series, Array(13).fill(0));
+
+  // Con un partido válido además, los inválidos no cuentan.
+  const mixto = calcPredictionSeries([...matchDetails, { match: { id: 5, ronda: 1, fase: 'liga' }, points: 15 }]);
+  assert.strictEqual(mixto.hasData, true);
+  assert.strictEqual(mixto.series[0], 15);
+  assert.strictEqual(mixto.series[12], 15);
+}
+
+function test_calcPredictionSeries_partido_liga_points_0_hasData() {
+  const matchDetails = [
+    { match: { id: 1, ronda: 1, fase: 'liga' }, points: 0 },
+  ];
+  const r = calcPredictionSeries(matchDetails);
+  assert.strictEqual(r.hasData, true);
+  assert.strictEqual(r.series[0], 0);
+  assert.strictEqual(r.series[12], 0);
+}
+
+function test_getSeriesBySource_datos_mixtos_hasData_por_fuente() {
+  // Jugador con datos totales pero sin datos de clasificación (liga incompleta):
+  // la fuente 'clasificacion' debe reportar hasData=false mientras 'total' reporta true.
+  const userData = {
+    matchDetails: [{ match: { id: 1, ronda: 1, fase: 'liga' }, points: 8 }],
+    squadPoints: { playerDetails: [] },
+    classificationTotal: 0,
+    leagueComplete: false,
+    eliminatoriasTeamDetails: [],
+    matchesById: {},
+  };
+  assert.strictEqual(getSeriesBySource('total', userData).hasData, true);
+  assert.strictEqual(getSeriesBySource('clasificacion', userData).hasData, false);
+  assert.strictEqual(getSeriesBySource('clasificacion', userData).series[12], 0);
+}
+
 test_calcClassificationSeries_salto_en_J8_solo_liga_completa();
 test_calcClassificationSeries_liga_incompleta_sin_datos();
 test_calcEliminatoriasSeries_saltos_por_fase_alcanzada();
@@ -162,3 +208,6 @@ test_sumSeries_sin_datos();
 test_isLeagueComplete();
 test_getSeriesBySource_total_suma_todas();
 test_getSeriesBySource_pronosticos_elige_serie_correcta();
+test_calcPredictionSeries_ronda_fuera_de_rango_ignorada();
+test_calcPredictionSeries_partido_liga_points_0_hasData();
+test_getSeriesBySource_datos_mixtos_hasData_por_fuente();
