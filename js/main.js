@@ -1398,7 +1398,7 @@ async function renderEliminatoriasTab(container, username) {
 
   const reachedPhases = computeReachedPhases(AppState.matches, AppState.matchStats);
   const elimResult = computeEliminatorias(AppState.matches, AppState.matchStats);
-  const realStandings = calculateRealStandings();
+  const realStandings = isLeagueComplete(AppState.matches, AppState.matchStats) ? calculateRealStandings() : [];
   const { totalPoints, teamDetails } = calculateEliminatoriasPoints(fp, reachedPhases);
   const pointsByTeam = {};
   for (const d of teamDetails) pointsByTeam[d.teamId] = d.points;
