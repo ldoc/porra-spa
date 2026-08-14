@@ -71,12 +71,39 @@ function test_html_chevron() {
   assert.ok(buildPointsMenuHtml(0).includes('M19 9l-7 7-7-7'), 'chevron abajo');
 }
 
+function computeRealPointsTotal(components) {
+  return (components.prediction || 0)
+    + (components.squad || 0)
+    + (components.classification || 0)
+    + (components.eliminatorias || 0);
+}
+
+function test_suma_completa() {
+  assert.strictEqual(
+    computeRealPointsTotal({ prediction: 145, squad: 181, classification: 60, eliminatorias: 12 }),
+    398, 'suma de los 4 componentes'
+  );
+}
+
+function test_suma_fallbacks_a_cero() {
+  assert.strictEqual(computeRealPointsTotal({}), 0, 'sin componentes');
+  assert.strictEqual(computeRealPointsTotal({ prediction: 10 }), 10, 'solo prediction');
+  assert.strictEqual(computeRealPointsTotal({ prediction: 1, squad: 2, classification: 3 }), 6, 'sin eliminatorias');
+}
+
+function test_suma_ignora_null() {
+  assert.strictEqual(computeRealPointsTotal({ prediction: 5, squad: null, classification: undefined, eliminatorias: 0 }), 5);
+}
+
 const tests = [
   test_mapping_correcto,
   test_html_incluye_puntos_y_estrella,
   test_html_estado_inicial_cerrado,
   test_html_celdas_con_data_tab,
   test_html_chevron,
+  test_suma_completa,
+  test_suma_fallbacks_a_cero,
+  test_suma_ignora_null,
 ];
 let passed = 0, failed = 0;
 for (const t of tests) {

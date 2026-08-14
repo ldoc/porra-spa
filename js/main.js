@@ -2943,6 +2943,13 @@ function buildPointsMenuHtml(totalPoints) {
     </div>`;
 }
 
+function computeRealPointsTotal(components) {
+  return (components.prediction || 0)
+    + (components.squad || 0)
+    + (components.classification || 0)
+    + (components.eliminatorias || 0);
+}
+
 function renderInicioTab() {
   const container = document.getElementById('inicio-container');
   if (!container || !AppState.currentUser) return;
