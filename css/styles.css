@@ -4891,3 +4891,78 @@ html, body {
 .stats-lastpoint {
   cursor: pointer;
 }
+
+/* ==========================================================================
+   MENÚ TUS PUNTOS (Inicio)
+   ========================================================================== */
+.points-menu { position: relative; align-self: flex-start; }
+
+.points-trigger {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  background: linear-gradient(135deg, var(--ucl-card) 0%, var(--ucl-surface) 100%);
+  border: 1px solid rgba(6, 182, 212, 0.4);
+  padding: 5px 16px 6px;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  color: var(--text-primary);
+  font-family: var(--font-family);
+  animation: attentionPulse 2s ease-in-out infinite;
+  transition: transform var(--transition-fast);
+}
+.points-trigger:active { transform: scale(0.97); }
+
+@keyframes attentionPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(6, 182, 212, 0.35), 0 0 18px rgba(6, 182, 212, 0.35); transform: scale(1); }
+  50%      { box-shadow: 0 0 0 10px rgba(6, 182, 212, 0), 0 0 4px rgba(6, 182, 212, 0.15); transform: scale(0.99); }
+}
+.points-trigger.open { animation: none; }
+
+.points-lbl {
+  font-size: 0.5rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 1.3px;
+  line-height: 1;
+  margin-bottom: 3px;
+}
+.points-row { display: flex; align-items: center; gap: 7px; font-size: 0.82rem; font-weight: 800; }
+.points-num { color: var(--accent-cyan); font-weight: 800; }
+.points-chev { color: var(--text-secondary); display: inline-flex; }
+.points-chev svg { width: 11px; height: 11px; stroke: currentColor; fill: none; stroke-width: 2.4; transition: transform var(--transition-normal); }
+.points-trigger.open .points-chev svg { transform: rotate(180deg); }
+
+.points-dropdown {
+  margin-top: 8px;
+  background: var(--ucl-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 8px;
+  box-shadow: var(--shadow-card);
+  animation: pointsPopIn 0.25s ease-out;
+}
+@keyframes pointsPopIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
+
+.points-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.points-tile {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--ucl-surface);
+  border-radius: 10px;
+  padding: 9px 8px;
+  min-height: 44px;
+  cursor: pointer;
+  border-left: 3px solid transparent;
+  transition: background var(--transition-fast);
+}
+.points-tile:active { background: var(--ucl-card-hover); }
+.points-tile svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2; flex-shrink: 0; }
+.points-tile span { font-size: 0.66rem; font-weight: 700; line-height: 1.1; }
+
+.tile-pronosticos   { color: #10B981; border-left-color: #10B981; }
+.tile-plantilla     { color: #8B5CF6; border-left-color: #8B5CF6; }
+.tile-clasificacion { color: #06B6D4; border-left-color: #06B6D4; }
+.tile-eliminatorias { color: #F59E0B; border-left-color: #F59E0B; }
