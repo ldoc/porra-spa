@@ -53,10 +53,10 @@ Prepend al `container.innerHTML` del Inicio, **antes** de `.inicio-welcome`:
   </button>
   <div class="points-dropdown" id="points-dropdown" hidden>
     <div class="points-grid">
-      <div class="points-tile tile-pronosticos" data-tab="pronosticos">…svg…<span>Pronósticos</span></div>
-      <div class="points-tile tile-plantilla"   data-tab="plantilla">…svg…<span>Plantilla</span></div>
-      <div class="points-tile tile-clasificacion" data-tab="clasificacion">…svg…<span>Clasificación</span></div>
-      <div class="points-tile tile-eliminatorias" data-tab="final-predictions">…svg…<span>Eliminatorias</span></div>
+      <div class="points-tile tile-pronosticos" data-tab="predictions">…svg…<span>Pronósticos</span></div>
+      <div class="points-tile tile-plantilla"   data-tab="squad">…svg…<span>Plantilla</span></div>
+      <div class="points-tile tile-clasificacion" data-tab="classification">…svg…<span>Clasificación</span></div>
+      <div class="points-tile tile-eliminatorias" data-tab="eliminatorias">…svg…<span>Eliminatorias</span></div>
     </div>
   </div>
 </div>
@@ -96,7 +96,7 @@ function getUserTotalRealPoints(username) {
 - **Toggle**: click en `#points-trigger` → alterna `.open`, `aria-expanded`, y `hidden` de `#points-dropdown`.
 - **Cerrar al hacer clic fuera**: listener `document` que cierra si el clic no está dentro de `.points-menu`.
 - **Cerrar con `Escape`**: listener `keydown`.
-- **Navegación**: click en `.points-tile` → `navigateToTab(dataset.tab)` y cerrar el menú. El guard existente de `final-predictions` (js/main.js:2622, «Debes confirmar tus pronósticos de liga primero») se mantiene intacto.
+- **Navegación (corregido 2026-08-14)**: click en `.points-tile` → cierra el menú y abre el **modal de perfil del usuario actual en su pestaña correspondiente** (`showUserProfileModal(username, tab)` con `tab` ∈ `predictions`/`squad`/`classification`/`eliminatorias`), que es exactamente lo que se ve al pulsar tu fila en Clasificación y seleccionar la pestaña. No navega a las pestañas principales. Antes de abrir se garantiza que `AppState.userPoints[username]` esté poblado (`openMyProfileTab` → `computeUserRealPoints(username).userData` si falta). `showUserProfileModal` gana el parámetro `initialTab` (default `'predictions'`, compatible con las llamadas existentes). El guard de pretemporada (solo perfil propio) no afecta porque el menú abre el perfil propio.
 - **Al salir de Inicio** el menú se considera cerrado (estado no persistente; al volver, `renderInicioTab` lo renderiza cerrado).
 
 ### 2. CSS (css/styles.css)
@@ -104,7 +104,7 @@ function getUserTotalRealPoints(username) {
 Usar las variables del sistema de diseño (`--ucl-card`, `--ucl-surface`, `--ucl-card-hover`, `--accent-cyan`, `--text-secondary`, etc.).
 
 ```css
-.points-menu { position: relative; align-self: flex-start; }
+.points-menu { position: relative; }
 
 .points-trigger {
   display: inline-flex; flex-direction: column; align-items: center;
@@ -114,12 +114,14 @@ Usar las variables del sistema de diseño (`--ucl-card`, `--ucl-surface`, `--ucl
   border-radius: var(--radius-full);
   cursor: pointer;
   animation: attentionPulse 2s ease-in-out infinite;
+  transition: transform var(--transition-fast);
 }
 @keyframes attentionPulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(6, 182, 212, 0.35), 0 0 18px rgba(6, 182, 212, 0.35); transform: scale(1); }
-  50%      { box-shadow: 0 0 0 10px rgba(6, 182, 212, 0), 0 0 4px rgba(6, 182, 212, 0.15); transform: scale(0.99); }
+  0%, 100% { box-shadow: 0 0 0 0 rgba(6, 182, 212, 0.35), 0 0 18px rgba(6, 182, 212, 0.35); }
+  50%      { box-shadow: 0 0 0 10px rgba(6, 182, 212, 0), 0 0 4px rgba(6, 182, 212, 0.15); }
 }
 .points-trigger.open { animation: none; }
+.points-trigger:active { transform: scale(0.97); }
 
 .points-lbl {
   font-size: 0.5rem; font-weight: 700; color: var(--text-secondary);
