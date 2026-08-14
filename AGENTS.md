@@ -414,6 +414,7 @@ La aplicación utiliza una estructura de navegación con:
 - `tab-pronosticos`: Wizard de predicciones de partidos
 - `tab-plantilla`: Selección de plantilla ideal (25 jugadores: 3G, 8D, 8M, 6F)
 - `tab-final-predictions`: Predicciones de eliminatorias (24 equipos asignados a rondas). Solo accesible tras confirmar pronósticos
+- `tab-estadisticas`: Gráfico de evolución de puntos acumulados por jornada y jugador, con selector de jugadores (chips con scroll) y conmutador de tipo de puntos (Total, Pronósticos, Plantilla, Clasificación, Eliminatorias). Implementado en `js/stats.js` (cálculos puros + render). Guard de fase simple: solo `FASE_PRETEMPORADA` oculta la sección.
 
 **Flujo de usuario:**
 1. Tras registro/login → entra directamente a pestaña Inicio
