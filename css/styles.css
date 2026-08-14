@@ -4929,7 +4929,12 @@ html, body {
   margin-bottom: 3px;
 }
 .points-row { display: flex; align-items: center; gap: 7px; font-size: 0.82rem; font-weight: 800; }
-.points-num { color: var(--accent-cyan); font-weight: 800; }
+.points-num { color: var(--accent-cyan); font-weight: 800; display: inline-block; }
+.points-num-pop { animation: pointsNumPop 0.4s ease; }
+@keyframes pointsNumPop {
+  0%   { transform: scale(0.5); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
 .points-chev { color: var(--text-secondary); display: inline-flex; }
 .points-chev svg { width: 11px; height: 11px; stroke: currentColor; fill: none; stroke-width: 2.4; transition: transform var(--transition-normal); }
 .points-trigger.open .points-chev svg { transform: rotate(180deg); }

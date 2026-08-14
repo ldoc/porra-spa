@@ -38,6 +38,8 @@ const AppState = {
   allPredictions: {},   // { username: { matchId: { home, away } } }
   userPoints: {},       // { username: { totalPoints, matchDetails } }
   squadsCache: {},      // { username: squad[] } - caché de plantillas para resultados
+  pointsReady: false,   // true cuando matchStats y allPredictions han cargado (botón 'Tus puntos')
+  predictionsLoaded: false, // true cuando el perfil, pronósticos y finalPredictions han cargado (tarjetas de Inicio)
   currentSquadDetails: [], // detalles de plantilla para modal de desglose
   realStandings: [],    // Clasificación real calculada desde matchStats
   classificationPoints: {}, // { username: { totalPoints, teamDetails } }
@@ -218,10 +220,13 @@ const SQUAD_FORMATION = {
 // ARRANQUE
 // ============================================================
 document.addEventListener('DOMContentLoaded', async () => {
-  await loadInitialData();
+  loadLocalSquad();
   checkAuthStatus();
   setupNavigation();
   setupPointsMenuGlobals();
+  await loadInitialData();
+  const activeTab = document.querySelector('.nav-item.active')?.dataset?.tab;
+  if (activeTab === 'inicio') renderInicioTab();
 });
 
 // Delegación de eventos global para el botón guardar pronósticos
@@ -234,6 +239,21 @@ document.addEventListener('click', (e) => {
 // ============================================================
 // CARGA DE DATOS JSON
 // ============================================================
+function loadLocalSquad() {
+  const savedSquad = localStorage.getItem('porra_ucl_squad');
+  if (savedSquad) {
+    const parsed = JSON.parse(savedSquad);
+    // Migrar formato antiguo (objeto) al nuevo (array)
+    if (Array.isArray(parsed)) {
+      AppState.squadPicks = parsed;
+    } else {
+      AppState.squadPicks = [];
+      localStorage.removeItem('porra_ucl_squad');
+    }
+    AppState.blockedTeams = new Set(AppState.squadPicks.map(p => p.equipo));
+  }
+}
+
 async function loadInitialData() {
   try {
     const [codesRes, calendarRes, jugadoresRes, teamsRes, fasesRes] = await Promise.all([
@@ -298,19 +318,6 @@ async function loadInitialData() {
           F: 6
         }
       };
-    }
-
-    const savedSquad = localStorage.getItem('porra_ucl_squad');
-    if (savedSquad) {
-      const parsed = JSON.parse(savedSquad);
-      // Migrar formato antiguo (objeto) al nuevo (array)
-      if (Array.isArray(parsed)) {
-        AppState.squadPicks = parsed;
-      } else {
-        AppState.squadPicks = [];
-        localStorage.removeItem('porra_ucl_squad');
-      }
-      AppState.blockedTeams = new Set(AppState.squadPicks.map(p => p.equipo));
     }
 
   } catch (err) {
@@ -2225,16 +2232,38 @@ async function enterApp() {
   const overlay = document.getElementById('auth-overlay');
   if (overlay) overlay.style.display = 'none';
 
-  await refreshUserProfile();
   updateUserHeader();
   setupHeaderClick();
-  fetchPlayers();
-  await fetchPredictionsFromBackend();
-  fetchSquadFromBackend();
-  await Promise.all([fetchMatchStats(), fetchAllPredictions()]);
-  await fetchFinalPredictionsFromBackend();
-  startMatchStatsPolling();
+  AppState.pointsReady = false;
+  AppState.predictionsLoaded = false;
   navigateToTab('inicio');
+
+  const refreshInicio = () => {
+    const activeTab = document.querySelector('.nav-item.active')?.dataset?.tab;
+    if (activeTab === 'inicio') renderInicioTab();
+  };
+
+  fetchPlayers();
+  fetchSquadFromBackend();
+  startMatchStatsPolling();
+
+  const othersReady = Promise.all([
+    refreshUserProfile(),
+    fetchPredictionsFromBackend(),
+    fetchFinalPredictionsFromBackend(),
+  ]);
+  const pointsReadyP = Promise.all([fetchMatchStats(), fetchAllPredictions()]);
+
+  othersReady.then(() => {
+    AppState.predictionsLoaded = true;
+    refreshInicio();
+  });
+
+  // El botón espera un mínimo visible para que su carga asíncrona se aprecie
+  Promise.all([pointsReadyP, new Promise(r => setTimeout(r, 400))]).then(() => {
+    AppState.pointsReady = true;
+    updatePointsNumber();
+  });
 }
 
 // ============================================================
@@ -2900,6 +2929,7 @@ const POINTS_MENU_TABS = [
 ];
 
 function buildPointsMenuHtml(totalPoints) {
+  const points = (totalPoints === null || totalPoints === undefined) ? '…' : totalPoints;
   const tiles = POINTS_MENU_TABS.map(t => `
       <div class="points-tile ${t.cls}" data-tab="${t.tab}">${t.icon}<span>${t.label}</span></div>`).join('');
   return `
@@ -2908,7 +2938,7 @@ function buildPointsMenuHtml(totalPoints) {
         <span class="points-lbl">Tus puntos</span>
         <span class="points-row">
           <span class="points-star">⭐</span>
-          <span class="points-num">${totalPoints}</span>
+          <span class="points-num">${points}</span>
           <span class="points-chev"><svg viewBox="0 0 24 24"><path d="M19 9l-7 7-7-7"/></svg></span>
         </span>
       </button>
@@ -2960,6 +2990,15 @@ function computeUserRealPoints(username) {
 
 function getUserTotalRealPoints(username) {
   return computeUserRealPoints(username).realPoints;
+}
+
+function updatePointsNumber() {
+  const numEl = document.querySelector('#points-trigger .points-num');
+  if (!numEl || !AppState.currentUser) return;
+  numEl.textContent = getUserTotalRealPoints(AppState.currentUser.name);
+  numEl.classList.remove('points-num-pop');
+  void numEl.offsetWidth;
+  numEl.classList.add('points-num-pop');
 }
 
 function closePointsMenu() {
@@ -3068,7 +3107,7 @@ function renderInicioTab() {
   `;
 
   container.innerHTML = `
-    ${buildPointsMenuHtml(getUserTotalRealPoints(user.name))}
+    ${buildPointsMenuHtml(AppState.pointsReady ? getUserTotalRealPoints(user.name) : null)}
 
     <div class="inicio-welcome">
       <div class="inicio-avatar">${user.avatar}</div>
@@ -3081,7 +3120,19 @@ function renderInicioTab() {
     ${(() => {
       const isPreFase = fase.startsWith('FASE_PRE');
       const isPretemporada = fase === 'FASE_PRETEMPORADA';
-      
+
+      if (!AppState.predictionsLoaded && (isPretemporada || isPreFase)) {
+        return `
+          <div class="inicio-card inicio-pending">
+            <div class="inicio-card-icon">⏳</div>
+            <div class="inicio-card-content">
+              <div class="inicio-card-title">Cargando pronósticos…</div>
+              <div class="inicio-card-desc">Un momento, por favor.</div>
+            </div>
+          </div>
+        `;
+      }
+
       if (isPretemporada) {
         if (pending > 0) {
           return `
@@ -3156,7 +3207,7 @@ function renderInicioTab() {
       </div>
     `) : ''}
 
-    ${(fase === 'FASE_PRETEMPORADA' && AppState.predictionsConfirmed) ? (() => {
+    ${(fase === 'FASE_PRETEMPORADA' && AppState.predictionsConfirmed && AppState.predictionsLoaded) ? (() => {
       const finalCount = countFinalPredictions();
       const finalTotal = 24;
       const finalPending = finalTotal - finalCount;
