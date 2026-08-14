@@ -2231,8 +2231,7 @@ async function enterApp() {
   fetchPlayers();
   await fetchPredictionsFromBackend();
   fetchSquadFromBackend();
-  fetchMatchStats();
-  fetchAllPredictions();
+  await Promise.all([fetchMatchStats(), fetchAllPredictions()]);
   await fetchFinalPredictionsFromBackend();
   startMatchStatsPolling();
   navigateToTab('inicio');
