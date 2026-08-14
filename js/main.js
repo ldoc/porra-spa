@@ -1394,7 +1394,11 @@ async function renderEliminatoriasTab(container, username) {
     return;
   }
 
+  if (!AppState.matchStats.length) await fetchMatchStats();
+
   const reachedPhases = computeReachedPhases(AppState.matches, AppState.matchStats);
+  const elimResult = computeEliminatorias(AppState.matches, AppState.matchStats);
+  const realStandings = calculateRealStandings();
   const { totalPoints, teamDetails } = calculateEliminatoriasPoints(fp, reachedPhases);
   const pointsByTeam = {};
   for (const d of teamDetails) pointsByTeam[d.teamId] = d.points;
@@ -1418,8 +1422,10 @@ async function renderEliminatoriasTab(container, username) {
       }
       const ext = AppState.teamsMap[teamId]?.ext || 'png';
       const pts = pointsByTeam[teamId] || 0;
+      const status = getTeamEliminatoriasStatus(teamId, elimResult, realStandings);
       slots.push(`
         <div class="drop-slot filled">
+          <span class="elim-status-dot ${status}"></span>
           <img class="drop-slot-img" src="data/imgEquipos/${teamId}.${ext}" alt="${teamName(teamId)}" onerror="this.onerror=null;this.src='data/imgEquipos/default.png'">
           <span class="drop-slot-name">${teamName(teamId)}</span>
           <span class="drop-slot-points ${pts > 0 ? 'earned' : ''}">${pts > 0 ? '🎯 ' + pts + ' pts' : '—'}</span>
@@ -1440,6 +1446,11 @@ async function renderEliminatoriasTab(container, username) {
   let html = `
     <div class="eliminatorias-tab-total">
       Puntos totales eliminatorias: <strong>${totalPoints}</strong>
+    </div>
+    <div class="elim-status-legend">
+      <span class="legend-item"><span class="elim-status-dot vivo"></span> En juego</span>
+      <span class="legend-item"><span class="elim-status-dot eliminado"></span> Eliminado</span>
+      <span class="legend-item"><span class="elim-status-dot noClasificado"></span> No clasificado</span>
     </div>
     <div class="eliminatorias-view">
   `;
