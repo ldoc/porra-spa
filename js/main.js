@@ -1315,6 +1315,35 @@ async function renderSquadTab(container, username) {
   }
 }
 
+/**
+ * Ordena los equipos por posición pronosticada ascendente (1→36).
+ * Los equipos sin pronóstico (predictedPos = 36) quedan al final.
+ */
+function sortTeamsByPredicted(teamDetails) {
+  return [...teamDetails].sort((a, b) => a.predictedPos - b.predictedPos);
+}
+
+/**
+ * Construye el HTML de una fila de la tabla de clasificación del perfil.
+ * @param {Object} team - { teamId, name, badgeExt, predictedPos, realPos, points }
+ * @returns {string} Fila de 4 columnas: Pron | Equipo | Real | Pts
+ */
+function buildClassificationRowHtml(team) {
+  const muted = team.realPos > 24 ? ' muted' : '';
+  const ptsClass = team.points > 0 ? ' positive' : '';
+  return `
+    <div class="classification-row${muted}">
+      <span class="col-pos">${team.predictedPos}</span>
+      <span class="col-team">
+        <img src="data/imgEquipos/${team.teamId}.${team.badgeExt}" class="classification-badge" alt="${team.name}" loading="lazy" onerror="this.style.display='none'">
+        <span class="col-team-name">${team.name}</span>
+      </span>
+      <span class="col-real">${team.realPos}</span>
+      <span class="col-pts${ptsClass}">${team.points}</span>
+    </div>
+  `;
+}
+
 /** Renderiza la tab de clasificación en el modal de perfil */
 function renderClassificationTab(container, username) {
   // Verificar si hay clasificación real disponible
