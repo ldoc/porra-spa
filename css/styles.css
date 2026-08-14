@@ -3473,7 +3473,7 @@ html, body {
 
 .classification-header {
   display: grid;
-  grid-template-columns: 32px 1fr 50px 50px 50px;
+  grid-template-columns: 32px 1fr 50px 50px;
   gap: 4px;
   padding: 8px 8px;
   font-size: 10px;
@@ -3482,15 +3482,25 @@ html, body {
   text-transform: uppercase;
   letter-spacing: 0.5px;
   border-bottom: 1px solid var(--border-color);
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--ucl-card);
 }
 
 .classification-header .col-team {
   text-align: left;
 }
 
+.classification-header .col-pos,
+.classification-header .col-real,
+.classification-header .col-pts {
+  text-align: center;
+}
+
 .classification-row {
   display: grid;
-  grid-template-columns: 32px 1fr 50px 50px 50px;
+  grid-template-columns: 32px 1fr 50px 50px;
   gap: 4px;
   padding: 8px 8px;
   font-size: var(--font-size-sm);
@@ -3519,9 +3529,19 @@ html, body {
   gap: 8px;
   font-weight: 600;
   font-size: 11px;
+  min-width: 0;
 }
 
-.classification-row .col-pred,
+.classification-row .col-team-name {
+  min-width: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  line-height: 1.15;
+}
+
 .classification-row .col-real,
 .classification-row .col-pts {
   text-align: center;
