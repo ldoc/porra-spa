@@ -23,8 +23,52 @@
     return out;
   }
 
+  function positionForMatch(match) {
+    if (match.fase === 'liga') {
+      const ronda = Number(match.ronda);
+      if (ronda >= 1 && ronda <= 8) return ronda - 1;
+      return null;
+    }
+    const faseMap = { '16': 8, '8': 9, '4': 10, 'semis': 11, 'final': 12 };
+    return faseMap[match.fase] ?? null;
+  }
+
+  function calcPredictionSeries(matchDetails) {
+    const acc = Array(13).fill(0);
+    let hasData = false;
+    for (const d of matchDetails || []) {
+      const m = d.match;
+      if (!m || m.fase !== 'liga') continue;
+      const ronda = Number(m.ronda);
+      if (ronda < 1 || ronda > 8) continue;
+      acc[ronda - 1] += d.points || 0;
+      hasData = true;
+    }
+    if (!hasData) return emptySeries();
+    return { series: toCumulative(acc), hasData: true };
+  }
+
+  function calcSquadSeries(squadPoints, matchesById) {
+    const acc = Array(13).fill(0);
+    let hasData = false;
+    for (const pd of squadPoints?.playerDetails || []) {
+      for (const partido of pd.partidos || []) {
+        const match = matchesById?.[partido.eventId];
+        if (!match) continue;
+        const pos = positionForMatch(match);
+        if (pos === null) continue;
+        acc[pos] += partido.puntos || 0;
+        hasData = true;
+      }
+    }
+    if (!hasData) return emptySeries();
+    return { series: toCumulative(acc), hasData: true };
+  }
+
   global.buildTimeline = buildTimeline;
+  global.calcPredictionSeries = calcPredictionSeries;
+  global.calcSquadSeries = calcSquadSeries;
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { buildTimeline };
+    module.exports = { buildTimeline, calcPredictionSeries, calcSquadSeries };
   }
 })(typeof window !== 'undefined' ? window : globalThis);
