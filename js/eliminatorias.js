@@ -114,8 +114,10 @@
    * Calcula el rango de fase final alcanzado por cada equipo del cuadro real.
    * Rangos: 0=no llega, 1=dieciseisavos, 2=octavos, 3=cuartos, 4=semis,
    * 5=final(subcampeón), 6=campeón.
-   * Provisional con fase mínima: un equipo que avanza de ronda o cuyo cruce
-   * está pendiente se queda en el rango de la fase en la que está.
+   * Solo se asignan rangos con resultado real: un cruce resuelto marca al
+   * eliminado en esa fase y al ganador avanza una ronda. Los cruces
+   * pendientes NO asignan rango (provisional) para no otorgar puntos antes
+   * de que existan resultados.
    */
   function computeReachedPhases(matches, matchStats) {
     const matchStatsById = new Map((matchStats || []).map(ms => [ms.eventId, ms]));
@@ -127,18 +129,13 @@
       const ties = groupTies((matches || []).filter(m => m.fase === fase));
       for (const tie of ties) {
         const { resuelto, eliminado } = resolveTie(tie, matchStatsById);
-        if (resuelto) {
-          // Eliminado en esta ronda → rango definitivo de esta fase
-          reached[eliminado] = rankByFase[fase];
-          // El ganador avanza a la siguiente fase (rango +1) de forma provisional
-          const ganador = eliminado === tie.teamA ? tie.teamB : tie.teamA;
-          if (!reached[ganador] || reached[ganador] <= rankByFase[fase]) {
-            reached[ganador] = rankByFase[fase] + 1;
-          }
-        } else {
-          // Cruce pendiente: ambos siguen vivos en esta fase (fase mínima)
-          if (!reached[tie.teamA]) reached[tie.teamA] = rankByFase[fase];
-          if (!reached[tie.teamB]) reached[tie.teamB] = rankByFase[fase];
+        if (!resuelto) continue; // cruce pendiente → no hay rango real aún
+        // Eliminado en esta ronda → rango definitivo de esta fase
+        reached[eliminado] = rankByFase[fase];
+        // El ganador avanza a la siguiente fase (rango +1) de forma provisional
+        const ganador = eliminado === tie.teamA ? tie.teamB : tie.teamA;
+        if (!reached[ganador] || reached[ganador] <= rankByFase[fase]) {
+          reached[ganador] = rankByFase[fase] + 1;
         }
       }
     }
@@ -156,15 +153,7 @@
         if (winner !== null) {
           reached[winner] = 6;
           reached[winner === f.homeTeamId ? f.awayTeamId : f.homeTeamId] = 5;
-        } else {
-          // Final empatada sin tanda: ambos alcanzaron la final (provisional)
-          reached[f.homeTeamId] = 5;
-          reached[f.awayTeamId] = 5;
         }
-      } else {
-        // Final pendiente: ambos alcanzaron la final (provisional)
-        reached[f.homeTeamId] = 5;
-        reached[f.awayTeamId] = 5;
       }
     }
 

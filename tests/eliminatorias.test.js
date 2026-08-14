@@ -221,19 +221,55 @@ function test_reachedPhases_eliminados_y_vivos() {
   assert.strictEqual(r[300], 2);   // avanzó de 16avos y su cruce de octavos no tiene matchStats → provisional octavos
 }
 
-function test_reachedPhases_sin_resultados_rango_0() {
+function test_reachedPhases_sin_resultados_sin_rango() {
   const matches = [partido(1, '16', 100, 200), partido(2, '16', 200, 100)];
   const r = computeReachedPhases(matches, []);
-  assert.strictEqual(r[100], 1);   // vive en dieciseisavos (provisional fase mínima)
-  assert.strictEqual(r[200], 1);
+  assert.strictEqual(r[100], undefined); // sin resultados → sin rango definitivo
+  assert.strictEqual(r[200], undefined);
   assert.strictEqual(r[999], undefined); // equipo ajeno no aparece
 }
 
-function test_reachedPhases_final_pendiente_ambos_5() {
+function test_reachedPhases_final_pendiente_sin_rango() {
   const matches = [partido(1, 'final', 100, 200)];
   const r = computeReachedPhases(matches, []); // sin resultado
-  assert.strictEqual(r[100], 5);
-  assert.strictEqual(r[200], 5);
+  assert.strictEqual(r[100], undefined);
+  assert.strictEqual(r[200], undefined);
+}
+
+function test_reachedPhases_sin_resultados_en_una_ronda_no_asigna_esa_fase() {
+  // Octavos sin resultados: el ganador de dieciseisavos (100) NO debe subir
+  // de rango por la fase mínima pendiente; se queda en octavos (2).
+  const matches = [
+    partido(1, '16', 100, 200), partido(2, '16', 200, 100),
+    partido(3, '8', 100, 300), partido(4, '8', 300, 100),
+  ];
+  const matchStats = [
+    ms(1, { 100: 2, 200: 0 }), ms(2, { 200: 1, 100: 2 }), // 200 eliminado, 100 avanza a octavos
+  ];
+  const r = computeReachedPhases(matches, matchStats);
+  assert.strictEqual(r[200], 1);   // eliminado en dieciseisavos (definitivo)
+  assert.strictEqual(r[100], 2);   // avanzó a octavos (rango definitivo mínimo)
+  assert.strictEqual(r[300], undefined); // su cruce de octavos no tiene resultado
+}
+
+function test_points_sin_resultados_eliminatorias_cero() {
+  // Sin resultados de eliminatorias → computeReachedPhases no asigna rangos
+  // → calculateEliminatoriasPoints debe dar 0 puntos.
+  const matches = [
+    partido(1, '16', 100, 200), partido(2, '16', 200, 100),
+    partido(3, '16', 300, 400), partido(4, '16', 400, 300),
+    partido(5, '8', 100, 300), partido(6, '8', 300, 100),
+    partido(7, 'final', 100, 300),
+  ];
+  const reachedPhases = computeReachedPhases(matches, []);
+  const fp = {
+    champion: 100, runnerUp: 300,
+    semiFinalists: [], quarterFinalists: [],
+    roundOf16: [200, 400], roundOf32: []
+  };
+  const { totalPoints, teamDetails } = calculateEliminatoriasPoints(fp, reachedPhases);
+  assert.strictEqual(totalPoints, 0);
+  assert.strictEqual(teamDetails.every(t => t.points === 0), true);
 }
 
 // ---- Tests de calculateEliminatoriasPoints ----
@@ -297,8 +333,10 @@ const tests = [
   test_computeEliminatorias_final_resuelta,
   test_computeEliminatorias_final_empatada_no_resuelta,
   test_reachedPhases_eliminados_y_vivos,
-  test_reachedPhases_sin_resultados_rango_0,
-  test_reachedPhases_final_pendiente_ambos_5,
+  test_reachedPhases_sin_resultados_sin_rango,
+  test_reachedPhases_final_pendiente_sin_rango,
+  test_reachedPhases_sin_resultados_en_una_ronda_no_asigna_esa_fase,
+  test_points_sin_resultados_eliminatorias_cero,
   test_points_acierto_exacto_por_ronda,
   test_points_regla_del_minimo,
   test_points_sin_prediccion_y_sin_datos,
