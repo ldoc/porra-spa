@@ -11,10 +11,9 @@ Esta carpeta contiene los ficheros JSON y recursos estáticos que alimentan la a
 | `teams.json`          | 36        | Equipos participantes en la competición          |
 | `jugadores.json`      | 1 134     | Jugadores disponibles para la plantilla ideal      |
 | `calendar.json`       | 189 (144 liga + 45 eliminatorias) | Partidos de liga y eliminatorias      |
-| `imgEquipos/`         | 36        | Escudos de equipos (`{id}.webp`)                 |
-| `imgJugadores/`       | 1 220     | Fotos de jugadores (`{id}.webp`)                 |
+| `imgEquipos/`         | 36        | Escudos de equipos (`{id}.webp`, + `default.webp` placeholder) |
+| `imgJugadores/`       | 1 134     | Fotos de jugadores (`{id}.webp`)                 |
 | `fases.json`          | 13        | Fases de la competición                          |
-| `codes.json`          | 3         | Códigos de acceso (LEGACY, no usado)             |
 
 ---
 
@@ -157,7 +156,7 @@ imgJugadores/{id}.webp
 imgEquipos/{id}.webp
 ```
 
-Por ejemplo, el jugador con `"id": 804508` corresponde al fichero `imgJugadores/804508.webp`. Hay 86 fotos de jugadores sin entrada asociada en `jugadores.json` (huérfanas).
+Por ejemplo, el jugador con `"id": 804508` corresponde al fichero `imgJugadores/804508.webp`. `imgEquipos/default.webp` es un placeholder que se muestra cuando falta un escudo.
 
 ---
 

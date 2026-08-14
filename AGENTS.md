@@ -33,7 +33,6 @@ Definido en `js/main.js` (objeto `AppState`, líneas 17-55). Es la **fuente de v
 |-------|------|-------------|
 | `sessionToken` | string\|null | Token JWT en memoria (persistido en `localStorage` como `session_token`) |
 | `currentUser` | object\|null | Usuario actual `{ name, avatar, ... }` |
-| `validCodes` | array | Códigos de acceso (LEGACY, no usado; se cargan de `data/codes.json` pero la validación real es del backend) |
 | `teamsMap` | object | `{ teamId: { name, ext } }` |
 | `matches` | array | Todos los partidos transformados (liga + eliminatorias) |
 | `leagueMatches` | array | Solo los 144 partidos de fase de liga |
@@ -207,9 +206,8 @@ Si al finalizar el partido el equipo no ha recibido goles, el portero recibirá 
 │   ├── teams.json    # 36 equipos participantes
 │   ├── jugadores.json # Jugadores para la plantilla ideal
 │   ├── calendar.json # Partidos (liga + eliminatorias)
-│   ├── imgEquipos/   # Escudos de equipos ({id}.webp)
+│   ├── imgEquipos/   # Escudos de equipos ({id}.webp, + default.webp como placeholder)
 │   ├── imgJugadores/ # Fotos de jugadores ({id}.webp)
-│   ├── codes.json    # Códigos de acceso (LEGACY: los reales se gestionan en el backend/MongoDB)
 │   └── partidos/     # Datos de partidos
 ├── api/              # (Placeholder) Ficheros de integración con APIs
 ├── extract/          # (Placeholder) Documentación de extracción de SofaScore
@@ -465,7 +463,8 @@ Datos estáticos del torneo extraídos de SofaScore. Documentación completa en 
 | `jugadores.json` | 1 134 | Selección de plantilla ideal (`id`, `nombre`, `posicion`, `club`, `equipo`, `extension`) |
 | `calendar.json` | 189 (144 de fase de liga) | Wizard de pronósticos (`id`, `ronda`, `fase`, `fecha`, `equipoLocal`, `equipoVisitante`) |
 | `imgEquipos/` | 36 | Escudos de equipos en WEBP, nombradas `{id}.webp` |
-| `imgJugadores/` | 1 220 | Fotos de jugadores en WEBP, nombradas `{id}.webp` (86 fotos sin jugador asociado) |
+| `imgEquipos/default.webp` | 1 | Placeholder para escudos faltantes |
+| `imgJugadores/` | 1 134 | Fotos de jugadores en WEBP, nombradas `{id}.webp` |
 
 **Relaciones entre ficheros:**
 
@@ -478,8 +477,6 @@ teams.json ──(id)──► jugadores.json ──(id)──► imgJugadores/{
 ```
 
 Los **perfiles de usuario**, **predicciones** y **clasificaciones** no residen en `data/`; se gestionan a través del backend (`api-porra`) en MongoDB.
-
-> **Nota `codes.json` (LEGACY)**: `data/codes.json` contiene códigos antiguos (`UCL2026`, `PORRA-CHAMPS`, `DEMO123`). Se carga en `AppState.validCodes` pero **no se usa** en el flujo de registro: los códigos reales se gestionan en el backend (colección `invitations`) y se validan en `POST /api/auth/register`. Candidato a eliminación.
 
 #### Servicios / API (`api/`)
 
