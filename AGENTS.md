@@ -316,9 +316,6 @@ POST   /api/admin/invitations       // Crear nuevo código
 DELETE /api/admin/invitations/:code // Eliminar código no usado
 PUT    /api/admin/fase-juego        // Cambiar la fase del juego
 PUT    /api/admin/config            // Actualizar configuración completa
-
-// ─── Legacy ───────────────────────────────────────────────────
-GET  /usuario?clave=xxxx         // Buscar usuario por clave de invitación
 ```
 
 #### Variables de Entorno Requeridas (Backend)
