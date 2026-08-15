@@ -3368,7 +3368,7 @@ function renderInicioTab() {
 
   setupPointsMenu();
 
-  renderHoyPartidos();
+  hoyPartidosApi.renderHoyPartidos();
 
   const countdownEl = document.getElementById('inicio-countdown-time');
   if (countdownEl) {
