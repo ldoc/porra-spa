@@ -178,11 +178,43 @@
     return 'Empate';
   }
 
+  function renderHoyPartidos(container) {
+    if (!container) container = document.getElementById('hoy-partidos-section');
+    if (!container) return;
+    const fase = getFaseJuego();
+    if (!isHoyPartidosAllowed(fase)) { container.innerHTML = ''; return; }
+
+    const calendarFase = getFaseForCurrentPhase();
+    const todayMatches = getTodayMatches(AppState.matches, Date.now(), calendarFase);
+    if (!todayMatches.length) { container.innerHTML = ''; return; }
+
+    const scorePreds = AppState.scorePredictions || {};
+    const allPreds = AppState.allPredictions || {};
+    const matchStats = AppState.matchStats || [];
+
+    const cardsHtml = todayMatches.map(match => {
+      const pred = scorePreds[match.id];
+      const hasPred = pred && typeof pred.home === 'number' && typeof pred.away === 'number';
+      const predDisplay = hasPred ? `${pred.home} - ${pred.away}` : '– –';
+      const myResult = hasPred ? getMatchResult(pred.home, pred.away) : null;
+      const real = getRealResult(match, matchStats);
+      const counts = computeResultCounts(match.id, allPreds);
+      const best = computeBestResult(counts, myResult);
+      const pts = real ? calcMatchPoints(pred, real.home, real.away) : 0;
+      return buildMatchCardHtml({ match, predDisplay, hasPred, real, pts, counts, best });
+    }).join('');
+
+    container.innerHTML = `
+      <div class="hoy-title">⚽ <span>Hoy tenemos partidos</span></div>
+      ${cardsHtml}
+    `;
+  }
+
   const hoyPartidosApi = {
     isHoyPartidosAllowed, getMatchResult, getTodayMatches,
     computeResultCounts, computeBestResult, getRealResult,
     calcMatchPoints, formatMatchTime, esc,
-    buildMatchCardHtml, buildStatsHtml
+    buildMatchCardHtml, buildStatsHtml, renderHoyPartidos
   };
   global.hoyPartidosApi = hoyPartidosApi;
   if (typeof module !== 'undefined' && module.exports) {

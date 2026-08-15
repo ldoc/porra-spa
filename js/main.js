@@ -2257,6 +2257,8 @@ async function enterApp() {
   Promise.all([pointsReadyP, new Promise(r => setTimeout(r, 400))]).then(() => {
     AppState.pointsReady = true;
     updatePointsNumber();
+    const activeTab = document.querySelector('.nav-item.active')?.dataset?.tab;
+    if (activeTab === 'inicio') renderInicioTab();
   });
 }
 
@@ -3219,6 +3221,8 @@ function renderInicioTab() {
     </div>
   `;
 
+  const hoyPartidosHtml = '<div id="hoy-partidos-section"></div>';
+
   const countdownHtml = renderInicioCountdownHtml(fase, fases);
   const showPointsMenu = fase !== 'FASE_PRETEMPORADA';
   const pointsMenuHtml = showPointsMenu
@@ -3241,6 +3245,8 @@ function renderInicioTab() {
     </div>
 
     ${faseHtml}
+
+    ${hoyPartidosHtml}
 
     ${(() => {
       const isPreFase = fase.startsWith('FASE_PRE');
@@ -3361,6 +3367,8 @@ function renderInicioTab() {
   `;
 
   setupPointsMenu();
+
+  renderHoyPartidos();
 
   const countdownEl = document.getElementById('inicio-countdown-time');
   if (countdownEl) {
