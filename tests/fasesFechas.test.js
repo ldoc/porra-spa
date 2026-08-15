@@ -1,5 +1,5 @@
 const assert = require('assert');
-const { getCountdownTarget, formatCountdown, isoToDatetimeLocal, datetimeLocalToIso } = require('../js/fasesFechas.js');
+const { getCountdownTarget, formatCountdown, formatCountdownHtml, isoToDatetimeLocal, datetimeLocalToIso } = require('../js/fasesFechas.js');
 
 const FASES = [
   { id: 1, nombre: 'FASE_PRETEMPORADA', desc: 'Pretemporada' },
@@ -58,6 +58,30 @@ function test_formatCountdown_unidades_pequeñas() {
   assert.strictEqual(formatCountdown(ms), '0d 01h 05m 09s');
 }
 
+function test_formatCountdownHtml_cero_o_negativo() {
+  assert.strictEqual(formatCountdownHtml(0), null);
+  assert.strictEqual(formatCountdownHtml(-5), null);
+}
+
+function test_formatCountdownHtml_estilos_y_contenido() {
+  const ms = ((2 * 86400) + (14 * 3600) + (3 * 60) + 25) * 1000;
+  const html = formatCountdownHtml(ms);
+  assert.ok(html.includes('<span style="font-size: 15px; font-weight: 800;">2</span>'));
+  assert.ok(html.includes('<span style="font-size: 15px; font-weight: 800;">14</span>'));
+  assert.ok(html.includes('<span style="font-size: 15px; font-weight: 800;">03</span>'));
+  assert.ok(html.includes('<span style="font-size: 15px; font-weight: 800;">25</span>'));
+  assert.ok(html.includes('<span style="font-size: 11px; margin: 0 7px 0 3px;">d</span>'));
+  assert.ok(html.includes('<span style="font-size: 11px; margin: 0 7px 0 3px;">h</span>'));
+  assert.ok(html.includes('<span style="font-size: 11px; margin: 0 7px 0 3px;">m</span>'));
+}
+
+function test_formatCountdownHtml_ultima_letra_sin_margen_derecho() {
+  const ms = ((2 * 86400) + (14 * 3600) + (3 * 60) + 25) * 1000;
+  const html = formatCountdownHtml(ms);
+  assert.ok(html.includes('<span style="font-size: 11px; margin: 0 0 0 3px;">s</span>'));
+  assert.ok(!html.includes('<span style="font-size: 11px; margin: 0 7px 0 3px;">s</span>'));
+}
+
 function test_isoToDatetimeLocal_vacio() {
   assert.strictEqual(isoToDatetimeLocal(null), '');
   assert.strictEqual(isoToDatetimeLocal(''), '');
@@ -82,6 +106,9 @@ const tests = [
   test_formatCountdown_basico,
   test_formatCountdown_cero_o_negativo,
   test_formatCountdown_unidades_pequeñas,
+  test_formatCountdownHtml_cero_o_negativo,
+  test_formatCountdownHtml_estilos_y_contenido,
+  test_formatCountdownHtml_ultima_letra_sin_margen_derecho,
   test_isoToDatetimeLocal_vacio,
   test_datetimeLocalToIso_vacio,
   test_datetimeLocalToIso_redondea_minutos,

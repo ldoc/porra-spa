@@ -41,6 +41,20 @@
     return `${d}d ${pad(h)}h ${pad(m)}m ${pad(s)}s`;
   }
 
+  function formatCountdownHtml(ms) {
+    if (ms <= 0) return null;
+    const totalSeconds = Math.floor(ms / 1000);
+    const d = Math.floor(totalSeconds / 86400);
+    const h = Math.floor((totalSeconds % 86400) / 3600);
+    const m = Math.floor((totalSeconds % 3600) / 60);
+    const s = totalSeconds % 60;
+    const pad = n => String(n).padStart(2, '0');
+    const num = (n, letter, last) =>
+      `<span style="font-size: 15px; font-weight: 800;">${n}</span>` +
+      `<span style="font-size: 11px; margin: 0 ${last ? '0' : '7px'} 0 3px;">${letter}</span>`;
+    return num(d, 'd') + num(pad(h), 'h') + num(pad(m), 'm') + num(pad(s), 's', true);
+  }
+
   function isoToDatetimeLocal(iso) {
     if (!iso) return '';
     const d = new Date(iso);
@@ -56,7 +70,7 @@
     return d.toISOString();
   }
 
-  const api = { getCountdownTarget, formatCountdown, isoToDatetimeLocal, datetimeLocalToIso };
+  const api = { getCountdownTarget, formatCountdown, formatCountdownHtml, isoToDatetimeLocal, datetimeLocalToIso };
   global.fasesFechasApi = api;
   if (typeof module !== 'undefined' && module.exports) {
     module.exports = api;
