@@ -2293,7 +2293,7 @@ function showAdminFaseFechasModal(faseNombre) {
     <div class="profile-modal-content" style="max-width: 360px;">
       <button class="profile-modal-close" id="close-fechas-modal">&times;</button>
       <div style="font-size: 1.2rem; font-weight: 800; margin-bottom: 16px;">📅 Fechas — ${faseObj.desc || faseObj.nombre}</div>
-      <div style="display: flex; gap: 10px; margin-bottom: 16px;">
+      <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px;">
         <div style="flex: 1;">
           <label style="font-size: 11px; color: var(--text-muted); font-weight: 700; display: block; margin-bottom: 6px;">Inicio</label>
           <input type="datetime-local" id="fecha-inicio" value="${fasesFechasApi.isoToDatetimeLocal(ff.inicio)}" style="${inputStyle}">
