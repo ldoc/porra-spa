@@ -36,7 +36,9 @@ function test_header_tiene_copa_y_pill_ayuda() {
 function test_modal_reglas_presente() {
   assert.ok(indexHtml.includes('id="rules-modal"'), 'falta el modal de reglas');
   assert.ok(indexHtml.includes('id="rules-body"'), 'falta el contenedor rules-body');
-  assert.ok(indexHtml.includes('openRulesModal()'), 'falta el handler openRulesModal');
+  assert.ok(indexHtml.includes('header-right'), 'falta el contenedor header-right');
+  assert.ok(indexHtml.includes('id="user-help-pill"'), 'falta el pill de ayuda');
+  assert.ok(!indexHtml.includes('onclick="openRulesModal()"'), 'openRulesModal debe bindearse solo en main.js (single binding)');
   assert.ok(indexHtml.includes('closeRulesModal()'), 'falta el handler closeRulesModal');
   assert.ok(indexHtml.includes('reglas/UCL.pdf'), 'falta el enlace al PDF original');
 }

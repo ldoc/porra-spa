@@ -157,12 +157,19 @@ html, body {
   cursor: pointer;
 }
 
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .user-help-pill {
   display: flex;
   align-items: center;
   gap: 6px;
   background: var(--ucl-card);
-  padding: 6px 12px;
+  min-height: 44px;
+  padding: 0 12px;
   border-radius: var(--radius-full);
   border: 1px solid var(--border-color);
   cursor: pointer;
