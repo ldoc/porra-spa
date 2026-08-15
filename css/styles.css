@@ -4940,7 +4940,12 @@ html, body {
 .points-trigger.open .points-chev svg { transform: rotate(180deg); }
 
 .points-dropdown {
-  margin-top: 8px;
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: 50;
+  width: max-content;
+  min-width: 240px;
   background: var(--ucl-card);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);

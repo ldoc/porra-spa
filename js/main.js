@@ -3123,7 +3123,7 @@ function renderInicioCountdownHtml(fase, fases) {
   if (!target) return '';
   const remain = target.target - Date.now();
   return `
-    <div style="flex: 1; text-align: right; border: 1px solid rgba(245, 158, 11, 0.5); border-radius: 12px; padding: 8px 14px; background: rgba(245, 158, 11, 0.06);">
+    <div style="text-align: right; border: 1px solid rgba(245, 158, 11, 0.5); border-radius: 12px; padding: 8px 14px; background: rgba(245, 158, 11, 0.06);">
       <div style="font-size: 9px; color: #94A3B8; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; margin-bottom: 4px;">⏳ ${target.label}</div>
       <div id="inicio-countdown-time" style="text-align: right; color: #F59E0B; font-variant-numeric: tabular-nums; letter-spacing: 1px;">${fasesFechasApi.formatCountdownHtml(remain)}</div>
     </div>
@@ -3185,7 +3185,7 @@ function renderInicioTab() {
   const countdownHtml = renderInicioCountdownHtml(fase, fases);
   const pointsMenuHtml = buildPointsMenuHtml(AppState.pointsReady ? getUserTotalRealPoints(user.name) : null);
   const topRowHtml = countdownHtml
-    ? `<div style="display: flex; align-items: center; gap: 8px; padding: 4px 4px 0;">
+    ? `<div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 4px 4px 0;">
         <div style="flex-shrink: 0;">${pointsMenuHtml}</div>
         ${countdownHtml}
       </div>`
