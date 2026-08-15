@@ -166,21 +166,19 @@ html, body {
 .user-help-pill {
   display: flex;
   align-items: center;
-  gap: 6px;
+  justify-content: center;
   background: var(--ucl-card);
-  min-height: 44px;
-  padding: 0 12px;
-  border-radius: var(--radius-full);
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
   border: 1px solid var(--border-color);
   cursor: pointer;
   color: var(--accent-cyan);
-  font-size: var(--font-size-xs);
-  font-weight: 700;
-  line-height: 1;
+  transition: all var(--transition-fast);
 }
 .user-help-pill svg {
-  width: 15px;
-  height: 15px;
+  width: 23px;
+  height: 23px;
   flex-shrink: 0;
 }
 .user-help-pill:active {
@@ -5312,13 +5310,32 @@ html, body {
   color: var(--text-primary);
 }
 
+.rules-chips-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+.rules-chips-wrap::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 32px;
+  pointer-events: none;
+  background: linear-gradient(to right, rgba(30, 41, 59, 0), var(--ucl-card));
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+.rules-chips-wrap.has-more::after {
+  opacity: 1;
+}
+
 .rules-chips {
   display: flex;
   gap: 6px;
   padding: 10px 14px;
   overflow-x: auto;
   border-bottom: 1px solid var(--border-color);
-  flex-shrink: 0;
   -webkit-overflow-scrolling: touch;
 }
 .rules-chips::-webkit-scrollbar { display: none; }
@@ -5414,25 +5431,3 @@ html, body {
   white-space: nowrap;
 }
 
-.rules-footer {
-  display: flex;
-  justify-content: center;
-  padding: 12px 16px;
-  border-top: 1px solid var(--border-color);
-  flex-shrink: 0;
-}
-
-.rules-pdf-btn {
-  background: rgba(139, 92, 246, 0.2);
-  border: 1px solid rgba(139, 92, 246, 0.4);
-  color: #c4b5fd;
-  font-family: var(--font-family);
-  font-size: var(--font-size-sm);
-  font-weight: 700;
-  padding: 9px 20px;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  min-height: 44px;
-  transition: all var(--transition-fast);
-}
-.rules-pdf-btn:active { background: rgba(139, 92, 246, 0.32); }

@@ -3506,8 +3506,7 @@ async function openRulesModal() {
     body.innerHTML = AppState.rulesHtml;
   } catch (e) {
     console.error('Error cargando reglas:', e);
-    body.innerHTML = '<div class="rules-error">No se pudieron cargar las reglas. ' +
-      '<a href="reglas/UCL.pdf" target="_blank" rel="noopener">Abrir PDF original</a></div>';
+    body.innerHTML = '<div class="rules-error">No se pudieron cargar las reglas. Inténtalo de nuevo más tarde.</div>';
   }
   setupRulesChips();
 }
@@ -3518,7 +3517,17 @@ function closeRulesModal() {
 }
 
 function setupRulesChips() {
+  const wrap = document.querySelector('#rules-modal .rules-chips-wrap');
+  const chipsEl = document.querySelector('#rules-modal .rules-chips');
   const chips = document.querySelectorAll('#rules-modal .rules-chip');
+
+  const updateFade = () => {
+    if (wrap && chipsEl) {
+      const hasMore = chipsEl.scrollWidth - chipsEl.scrollLeft - chipsEl.clientWidth > 8;
+      wrap.classList.toggle('has-more', hasMore);
+    }
+  };
+
   chips.forEach(chip => {
     chip.addEventListener('click', () => {
       chips.forEach(c => c.classList.remove('active'));
@@ -3527,6 +3536,11 @@ function setupRulesChips() {
       if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
   });
+
+  if (wrap && chipsEl) {
+    chipsEl.addEventListener('scroll', updateFade, { passive: true });
+    updateFade();
+  }
 }
 
 function showProfileModal() {

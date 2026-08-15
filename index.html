@@ -16,7 +16,7 @@
   <link
     href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800;900&display=swap"
     rel="stylesheet">
-  <link rel="stylesheet" href="css/styles.css?v=68">
+  <link rel="stylesheet" href="css/styles.css?v=72">
 </head>
 
 <body>
@@ -111,7 +111,6 @@
             <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
             <path d="M12 17h.01" />
           </svg>
-          <span>Ayuda</span>
         </div>
         <div id="user-status-pill" class="user-status-pill clickable" style="display: none;">
           <span id="user-header-avatar" class="user-status-avatar">⚽</span>
@@ -285,17 +284,19 @@
         </div>
         <button class="rules-close" onclick="closeRulesModal()">&times;</button>
       </div>
-      <div class="rules-chips">
-        <button class="rules-chip active" data-target="#fase-liga">⚽ Fase de Liga</button>
-        <button class="rules-chip" data-target="#fase-final">🏆 Fase Final</button>
-        <button class="rules-chip" data-target="#puntuacion">⭐ Puntuación</button>
-        <button class="rules-chip" data-target="#plantilla">👥 Plantilla</button>
+      <div class="rules-chips-wrap">
+        <div class="rules-chips">
+          <button class="rules-chip active" data-target="#fase-liga">⚽ Fase de Liga</button>
+          <button class="rules-chip" data-target="#fase-final">🏆 Fase Final</button>
+          <button class="rules-chip" data-target="#la-porra">📝 La Porra</button>
+          <button class="rules-chip" data-target="#puntuacion">⭐ Puntuación</button>
+          <button class="rules-chip" data-target="#eliminatorias">🔮 Eliminatorias</button>
+          <button class="rules-chip" data-target="#plantilla">👥 Plantilla</button>
+          <button class="rules-chip" data-target="#pronostico-fase-final">🗓️ Pronóstico Fase Final</button>
+        </div>
       </div>
       <div class="rules-body" id="rules-body">
         <div class="rules-loading">Cargando reglas…</div>
-      </div>
-      <div class="rules-footer">
-        <button class="rules-pdf-btn" onclick="window.open('reglas/UCL.pdf', '_blank', 'noopener')">Abrir PDF original</button>
       </div>
     </div>
   </div>
@@ -305,7 +306,7 @@
   <script src="js/stats.js?v=1"></script>
   <script src="js/fasesFechas.js?v=2"></script>
   <script src="js/hoyPartidos.js?v=1"></script>
-  <script src="js/main.js?v=103"></script>
+  <script src="js/main.js?v=105"></script>
 </body>
 
 </html>
