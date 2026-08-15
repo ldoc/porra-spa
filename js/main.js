@@ -2314,7 +2314,12 @@ function showAdminFaseFechasModal(faseNombre) {
   const closeBtn = modal.querySelector('#close-fechas-modal');
   const saveBtn = modal.querySelector('#btn-save-fase-fechas');
 
-  closeBtn.addEventListener('click', () => modal.remove());
+  const backToAdmin = () => {
+    modal.remove();
+    showAdminModal();
+  };
+
+  closeBtn.addEventListener('click', backToAdmin);
 
   saveBtn.addEventListener('click', async () => {
     const inicio = fasesFechasApi.datetimeLocalToIso(modal.querySelector('#fecha-inicio').value);
@@ -2341,7 +2346,7 @@ function showAdminFaseFechasModal(faseNombre) {
   });
 
   modal.addEventListener('click', (e) => {
-    if (e.target === modal) modal.remove();
+    if (e.target === modal) backToAdmin();
   });
 }
 
