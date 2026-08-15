@@ -1164,6 +1164,69 @@ AppState.hasUnsavedFinalChanges = false; // Bandera de cambios sin guardar
 - `AppState.teamsMap`: Mapa de equipos `{ teamId: { name, ext } }`
 - `data/imgEquipos/{id}.{ext}`: Imágenes de escudos de equipos
 
+### 5.6. Hoy tenemos partidos (Inicio)
+
+#### Descripción
+
+Bloque en la pantalla **Inicio** que muestra los partidos que se juegan **hoy** en la fase de calendario actual. Solo se muestra en **fases activas**; nunca en fases `PRE*`, `FASE_PRETEMPORADA` ni `FASE_POSTFINAL`.
+
+| Estado | Fases |
+|---|---|
+| **Se muestra** | `FASE_LIGA`, `FASE_16`, `FASE_8`, `FASE_4`, `FASE_SEMIS`, `FASE_FINAL` |
+| **No se muestra** | `FASE_PRETEMPORADA`, `FASE_PRE16`, `FASE_PRE8`, `FASE_PRE4`, `FASE_PRESEMIS`, `FASE_PREFINAL`, `FASE_POSTFINAL` |
+
+Regla de código: `isHoyPartidosAllowed(fase) = !fase.startsWith('FASE_PRE') && fase !== 'FASE_POSTFINAL'`.
+
+#### Implementación
+
+- Módulo **`js/hoyPartidos.js`** (IIFE estilo `js/stats.js`): cálculos puros exportables para tests + `renderHoyPartidos(container)`.
+- `renderInicioTab()` inserta `<div id="hoy-partidos-section"></div>` entre la tarjeta de fase y las tarjetas de pendientes y llama a `renderHoyPartidos`.
+- `enterApp()` re-renderiza Inicio cuando termina `pointsReadyP` (que incluye `fetchAllPredictions()`), para que los porcentajes aparezcan sin re-navegar.
+- "Hoy" = mismo día/mes/año **local** entre `fechaTs` (segundos Unix) y `Date.now()`. Solo se filtran partidos cuya `fase` de calendario coincide con `getFaseForCurrentPhase()`.
+
+#### Funciones JavaScript
+
+| Función | Responsabilidad |
+|---|---|
+| `isHoyPartidosAllowed(fase)` | `true` solo en fases activas (no `FASE_PRE*` ni `FASE_POSTFINAL`) |
+| `getMatchResult(home, away)` | `'H'`/`'D'`/`'A'` |
+| `getTodayMatches(matches, nowMs, calendarFase)` | Partidos de hoy (fecha local) de la fase de calendario indicada |
+| `computeResultCounts(matchId, allPredictions)` | `{ counts: {H,D,A}, total, pct: {H,D,A} }` entre jugadores con pronóstico numérico completo en ese partido |
+| `computeBestResult(counts, myResult)` | Resultado con mayor **ventaja relativa** → `{ result, advantage }` (o `null` si `total === 0` o sin pronóstico propio) |
+| `renderHoyPartidos(container)` | Genera el HTML de la sección |
+
+#### Tarjeta de partido (colapsada)
+
+- Cabecera: `⚽ Hoy · <día> <mes> · <HH:MM>` + chevron ▾/▴.
+- Escudos y nombres de ambos equipos.
+- **Marcador central**: tu pronóstico. Si el partido tiene resultado real en `AppState.matchStats`, el marcador central pasa a ser el **real** (resaltado en `--accent-gold`) y el pie muestra `Tu pronóstico: X - Y` + `✔ Acertaste (N pts)` o `✘ No acertaste`.
+- Pulsar la tarjeta alterna `.open`.
+
+#### Desplegable (estadísticas 1X2)
+
+- Cabecera `Pronósticos de la porra · <total> jugadores`.
+- Fila por resultado 1/X/2 con nombre, barra de porcentaje y valor numérico.
+- **Tu pronóstico**: fila resaltada (tag cyan) `★ tu pronóstico`.
+- **⚡ Mejor para ti**: resultado con mayor ventaja relativa, badge dorado + nota con la ventaja estimada (1 decimal).
+- Con resultado real: `Acertaron el resultado: X/Y (N%)`.
+- Sin pronósticos aún (`total === 0`): `Aún no hay pronósticos de la porra en este partido.`
+
+#### Cálculo de ventaja relativa
+
+Base = jugadores con pronóstico numérico completo para ese `matchId`. Para cada resultado `R ∈ {H,D,A}`:
+
+- `pct(R) = counts[R] / total`
+- Si mi pronóstico es `R`: `ventaja(R) = 8 × (1 − pct(R))`
+- Si mi pronóstico no es `R`: `ventaja(R) = −8 × pct(R)`
+
+`mejor` = resultado con mayor ventaja (redondeado a 1 decimal). Se usa el componente de 8 puntos del resultado; la parte de goles (3+3+1) no es estimable sin conocer el marcador real.
+
+> Nota: el resultado marcado como "mejor para ti" suele ser el propio pronóstico del usuario; el dato útil es la magnitud de la ventaja (si acertaste una elección minoritaria ganas más sobre la media).
+
+#### Cache-busting
+
+Tras añadir `js/hoyPartidos.js`, incrementar la versión de `js/main.js`, `css/styles.css` y `js/hoyPartidos.js` en `index.html` (regla de AGENTS.md).
+
 
 
 ## Reglas básicas de la porra
