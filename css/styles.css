@@ -4932,38 +4932,42 @@ html, body {
 
 .points-dropdown {
   position: absolute;
-  top: calc(100% + 8px);
+  top: calc(100% + 4px);
   left: 0;
-  z-index: 50;
-  width: max-content;
-  min-width: 240px;
-  background: var(--ucl-card);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-md);
-  padding: 8px;
-  box-shadow: var(--shadow-card);
-  animation: pointsPopIn 0.25s ease-out;
+  z-index: 60;
+  display: flex;
+  gap: 5px;
 }
-@keyframes pointsPopIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
 
-.points-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.points-tile {
+.points-ball {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  cursor: pointer;
+  opacity: 0;
+  animation: pointsBallPop 0.25s ease-out forwards;
+}
+
+.points-ball-icon {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 2px solid currentColor;
+  background: rgba(255, 255, 255, 0.08);
   display: flex;
   align-items: center;
-  gap: 8px;
-  background: var(--ucl-surface);
-  border-radius: 10px;
-  padding: 9px 8px;
-  min-height: 44px;
-  cursor: pointer;
-  border-left: 3px solid transparent;
-  transition: background var(--transition-fast);
+  justify-content: center;
 }
-.points-tile:active { background: var(--ucl-card-hover); }
-.points-tile svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2; flex-shrink: 0; }
-.points-tile span { font-size: 0.66rem; font-weight: 700; line-height: 1.1; }
+.points-ball-icon svg { width: 11px; height: 11px; stroke: currentColor; fill: none; stroke-width: 2.2; }
+.points-ball-label { font-size: 6px; font-weight: 800; letter-spacing: 0.4px; }
 
-.tile-pronosticos   { color: #10B981; border-left-color: #10B981; }
-.tile-plantilla     { color: #8B5CF6; border-left-color: #8B5CF6; }
-.tile-clasificacion { color: #06B6D4; border-left-color: #06B6D4; }
-.tile-eliminatorias { color: #F59E0B; border-left-color: #F59E0B; }
+.ball-pronosticos   { color: #10B981; }
+.ball-plantilla     { color: #8B5CF6; }
+.ball-clasificacion { color: #06B6D4; }
+.ball-eliminatorias { color: #F59E0B; }
+
+@keyframes pointsBallPop {
+  from { opacity: 0; transform: translateX(-10px) scale(0.6); }
+  to   { opacity: 1; transform: translateX(0) scale(1); }
+}
