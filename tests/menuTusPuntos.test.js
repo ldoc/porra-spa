@@ -8,8 +8,8 @@ const POINTS_MENU_TABS = [
 ];
 
 function buildPointsMenuHtml(totalPoints) {
-  const balls = POINTS_MENU_TABS.map((t, i) => `
-      <div class="points-ball ${t.cls}" data-tab="${t.tab}" title="${t.label}" style="animation-delay: ${i * 60}ms;">
+  const balls = POINTS_MENU_TABS.map(t => `
+      <div class="points-ball ${t.cls}" data-tab="${t.tab}" title="${t.label}">
         <span class="points-ball-icon">${t.icon}</span>
         <span class="points-ball-label">${t.short}</span>
       </div>`).join('');

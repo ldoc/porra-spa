@@ -4938,6 +4938,7 @@ html, body {
   display: flex;
   gap: 5px;
 }
+.points-dropdown[hidden] { display: none; }
 
 .points-ball {
   display: flex;
@@ -4946,7 +4947,6 @@ html, body {
   gap: 2px;
   cursor: pointer;
   opacity: 0;
-  animation: pointsBallPop 0.25s ease-out forwards;
 }
 
 .points-ball-icon {
@@ -4967,7 +4967,23 @@ html, body {
 .ball-clasificacion { color: #06B6D4; }
 .ball-eliminatorias { color: #F59E0B; }
 
+.points-dropdown:not([hidden]):not(.closing) .points-ball { animation: pointsBallPop 0.25s ease-out forwards; }
+.points-dropdown:not([hidden]):not(.closing) .points-ball:nth-child(1) { animation-delay: 0ms; }
+.points-dropdown:not([hidden]):not(.closing) .points-ball:nth-child(2) { animation-delay: 60ms; }
+.points-dropdown:not([hidden]):not(.closing) .points-ball:nth-child(3) { animation-delay: 120ms; }
+.points-dropdown:not([hidden]):not(.closing) .points-ball:nth-child(4) { animation-delay: 180ms; }
+
+.points-dropdown.closing .points-ball { animation: pointsBallPopOut 0.25s ease-in forwards; }
+.points-dropdown.closing .points-ball:nth-child(1) { animation-delay: 180ms; }
+.points-dropdown.closing .points-ball:nth-child(2) { animation-delay: 120ms; }
+.points-dropdown.closing .points-ball:nth-child(3) { animation-delay: 60ms; }
+.points-dropdown.closing .points-ball:nth-child(4) { animation-delay: 0ms; }
+
 @keyframes pointsBallPop {
   from { opacity: 0; transform: translateX(-10px) scale(0.6); }
   to   { opacity: 1; transform: translateX(0) scale(1); }
+}
+@keyframes pointsBallPopOut {
+  from { opacity: 1; transform: translateX(0) scale(1); }
+  to   { opacity: 0; transform: translateX(-10px) scale(0.6); }
 }

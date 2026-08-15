@@ -3013,8 +3013,8 @@ const POINTS_MENU_TABS = [
 
 function buildPointsMenuHtml(totalPoints) {
   const points = (totalPoints === null || totalPoints === undefined) ? '…' : totalPoints;
-  const balls = POINTS_MENU_TABS.map((t, i) => `
-      <div class="points-ball ${t.cls}" data-tab="${t.tab}" title="${t.label}" style="animation-delay: ${i * 60}ms;">
+  const balls = POINTS_MENU_TABS.map(t => `
+      <div class="points-ball ${t.cls}" data-tab="${t.tab}" title="${t.label}">
         <span class="points-ball-icon">${t.icon}</span>
         <span class="points-ball-label">${t.short}</span>
       </div>`).join('');
@@ -3089,7 +3089,13 @@ function closePointsMenu() {
   const trigger = document.getElementById('points-trigger');
   const dropdown = document.getElementById('points-dropdown');
   if (trigger) { trigger.classList.remove('open'); trigger.setAttribute('aria-expanded', 'false'); }
-  if (dropdown) dropdown.hidden = true;
+  if (!dropdown || dropdown.hidden) return;
+  dropdown.classList.add('closing');
+  clearTimeout(window._pointsMenuCloseTimer);
+  window._pointsMenuCloseTimer = setTimeout(() => {
+    dropdown.hidden = true;
+    dropdown.classList.remove('closing');
+  }, 480);
 }
 
 function setupPointsMenu() {
@@ -3100,6 +3106,7 @@ function setupPointsMenu() {
   trigger.addEventListener('click', () => {
     if (dropdown.hidden) {
       trigger.classList.add('open');
+      dropdown.classList.remove('closing');
       dropdown.hidden = false;
       trigger.setAttribute('aria-expanded', 'true');
     } else {
