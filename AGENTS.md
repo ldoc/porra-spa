@@ -40,7 +40,7 @@ Definido en `js/main.js` (objeto `AppState`, líneas 17-55). Es la **fuente de v
 | `scorePredictions` | object | `{ matchId: { home, away } }` (pronósticos en edición) |
 | `squadPicks` | array | 25 jugadores seleccionados |
 | `blockedTeams` | Set | IDs de equipos ya usados en plantilla |
-| `appConfig` | object\|null | Config del torneo (faseJuego, totalMatches, squadFormation) |
+| `appConfig` | object\|null | Config del torneo (faseJuego, totalMatches, squadFormation). Incluye `fasesFechas`: `{ FASE_X: { inicio, fin } }` — fechas de inicio/fin de cada fase (string ISO o `null` mientras no se conozcan) |
 | `fases` | array | 13 fases desde `fases.json` |
 | `players` | array | Usuarios registrados (para clasificación) |
 | `matchStats` | array | Todos los matchstats del backend |
@@ -300,7 +300,7 @@ PUT  /api/squad                  // Body: { squad } (bloqueado fuera de FASE_PRE
 GET  /api/squad/all              // Fuera de pretemporada: todos. En pretemporada: solo propio
 
 // ─── Configuración y jugadores ────────────────────────────────
-GET  /api/config                 // { faseJuego, totalMatches, squadSize, squadFormation }
+GET  /api/config                 // { faseJuego, totalMatches, squadSize, squadFormation, fasesFechas }
 GET  /api/avatars/taken          // Avatares ya cogidos
 GET  /api/players                // Todos los usuarios registrados
 
@@ -316,6 +316,7 @@ POST   /api/admin/invitations       // Crear nuevo código
 DELETE /api/admin/invitations/:code // Eliminar código no usado
 PUT    /api/admin/fase-juego        // Cambiar la fase del juego
 PUT    /api/admin/config            // Actualizar configuración completa
+PUT    /api/admin/fases-fechas      // Body: { fasesFechas } — actualizar fechas de fases (admin)
 ```
 
 #### Variables de Entorno Requeridas (Backend)
@@ -411,6 +412,8 @@ La configuración se obtiene del backend (`GET /api/config`), se almacena en Mon
 | `squadFormation.D` | `8` | Defensas en plantilla |
 | `squadFormation.M` | `8` | Centrocampistas en plantilla |
 | `squadFormation.F` | `6` | Delanteros en plantilla |
+| `fasesFechas.FASE_X.inicio` | `null` | Fecha de inicio de la fase (string ISO o `null` si no se conoce) |
+| `fasesFechas.FASE_X.fin` | `null` | Fecha de fin de la fase (string ISO o `null` si no se conoce) |
 
 #### Cierre de Sesión
 
@@ -487,7 +490,7 @@ Herramientas para obtener automáticamente datos y resultados actualizados de So
 1. **Pronósticos por Jornada**: Predicciones de marcadores exactos en los 144 partidos de la fase de liga de la Champions League 2026/2027 (15 puntos máximo por partido).
 2. **Clasificación General**: Tabla acumulada de puntos y aciertos por cada jugador registrado con su avatar y plantilla ideal.
 3. **Estadísticas de Porra**: Tendencias comunitarias y desglose de predicciones.
-4. **Pestaña Inicio**: Pantalla de bienvenida con avatar del usuario, avisos de partidos/pendientes y countdown hasta el inicio de la fase de liga (8 septiembre 2026).
+4. **Pestaña Inicio**: Pantalla de bienvenida con avatar del usuario, avisos de partidos/pendientes y countdown hasta el inicio de la fase de liga (8 septiembre 2026). Si el admin ha definido fechas (`appConfig.fasesFechas`), se muestra además un **countdown dorado** bajo la cabecera, alineado a la derecha, hacia el hito relevante: el **fin de la fase actual** (si estamos dentro de su rango `[inicio, fin]`) o el **inicio de la siguiente fase**. Lógica en `js/fasesFechas.js` (`getCountdownTarget` / `formatCountdownHtml`), renderizada por `renderInicioCountdownHtml()` con actualización cada segundo.
 5. **Pronóstico de Clasificación**: Predicción de la posición final de cada equipo en la fase de liga (puntos por acertar posiciones del 1º al 24º).
 6. **Clasificación Pronosticada**: Pantalla dinámica que muestra la clasificación de los 36 equipos calculada a partir de los marcadores pronosticados por el usuario.
 
