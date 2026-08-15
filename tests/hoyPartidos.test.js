@@ -4,6 +4,7 @@ const {
   computeResultCounts, computeBestResult, getRealResult,
   calcMatchPoints, formatMatchTime
 } = require('../js/hoyPartidos.js');
+const { buildMatchCardHtml, buildStatsHtml } = require('../js/hoyPartidos.js');
 
 function test_isHoyPartidosAllowed_solo_fases_activas() {
   const activas = ['FASE_LIGA', 'FASE_16', 'FASE_8', 'FASE_4', 'FASE_SEMIS', 'FASE_FINAL'];
@@ -103,6 +104,52 @@ function test_formatMatchTime_formato_esperado() {
   assert.match(s, /21:05/);
 }
 
+function test_buildMatchCardHtml_contiene_datos_clave() {
+  const match = { id: 5, fase: 'liga', fechaTs: Math.floor(new Date(2026, 8, 8, 21, 0).getTime() / 1000), homeTeam: 'Athletic Club', homeTeamId: 10, homeBadgeExt: 'webp', awayTeam: 'Arsenal', awayTeamId: 20, awayBadgeExt: 'webp' };
+  const counts = { counts: { H: 0, D: 0, A: 0 }, total: 0, pct: { H: 0, D: 0, A: 0 } };
+  const html = buildMatchCardHtml({ match, predDisplay: '2 - 1', hasPred: true, real: null, pts: 0, counts, best: null });
+  assert.match(html, /hoy-card/);
+  assert.match(html, /Athletic Club/);
+  assert.match(html, /Arsenal/);
+  assert.match(html, /data-match="5"/);
+  assert.match(html, /Tu pronóstico: 2 - 1/);
+  assert.match(html, /data\/imgEquipos\/10\.webp/);
+}
+
+function test_buildMatchCardHtml_con_resultado_real() {
+  const match = { id: 5, fase: 'liga', fechaTs: Math.floor(new Date(2026, 8, 8, 21, 0).getTime() / 1000), homeTeam: 'PSG', homeTeamId: 10, homeBadgeExt: 'webp', awayTeam: 'Real Madrid', awayTeamId: 20, awayBadgeExt: 'webp' };
+  const counts = { counts: { H: 4, D: 5, A: 3 }, total: 12, pct: { H: 4 / 12, D: 5 / 12, A: 3 / 12 } };
+  const html = buildMatchCardHtml({ match, predDisplay: '1 - 1', hasPred: true, real: { home: 1, away: 1 }, pts: 15, counts, best: { result: 'D', advantage: 4.7 } });
+  assert.match(html, /Resultado real: 1 - 1/);
+  assert.match(html, /Acertaste/);
+}
+
+function test_buildStatsHtml_barras_porcentajes_mejor() {
+  const counts = { counts: { H: 4, D: 5, A: 3 }, total: 12, pct: { H: 4 / 12, D: 5 / 12, A: 3 / 12 } };
+  const html = buildStatsHtml({ counts, myResult: 'D', best: { result: 'D', advantage: 8 * (1 - 5 / 12) }, real: null, homeTeam: 'PSG', awayTeam: 'Real Madrid', realResult: null });
+  assert.match(html, /Pronósticos de la porra/);
+  assert.match(html, /12 jugadores/);
+  assert.match(html, /33%/);
+  assert.match(html, /42%/);
+  assert.match(html, /25%/);
+  assert.match(html, /tu pronóstico/);
+  assert.match(html, /Mejor para ti/);
+  assert.match(html, /sobre la media/);
+}
+
+function test_buildStatsHtml_sin_pronosticos() {
+  const counts = { counts: { H: 0, D: 0, A: 0 }, total: 0, pct: { H: 0, D: 0, A: 0 } };
+  const html = buildStatsHtml({ counts, myResult: null, best: null, real: null, homeTeam: 'A', awayTeam: 'B', realResult: null });
+  assert.match(html, /Aún no hay pronósticos/);
+}
+
+function test_buildStatsHtml_con_resultado_real_nota_acertaron() {
+  const counts = { counts: { H: 4, D: 5, A: 3 }, total: 12, pct: { H: 4 / 12, D: 5 / 12, A: 3 / 12 } };
+  const html = buildStatsHtml({ counts, myResult: 'D', best: { result: 'D', advantage: 4.7 }, real: { home: 1, away: 1 }, homeTeam: 'PSG', awayTeam: 'Real Madrid', realResult: 'D' });
+  assert.match(html, /Acertaron el resultado/);
+  assert.match(html, /5\/12/);
+}
+
 test_isHoyPartidosAllowed_solo_fases_activas();
 test_getMatchResult_tres_casos();
 test_getTodayMatches_misma_fecha_local_y_fase();
@@ -113,3 +160,8 @@ test_computeBestResult_pronostico_minoritario_gana();
 test_computeBestResult_sin_total_o_sin_pronostico_devuelve_null();
 test_getRealResult_y_calcMatchPoints();
 test_formatMatchTime_formato_esperado();
+test_buildMatchCardHtml_contiene_datos_clave();
+test_buildMatchCardHtml_con_resultado_real();
+test_buildStatsHtml_barras_porcentajes_mejor();
+test_buildStatsHtml_sin_pronosticos();
+test_buildStatsHtml_con_resultado_real_nota_acertaron();
