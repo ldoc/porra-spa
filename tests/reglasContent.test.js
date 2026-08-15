@@ -4,6 +4,13 @@ const path = require('path');
 
 const html = fs.readFileSync(path.join(__dirname, '../reglas/UCL.html'), 'utf8');
 const indexHtml = fs.readFileSync(path.join(__dirname, '../index.html'), 'utf8');
+const css = fs.readFileSync(path.join(__dirname, '../css/styles.css'), 'utf8');
+const NEEDED_CSS = [
+  '.user-help-pill', '.rules-modal', '.rules-overlay', '.rules-modal-content',
+  '.rules-header', '.rules-title', '.rules-close', '.rules-chips', '.rules-chip',
+  '.rules-body', '.rules-loading', '.rules-error', '.rules-footer', '.rules-pdf-btn',
+  '.rules-section', '.rules-section-head', '.rules-table', '.rules-pts',
+];
 
 function test_tiene_las_4_secciones() {
   for (const id of ['fase-liga', 'fase-final', 'puntuacion', 'plantilla']) {
@@ -42,6 +49,12 @@ function test_chips_matched_a_secciones() {
   }
 }
 
+function test_estilos_definidos() {
+  for (const cls of NEEDED_CSS) {
+    assert.ok(css.includes(cls), `falta la clase CSS ${cls}`);
+  }
+}
+
 // runner
 const tests = [
   ['4 secciones con id', test_tiene_las_4_secciones],
@@ -49,6 +62,7 @@ const tests = [
   ['header con copa y pill ayuda', test_header_tiene_copa_y_pill_ayuda],
   ['modal de reglas presente', test_modal_reglas_presente],
   ['chips matched a secciones', test_chips_matched_a_secciones],
+  ['estilos definidos', test_estilos_definidos],
 ];
 let failed = 0;
 for (const [name, fn] of tests) {
