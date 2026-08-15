@@ -36,6 +36,12 @@ function test_fase_postfinal_devuelve_null() {
   assert.strictEqual(t, null);
 }
 
+function test_fase_postfinal_con_fechas_en_rango_devuelve_null() {
+  // Aunque el admin haya definido fechas para FASE_POSTFINAL, la porra terminó → no hay countdown
+  const t = getCountdownTarget('FASE_POSTFINAL', FASES, { FASE_POSTFINAL: { inicio: '2026-09-01T20:00:00.000Z', fin: '2026-12-31T20:00:00.000Z' } }, Date.parse('2026-10-01T12:00:00Z'));
+  assert.strictEqual(t, null);
+}
+
 function test_antes_del_inicio_de_la_propia_fase_cuenta_al_inicio_de_siguiente() {
   // FASE_LIGA activa pero ahora < inicio de FASE_LIGA y PRE16 sin fechas → sigue regla 2 con siguiente fase (sin fechas) → null
   const t = getCountdownTarget('FASE_LIGA', FASES, { FASE_LIGA: { inicio: ISO.ligaIni, fin: ISO.ligaFin } }, Date.parse('2026-08-15T12:00:00Z'));
@@ -102,6 +108,7 @@ const tests = [
   test_antes_de_siguiente_fase_cuenta_al_inicio,
   test_sin_fechas_devuelve_null,
   test_fase_postfinal_devuelve_null,
+  test_fase_postfinal_con_fechas_en_rango_devuelve_null,
   test_antes_del_inicio_de_la_propia_fase_cuenta_al_inicio_de_siguiente,
   test_formatCountdown_basico,
   test_formatCountdown_cero_o_negativo,

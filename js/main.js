@@ -2684,6 +2684,9 @@ function navigateToTab(tabName) {
     AppState.resultadosRound = null;
   }
 
+  // Limpiar el intervalo del countdown del Inicio al salir de esa pestaña
+  if (tabName !== 'inicio') clearInicioCountdown();
+
   const navItems = document.querySelectorAll('.nav-item');
   const pages = document.querySelectorAll('.tab-page');
 
@@ -2882,6 +2885,7 @@ function showLogoutWithUnsavedModal() {
     AppState.sessionToken = null;
     AppState.hasUnsavedChanges = false;
     AppState.hasUnsavedSquadChanges = false;
+    clearInicioCountdown();
     stopMatchStatsPolling();
     checkAuthStatus();
     showToast('Sesion cerrada correctamente');
@@ -2895,6 +2899,7 @@ function showLogoutWithUnsavedModal() {
     AppState.sessionToken = null;
     AppState.hasUnsavedChanges = false;
     AppState.hasUnsavedSquadChanges = false;
+    clearInicioCountdown();
     stopMatchStatsPolling();
     checkAuthStatus();
     showToast('Sesion cerrada correctamente');
@@ -3105,6 +3110,13 @@ function setupPointsMenuGlobals() {
   });
 }
 
+function clearInicioCountdown() {
+  if (window._inicioCountdownInterval) {
+    clearInterval(window._inicioCountdownInterval);
+    window._inicioCountdownInterval = null;
+  }
+}
+
 function renderInicioCountdownHtml(fase, fases) {
   const fechas = AppState.appConfig?.fasesFechas || {};
   const target = fasesFechasApi.getCountdownTarget(fase, fases, fechas, Date.now());
@@ -3124,10 +3136,7 @@ function renderInicioTab() {
   const container = document.getElementById('inicio-container');
   if (!container || !AppState.currentUser) return;
 
-  if (window._inicioCountdownInterval) {
-    clearInterval(window._inicioCountdownInterval);
-    window._inicioCountdownInterval = null;
-  }
+  clearInicioCountdown();
 
   const user = AppState.currentUser;
   const config = AppState.appConfig || {};
@@ -3487,6 +3496,7 @@ function showProfileModal() {
     AppState.currentUser = null;
     AppState.sessionToken = null;
     AppState.hasUnsavedChanges = false;
+    clearInicioCountdown();
     stopMatchStatsPolling();
     modal.remove();
     checkAuthStatus();

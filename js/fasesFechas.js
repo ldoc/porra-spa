@@ -4,6 +4,7 @@
     const sorted = [...(fases || [])].sort((a, b) => a.id - b.id);
     const idx = sorted.findIndex(f => f.nombre === faseActual);
     if (idx === -1) return null;
+    if (faseActual === 'FASE_POSTFINAL') return null;
     const current = sorted[idx];
     const next = sorted[idx + 1] || null;
     const cur = fechas[current.nombre];
@@ -30,7 +31,7 @@
     return null;
   }
 
-  function formatCountdown(ms) {
+  function getCountdownParts(ms) {
     if (ms <= 0) return null;
     const totalSeconds = Math.floor(ms / 1000);
     const d = Math.floor(totalSeconds / 86400);
@@ -38,21 +39,22 @@
     const m = Math.floor((totalSeconds % 3600) / 60);
     const s = totalSeconds % 60;
     const pad = n => String(n).padStart(2, '0');
-    return `${d}d ${pad(h)}h ${pad(m)}m ${pad(s)}s`;
+    return { d, h: pad(h), m: pad(m), s: pad(s) };
+  }
+
+  function formatCountdown(ms) {
+    const p = getCountdownParts(ms);
+    if (!p) return null;
+    return `${p.d}d ${p.h}h ${p.m}m ${p.s}s`;
   }
 
   function formatCountdownHtml(ms) {
-    if (ms <= 0) return null;
-    const totalSeconds = Math.floor(ms / 1000);
-    const d = Math.floor(totalSeconds / 86400);
-    const h = Math.floor((totalSeconds % 86400) / 3600);
-    const m = Math.floor((totalSeconds % 3600) / 60);
-    const s = totalSeconds % 60;
-    const pad = n => String(n).padStart(2, '0');
+    const p = getCountdownParts(ms);
+    if (!p) return null;
     const num = (n, letter, last) =>
       `<span style="font-size: 15px; font-weight: 800;">${n}</span>` +
       `<span style="font-size: 11px; margin: 0 ${last ? '0' : '7px'} 0 3px;">${letter}</span>`;
-    return num(d, 'd') + num(pad(h), 'h') + num(pad(m), 'm') + num(pad(s), 's', true);
+    return num(p.d, 'd') + num(p.h, 'h') + num(p.m, 'm') + num(p.s, 's', true);
   }
 
   function isoToDatetimeLocal(iso) {

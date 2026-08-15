@@ -199,6 +199,7 @@ Si al finalizar el partido el equipo no ha recibido goles, el portero recibirá 
 │   ├── main.js       # Lógica principal, control de navegación y autenticación
 │   ├── eliminatorias.js # Lógica de predicciones de eliminatorias
 │   ├── apiData.js    # Utilidades de datos de API (unwrapAllPredictions)
+│   ├── fasesFechas.js # Lógica de countdown y fechas de inicio/fin de fases
 │   └── stats.js      # Cálculos y render de estadísticas/gráficos
 ├── data/             # Datos estáticos del torneo (ver data/README.md)
 │   ├── README.md     # Esquemas, relaciones y documentación de modelos
