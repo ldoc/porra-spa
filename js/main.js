@@ -2280,19 +2280,69 @@ async function checkAdminStatus() {
   }
 }
 
-function renderAdminFasesFechas() {
+function showAdminFaseFechasModal(faseNombre) {
+  const fases = AppState.fases || [];
+  const faseObj = fases.find(f => f.nombre === faseNombre) || { nombre: faseNombre, desc: faseNombre };
   const fechas = AppState.appConfig?.fasesFechas || {};
-  return (AppState.fases || []).map(f => {
-    const ff = fechas[f.nombre] || {};
-    const inputStyle = 'width: 45%; padding: 6px 8px; border-radius: 8px; border: 1px solid var(--ucl-border); background: var(--ucl-surface); color: var(--text-primary); font-size: 11px;';
-    return `
-      <div style="display: flex; align-items: center; gap: 6px; background: var(--ucl-surface); padding: 6px 8px; border-radius: var(--radius-sm);">
-        <span style="font-size: 11px; color: var(--text-primary); font-weight: 700; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${f.desc || f.nombre}</span>
-        <input type="datetime-local" data-fase="${f.nombre}" data-tipo="inicio" value="${fasesFechasApi.isoToDatetimeLocal(ff.inicio)}" style="${inputStyle}">
-        <input type="datetime-local" data-fase="${f.nombre}" data-tipo="fin" value="${fasesFechasApi.isoToDatetimeLocal(ff.fin)}" style="${inputStyle}">
+  const ff = fechas[faseNombre] || {};
+  const inputStyle = 'width: 100%; padding: 10px; border-radius: var(--radius-sm); border: 1px solid var(--ucl-border); background: var(--ucl-surface); color: var(--text-primary); font-size: 13px;';
+
+  const modal = document.createElement('div');
+  modal.className = 'profile-modal';
+  modal.innerHTML = `
+    <div class="profile-modal-content" style="max-width: 360px;">
+      <button class="profile-modal-close" id="close-fechas-modal">&times;</button>
+      <div style="font-size: 1.2rem; font-weight: 800; margin-bottom: 16px;">📅 Fechas — ${faseObj.desc || faseObj.nombre}</div>
+      <div style="display: flex; gap: 10px; margin-bottom: 16px;">
+        <div style="flex: 1;">
+          <label style="font-size: 11px; color: var(--text-muted); font-weight: 700; display: block; margin-bottom: 6px;">Inicio</label>
+          <input type="datetime-local" id="fecha-inicio" value="${fasesFechasApi.isoToDatetimeLocal(ff.inicio)}" style="${inputStyle}">
+        </div>
+        <div style="flex: 1;">
+          <label style="font-size: 11px; color: var(--text-muted); font-weight: 700; display: block; margin-bottom: 6px;">Fin</label>
+          <input type="datetime-local" id="fecha-fin" value="${fasesFechasApi.isoToDatetimeLocal(ff.fin)}" style="${inputStyle}">
+        </div>
       </div>
-    `;
-  }).join('');
+      <button id="btn-save-fase-fechas" class="btn-primary" style="background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%); color: #fff; width: 100%;">
+        Guardar Fechas
+      </button>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  const closeBtn = modal.querySelector('#close-fechas-modal');
+  const saveBtn = modal.querySelector('#btn-save-fase-fechas');
+
+  closeBtn.addEventListener('click', () => modal.remove());
+
+  saveBtn.addEventListener('click', async () => {
+    const inicio = fasesFechasApi.datetimeLocalToIso(modal.querySelector('#fecha-inicio').value);
+    const fin = fasesFechasApi.datetimeLocalToIso(modal.querySelector('#fecha-fin').value);
+    const current = { ...(AppState.appConfig?.fasesFechas || {}) };
+    current[faseNombre] = { inicio, fin };
+    try {
+      const res = await fetchWithPhase(`${API_BASE}/api/admin/fases-fechas`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        body: JSON.stringify({ fasesFechas: current })
+      });
+      const data = await res.json();
+      if (data.ok) {
+        AppState.appConfig.fasesFechas = data.fasesFechas;
+        showToast('Fechas guardadas');
+        modal.remove();
+      } else {
+        showToast(data.error || 'Error guardando fechas');
+      }
+    } catch (e) {
+      showToast('Error de conexión');
+    }
+  });
+
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) modal.remove();
+  });
 }
 
 function showAdminModal() {
@@ -2307,35 +2357,29 @@ function showAdminModal() {
   modal.innerHTML = `
     <div class="profile-modal-content" style="max-width: 400px;">
       <button class="profile-modal-close" id="close-admin-modal">&times;</button>
-      <div style="font-size: 2rem; margin-bottom: 8px;">⚙️</div>
-      <h2 style="font-size: 1.3rem; font-weight: 800; margin-bottom: 4px;">Panel de Administración</h2>
-      <span class="admin-badge" style="background: rgba(102,126,234,0.2); color: #667eea; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 700;">ADMIN</span>
+      <div style="text-align: center; margin-bottom: 16px;">
+        <div style="font-size: 2rem; margin-bottom: 8px;">⚙️</div>
+        <h2 style="font-size: 1.3rem; font-weight: 800; margin: 0;">Panel de Administración</h2>
+      </div>
 
-      <div style="width: 100%; margin-top: 20px; text-align: left;">
+      <div style="width: 100%; text-align: left; background: var(--ucl-surface); padding: 12px; border-radius: var(--radius-md); margin-bottom: 14px;">
+        <p style="font-size: 11px; color: var(--text-muted); margin: 0 0 2px 0;">Fase actual</p>
+        <p style="font-size: 15px; color: var(--text-primary); font-weight: 800; margin: 0;">${getFaseDesc(fase)}</p>
+      </div>
+
+      <div style="width: 100%; text-align: left;">
         <label style="font-size: 11px; color: var(--text-muted); font-weight: 700; display: block; margin-bottom: 8px;">Cambiar a:</label>
-        <div style="display: flex; gap: 10px;">
-          <select id="admin-phase-select" style="flex: 1; padding: 12px; border-radius: var(--radius-md); border: 1px solid var(--ucl-border); background: var(--ucl-surface); color: var(--text-primary); font-size: 14px;">
-            ${optionsHtml}
-          </select>
-        </div>
+        <select id="admin-phase-select" style="width: 100%; padding: 12px; border-radius: var(--radius-md); border: 1px solid var(--ucl-border); background: var(--ucl-surface); color: var(--text-primary); font-size: 14px;">
+          ${optionsHtml}
+        </select>
       </div>
 
-      <div style="width: 100%; margin-top: 16px; background: var(--ucl-surface); padding: 12px; border-radius: var(--radius-md);">
-        <p style="font-size: 12px; color: var(--text-muted); margin: 0;">Fase actual: <strong style="color: var(--text-primary);">${getFaseDesc(fase)}</strong></p>
-      </div>
-
-      <div style="width: 100%; margin-top: 20px; text-align: left;">
-        <label style="font-size: 11px; color: var(--text-muted); font-weight: 700; display: block; margin-bottom: 8px;">📅 Fechas de fases (inicio / fin)</label>
-        <div id="admin-fases-fechas" style="max-height: 240px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px;">
-          ${renderAdminFasesFechas()}
-        </div>
-        <button id="btn-admin-save-fechas" class="btn-primary" style="background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%); color: #fff; margin-top: 12px; width: 100%;">
-          Guardar Fechas
-        </button>
-      </div>
-
-      <button id="btn-admin-change-phase" class="btn-primary" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #fff; margin-top: 16px; width: 100%;">
+      <button id="btn-admin-change-phase" class="btn-primary" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #fff; margin-top: 12px; width: 100%;">
         Cambiar Fase
+      </button>
+
+      <button id="btn-admin-fechas-fase" class="btn-primary" style="background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%); color: #fff; margin-top: 8px; width: 100%;">
+        📅 Cambiar fechas de fase
       </button>
 
       <button id="btn-manage-invitations" class="btn-primary" style="background: linear-gradient(135deg, #10B981 0%, #059669 100%); color: #fff; margin-top: 8px; width: 100%;">
@@ -2349,6 +2393,7 @@ function showAdminModal() {
   const closeBtn = modal.querySelector('#close-admin-modal');
   const changePhaseBtn = modal.querySelector('#btn-admin-change-phase');
   const manageInvitationsBtn = modal.querySelector('#btn-manage-invitations');
+  const fechasBtn = modal.querySelector('#btn-admin-fechas-fase');
 
   closeBtn.addEventListener('click', () => modal.remove());
   changePhaseBtn.addEventListener('click', () => {
@@ -2365,40 +2410,19 @@ function showAdminModal() {
     showPhaseConfirmModal(targetPhase);
   });
 
+  if (fechasBtn) {
+    fechasBtn.addEventListener('click', () => {
+      const select = modal.querySelector('#admin-phase-select');
+      const targetPhase = select.value;
+      modal.remove();
+      showAdminFaseFechasModal(targetPhase);
+    });
+  }
+
   if (manageInvitationsBtn) {
     manageInvitationsBtn.addEventListener('click', () => {
       modal.remove();
       showInvitationCodesModal();
-    });
-  }
-
-  const saveFechasBtn = modal.querySelector('#btn-admin-save-fechas');
-  if (saveFechasBtn) {
-    saveFechasBtn.addEventListener('click', async () => {
-      const inputs = modal.querySelectorAll('#admin-fases-fechas input[type="datetime-local"]');
-      const fasesFechas = {};
-      inputs.forEach(inp => {
-        const nombre = inp.dataset.fase;
-        const tipo = inp.dataset.tipo;
-        if (!fasesFechas[nombre]) fasesFechas[nombre] = { inicio: null, fin: null };
-        fasesFechas[nombre][tipo] = fasesFechasApi.datetimeLocalToIso(inp.value);
-      });
-      try {
-        const res = await fetchWithPhase(`${API_BASE}/api/admin/fases-fechas`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json', ...authHeaders() },
-          body: JSON.stringify({ fasesFechas })
-        });
-        const data = await res.json();
-        if (data.ok) {
-          AppState.appConfig.fasesFechas = data.fasesFechas;
-          showToast('Fechas guardadas');
-        } else {
-          showToast(data.error || 'Error guardando fechas');
-        }
-      } catch (e) {
-        showToast('Error de conexión');
-      }
     });
   }
 
