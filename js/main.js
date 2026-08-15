@@ -3105,9 +3105,29 @@ function setupPointsMenuGlobals() {
   });
 }
 
+function renderInicioCountdownHtml(fase, fases) {
+  const fechas = AppState.appConfig?.fasesFechas || {};
+  const target = fasesFechasApi.getCountdownTarget(fase, fases, fechas, Date.now());
+  if (!target) return '';
+  const remain = target.target - Date.now();
+  return `
+    <div style="text-align: right; padding: 4px 4px 0;">
+      <div style="display: inline-block; text-align: left; border: 1px solid rgba(245, 158, 11, 0.5); border-radius: 12px; padding: 8px 14px; background: rgba(245, 158, 11, 0.06);">
+        <div style="font-size: 9px; color: #94A3B8; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; margin-bottom: 4px;">⏳ ${target.label}</div>
+        <div id="inicio-countdown-time" style="text-align: right; color: #F59E0B; font-variant-numeric: tabular-nums; letter-spacing: 1px;">${fasesFechasApi.formatCountdown(remain)}</div>
+      </div>
+    </div>
+  `;
+}
+
 function renderInicioTab() {
   const container = document.getElementById('inicio-container');
   if (!container || !AppState.currentUser) return;
+
+  if (window._inicioCountdownInterval) {
+    clearInterval(window._inicioCountdownInterval);
+    window._inicioCountdownInterval = null;
+  }
 
   const user = AppState.currentUser;
   const config = AppState.appConfig || {};
@@ -3156,6 +3176,8 @@ function renderInicioTab() {
   `;
 
   container.innerHTML = `
+    ${renderInicioCountdownHtml(fase, fases)}
+
     ${buildPointsMenuHtml(AppState.pointsReady ? getUserTotalRealPoints(user.name) : null)}
 
     <div class="inicio-welcome">
@@ -3285,6 +3307,24 @@ function renderInicioTab() {
   `;
 
   setupPointsMenu();
+
+  const countdownEl = document.getElementById('inicio-countdown-time');
+  if (countdownEl) {
+    const fechas = AppState.appConfig?.fasesFechas || {};
+    const target = fasesFechasApi.getCountdownTarget(fase, fases, fechas, Date.now());
+    if (target) {
+      window._inicioCountdownInterval = setInterval(() => {
+        const remain = target.target - Date.now();
+        if (remain <= 0) {
+          clearInterval(window._inicioCountdownInterval);
+          window._inicioCountdownInterval = null;
+          renderInicioTab();
+          return;
+        }
+        countdownEl.textContent = fasesFechasApi.formatCountdown(remain);
+      }, 1000);
+    }
+  }
 }
 
 // ============================================================
