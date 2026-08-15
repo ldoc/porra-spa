@@ -3220,10 +3220,13 @@ function renderInicioTab() {
   `;
 
   const countdownHtml = renderInicioCountdownHtml(fase, fases);
-  const pointsMenuHtml = buildPointsMenuHtml(AppState.pointsReady ? getUserTotalRealPoints(user.name) : null);
+  const showPointsMenu = fase !== 'FASE_PRETEMPORADA';
+  const pointsMenuHtml = showPointsMenu
+    ? buildPointsMenuHtml(AppState.pointsReady ? getUserTotalRealPoints(user.name) : null)
+    : '';
   const topRowHtml = countdownHtml
     ? `<div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 4px 4px 0;">
-        <div style="flex-shrink: 0;">${pointsMenuHtml}</div>
+        ${pointsMenuHtml ? `<div style="flex-shrink: 0;">${pointsMenuHtml}</div>` : ''}
         ${countdownHtml}
       </div>`
     : pointsMenuHtml;
