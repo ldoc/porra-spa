@@ -99,11 +99,18 @@
          ====================================================== -->
     <header class="app-header">
       <div class="brand">
-        <div class="brand-icon">⭐</div>
+        <div class="brand-icon">🏆</div>
         <div class="brand-title-group">
           <span class="brand-title">Porra UCL</span>
           <span class="brand-subtitle">Champions 2026/27</span>
         </div>
+      </div>
+      <div id="user-help-pill" class="user-help-pill" style="display: none;" onclick="openRulesModal()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+          <path d="M12 17h.01" />
+        </svg>
+        <span>Ayuda</span>
       </div>
       <div id="user-status-pill" class="user-status-pill clickable" style="display: none;">
         <span id="user-header-avatar" class="user-status-avatar">⚽</span>
@@ -258,6 +265,35 @@
       <div class="modal-footer">
         <button onclick="closePhaseChangeModal()" class="btn-secondary">Cancelar</button>
         <button onclick="confirmPhaseChange()" class="btn-danger">Confirmar Cambio</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de reglas de la porra -->
+  <div id="rules-modal" class="rules-modal" style="display: none;">
+    <div class="rules-overlay" onclick="closeRulesModal()"></div>
+    <div class="rules-modal-content">
+      <div class="rules-header">
+        <div class="rules-title">
+          <span class="rules-title-icon">🏆</span>
+          <div>
+            <div class="rules-title-main">Reglas de la Porra</div>
+            <div class="rules-subtitle">Champions 2026/27</div>
+          </div>
+        </div>
+        <button class="rules-close" onclick="closeRulesModal()">&times;</button>
+      </div>
+      <div class="rules-chips">
+        <button class="rules-chip active" data-target="#fase-liga">⚽ Fase de Liga</button>
+        <button class="rules-chip" data-target="#fase-final">🏆 Fase Final</button>
+        <button class="rules-chip" data-target="#puntuacion">⭐ Puntuación</button>
+        <button class="rules-chip" data-target="#plantilla">👥 Plantilla</button>
+      </div>
+      <div class="rules-body" id="rules-body">
+        <div class="rules-loading">Cargando reglas…</div>
+      </div>
+      <div class="rules-footer">
+        <button class="rules-pdf-btn" onclick="window.open('reglas/UCL.pdf', '_blank')">Abrir PDF original</button>
       </div>
     </div>
   </div>
