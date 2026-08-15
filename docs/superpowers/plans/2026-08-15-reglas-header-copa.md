@@ -55,21 +55,10 @@ function test_contenido_clave() {
   }
 }
 
-function test_chips_matched_a_secciones() {
-  // Los chips del modal (index.html) apuntan a los ids de UCL.html
-  const indexHtml = fs.readFileSync(path.join(__dirname, '../index.html'), 'utf8');
-  const chipTargets = [...indexHtml.matchAll(/data-target="(#fase-liga|#fase-final|#puntuacion|#plantilla)"/g)].map(m => m[1]);
-  assert.strictEqual(chipTargets.length, 4, 'debe haber 4 chips');
-  for (const t of chipTargets) {
-    assert.ok(html.includes(`id="${t.slice(1)}"`), `el chip ${t} no tiene sección en UCL.html`);
-  }
-}
-
 // runner
 const tests = [
   ['4 secciones con id', test_tiene_las_4_secciones],
   ['contenido clave del PDF', test_contenido_clave],
-  ['chips de index.html apuntan a secciones', test_chips_matched_a_secciones],
 ];
 let failed = 0;
 for (const [name, fn] of tests) {
@@ -219,7 +208,7 @@ Create the file with the complete content below (fragment, sin `<html>` — se i
 - [ ] **Step 4: Run test to verify it passes**
 
 Run: `node tests/reglasContent.test.js`
-Expected: PASS — las 3 pruebas `ok`.
+Expected: PASS — las 2 pruebas `ok`.
 
 - [ ] **Step 5: Commit**
 
@@ -259,9 +248,17 @@ function test_modal_reglas_presente() {
   assert.ok(indexHtml.includes('closeRulesModal()'), 'falta el handler closeRulesModal');
   assert.ok(indexHtml.includes('reglas/UCL.pdf'), 'falta el enlace al PDF original');
 }
+
+function test_chips_matched_a_secciones() {
+  const chipTargets = [...indexHtml.matchAll(/data-target="(#fase-liga|#fase-final|#puntuacion|#plantilla)"/g)].map(m => m[1]);
+  assert.strictEqual(chipTargets.length, 4, 'debe haber 4 chips');
+  for (const t of chipTargets) {
+    assert.ok(html.includes(`id="${t.slice(1)}"`), `el chip ${t} no tiene sección en UCL.html`);
+  }
+}
 ```
 
-Y registra ambos en el array `tests` del runner.
+Y registra los tres (`test_header_tiene_copa_y_pill_ayuda`, `test_modal_reglas_presente`, `test_chips_matched_a_secciones`) en el array `tests` del runner.
 
 - [ ] **Step 2: Run test to verify it fails**
 
