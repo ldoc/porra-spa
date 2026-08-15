@@ -51,6 +51,7 @@ const AppState = {
   predictionsConfirmed: false, // flag: pronósticos confirmados (bloquea edición)
   openProfileJourney: null, // string: jornada desplegada en el modal de perfil (tab Pronósticos)
   fases: [],             // fases de la competición desde fases.json
+  rulesHtml: null,         // caché del HTML de reglas cargado de reglas/UCL.html
 };
 
 const SQUAD_SIZE = 25;
@@ -2228,6 +2229,7 @@ async function enterApp() {
 
   updateUserHeader();
   setupHeaderClick();
+  setupHelpClick();
   AppState.pointsReady = false;
   AppState.predictionsLoaded = false;
   navigateToTab('inicio');
@@ -3472,6 +3474,61 @@ function setupHeaderClick() {
   }
 }
 
+// ============================================================
+// HEADER — Ayuda y Modal de Reglas de la Porra
+// ============================================================
+function setupHelpClick() {
+  const pill = document.getElementById('user-help-pill');
+  if (pill) {
+    pill.addEventListener('click', () => openRulesModal());
+  }
+}
+
+async function openRulesModal() {
+  const modal = document.getElementById('rules-modal');
+  if (!modal) return;
+  modal.style.display = 'flex';
+
+  const body = document.getElementById('rules-body');
+  if (!body) return;
+
+  if (AppState.rulesHtml) {
+    body.innerHTML = AppState.rulesHtml;
+    setupRulesChips();
+    return;
+  }
+
+  body.innerHTML = '<div class="rules-loading">Cargando reglas…</div>';
+  try {
+    const res = await fetch('reglas/UCL.html');
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    AppState.rulesHtml = await res.text();
+    body.innerHTML = AppState.rulesHtml;
+  } catch (e) {
+    console.error('Error cargando reglas:', e);
+    body.innerHTML = '<div class="rules-error">No se pudieron cargar las reglas. ' +
+      '<a href="reglas/UCL.pdf" target="_blank" rel="noopener">Abrir PDF original</a></div>';
+  }
+  setupRulesChips();
+}
+
+function closeRulesModal() {
+  const modal = document.getElementById('rules-modal');
+  if (modal) modal.style.display = 'none';
+}
+
+function setupRulesChips() {
+  const chips = document.querySelectorAll('#rules-modal .rules-chip');
+  chips.forEach(chip => {
+    chip.addEventListener('click', () => {
+      chips.forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      const target = document.querySelector(chip.dataset.target);
+      if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  });
+}
+
 function showProfileModal() {
   if (!AppState.currentUser) return;
 
@@ -3662,6 +3719,7 @@ function showChangePasswordModal() {
 // ============================================================
 function updateUserHeader() {
   const pill = document.getElementById('user-status-pill');
+  const helpPill = document.getElementById('user-help-pill');
   const avatar = document.getElementById('user-header-avatar');
   const name = document.getElementById('user-header-name');
 
@@ -3669,8 +3727,10 @@ function updateUserHeader() {
     if (avatar) avatar.textContent = AppState.currentUser.avatar;
     if (name) name.textContent = AppState.currentUser.name;
     if (pill) pill.style.display = 'flex';
+    if (helpPill) helpPill.style.display = 'flex';
   } else {
     if (pill) pill.style.display = 'none';
+    if (helpPill) helpPill.style.display = 'none';
   }
 }
 
