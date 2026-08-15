@@ -1179,7 +1179,6 @@ html, body {
   gap: 8px;
   padding: 7px 0;
   border-radius: var(--radius-sm);
-  cursor: pointer;
 }
 .hoy-stat-tag {
   flex-shrink: 0;

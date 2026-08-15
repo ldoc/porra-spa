@@ -56,7 +56,7 @@
     if (!ms || !ms.stats) return null;
     const home = ms.stats[match.homeTeamId]?.goles;
     const away = ms.stats[match.awayTeamId]?.goles;
-    if (home === undefined || away === undefined) return null;
+    if (home == null || away == null) return null;
     return { home, away };
   }
 
@@ -89,13 +89,15 @@
   }
 
   function buildMatchCardHtml(opts) {
-    const { match, predDisplay, hasPred, real, pts, counts, best } = opts;
+    const { match, predDisplay, hasPred, real, pts, counts, best, myResult } = opts;
     const isReal = !!real;
     const scoreLine = isReal ? `${real.home} - ${real.away}` : predDisplay;
     const scoreLabel = isReal ? 'Resultado real' : (hasPred ? 'Tu pronóstico' : 'Sin pronóstico');
     const footMine = `Tu pronóstico: ${predDisplay}`;
     const footReal = isReal
-      ? (pts > 0 ? `<span class="ok">✔ Acertaste (${pts} pts)</span>` : `<span class="ko">✘ No acertaste</span>`)
+      ? (hasPred
+          ? (pts > 0 ? `<span class="ok">✔ Acertaste (${pts} pts)</span>` : `<span class="ko">✘ No acertaste</span>`)
+          : '<span style="color: var(--text-muted); font-weight: 600;">Sin pronóstico</span>')
       : '';
     return `
       <div class="hoy-card" data-match="${match.id}" onclick="this.classList.toggle('open')">
@@ -122,7 +124,7 @@
           ${footReal}
         </div>
         ${buildStatsHtml({
-          counts, myResult: best ? best.result : null,
+          counts, myResult: opts.myResult ?? (best ? best.result : null),
           best, real, homeTeam: match.homeTeam, awayTeam: match.awayTeam,
           realResult: isReal ? getMatchResult(real.home, real.away) : null
         })}
@@ -155,7 +157,7 @@
         </div>`;
     }).join('');
 
-    const bestNote = best
+    const bestNote = (best && counts.total >= 2 && best.advantage > 0)
       ? `<div class="hoy-best-note">⚡ <strong>Mejor para ti: ${esc(bestNameOf(best.result, homeTeam, awayTeam))}</strong> — si aciertas este resultado ganas <strong>≈ ${best.advantage.toFixed(1)} pts sobre la media</strong>.</div>`
       : '';
 
@@ -201,7 +203,7 @@
       const counts = computeResultCounts(match.id, allPreds);
       const best = computeBestResult(counts, myResult);
       const pts = real ? calcMatchPoints(pred, real.home, real.away) : 0;
-      return buildMatchCardHtml({ match, predDisplay, hasPred, real, pts, counts, best });
+      return buildMatchCardHtml({ match, predDisplay, hasPred, real, pts, counts, best, myResult });
     }).join('');
 
     container.innerHTML = `

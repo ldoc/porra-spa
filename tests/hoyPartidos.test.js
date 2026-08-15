@@ -2,9 +2,9 @@ const assert = require('assert');
 const {
   isHoyPartidosAllowed, getMatchResult, getTodayMatches,
   computeResultCounts, computeBestResult, getRealResult,
-  calcMatchPoints, formatMatchTime
+  calcMatchPoints, formatMatchTime, esc,
+  buildMatchCardHtml, buildStatsHtml
 } = require('../js/hoyPartidos.js');
-const { buildMatchCardHtml, buildStatsHtml } = require('../js/hoyPartidos.js');
 
 function test_isHoyPartidosAllowed_solo_fases_activas() {
   const activas = ['FASE_LIGA', 'FASE_16', 'FASE_8', 'FASE_4', 'FASE_SEMIS', 'FASE_FINAL'];
@@ -104,6 +104,15 @@ function test_formatMatchTime_formato_esperado() {
   assert.match(s, /21:05/);
 }
 
+function test_calcMatchPoints_resultado_solo_8pts() {
+  // Resultado H acertado (2-0 pred vs 3-1 real), ningún gol → solo 8 pts
+  assert.strictEqual(calcMatchPoints({ home: 2, away: 0 }, 3, 1), 8);
+}
+
+function test_esc_escapa_html() {
+  assert.strictEqual(esc('<b>&"\'</b>'), '&lt;b&gt;&amp;&quot;&#39;&lt;/b&gt;');
+}
+
 function test_buildMatchCardHtml_contiene_datos_clave() {
   const match = { id: 5, fase: 'liga', fechaTs: Math.floor(new Date(2026, 8, 8, 21, 0).getTime() / 1000), homeTeam: 'Athletic Club', homeTeamId: 10, homeBadgeExt: 'webp', awayTeam: 'Arsenal', awayTeamId: 20, awayBadgeExt: 'webp' };
   const counts = { counts: { H: 0, D: 0, A: 0 }, total: 0, pct: { H: 0, D: 0, A: 0 } };
@@ -160,6 +169,8 @@ test_computeBestResult_pronostico_minoritario_gana();
 test_computeBestResult_sin_total_o_sin_pronostico_devuelve_null();
 test_getRealResult_y_calcMatchPoints();
 test_formatMatchTime_formato_esperado();
+test_calcMatchPoints_resultado_solo_8pts();
+test_esc_escapa_html();
 test_buildMatchCardHtml_contiene_datos_clave();
 test_buildMatchCardHtml_con_resultado_real();
 test_buildStatsHtml_barras_porcentajes_mejor();
