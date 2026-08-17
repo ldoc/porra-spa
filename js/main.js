@@ -4412,12 +4412,17 @@ function renderSquadSlots() {
       if (player) {
         const sourcePlayer = AppState.allPlayers.find(p => p.id === player.id);
         const playerExt = sourcePlayer?.extension || player.extension || 'png';
+        const teamData = AppState.teamsMap[player.equipo];
+        const teamExt = teamData?.ext || 'webp';
         slots.push(`
           <div class="squad-slot filled" data-position="${pos}" data-index="${i}">
-            ${playerImgTag(player.id, playerExt, player.nombre, 'squad-slot-img')}
-            <div class="squad-slot-info">
-              <span class="squad-slot-name">${player.nombre}</span>
-              <span class="squad-slot-team">${player.club}</span>
+            ${playerImgTag(player.id, playerExt, player.nombre, 'squad-slot-photo')}
+            <div class="squad-slot-details">
+              <div class="squad-slot-player-name">${player.nombre}</div>
+              <div class="squad-slot-team-info">
+                <img class="squad-slot-team-badge" src="data/imgEquipos/${player.equipo}.${teamExt}" alt="${player.club}">
+                <span class="squad-slot-team-name">${player.club}</span>
+              </div>
             </div>
             <button class="squad-slot-remove" data-position="${pos}" data-index="${i}" aria-label="Quitar ${player.nombre}">&times;</button>
           </div>
@@ -4425,8 +4430,11 @@ function renderSquadSlots() {
       } else {
         slots.push(`
           <div class="squad-slot empty" data-position="${pos}" data-index="${i}">
-            <span class="squad-slot-plus">+</span>
-            <span class="squad-slot-label">Vacío</span>
+            <div class="squad-slot-empty-icon">+</div>
+            <div>
+              <div class="squad-slot-empty-text">Vacío</div>
+              <div class="squad-slot-empty-hint">Toca para buscar</div>
+            </div>
           </div>
         `);
       }
