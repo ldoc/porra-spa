@@ -1274,12 +1274,19 @@ async function renderSquadTab(container, username) {
         const p = detail.jugador;
         const pts = detail.puntosTotal;
         const idx = playerDetails.indexOf(detail);
+        const teamData = AppState.teamsMap[p.equipo];
+        const teamExt = teamData?.ext || 'webp';
         html += `
           <div class="profile-squad-card" onclick="showPlayerPointsBreakdown(AppState.currentSquadDetails[${idx}])" style="cursor:pointer">
             <img class="profile-squad-img" src="data/imgJugadores/${p.id}.${p.extension || 'png'}" alt="${p.nombre}" loading="lazy">
-            <div class="profile-squad-name">${p.nombre}</div>
-            <div class="profile-squad-club">${p.club}</div>
-            <div class="profile-squad-pts">${pts} pts</div>
+            <div class="profile-squad-details">
+              <div class="profile-squad-name">${p.nombre}</div>
+              <div class="profile-squad-team-info">
+                <img class="profile-squad-team-badge" src="data/imgEquipos/${p.equipo}.${teamExt}" alt="${p.club}">
+                <span class="profile-squad-team-name">${p.club}</span>
+              </div>
+            </div>
+            <div class="profile-squad-badge">${pts} pts</div>
           </div>
         `;
       }
