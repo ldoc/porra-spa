@@ -30,6 +30,7 @@ const AppState = {
   hasUnsavedSquadChanges: false, // flag de cambios sin guardar en plantilla
   activeSlot: null,     // { position: 'G', index: 0 } - casilla activa para búsqueda
   teamFilter: null,     // filtro de equipo activo en búsqueda
+  squadSearchOffset: 0, // offset para lazy load en búsqueda de jugadores
 
   savedSquadSnapshot: [], // snapshot de plantilla al guardar para comparar
   matchStats: [],       // Array de todos los matchstats del backend
@@ -1286,7 +1287,7 @@ async function renderSquadTab(container, username) {
                 <span class="profile-squad-team-name">${p.club}</span>
               </div>
             </div>
-            <div class="profile-squad-badge">${pts} pts</div>
+            <div class="profile-squad-badge${pts < 0 ? ' negative' : ''}">${pts} pts</div>
           </div>
         `;
       }
@@ -4255,6 +4256,7 @@ function openSlotSearch(position, index) {
 
   AppState.activeSlot = { position, index };
   AppState.teamFilter = null;
+  AppState.squadSearchOffset = 0;
 
   const panel = document.getElementById('squad-search-panel');
   if (panel) {
@@ -4272,6 +4274,8 @@ function openSlotSearch(position, index) {
 /** Cierra el panel de búsqueda */
 function closeSlotSearch() {
   AppState.activeSlot = null;
+  const container = document.getElementById('squad-search-results');
+  if (container) container.removeEventListener('scroll', _onSearchScroll);
   const panel = document.getElementById('squad-search-panel');
   if (panel) panel.classList.remove('active');
 }
@@ -4308,12 +4312,13 @@ function renderTeamFilter() {
 
   document.getElementById('squad-team-select')?.addEventListener('change', (e) => {
     AppState.teamFilter = e.target.value || null;
+    AppState.squadSearchOffset = 0;
     const input = document.getElementById('squad-search-input');
     renderSearchResults(input?.value || '');
   });
 }
 
-/** Renderiza los resultados de búsqueda filtrados por posición activa */
+/** Renderiza los resultados de búsqueda filtrados por posición activa (lazy load) */
 function renderSearchResults(query) {
   const results = document.getElementById('squad-search-results');
   if (!results) return;
@@ -4321,28 +4326,71 @@ function renderSearchResults(query) {
   const selectedIds = new Set(AppState.squadPicks.map(p => p.id));
   const positionFilter = AppState.activeSlot?.position || null;
   const teamFilter = AppState.teamFilter || null;
-  const players = filterPlayers(query, selectedIds, positionFilter, teamFilter);
+  const allFiltered = filterPlayers(query, selectedIds, positionFilter, teamFilter);
 
-  if (players.length === 0) {
+  if (allFiltered.length === 0) {
     results.innerHTML = '<p class="squad-no-results">No se encontraron jugadores</p>';
     return;
   }
 
-  results.innerHTML = players.slice(0, 50).map(p => {
+  const offset = AppState.squadSearchOffset;
+  const BATCH_SIZE = 50;
+  const visible = allFiltered.slice(0, offset + BATCH_SIZE);
+  const hasMore = allFiltered.length > visible.length;
+
+  results.innerHTML = visible.map(p => {
     const posLabel = { G: 'POR', D: 'DEF', M: 'MED', F: 'DEL' }[p.posicion] || p.posicion;
     const isBlocked = AppState.blockedTeams.has(p.equipo);
+    const teamData = AppState.teamsMap[p.equipo];
+    const teamExt = teamData?.ext || 'webp';
     return `
       <div class="squad-player-row ${isBlocked ? 'blocked' : ''}" data-player-id="${p.id}" ${isBlocked ? 'data-blocked="true"' : ''}>
         ${playerImgTag(p.id, p.extension || 'png', p.nombre, 'squad-player-img')}
         <div class="squad-player-info">
           <div class="squad-player-name">${p.nombre}</div>
-          <div class="squad-player-team">${p.club}</div>
+          <div class="squad-player-team">
+            <img class="squad-player-team-badge" src="data/imgEquipos/${p.equipo}.${teamExt}" alt="${p.club}">
+            <span>${p.club}</span>
+          </div>
         </div>
         ${isBlocked ? '<span class="squad-player-blocked-badge">EQUIPO USADO</span>' : `<span class="squad-player-pos">${posLabel}</span>`}
         ${isBlocked ? '' : `<button class="squad-add-btn" data-player-id="${p.id}" aria-label="Anadir ${p.nombre}">+</button>`}
       </div>
     `;
   }).join('');
+
+  if (hasMore) {
+    results.insertAdjacentHTML('beforeend', '<div id="squad-load-sentinel"></div>');
+    setupSearchLazyLoad();
+  } else if (visible.length > BATCH_SIZE) {
+    results.insertAdjacentHTML('beforeend', '<p class="squad-no-results" style="opacity:0.5;margin-top:8px;">No hay más jugadores</p>');
+  }
+}
+
+/** Configura scroll listener en el contenedor de resultados para lazy load */
+function setupSearchLazyLoad() {
+  const container = document.getElementById('squad-search-results');
+  if (!container) return;
+  container.removeEventListener('scroll', _onSearchScroll);
+  container.addEventListener('scroll', _onSearchScroll);
+}
+
+/** Handler de scroll para lazy load */
+function _onSearchScroll() {
+  const container = document.getElementById('squad-search-results');
+  if (!container) return;
+  const sentinel = document.getElementById('squad-load-sentinel');
+  if (!sentinel) return;
+  if (container.scrollTop + container.clientHeight >= container.scrollHeight - 100) {
+    loadMoreSearchResults();
+  }
+}
+
+/** Carga el siguiente lote de jugadores al hacer scroll */
+function loadMoreSearchResults() {
+  AppState.squadSearchOffset += 50;
+  const input = document.getElementById('squad-search-input');
+  renderSearchResults(input?.value || '');
 }
 
 /** Selecciona un jugador para la casilla activa */
@@ -4530,10 +4578,10 @@ function renderPlantillaTab() {
 
   // Búsqueda de jugadores
   const searchInput = document.getElementById('squad-search-input');
-  const debouncedSearch = debounce((val) => renderSearchResults(val), 300);
+  const debouncedSearch = debounce((val) => { AppState.squadSearchOffset = 0; renderSearchResults(val); }, 300);
   searchInput?.addEventListener('input', (e) => debouncedSearch(e.target.value));
 
-
+  // Lazy load: se configura en renderSearchResults via IntersectionObserver
 
   // Seleccionar jugador de la lista
   document.getElementById('squad-search-results')?.addEventListener('click', (e) => {

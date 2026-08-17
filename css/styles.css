@@ -1674,8 +1674,20 @@ html, body {
 }
 
 .squad-player-team {
-  font-size: 11px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
   color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.squad-player-team-badge {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
 }
 
 .squad-player-pos {
@@ -2879,6 +2891,11 @@ html, body {
   color: var(--accent-primary);
   white-space: nowrap;
   flex-shrink: 0;
+}
+.profile-squad-badge.negative {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.3);
+  color: #FCA5A5;
 }
 
 /* ==========================================================================
