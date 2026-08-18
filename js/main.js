@@ -2018,6 +2018,11 @@ function checkAuthStatus() {
     setupAuthFlow();
     goToAuthStep(1);
   }
+
+  // Hide splash screen when showing auth overlay
+  const elapsed = Date.now() - splashTimestamp;
+  const remaining = Math.max(0, SPLASH_MIN_MS - elapsed);
+  setTimeout(() => hideSplashScreen(), remaining);
 }
 
 function setupAuthFlow() {
