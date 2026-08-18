@@ -56,6 +56,8 @@ const AppState = {
 };
 
 const SQUAD_SIZE = 25;
+const SPLASH_MIN_MS = 2500;
+let splashTimestamp = Date.now();
 
 function authHeaders() {
   const token = AppState.sessionToken || localStorage.getItem('session_token');
@@ -2239,6 +2241,12 @@ async function refreshUserProfile() {
 }
 
 async function enterApp() {
+  // Hide splash screen after minimum delay
+  const elapsed = Date.now() - splashTimestamp;
+  const remaining = Math.max(0, SPLASH_MIN_MS - elapsed);
+  if (remaining > 0) await new Promise(r => setTimeout(r, remaining));
+  hideSplashScreen();
+
   const overlay = document.getElementById('auth-overlay');
   if (overlay) overlay.style.display = 'none';
 
@@ -2701,6 +2709,13 @@ function showPhaseConfirmModal(targetPhase) {
   modal.addEventListener('click', (e) => {
     if (e.target === modal) modal.remove();
   });
+}
+
+function hideSplashScreen() {
+  const splash = document.getElementById('splash-screen');
+  if (!splash) return;
+  splash.classList.add('hidden');
+  splash.addEventListener('transitionend', () => splash.remove(), { once: true });
 }
 
 function navigateToTab(tabName) {
