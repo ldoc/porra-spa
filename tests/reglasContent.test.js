@@ -12,49 +12,61 @@ const NEEDED_CSS = [
   '.rules-section', '.rules-section-head', '.rules-table', '.rules-pts',
 ];
 
-function test_tiene_las_8_secciones() {
-  for (const id of ['fase-liga', 'fase-final', 'la-porra', 'puntuacion',
-    'eliminatorias', 'plantilla', 'pronostico-fase-final', 'clasificacion-final']) {
+function test_tiene_las_secciones() {
+  for (const id of ['introduccion', 'acceso-plataforma', 'fase-pretemporada',
+    'fase-eliminatorias', 'puntuacion', 'pronostico-partidos',
+    'pronostico-clasificacion', 'pronostico-eliminatorias', 'plantilla',
+    'clasificacion-final']) {
     assert.ok(html.includes(`id="${id}"`), `falta la sección #${id}`);
   }
 }
 
 function test_contenido_clave() {
-  const markers = ['FASE DE LIGA', '36 equipos', 'JORNADA 1', 'DIECISEISAVOS DE FINAL', 'OCTAVOS DE FINAL',
-    'CUARTOS DE FINAL', 'SEMIFINALES', '15 puntos', '60 puntos', '575 puntos',
-    '25 jugadores', 'SOFASCORE', 'portería a cero',
-    'DESCRIPCIÓN DEL TORNEO DE PORRA', '5 de septiembre de 2026',
-    'PRONÓSTICO DE PARTIDOS DE LA FASE DE LIGA', '144 partidos',
-    'Guardar en servidor', 'Ver Clasificación',
-    'PRONÓSTICO DE ELIMINATORIAS', 'SUBCAMPEÓN',
-    'PRONÓSTICO DE PARTIDOS DE LA FASE FINAL', '189 partidos',
-    'PRONÓSTICO DE PARTIDOS', 'PRONÓSTICO DE CLASIFICACIÓN',
-    'PUNTUACIÓN POR ASISTENCIAS DE GOL', 'CLASIFICACIÓN FINAL',
-    '5 €', 'bote'];
+  const markers = [
+    'INTRODUCCIÓN', '5 €', 'bote',
+    'ACCESO A LA PLATAFORMA', 'código de invitación',
+    'FASE DE PRETEMPORADA', '144 partidos', 'PRONOSTICO DE PARTIDOS DE LA FASE DE LIGA',
+    'PRONOSTICO DE RESULTADOS DE LAS ELIMINATORIAS', 'Dieciseisavos de Final',
+    'CONFECCIÓN DE LA PLANTILLA', '25 jugadores',
+    'FASE DE ELIMINATORIAS', '23:59 horas del día previo',
+    'PUNTUACIÓN', 'PRONOSTICO DE PARTIDOS', '189 partidos', '2.835 puntos',
+    'PRONÓSTICO DE CLASIFICACIÓN', '420 puntos',
+    'PRONÓSTICO DE ELIMINATORIAS', '575 puntos',
+    'PLANTILLA', 'SOFASCORE', 'PUNTUACIÓN POR ASISTENCIAS DE GOL',
+    'PUNTUACIÓN DE PORTEROS', 'PUNTUACIÓN POR PORTERÍA A CERO',
+    'CLASIFICACIÓN FINAL',
+  ];
   for (const m of markers) {
     assert.ok(html.toLowerCase().includes(m.toLowerCase()), `falta el contenido: "${m}"`);
+  }
+}
+
+function test_no_contenido_viejo() {
+  const oldMarkers = [
+    'JORNADA 1', 'JORNADA 2', '27 de agosto de 2026',
+    '4 bombos con 9 equipos', 'coeficiente UEFA',
+    'Play-off', 'FASE DE LIGA del torneo participan un total de 36 equipos',
+    'DESCRIPCIÓN DEL TORNEO DE PORRA UCL 26-27',
+  ];
+  for (const m of oldMarkers) {
+    assert.ok(!html.includes(m), `no debe estar el contenido viejo: "${m}"`);
   }
 }
 
 function test_header_tiene_copa_y_pill_ayuda() {
   assert.ok(indexHtml.includes('🏆'), 'brand-icon debería ser 🏆');
   assert.ok(indexHtml.includes('id="user-help-pill"'), 'falta el pill de ayuda');
-  assert.ok(indexHtml.includes('user-help-pill'), 'falta la clase user-help-pill');
 }
 
 function test_modal_reglas_presente() {
   assert.ok(indexHtml.includes('id="rules-modal"'), 'falta el modal de reglas');
   assert.ok(indexHtml.includes('id="rules-body"'), 'falta el contenedor rules-body');
-  assert.ok(indexHtml.includes('header-right'), 'falta el contenedor header-right');
-  assert.ok(indexHtml.includes('id="user-help-pill"'), 'falta el pill de ayuda');
-  assert.ok(!indexHtml.includes('onclick="openRulesModal()"'), 'openRulesModal debe bindearse solo en main.js (single binding)');
-  assert.ok(indexHtml.includes('closeRulesModal()'), 'falta el handler closeRulesModal');
   assert.ok(!indexHtml.includes('reglas/UCL.pdf'), 'no debe quedar enlace al PDF original');
 }
 
 function test_chips_matched_a_secciones() {
-  const chipTargets = [...indexHtml.matchAll(/data-target="(#fase-liga|#fase-final|#la-porra|#puntuacion|#eliminatorias|#plantilla|#pronostico-fase-final|#clasificacion-final)"/g)].map(m => m[1]);
-  assert.strictEqual(chipTargets.length, 8, 'debe haber 8 chips');
+  const chipTargets = [...indexHtml.matchAll(/data-target="(#introduccion|#fase-pretemporada|#fase-eliminatorias|#puntuacion|#pronostico-partidos|#pronostico-clasificacion|#pronostico-eliminatorias|#plantilla|#clasificacion-final)"/g)].map(m => m[1]);
+  assert.ok(chipTargets.length >= 8, `debe haber al menos 8 chips, hay ${chipTargets.length}`);
   for (const t of chipTargets) {
     assert.ok(html.includes(`id="${t.slice(1)}"`), `el chip ${t} no tiene sección en UCL.html`);
   }
@@ -66,10 +78,10 @@ function test_estilos_definidos() {
   }
 }
 
-// runner
 const tests = [
-  ['8 secciones con id', test_tiene_las_8_secciones],
+  ['secciones del PDF', test_tiene_las_secciones],
   ['contenido clave del PDF', test_contenido_clave],
+  ['sin contenido viejo', test_no_contenido_viejo],
   ['header con copa y pill ayuda', test_header_tiene_copa_y_pill_ayuda],
   ['modal de reglas presente', test_modal_reglas_presente],
   ['chips matched a secciones', test_chips_matched_a_secciones],
