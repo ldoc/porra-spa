@@ -786,6 +786,13 @@ function calculatePlayerMatchPoints(playerData, squadPlayer, matchStat) {
     }
   }
 
+  // 2.5. Puntuación por asistencias de gol
+  const asistencias = playerData.asistencias || 0;
+  if (asistencias > 0) {
+    total += asistencias;
+    desglose.push({ concepto: `${asistencias} asistencia(s) de gol`, puntos: asistencias });
+  }
+
   // 3. Porteros: goles recibidos y penaltis parados
   if (squadPlayer.posicion === 'G') {
     const golesRecibidos = playerData.golesRecibidos || 0;
