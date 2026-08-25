@@ -203,6 +203,7 @@ Si al finalizar el partido el equipo no ha recibido goles, el portero recibirá 
 │   ├── main.js       # Lógica principal, control de navegación y autenticación
 │   ├── eliminatorias.js # Lógica de predicciones de eliminatorias
 │   ├── apiData.js    # Utilidades de datos de API (unwrapAllPredictions)
+│   ├── cacheStore.js # SWR en localStorage (claves porra_cache_*) + merge de deltas matchstats
 │   ├── fasesFechas.js # Lógica de countdown y fechas de inicio/fin de fases
 │   └── stats.js      # Cálculos y render de estadísticas/gráficos
 ├── data/             # Datos estáticos del torneo (ver data/README.md)
@@ -1239,6 +1240,7 @@ Tras añadir `js/hoyPartidos.js`, incrementar la versión de `js/main.js`, `css/
 - **Una vez comenzada la competición** (cuando la fase actual deje de ser `FASE_PRETEMPORADA`): se bloquea la edición de plantilla y pronósticos de resultados para todos, y los demás jugadores tienen acceso a ver la plantilla y los pronósticos de los otros desde Clasificación.
 - **Los resultados** se van subiendo mediante el script de matchstats de api-porra (`scrapeJornadas*.js` / `scrapeRounds*.js`) o el endpoint `GET /api/match-stats/:eventId`.
 - **Refresco de resultados en la app**: el frontend hace polling de `GET /api/match-stats/updated` (contador + última actualización) y recarga matchstats y predicciones cuando detecta cambios, de modo que los partidos subidos quedan disponibles en Resultados/Clasificación/Estadísticas.
+- **Caché SWR (localStorage)**: `fetchMatchStats()` y `fetchAllPredictions()` pintan al instante desde localStorage (`js/cacheStore.js`, claves `porra_cache_matchstats_v1` y `porra_cache_predall_v1_<username>`) y revalidan contra el backend. match-stats se descarga en delta con `?since=<serverTime del backend>` y se fusiona con `porraCache.mergeMatchStats` (idempotente). Tras cualquier PUT propio (predictions/confirm/squad/final-predictions) hay que llamar a `invalidatePredAllCache()` para forzar refetch; el logout normal purga todas las claves `porra_cache_*`. NO añadir cache-busters `?t=Date.now()` a endpoints de la API: la frescura la dan el ETag/304 del backend y la revalidación automática. Limitación aceptada: un DELETE puro de matchstat no se propaga por delta (solo delete+re-scrape, que sí entra en el siguiente delta); si hiciera falta, bump de versión de clave en `cacheStore.js`.
 
 
 
