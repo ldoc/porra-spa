@@ -507,7 +507,7 @@
     if (sub === 'evolucion') body = renderEvolucionBody(aggregates);
     else if (sub === 'fiabilidad') body = renderFiabilidadBody(aggregates);
     else if (sub === 'rachas') body = renderRachasBody(aggregates);
-    else if (sub === 'consenso') body = statsEmpty('Consenso disponible en breve');
+    else if (sub === 'consenso') body = renderConsensoBody(aggregates);
     else body = statsEmpty('Plantillas disponibles en breve');
 
     return `
@@ -583,6 +583,128 @@
         <div class="stats-card-title">📈 Mejores jornadas históricas</div>
         ${bestHtml || statsEmpty('Aún no hay jornadas completadas')}
       </div>`;
+  }
+
+  function getDefaultConsensoRonda(matchStatsById) {
+    let best = 0;
+    for (const m of AppState.leagueMatches || []) {
+      const home = matchStatsById?.[m.id]?.stats?.[m.homeTeamId]?.goles;
+      const away = matchStatsById?.[m.id]?.stats?.[m.awayTeamId]?.goles;
+      if (Number.isFinite(home) && Number.isFinite(away) && Number(m.ronda) > best) {
+        best = Number(m.ronda);
+      }
+    }
+    return best || 1;
+  }
+
+  function normalizeConsensoRonda(aggregates) {
+    let r = Number(AppState.estadisticasConsensoRonda);
+    if (!(r >= 1 && r <= 8)) r = getDefaultConsensoRonda(aggregates.matchStatsById);
+    AppState.estadisticasConsensoRonda = r;
+    return r;
+  }
+
+  function consensoBars(cons) {
+    const defs = [['1', 'H', 'var(--accent-primary)'], ['X', 'D', 'var(--accent-gold)'], ['2', 'A', 'var(--accent-purple)']];
+    return defs.map(([lbl, k, color]) => `
+      <div class="stats-consbar">
+        <span class="lbl">${lbl}</span>
+        <div class="track"><div class="fill" style="width:${cons.pct[k]}%;background:${color}"></div></div>
+        <b style="color:var(--text-primary)">${cons.pct[k]}%</b>
+      </div>`).join('');
+  }
+
+  function consensoScoreGrid(cons, myPr) {
+    const cells = cons.topScores.map(t => ({
+      score: t.score, label: `${t.votes} voto${t.votes === 1 ? '' : 's'} · ${t.pct}%`,
+      mine: !!myPr && t.score === `${myPr.home}-${myPr.away}`,
+    }));
+    if (myPr && Number.isFinite(myPr.home) && Number.isFinite(myPr.away)) {
+      const myKey = `${myPr.home}-${myPr.away}`;
+      if (!cells.some(c => c.mine)) cells.push({ score: myKey, label: 'tu marcador', mine: true });
+    }
+    if (!cells.length) return statsEmpty('Aún no hay pronósticos en este partido');
+    return `<div class="stats-scoregrid">${cells.map(c => `
+      <div class="stats-scorecell ${c.mine ? 'mine' : ''}">
+        <div class="stats-sv">${esc(c.score)}</div>
+        <div class="stats-sp">${esc(c.label)}</div>
+      </div>`).join('')}</div>`;
+  }
+
+  function renderConsensoBody(aggregates) {
+    const ronda = normalizeConsensoRonda(aggregates);
+    const me = AppState.currentUser?.name;
+    const matches = (AppState.leagueMatches || [])
+      .filter(m => Number(m.ronda) === ronda)
+      .sort((a, b) => (a.fechaTs || 0) - (b.fechaTs || 0));
+
+    const cardsHtml = matches.map(m => {
+      const cons = computeMatchConsensus(m.id, AppState.allPredictions);
+      const myPr = AppState.allPredictions?.[me]?.[m.id];
+      let pill = '';
+      if (cons.majorityResult && myPr && Number.isFinite(myPr.home) && Number.isFinite(myPr.away)) {
+        pill = matchResultOf(myPr.home, myPr.away) === cons.majorityResult
+          ? '<span class="stats-pill cyan">con la mayoría</span>'
+          : '<span class="stats-pill">⚖️ contra corriente</span>';
+      }
+      const ms = aggregates.matchStatsById?.[m.id];
+      const rh = ms?.stats?.[m.homeTeamId]?.goles;
+      const ra = ms?.stats?.[m.awayTeamId]?.goles;
+      let realInfo = '';
+      if (Number.isFinite(rh) && Number.isFinite(ra)) {
+        const acertaron = cons.counts[matchResultOf(rh, ra)];
+        realInfo = `<span class="stats-rank-sub">Real ${rh}-${ra} · ${acertaron}/${cons.total} acertaron</span>`;
+      }
+      const homeName = AppState.teamsMap?.[m.homeTeamId]?.name || m.homeTeam || '';
+      const awayName = AppState.teamsMap?.[m.awayTeamId]?.name || m.awayTeam || '';
+      return `
+      <div class="stats-cons-card" data-match="${m.id}">
+        <div class="stats-cons-head">
+          <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(homeName)} – ${esc(awayName)}</span>
+          ${pill}${realInfo}
+        </div>
+        ${consensoBars(cons)}
+        <div class="stats-cons-extra">
+          <div class="stats-card-title">Marcadores más votados</div>
+          ${consensoScoreGrid(cons, myPr)}
+        </div>
+      </div>`;
+    }).join('');
+
+    const champ = aggregates.championsTally || { total: 0, teams: [] };
+    const champHtml = champ.teams.length ? `
+      <div class="stats-card">
+        <div class="stats-card-title">👑 Campeón más votado (${champ.total} votos)</div>
+        ${champ.teams.map(t => `
+          <div class="stats-rank-row">
+            <img class="stats-sq-img" src="data/imgEquipos/${t.teamId}.${AppState.teamsMap?.[t.teamId]?.ext || 'webp'}" alt="" onerror="this.style.visibility='hidden'">
+            <span class="stats-rank-name">${esc(AppState.teamsMap?.[t.teamId]?.name || t.teamId)}</span>
+            <span class="stats-rank-main">${t.votes}/${champ.total}</span>
+          </div>`).join('')}
+      </div>` : '';
+
+    const q = aggregates.quadro || {};
+    const quadroHtml = q.users ? `
+      <div class="stats-card">
+        <div class="stats-card-title">🧩 Tu cuadro vs la porra</div>
+        <div class="stats-kpi-grid">
+          <div class="stats-kpi"><div class="stats-kv">${q.avgPct}%</div><div class="stats-kl">coincidencia media</div></div>
+          <div class="stats-kpi"><div class="stats-kv">${q.avgCommon}/24</div><div class="stats-kl">equipos en común</div></div>
+          <div class="stats-kpi"><div class="stats-kv">${q.veryDiffCount}</div><div class="stats-kl">cuadros muy distintos (&ge;12)</div></div>
+        </div>
+      </div>` : '';
+
+    return `
+      <div class="stats-card">
+        <div class="resultados-round-nav">
+          <button class="resultados-round-btn" id="btn-stats-cons-prev" ${ronda <= 1 ? 'disabled' : ''}>◀</button>
+          <span class="resultados-round-label">Jornada ${ronda}</span>
+          <button class="resultados-round-btn" id="btn-stats-cons-next" ${ronda >= 8 ? 'disabled' : ''}>▶</button>
+        </div>
+        ${cardsHtml || statsEmpty('No hay partidos en esta jornada')}
+      </div>
+      ${champHtml}
+      ${quadroHtml}`;
   }
 
   function renderEvolucionBody(aggregates) {
@@ -724,6 +846,23 @@
         const lastIdx = 12;
         showToast(`${esc(user)} · ${r.series[lastIdx]} pts (${tl[lastIdx].label})`);
       });
+    });
+
+    container.querySelectorAll('.stats-cons-card').forEach(card => {
+      card.addEventListener('click', () => card.classList.toggle('open'));
+    });
+
+    const prevBtn = container.querySelector('#btn-stats-cons-prev');
+    const nextBtn = container.querySelector('#btn-stats-cons-next');
+    if (prevBtn) prevBtn.addEventListener('click', () => {
+      AppState.estadisticasConsensoRonda = Math.max(1, (AppState.estadisticasConsensoRonda || 1) - 1);
+      container.innerHTML = renderStatsContent();
+      bindStatsEvents();
+    });
+    if (nextBtn) nextBtn.addEventListener('click', () => {
+      AppState.estadisticasConsensoRonda = Math.min(8, (AppState.estadisticasConsensoRonda || 1) + 1);
+      container.innerHTML = renderStatsContent();
+      bindStatsEvents();
     });
   }
 
