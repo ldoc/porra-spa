@@ -104,6 +104,65 @@
     return league.every(m => ids.has(m.id));
   }
 
+  function matchResultOf(homeGoals, awayGoals) {
+    if (homeGoals > awayGoals) return 'H';
+    if (homeGoals < awayGoals) return 'A';
+    return 'D';
+  }
+
+  function extractPlayedMatches(matches, matchStatsById) {
+    const played = [];
+    for (const m of matches || []) {
+      const ms = matchStatsById?.[m.id];
+      const home = ms?.stats?.[m.homeTeamId]?.goles;
+      const away = ms?.stats?.[m.awayTeamId]?.goles;
+      if (!Number.isFinite(home) || !Number.isFinite(away)) continue;
+      played.push({ matchId: m.id, home, away, result: matchResultOf(home, away) });
+    }
+    return played;
+  }
+
+  function calcReliabilityRow(username, playedMatches, allPredictions, userPoints) {
+    const preds = allPredictions?.[username] || {};
+    const pointsByMatch = new Map();
+    for (const d of userPoints?.[username]?.matchDetails || []) {
+      if (d.match) pointsByMatch.set(d.match.id, d.points || 0);
+    }
+    let played = 0, hits = 0, pointsSum = 0, exact = 0, perfect = 0;
+    for (const pm of playedMatches || []) {
+      const pr = preds[pm.matchId];
+      if (!pr || !Number.isFinite(pr.home) || !Number.isFinite(pr.away)) continue;
+      played++;
+      if (matchResultOf(pr.home, pr.away) === pm.result) hits++;
+      const pts = pointsByMatch.get(pm.matchId) || 0;
+      pointsSum += pts;
+      if (pts >= 15) perfect++;
+      if (pr.home === pm.home && pr.away === pm.away) exact++;
+    }
+    return {
+      username,
+      played,
+      hits,
+      pctResult: played ? Math.round((hits / played) * 100) : 0,
+      ptsPerMatch: played ? Math.round((pointsSum / played) * 10) / 10 : 0,
+      exactScores: exact,
+      perfect15: perfect,
+    };
+  }
+
+  function calcReliabilityRows(players, playedMatches, allPredictions, userPoints) {
+    const rows = [];
+    for (const p of players || []) {
+      rows.push(calcReliabilityRow(p.name, playedMatches, allPredictions, userPoints));
+    }
+    rows.sort((a, b) =>
+      b.pctResult - a.pctResult ||
+      b.ptsPerMatch - a.ptsPerMatch ||
+      String(a.username).localeCompare(String(b.username))
+    );
+    return rows;
+  }
+
   function getSeriesBySource(source, userData) {
     switch (source) {
       case 'pronosticos':
@@ -365,7 +424,11 @@
   global.sumSeries = sumSeries;
   global.isLeagueComplete = isLeagueComplete;
   global.getSeriesBySource = getSeriesBySource;
+  global.matchResultOf = matchResultOf;
+  global.extractPlayedMatches = extractPlayedMatches;
+  global.calcReliabilityRow = calcReliabilityRow;
+  global.calcReliabilityRows = calcReliabilityRows;
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { emptySeries, buildTimeline, calcPredictionSeries, calcSquadSeries, calcClassificationSeries, calcEliminatoriasSeries, sumSeries, isLeagueComplete, getSeriesBySource };
+    module.exports = { emptySeries, buildTimeline, calcPredictionSeries, calcSquadSeries, calcClassificationSeries, calcEliminatoriasSeries, sumSeries, isLeagueComplete, getSeriesBySource, matchResultOf, extractPlayedMatches, calcReliabilityRow, calcReliabilityRows };
   }
 })(typeof window !== 'undefined' ? window : globalThis);
