@@ -163,6 +163,64 @@
     return rows;
   }
 
+  function buildCompletedLeagueData(leagueMatches, matchStatsById, matchDetailsByUser) {
+    const totalByRonda = new Map();
+    const doneByRonda = new Map();
+    for (const m of leagueMatches || []) {
+      const r = Number(m.ronda);
+      if (!(r >= 1 && r <= 8)) continue;
+      totalByRonda.set(r, (totalByRonda.get(r) || 0) + 1);
+      const home = matchStatsById?.[m.id]?.stats?.[m.homeTeamId]?.goles;
+      const away = matchStatsById?.[m.id]?.stats?.[m.awayTeamId]?.goles;
+      if (Number.isFinite(home) && Number.isFinite(away)) {
+        doneByRonda.set(r, (doneByRonda.get(r) || 0) + 1);
+      }
+    }
+    const completedRondas = [...totalByRonda.keys()]
+      .filter(r => doneByRonda.get(r) === totalByRonda.get(r))
+      .sort((a, b) => a - b);
+    const idxByRonda = new Map(completedRondas.map((r, i) => [r, i]));
+
+    const pointsByUserByJornada = {};
+    for (const [username, details] of Object.entries(matchDetailsByUser || {})) {
+      const arr = completedRondas.map(() => 0);
+      for (const d of details || []) {
+        const m = d.match;
+        if (!m || m.fase !== 'liga') continue;
+        const idx = idxByRonda.get(Number(m.ronda));
+        if (idx === undefined) continue;
+        arr[idx] += d.points || 0;
+      }
+      pointsByUserByJornada[username] = arr;
+    }
+    return { completedRondas, pointsByUserByJornada };
+  }
+
+  function calcStreaks(pointsByUserByJornada) {
+    const out = {};
+    for (const [username, arr] of Object.entries(pointsByUserByJornada || {})) {
+      let dir = null, len = 0;
+      for (let i = arr.length - 1; i >= 1; i--) {
+        if (arr[i] === arr[i - 1]) break;
+        const curDir = arr[i] > arr[i - 1] ? 'up' : 'down';
+        if (dir === null) { dir = curDir; len = 1; }
+        else if (curDir === dir) len++;
+        else break;
+      }
+      out[username] = dir ? { dir, len, lastPts: arr[arr.length - 1] || 0 } : null;
+    }
+    return out;
+  }
+
+  function calcBestJornadas(pointsByUserByJornada, topN = 5) {
+    const items = [];
+    for (const [username, arr] of Object.entries(pointsByUserByJornada || {})) {
+      arr.forEach((pts, jornadaIdx) => items.push({ username, jornadaIdx, pts }));
+    }
+    items.sort((a, b) => b.pts - a.pts);
+    return items.slice(0, topN);
+  }
+
   function getSeriesBySource(source, userData) {
     switch (source) {
       case 'pronosticos':
@@ -428,7 +486,10 @@
   global.extractPlayedMatches = extractPlayedMatches;
   global.calcReliabilityRow = calcReliabilityRow;
   global.calcReliabilityRows = calcReliabilityRows;
+  global.buildCompletedLeagueData = buildCompletedLeagueData;
+  global.calcStreaks = calcStreaks;
+  global.calcBestJornadas = calcBestJornadas;
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { emptySeries, buildTimeline, calcPredictionSeries, calcSquadSeries, calcClassificationSeries, calcEliminatoriasSeries, sumSeries, isLeagueComplete, getSeriesBySource, matchResultOf, extractPlayedMatches, calcReliabilityRow, calcReliabilityRows };
+    module.exports = { emptySeries, buildTimeline, calcPredictionSeries, calcSquadSeries, calcClassificationSeries, calcEliminatoriasSeries, sumSeries, isLeagueComplete, getSeriesBySource, matchResultOf, extractPlayedMatches, calcReliabilityRow, calcReliabilityRows, buildCompletedLeagueData, calcStreaks, calcBestJornadas };
   }
 })(typeof window !== 'undefined' ? window : globalThis);
