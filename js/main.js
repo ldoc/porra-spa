@@ -34,6 +34,7 @@ const AppState = {
 
   savedSquadSnapshot: [], // snapshot de plantilla al guardar para comparar
   matchStats: [],       // Array de todos los matchstats del backend
+  _matchStatsServerTime: null, // serverTime del backend para delta since en match-stats
   resultadosRound: null, // Ronda seleccionada en pestaña resultados
   allPredictions: {},   // { username: { matchId: { home, away } } }
   userPoints: {},       // { username: { totalPoints, matchDetails } }
@@ -500,21 +501,37 @@ function filterPlayers(query, selectedIds, positionFilter, teamFilter) {
 const CACHE_TTL = 30000; // 30 segundos
 
 async function fetchMatchStats(force = false) {
-  // Usar caché si tiene menos de 30 segundos (salvo force)
+  // Usar caché en memoria si tiene menos de 30 segundos (salvo force)
   if (!force && AppState.matchStats.length > 0 && AppState._matchStatsTime && Date.now() - AppState._matchStatsTime < CACHE_TTL) {
     return;
   }
+  // SWR: pintar al instante desde localStorage si la memoria está vacía
+  let cachedServerTime = null;
+  if (AppState.matchStats.length === 0) {
+    const cached = porraCache.cacheGet(porraCache.KEYS.matchstats);
+    if (cached?.payload?.matchStats?.length > 0) {
+      AppState.matchStats = cached.payload.matchStats;
+      cachedServerTime = cached.serverTime || null;
+    }
+  }
+  const since = AppState._matchStatsServerTime || cachedServerTime;
   try {
-    const res = await fetchWithPhase(`${API_BASE}/api/match-stats`);
-    const data = await res.json();
-    if (data.ok && data.matchStats) {
-      const hadData = AppState.matchStats.length > 0;
-      AppState.matchStats = data.matchStats;
-      AppState._matchStatsTime = Date.now();
-      // Invalidar caché de clasificación si se actualizaron los datos
-      if (hadData || data.matchStats.length > 0) {
-        invalidateClassificationCache();
+    const url = since
+      ? `${API_BASE}/api/match-stats?since=${encodeURIComponent(since)}`
+      : `${API_BASE}/api/match-stats`;
+    const res = await fetchWithPhase(url);
+    const data = await res.json().catch(() => null);
+    if (data?.ok && Array.isArray(data.matchStats)) {
+      const isDelta = Boolean(since);
+      if (!isDelta) {
+        AppState.matchStats = data.matchStats;
+      } else if (data.matchStats.length > 0) {
+        AppState.matchStats = porraCache.mergeMatchStats(AppState.matchStats, data.matchStats);
       }
+      AppState._matchStatsTime = Date.now();
+      AppState._matchStatsServerTime = data.serverTime || since || new Date().toISOString();
+      porraCache.cacheSet(porraCache.KEYS.matchstats, { matchStats: AppState.matchStats }, AppState._matchStatsServerTime);
+      invalidateClassificationCache();
     }
   } catch (e) {
     console.error('Error cargando matchstats:', e);
