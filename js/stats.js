@@ -356,6 +356,13 @@
     { key: 'clasificacion', label: 'Clasif.' },
     { key: 'eliminatorias', label: 'Eliminat.' },
   ];
+  const SUBTABS = [
+    { key: 'evolucion', label: 'Evolución' },
+    { key: 'fiabilidad', label: 'Fiabilid.' },
+    { key: 'rachas', label: 'Rachas' },
+    { key: 'consenso', label: 'Consenso' },
+    { key: 'plantillas', label: 'Plantillas' },
+  ];
   const LINE_COLORS = ['var(--accent-primary)', 'var(--accent-purple)', 'var(--accent-gold)', 'var(--accent-cyan)', '#EC4899', '#F97316', '#22C55E', '#3B82F6'];
   let currentSeriesMap = null;
 
@@ -382,6 +389,20 @@
       eliminatoriasTeamDetails: elim.teamDetails,
       matchesById,
     };
+  }
+
+  let _userDataCache = null;
+
+  function getCachedUserData(username) {
+    if (!_userDataCache) _userDataCache = new Map();
+    if (!_userDataCache.has(username)) {
+      _userDataCache.set(username, buildUserData(
+        username,
+        computeReachedPhases(AppState.matches, AppState.matchStats),
+        buildMatchesById()
+      ));
+    }
+    return _userDataCache.get(username);
   }
 
   function renderEstadisticasTab() {
@@ -412,7 +433,7 @@
   function buildSeriesMap(source, reachedPhases, matchesById) {
     const map = new Map();
     for (const p of AppState.players || []) {
-      const r = getSeriesBySource(source, buildUserData(p.name, reachedPhases, matchesById));
+      const r = getSeriesBySource(source, getCachedUserData(p.name));
       map.set(p.name, r);
     }
     return map;
@@ -430,6 +451,7 @@
   }
 
   function initStatsState(seriesMap) {
+    if (!AppState.estadisticasSubTab) AppState.estadisticasSubTab = 'evolucion';
     if (!AppState.estadisticasPointType) AppState.estadisticasPointType = 'total';
     if (!AppState.estadisticasVisibleUsers) {
       const me = AppState.currentUser?.name;
@@ -438,11 +460,62 @@
     }
   }
 
-  function renderStatsContent() {
-    const source = AppState.estadisticasPointType || 'total';
-    const reachedPhases = computeReachedPhases(AppState.matches, AppState.matchStats);
+  function buildStatsAggregates() {
     const matchesById = buildMatchesById();
-    const seriesMap = buildSeriesMap(source, reachedPhases, matchesById);
+    const matchStatsById = {};
+    for (const ms of AppState.matchStats || []) matchStatsById[ms.eventId] = ms;
+    const playedMatches = extractPlayedMatches(AppState.matches, matchStatsById);
+    const detailsByUser = {};
+    for (const p of AppState.players || []) {
+      detailsByUser[p.name] = AppState.userPoints[p.name]?.matchDetails || [];
+    }
+    const league = buildCompletedLeagueData(AppState.leagueMatches, matchStatsById, detailsByUser);
+    const squadPointsByUser = {};
+    for (const p of AppState.players || []) {
+      const ud = getCachedUserData(p.name);
+      squadPointsByUser[p.name] = ud.squadPoints?.playerDetails?.length ? ud.squadPoints : null;
+    }
+    return {
+      reachedPhases: computeReachedPhases(AppState.matches, AppState.matchStats),
+      matchesById,
+      matchStatsById,
+      playedMatches,
+      reliabilityRows: calcReliabilityRows(AppState.players, playedMatches, AppState.allPredictions, AppState.userPoints),
+      completedRondas: league.completedRondas,
+      streaks: calcStreaks(league.pointsByUserByJornada),
+      bestJornadas: calcBestJornadas(league.pointsByUserByJornada, 5),
+      championsTally: tallyChampions(AppState.finalPredictionsCache),
+      quadro: compareQuadroWithCommunity(AppState.currentUser?.name, AppState.finalPredictionsCache),
+      squadOwnership: aggregateSquads(squadPointsByUser, AppState.squadsCache),
+    };
+  }
+
+  function renderStatsContent() {
+    _userDataCache = null;
+    const sub = AppState.estadisticasSubTab || 'evolucion';
+    const aggregates = buildStatsAggregates();
+
+    const subBar = SUBTABS.map(s =>
+      `<button class="stats-subtab ${s.key === sub ? 'active' : ''}" data-subtab="${s.key}">${s.label}</button>`
+    ).join('');
+
+    let body = '';
+    if (sub === 'evolucion') body = renderEvolucionBody(aggregates);
+    else if (sub === 'fiabilidad') body = statsEmpty('Fiabilidad disponible en breve');
+    else if (sub === 'rachas') body = statsEmpty('Rachas disponibles en breve');
+    else if (sub === 'consenso') body = statsEmpty('Consenso disponible en breve');
+    else body = statsEmpty('Plantillas disponibles en breve');
+
+    return `
+      <div class="stats-card">
+        <div class="stats-subtabs">${subBar}</div>
+      </div>
+      ${body}`;
+  }
+
+  function renderEvolucionBody(aggregates) {
+    const source = AppState.estadisticasPointType || 'total';
+    const seriesMap = buildSeriesMap(source, aggregates.reachedPhases, aggregates.matchesById);
     currentSeriesMap = seriesMap;
     initStatsState(seriesMap);
     const visibleSet = AppState.estadisticasVisibleUsers;
@@ -531,6 +604,14 @@
   function bindStatsEvents() {
     const container = document.getElementById('estadisticas-container');
     if (!container) return;
+
+    container.querySelectorAll('.stats-subtab').forEach(btn => {
+      btn.addEventListener('click', () => {
+        AppState.estadisticasSubTab = btn.dataset.subtab;
+        container.innerHTML = renderStatsContent();
+        bindStatsEvents();
+      });
+    });
 
     container.querySelectorAll('.stats-source').forEach(btn => {
       btn.addEventListener('click', () => {
