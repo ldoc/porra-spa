@@ -448,7 +448,7 @@ La aplicación utiliza una estructura de navegación con:
 - `tab-pronosticos`: Wizard de predicciones de partidos
 - `tab-plantilla`: Selección de plantilla ideal (25 jugadores: 3G, 8D, 8M, 6F)
 - `tab-final-predictions`: Predicciones de eliminatorias (24 equipos asignados a rondas). Solo accesible tras confirmar pronósticos
-- `tab-estadisticas`: Gráfico de evolución de puntos acumulados por jornada y jugador, con selector de jugadores (chips con scroll) y conmutador de tipo de puntos (Total, Pronósticos, Plantilla, Clasificación, Eliminatorias). Implementado en `js/stats.js` (cálculos puros + render). Guard de fase simple: solo `FASE_PRETEMPORADA` oculta la sección.
+- `tab-estadisticas`: Sub-tabs internas: **Evolución** (gráfico acumulado por jornada, selector de fuente Total/Pronóst./Plantilla/Clasif./Eliminat., chips de jugadores), **Fiabilidad** (ranking % resultado 1X2 y pts/partido + KPIs propios), **Rachas** (rachas ↑↓ entre jornadas completas de liga y top 5 mejores jornadas históricas), **Consenso** (% 1X2 y marcadores más votados por partido con navegación ◀▶ de jornadas, campeón más votado y rareza de tu cuadro de eliminatorias), **Plantillas** (jugadores reales más rentables entre todas las plantillas, con % posesión e insignias imprescindible/diferencial). Implementado en `js/stats.js` (funciones puras exportadas + render). Guard de fase simple: solo `FASE_PRETEMPORADA` oculta la sección. Estado: `AppState.estadisticasSubTab`, `AppState.estadisticasConsensoRonda`.
 
 **Flujo de usuario:**
 1. Tras registro/login → entra directamente a pestaña Inicio
