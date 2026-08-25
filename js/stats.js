@@ -221,6 +221,80 @@
     return items.slice(0, topN);
   }
 
+  function computeMatchConsensus(matchId, allPredictions) {
+    const counts = { H: 0, D: 0, A: 0 };
+    const scoreVotes = new Map();
+    let total = 0;
+    for (const preds of Object.values(allPredictions || {})) {
+      const pr = preds?.[matchId];
+      if (!pr || !Number.isFinite(pr.home) || !Number.isFinite(pr.away)) continue;
+      total++;
+      counts[matchResultOf(pr.home, pr.away)]++;
+      const key = `${pr.home}-${pr.away}`;
+      scoreVotes.set(key, (scoreVotes.get(key) || 0) + 1);
+    }
+    const topScores = [...scoreVotes.entries()]
+      .map(([score, votes]) => ({ score, votes, pct: Math.round((votes / total) * 100) }))
+      .sort((a, b) => b.votes - a.votes || a.score.localeCompare(b.score))
+      .slice(0, 6);
+    let majorityResult = null;
+    if (total) {
+      majorityResult = 'H';
+      for (const k of ['D', 'A']) {
+        if (counts[k] > counts[majorityResult]) majorityResult = k;
+      }
+    }
+    const pct = {};
+    for (const k of ['H', 'D', 'A']) pct[k] = total ? Math.round((counts[k] / total) * 100) : 0;
+    return { counts, pct, total, topScores, majorityResult };
+  }
+
+  function tallyChampions(finalPredictionsCache) {
+    const votes = new Map();
+    let total = 0;
+    for (const fp of Object.values(finalPredictionsCache || {})) {
+      const c = fp?.champion;
+      if (!Number.isFinite(c)) continue;
+      total++;
+      votes.set(c, (votes.get(c) || 0) + 1);
+    }
+    const teams = [...votes.entries()]
+      .map(([teamId, n]) => ({ teamId, votes: n }))
+      .sort((a, b) => b.votes - a.votes || a.teamId - b.teamId);
+    return { total, teams };
+  }
+
+  function finalPredictionTeamIds(fp) {
+    if (!fp) return [];
+    const ids = [
+      Number.isFinite(fp.champion) ? fp.champion : null,
+      Number.isFinite(fp.runnerUp) ? fp.runnerUp : null,
+      ...(Array.isArray(fp.semiFinalists) ? fp.semiFinalists : []),
+      ...(Array.isArray(fp.quarterFinalists) ? fp.quarterFinalists : []),
+      ...(Array.isArray(fp.roundOf16) ? fp.roundOf16 : []),
+      ...(Array.isArray(fp.roundOf32) ? fp.roundOf32 : []),
+    ];
+    return ids.filter(v => Number.isFinite(v));
+  }
+
+  function compareQuadroWithCommunity(myUsername, finalPredictionsCache) {
+    const mine = new Set(finalPredictionTeamIds(finalPredictionsCache?.[myUsername]));
+    let users = 0, commonSum = 0, veryDiffCount = 0;
+    for (const [username, fp] of Object.entries(finalPredictionsCache || {})) {
+      if (!fp || username === myUsername) continue;
+      const theirs = new Set(finalPredictionTeamIds(fp));
+      let common = 0;
+      for (const id of theirs) if (mine.has(id)) common++;
+      const union = new Set([...mine, ...theirs]);
+      users++;
+      commonSum += common;
+      if (union.size - common >= 12) veryDiffCount++;
+    }
+    const avgCommon = users ? Math.round((commonSum / users) * 10) / 10 : 0;
+    const avgPct = users ? Math.round((commonSum / users / 24) * 100) : 0;
+    return { users, avgCommon, avgPct, veryDiffCount };
+  }
+
   function getSeriesBySource(source, userData) {
     switch (source) {
       case 'pronosticos':
@@ -489,7 +563,11 @@
   global.buildCompletedLeagueData = buildCompletedLeagueData;
   global.calcStreaks = calcStreaks;
   global.calcBestJornadas = calcBestJornadas;
+  global.computeMatchConsensus = computeMatchConsensus;
+  global.tallyChampions = tallyChampions;
+  global.finalPredictionTeamIds = finalPredictionTeamIds;
+  global.compareQuadroWithCommunity = compareQuadroWithCommunity;
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { emptySeries, buildTimeline, calcPredictionSeries, calcSquadSeries, calcClassificationSeries, calcEliminatoriasSeries, sumSeries, isLeagueComplete, getSeriesBySource, matchResultOf, extractPlayedMatches, calcReliabilityRow, calcReliabilityRows, buildCompletedLeagueData, calcStreaks, calcBestJornadas };
+    module.exports = { emptySeries, buildTimeline, calcPredictionSeries, calcSquadSeries, calcClassificationSeries, calcEliminatoriasSeries, sumSeries, isLeagueComplete, getSeriesBySource, matchResultOf, extractPlayedMatches, calcReliabilityRow, calcReliabilityRows, buildCompletedLeagueData, calcStreaks, calcBestJornadas, computeMatchConsensus, tallyChampions, finalPredictionTeamIds, compareQuadroWithCommunity };
   }
 })(typeof window !== 'undefined' ? window : globalThis);

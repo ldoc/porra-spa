@@ -1,6 +1,7 @@
 const assert = require('assert');
 const { matchResultOf, extractPlayedMatches, calcReliabilityRow, calcReliabilityRows } = require('../js/stats.js');
 const { buildCompletedLeagueData, calcStreaks, calcBestJornadas } = require('../js/stats.js');
+const { computeMatchConsensus, tallyChampions, finalPredictionTeamIds, compareQuadroWithCommunity } = require('../js/stats.js');
 
 function test_matchResultOf() {
   assert.strictEqual(matchResultOf(2, 1), 'H');
@@ -153,3 +154,75 @@ test_calcStreaks_up_down_y_empate();
 test_calcStreaks_corte_al_cambiar_direccion();
 test_calcBestJornadas_top_n();
 console.log('OK estadisticas-subtabs T2');
+
+function test_computeMatchConsensus_barras_y_marcadores() {
+  const allPredictions = {
+    ana: { 7: { home: 2, away: 1 } },
+    bea: { 7: { home: 2, away: 1 } },
+    cal: { 7: { home: 1, away: 1 } },
+    dan: { 7: { home: 1, away: 0 } },
+    eve: { 7: { home: 2, away: 1 } },
+    fin: { 8: { home: 1, away: 0 } },
+    gil: {},
+  };
+  const c = computeMatchConsensus(7, allPredictions);
+  assert.strictEqual(c.total, 5);
+  assert.deepStrictEqual(c.counts, { H: 4, D: 1, A: 0 });
+  assert.strictEqual(c.majorityResult, 'H');
+  assert.strictEqual(c.topScores[0].score, '2-1');
+  assert.strictEqual(c.topScores[0].votes, 3);
+  assert.strictEqual(c.topScores[0].pct, 60);
+  assert.strictEqual(c.topScores.length, 3);
+}
+
+function test_computeMatchConsensus_vacio() {
+  const c = computeMatchConsensus(99, {});
+  assert.strictEqual(c.total, 0);
+  assert.strictEqual(c.majorityResult, null);
+  assert.deepStrictEqual(c.topScores, []);
+}
+
+function test_tallyChampions() {
+  const t = tallyChampions({
+    ana: { champion: 100 },
+    bea: { champion: 100 },
+    cal: { champion: 200 },
+    dan: { champion: null },
+    eve: null,
+  });
+  assert.strictEqual(t.total, 3);
+  assert.deepStrictEqual(t.teams, [{ teamId: 100, votes: 2 }, { teamId: 200, votes: 1 }]);
+}
+
+function test_finalPredictionTeamIds_24_slots() {
+  const fp = {
+    champion: 1, runnerUp: 2,
+    semiFinalists: [3, 4],
+    quarterFinalists: [5, 6, 7, 8],
+    roundOf16: [9, 10, 11, 12, 13, 14, 15, 16],
+    roundOf32: [17, 18, 19, 20, 21, 22, 23, 24],
+  };
+  assert.strictEqual(finalPredictionTeamIds(fp).length, 24);
+  assert.strictEqual(finalPredictionTeamIds(null).length, 0);
+}
+
+function test_compareQuadroWithCommunity() {
+  const mk = (base) => ({ champion: base, runnerUp: base + 1,
+    semiFinalists: [base + 2, base + 3],
+    quarterFinalists: [base + 4, base + 5, base + 6, base + 7],
+    roundOf16: Array.from({ length: 8 }, (_, i) => base + 8 + i),
+    roundOf32: Array.from({ length: 8 }, (_, i) => base + 16 + i) });
+  const cache = { yo: mk(100), igual: mk(100), medio: mk(112), muydistinto: mk(124) };
+  const r = compareQuadroWithCommunity('yo', cache);
+  assert.strictEqual(r.users, 3);
+  assert.strictEqual(r.avgCommon, 12);
+  assert.strictEqual(r.avgPct, 50);
+  assert.strictEqual(r.veryDiffCount, 2);
+}
+
+test_computeMatchConsensus_barras_y_marcadores();
+test_computeMatchConsensus_vacio();
+test_tallyChampions();
+test_finalPredictionTeamIds_24_slots();
+test_compareQuadroWithCommunity();
+console.log('OK estadisticas-subtabs T3');
