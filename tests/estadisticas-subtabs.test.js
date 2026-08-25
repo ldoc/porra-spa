@@ -2,6 +2,7 @@ const assert = require('assert');
 const { matchResultOf, extractPlayedMatches, calcReliabilityRow, calcReliabilityRows } = require('../js/stats.js');
 const { buildCompletedLeagueData, calcStreaks, calcBestJornadas } = require('../js/stats.js');
 const { computeMatchConsensus, tallyChampions, finalPredictionTeamIds, compareQuadroWithCommunity } = require('../js/stats.js');
+const { aggregateSquads } = require('../js/stats.js');
 
 function test_matchResultOf() {
   assert.strictEqual(matchResultOf(2, 1), 'H');
@@ -226,3 +227,37 @@ test_tallyChampions();
 test_finalPredictionTeamIds_24_slots();
 test_compareQuadroWithCommunity();
 console.log('OK estadisticas-subtabs T3');
+
+function test_aggregateSquads_pts_posesion() {
+  const squadsCache = {
+    ana: [{ id: 1, nombre: 'Mbappé', posicion: 'F' }, { id: 2, nombre: 'Courtois', posicion: 'G' }],
+    bea: [{ id: 1, nombre: 'Mbappé', posicion: 'F' }],
+  };
+  const squadPointsByUser = {
+    ana: { playerDetails: [
+      { jugador: { id: 1 }, puntosTotal: 50 },
+      { jugador: { id: 2 }, puntosTotal: 20 },
+    ] },
+    bea: { playerDetails: [{ jugador: { id: 1 }, puntosTotal: 36 }] },
+    cal: null,
+  };
+  const r = aggregateSquads(squadPointsByUser, squadsCache);
+  assert.strictEqual(r.usersWithSquad, 2);
+  assert.strictEqual(r.uniquePlayers, 2);
+  assert.strictEqual(r.rows[0].player.nombre, 'Mbappé');
+  assert.strictEqual(r.rows[0].pts, 86);
+  assert.strictEqual(r.rows[0].ownerCount, 2);
+  assert.strictEqual(r.rows[0].possessionPct, 100);
+  assert.strictEqual(r.rows[1].player.nombre, 'Courtois');
+  assert.strictEqual(r.rows[1].possessionPct, 50);
+}
+
+function test_aggregateSquads_vacio() {
+  const r = aggregateSquads({}, {});
+  assert.strictEqual(r.usersWithSquad, 0);
+  assert.deepStrictEqual(r.rows, []);
+}
+
+test_aggregateSquads_pts_posesion();
+test_aggregateSquads_vacio();
+console.log('OK estadisticas-subtabs T4');

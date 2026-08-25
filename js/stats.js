@@ -295,6 +295,34 @@
     return { users, avgCommon, avgPct, veryDiffCount };
   }
 
+  function aggregateSquads(squadPointsByUser, squadsCache) {
+    const agg = new Map();
+    let usersWithSquad = 0;
+    for (const [username, squad] of Object.entries(squadsCache || {})) {
+      if (!Array.isArray(squad) || !squad.length) continue;
+      usersWithSquad++;
+      for (const sp of squad) {
+        const id = String(sp?.id);
+        if (!id || id === 'undefined') continue;
+        if (!agg.has(id)) agg.set(id, { player: sp, owners: new Set(), pts: 0 });
+        agg.get(id).owners.add(username);
+      }
+    }
+    for (const sq of Object.values(squadPointsByUser || {})) {
+      for (const pd of sq?.playerDetails || []) {
+        const entry = agg.get(String(pd.jugador?.id));
+        if (entry) entry.pts += pd.puntosTotal || 0;
+      }
+    }
+    const rows = [...agg.values()].map(e => ({
+      player: e.player,
+      pts: e.pts,
+      ownerCount: e.owners.size,
+      possessionPct: usersWithSquad ? Math.round((e.owners.size / usersWithSquad) * 100) : 0,
+    })).sort((a, b) => b.pts - a.pts || b.possessionPct - a.possessionPct);
+    return { usersWithSquad, uniquePlayers: rows.length, rows };
+  }
+
   function getSeriesBySource(source, userData) {
     switch (source) {
       case 'pronosticos':
@@ -567,7 +595,8 @@
   global.tallyChampions = tallyChampions;
   global.finalPredictionTeamIds = finalPredictionTeamIds;
   global.compareQuadroWithCommunity = compareQuadroWithCommunity;
+  global.aggregateSquads = aggregateSquads;
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { emptySeries, buildTimeline, calcPredictionSeries, calcSquadSeries, calcClassificationSeries, calcEliminatoriasSeries, sumSeries, isLeagueComplete, getSeriesBySource, matchResultOf, extractPlayedMatches, calcReliabilityRow, calcReliabilityRows, buildCompletedLeagueData, calcStreaks, calcBestJornadas, computeMatchConsensus, tallyChampions, finalPredictionTeamIds, compareQuadroWithCommunity };
+    module.exports = { emptySeries, buildTimeline, calcPredictionSeries, calcSquadSeries, calcClassificationSeries, calcEliminatoriasSeries, sumSeries, isLeagueComplete, getSeriesBySource, matchResultOf, extractPlayedMatches, calcReliabilityRow, calcReliabilityRows, buildCompletedLeagueData, calcStreaks, calcBestJornadas, computeMatchConsensus, tallyChampions, finalPredictionTeamIds, compareQuadroWithCommunity, aggregateSquads };
   }
 })(typeof window !== 'undefined' ? window : globalThis);
