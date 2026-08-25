@@ -349,6 +349,10 @@
     return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
   }
 
+  function getPlayerMeta(name) {
+    return (AppState.players || []).find(p => p.name === name) || {};
+  }
+
   const SOURCES = [
     { key: 'total', label: 'Total' },
     { key: 'pronosticos', label: 'Pronóst.' },
@@ -501,7 +505,7 @@
 
     let body = '';
     if (sub === 'evolucion') body = renderEvolucionBody(aggregates);
-    else if (sub === 'fiabilidad') body = statsEmpty('Fiabilidad disponible en breve');
+    else if (sub === 'fiabilidad') body = renderFiabilidadBody(aggregates);
     else if (sub === 'rachas') body = statsEmpty('Rachas disponibles en breve');
     else if (sub === 'consenso') body = statsEmpty('Consenso disponible en breve');
     else body = statsEmpty('Plantillas disponibles en breve');
@@ -511,6 +515,37 @@
         <div class="stats-subtabs">${subBar}</div>
       </div>
       ${body}`;
+  }
+
+  function renderFiabilidadBody(aggregates) {
+    const me = AppState.currentUser?.name;
+    const rows = aggregates.reliabilityRows || [];
+    if (!rows.length || !rows.some(r => r.played > 0)) {
+      return statsEmpty('Sin partidos con resultado suficientes');
+    }
+    const rankHtml = rows.map((r, i) => `
+      <div class="stats-rank-row ${r.username === me ? 'me' : ''}">
+        <span class="stats-rank-pos ${i < 3 ? `rank-${i + 1}` : 'rank-n'}">${i + 1}</span>
+        <span class="stats-rank-name">${esc(getPlayerMeta(r.username).avatar || '⚽')} ${esc(r.username)}</span>
+        <span class="stats-rank-main">${r.played ? `${r.pctResult}%` : '—'}</span>
+        <span class="stats-rank-sub">${r.ptsPerMatch} pts/part</span>
+      </div>`).join('');
+    const my = rows.find(r => r.username === me);
+    const kpis = my ? `
+      <div class="stats-kpi-grid">
+        <div class="stats-kpi"><div class="stats-kv">${my.ptsPerMatch}</div><div class="stats-kl">pts medios/partido</div></div>
+        <div class="stats-kpi"><div class="stats-kv">${my.exactScores}</div><div class="stats-kl">marcadores exactos</div></div>
+        <div class="stats-kpi"><div class="stats-kv">${my.perfect15}</div><div class="stats-kl">partidos de 15</div></div>
+      </div>` : '';
+    return `
+      <div class="stats-card">
+        <div class="stats-card-title">🎯 Ranking de fiabilidad (% resultado · pts/partido)</div>
+        ${rankHtml}
+      </div>
+      <div class="stats-card">
+        <div class="stats-card-title">Tu detalle</div>
+        ${kpis || statsEmpty('Sin pronósticos tuyos con resultado')}
+      </div>`;
   }
 
   function renderEvolucionBody(aggregates) {
