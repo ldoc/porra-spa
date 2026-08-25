@@ -37,6 +37,7 @@ const AppState = {
   _matchStatsServerTime: null, // serverTime del backend para delta since en match-stats
   resultadosRound: null, // Ronda seleccionada en pestaña resultados
   allPredictions: {},   // { username: { matchId: { home, away } } }
+  _allPredictionsSeeded: false, // flag SWR: ya se ha hidratado desde localStorage esta sesión (pred-all)
   userPoints: {},       // { username: { totalPoints, matchDetails } }
   squadsCache: {},      // { username: squad[] } - caché de plantillas para resultados
   pointsReady: false,   // true cuando matchStats y allPredictions han cargado (botón 'Tus puntos')
@@ -358,6 +359,7 @@ async function savePredictionsToBackend() {
     const data = await res.json();
     if (data.ok) {
       AppState.hasUnsavedChanges = false;
+      invalidatePredAllCache();
       // Invalidar caché para que se refresquen los datos
       AppState._allPredictionsTime = 0;
       AppState._matchStatsTime = 0;
@@ -538,10 +540,36 @@ async function fetchMatchStats(force = false) {
   }
 }
 
+function predAllKey() {
+  const name = AppState.currentUser?.name;
+  return name ? porraCache.predKey(name) : null;
+}
+
+function invalidatePredAllCache() {
+  AppState._allPredictionsTime = 0;
+  AppState._allPredictionsSeeded = false;
+  const key = predAllKey();
+  if (key) porraCache.cacheRemove(key);
+}
+
 /** Obtiene las predicciones de todos los usuarios del backend */
 async function fetchAllPredictions() {
   if (AppState._allPredictionsTime && Date.now() - AppState._allPredictionsTime < CACHE_TTL) {
     return;
+  }
+  // SWR: pintar al instante desde localStorage si la memoria está vacía (clave por usuario)
+  const cacheKey = predAllKey();
+  if (cacheKey && !AppState._allPredictionsSeeded) {
+    const cached = porraCache.cacheGet(cacheKey);
+    if (cached?.payload) {
+      const { allPredictions, finalPredictionsCache, squadsCache } = unwrapAllPredictions({ predictions: cached.payload });
+      AppState.allPredictions = allPredictions;
+      if (!AppState.finalPredictionsCache) AppState.finalPredictionsCache = {};
+      Object.assign(AppState.finalPredictionsCache, finalPredictionsCache);
+      if (!AppState.squadsCache) AppState.squadsCache = {};
+      Object.assign(AppState.squadsCache, squadsCache);
+    }
+    AppState._allPredictionsSeeded = true;
   }
   try {
     const res = await fetchWithPhase(`${API_BASE}/api/predictions/all`, { headers: authHeaders() });
@@ -559,6 +587,7 @@ async function fetchAllPredictions() {
         AppState._finalPredictionsCacheTime[username] = now;
       }
       AppState._allPredictionsTime = now;
+      if (cacheKey) porraCache.cacheSet(cacheKey, data.predictions, null);
     }
   } catch (e) {
     console.error('Error cargando todas las predicciones:', e);
@@ -3669,6 +3698,8 @@ function showProfileModal() {
     }
     localStorage.removeItem('porra_ucl_user');
     localStorage.removeItem('session_token');
+    porraCache.clearPorraCaches();
+    AppState._allPredictionsSeeded = false;
     AppState.currentUser = null;
     AppState.sessionToken = null;
     AppState.hasUnsavedChanges = false;
@@ -4259,6 +4290,7 @@ async function confirmPredictions() {
     if (data.ok) {
       AppState.predictionsConfirmed = true;
       AppState.hasUnsavedChanges = false;
+      invalidatePredAllCache();
       const userData = JSON.parse(localStorage.getItem('porra_ucl_user') || '{}');
       userData.predictionsConfirmed = true;
       localStorage.setItem('porra_ucl_user', JSON.stringify(userData));
@@ -4674,7 +4706,7 @@ async function saveSquadToBackend() {
       if (!AppState.squadsCache) AppState.squadsCache = {};
       AppState.squadsCache[AppState.currentUser.name] = AppState.squadPicks;
       AppState._squadsCacheTime = 0;
-      AppState._allPredictionsTime = 0;
+      invalidatePredAllCache();
       showToast('Plantilla guardada');
       return true;
     } else {
@@ -6091,6 +6123,7 @@ async function saveFinalPredictionsToBackend() {
         if (!AppState._finalPredictionsCacheTime) AppState._finalPredictionsCacheTime = {};
         AppState._finalPredictionsCacheTime[AppState.currentUser.name] = Date.now();
       }
+      invalidatePredAllCache();
       AppState._allPredictionsTime = 0;
       showToast('✅ Predicciones guardadas correctamente');
     } else {
