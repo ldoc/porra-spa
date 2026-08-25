@@ -555,7 +555,7 @@
     const me = AppState.currentUser?.name;
     const streakHtml = streakEntries.length ? streakEntries.map(([u, s]) => `
       <div class="stats-rank-row ${u === me ? 'me' : ''}">
-        <span class="stats-rank-pos rank-n">${getPlayerMeta(u).avatar || '⚽'}</span>
+        <span class="stats-rank-pos rank-n">${esc(getPlayerMeta(u).avatar || '⚽')}</span>
         <span class="stats-rank-name">${esc(u)}</span>
         ${s.dir === 'up'
           ? `<span class="stats-badge-up">▲ ${s.len} mejorando</span>`
@@ -721,9 +721,9 @@
     const top = agg.rows.slice(0, 25);
     const rowsHtml = top.map(r => {
       const badge = r.possessionPct >= 70
-        ? '<span class="stats-pill gold">⭐ 70%+</span>'
+        ? '<span class="stats-pill gold">⭐ imprescindible</span>'
         : r.possessionPct <= 30
-          ? '<span class="stats-pill cyan">🎯 dif.</span>'
+          ? '<span class="stats-pill cyan">🎯 diferencial</span>'
           : '';
       const ext = r.player.extension || 'webp';
       const img = `<img class="stats-sq-img" src="data/imgJugadores/${r.player.id}.${ext}" alt="" loading="lazy"

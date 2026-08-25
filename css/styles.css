@@ -5717,7 +5717,7 @@ html, body {
 }
 
 .stats-badge-dn {
-  color: #EF4444;
+  color: var(--accent-danger, #EF4444);
   background: rgba(239, 68, 68, 0.12);
 }
 
