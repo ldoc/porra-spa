@@ -508,7 +508,7 @@
     else if (sub === 'fiabilidad') body = renderFiabilidadBody(aggregates);
     else if (sub === 'rachas') body = renderRachasBody(aggregates);
     else if (sub === 'consenso') body = renderConsensoBody(aggregates);
-    else body = statsEmpty('Plantillas disponibles en breve');
+    else body = renderPlantillasBody(aggregates);
 
     return `
       <div class="stats-card">
@@ -705,6 +705,46 @@
       </div>
       ${champHtml}
       ${quadroHtml}`;
+  }
+
+  function squadPosLabel(pos) {
+    return { G: 'Portero', D: 'Defensa', M: 'Centrocampista', F: 'Delantero' }[pos] || pos || '';
+  }
+
+  function squadPosEmoji(pos) {
+    return { G: '🧤', D: '🛡️', M: '⚙️', F: '⚽' }[pos] || '⚽';
+  }
+
+  function renderPlantillasBody(aggregates) {
+    const agg = aggregates.squadOwnership || { rows: [] };
+    if (!agg.rows.length) return statsEmpty('Aún no hay plantillas guardadas');
+    const top = agg.rows.slice(0, 25);
+    const rowsHtml = top.map(r => {
+      const badge = r.possessionPct >= 70
+        ? '<span class="stats-pill gold">⭐ 70%+</span>'
+        : r.possessionPct <= 30
+          ? '<span class="stats-pill cyan">🎯 dif.</span>'
+          : '';
+      const ext = r.player.extension || 'webp';
+      const img = `<img class="stats-sq-img" src="data/imgJugadores/${r.player.id}.${ext}" alt="" loading="lazy"
+        onerror="this.outerHTML='<span class=&quot;stats-sq-img&quot; style=&quot;display:flex;align-items:center;justify-content:center&quot;>${squadPosEmoji(r.player.posicion)}</span>'">`;
+      return `
+      <div class="stats-squad-row">
+        ${img}
+        <div class="stats-sq-info">
+          <div class="stats-sq-name">${esc(r.player.nombre || '')}</div>
+          <div class="stats-sq-pos">${esc(squadPosLabel(r.player.posicion))} · ${r.ownerCount}/${agg.usersWithSquad} lo tienen</div>
+        </div>
+        ${badge}
+        <span class="stats-sq-pts">${r.pts} pts</span>
+      </div>`;
+    }).join('');
+    return `
+      <div class="stats-card">
+        <div class="stats-card-title">⭐ Jugadores estrella de las plantillas</div>
+        ${rowsHtml}
+        <div class="stats-rank-sub">Top 25 de ${agg.uniquePlayers} jugadores únicos · posesión sobre ${agg.usersWithSquad} usuarios con plantilla</div>
+      </div>`;
   }
 
   function renderEvolucionBody(aggregates) {
