@@ -531,8 +531,11 @@ async function fetchMatchStats(force = false) {
         AppState.matchStats = porraCache.mergeMatchStats(AppState.matchStats, data.matchStats);
       }
       AppState._matchStatsTime = Date.now();
-      AppState._matchStatsServerTime = data.serverTime || since || new Date().toISOString();
-      porraCache.cacheSet(porraCache.KEYS.matchstats, { matchStats: AppState.matchStats }, AppState._matchStatsServerTime);
+      AppState._matchStatsServerTime = data.serverTime || since || null;
+      const deltaVacioSinCambios = Boolean(since) && data.matchStats.length === 0 && AppState._matchStatsServerTime === (data.serverTime || since);
+      if (!deltaVacioSinCambios) {
+        porraCache.cacheSet(porraCache.KEYS.matchstats, { matchStats: AppState.matchStats }, AppState._matchStatsServerTime);
+      }
       invalidateClassificationCache();
     }
   } catch (e) {
