@@ -744,7 +744,7 @@ Al final de `css/styles.css`:
 
 .stats-subtab.active {
   background: var(--accent-primary);
-  color: #05221A;
+  color: #fff;
 }
 
 .stats-rank-row {
@@ -833,8 +833,8 @@ Al final de `css/styles.css`:
 }
 
 .stats-badge-dn {
-  color: #F87171;
-  background: rgba(248, 113, 113, 0.12);
+  color: #EF4444;
+  background: rgba(239, 68, 68, 0.12);
 }
 
 .stats-pill {
