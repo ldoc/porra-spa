@@ -506,7 +506,7 @@
     let body = '';
     if (sub === 'evolucion') body = renderEvolucionBody(aggregates);
     else if (sub === 'fiabilidad') body = renderFiabilidadBody(aggregates);
-    else if (sub === 'rachas') body = statsEmpty('Rachas disponibles en breve');
+    else if (sub === 'rachas') body = renderRachasBody(aggregates);
     else if (sub === 'consenso') body = statsEmpty('Consenso disponible en breve');
     else body = statsEmpty('Plantillas disponibles en breve');
 
@@ -545,6 +545,43 @@
       <div class="stats-card">
         <div class="stats-card-title">Tu detalle</div>
         ${kpis || statsEmpty('Sin pronósticos tuyos con resultado')}
+      </div>`;
+  }
+
+  function renderRachasBody(aggregates) {
+    const streakEntries = Object.entries(aggregates.streaks || {})
+      .filter(([, s]) => s)
+      .sort((a, b) => b[1].len - a[1].len || b[1].lastPts - a[1].lastPts);
+    const me = AppState.currentUser?.name;
+    const streakHtml = streakEntries.length ? streakEntries.map(([u, s]) => `
+      <div class="stats-rank-row ${u === me ? 'me' : ''}">
+        <span class="stats-rank-pos rank-n">${getPlayerMeta(u).avatar || '⚽'}</span>
+        <span class="stats-rank-name">${esc(u)}</span>
+        ${s.dir === 'up'
+          ? `<span class="stats-badge-up">▲ ${s.len} mejorando</span>`
+          : `<span class="stats-badge-dn">▼ ${s.len} empeorando</span>`}
+      </div>`).join('') : '';
+
+    const medals = ['🥇', '🥈', '🥉'];
+    const bestHtml = (aggregates.bestJornadas || []).length ? aggregates.bestJornadas.map((b, i) => {
+      const ronda = aggregates.completedRondas?.[b.jornadaIdx];
+      const pos = i < 3 ? medals[i] : `<span class="stats-rank-pos rank-n">${i + 1}</span>`;
+      return `
+      <div class="stats-rank-row ${b.username === me ? 'me' : ''}">
+        ${pos}
+        <span class="stats-rank-name">${esc(getPlayerMeta(b.username).avatar || '⚽')} ${esc(b.username)} · J${ronda ?? b.jornadaIdx + 1}</span>
+        <span class="stats-rank-main">+${b.pts} pts</span>
+      </div>`;
+    }).join('') : '';
+
+    return `
+      <div class="stats-card">
+        <div class="stats-card-title">🔥 Rachas de jornada</div>
+        ${streakHtml || statsEmpty('Aún no hay jornadas completadas')}
+      </div>
+      <div class="stats-card">
+        <div class="stats-card-title">📈 Mejores jornadas históricas</div>
+        ${bestHtml || statsEmpty('Aún no hay jornadas completadas')}
       </div>`;
   }
 
