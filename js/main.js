@@ -300,7 +300,7 @@ async function loadInitialData() {
 
     // Configuración del torneo desde backend
     try {
-      const configRes = await fetchWithPhase(`${API_BASE}/api/config?t=${Date.now()}`);
+      const configRes = await fetchWithPhase(`${API_BASE}/api/config`);
       const configData = await configRes.json();
       if (configData.ok) AppState.appConfig = configData.config;
     } catch (e) {
@@ -2733,7 +2733,7 @@ function showPhaseConfirmModal(targetPhase) {
         modal.remove();
 
         try {
-          const configRes = await fetchWithPhase(`${API_BASE}/api/config?t=${Date.now()}`);
+          const configRes = await fetchWithPhase(`${API_BASE}/api/config`);
           const configData = await configRes.json();
           if (configData.ok) AppState.appConfig = configData.config;
         } catch (e) {
@@ -3533,7 +3533,7 @@ async function loadAvatars() {
 // ============================================================
 async function fetchPlayers() {
   try {
-    const res = await fetchWithPhase(`${API_BASE}/api/players?t=${Date.now()}`);
+    const res = await fetchWithPhase(`${API_BASE}/api/players`);
     const data = await res.json();
     if (data.ok) {
       AppState.players = data.players || [];
