@@ -5871,3 +5871,89 @@ html, body {
   white-space: nowrap;
 }
 
+.stats-ind-select {
+  width: 100%;
+  padding: 10px 36px 10px 12px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  background-color: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--accent-primary);
+  border-radius: 12px;
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238B5CF6' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+}
+
+.stats-ind-select:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.35);
+}
+
+.stats-ind-select option {
+  background: #1E293B;
+  color: var(--text-primary);
+}
+
+.stats-donut {
+  display: block;
+  width: 150px;
+  margin: 0 auto;
+}
+
+.stats-donut-total {
+  font-size: 21px;
+  font-weight: 800;
+  fill: var(--text-primary);
+}
+
+.stats-donut-sub {
+  font-size: 9px;
+  fill: var(--text-secondary);
+}
+
+.stats-donut-legend,
+.stats-cmp-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: center;
+  margin-top: 10px;
+}
+
+.stats-donut-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: var(--radius-full);
+}
+
+.stats-donut-chip i {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.stats-cmp-chip {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: var(--radius-full);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.stats-cmp-chip.up {
+  color: var(--accent-green);
+}
+
+.stats-cmp-chip.dn {
+  color: var(--accent-danger, #EF4444);
+}
+
