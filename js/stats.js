@@ -286,6 +286,49 @@
     return Math.round(Math.sqrt(variance) * 10) / 10;
   }
 
+  function buildDonutSegments(parts) {
+    const C = 2 * Math.PI * DONUT_RADIUS;
+    const valid = (parts || []).filter(p => Number(p.value) > 0);
+    const total = valid.reduce((a, p) => a + Number(p.value), 0);
+    if (!valid.length || total <= 0) return [];
+    let acc = 0;
+    return valid.map(p => {
+      const len = (Number(p.value) / total) * C;
+      const seg = {
+        key: p.key,
+        label: p.label,
+        color: p.color,
+        value: Number(p.value),
+        pct: Math.round((Number(p.value) / total) * 100),
+        dasharray: `${len.toFixed(2)} ${(C - len).toFixed(2)}`,
+        dashoffset: (-acc).toFixed(2),
+      };
+      acc += len;
+      return seg;
+    });
+  }
+
+  function calcPredictionBias(userPredictions, playedMatches) {
+    const out = { H: { pred: 0, hits: 0 }, D: { pred: 0, hits: 0 }, A: { pred: 0, hits: 0 } };
+    for (const pm of playedMatches || []) {
+      const pr = userPredictions?.[pm.matchId];
+      if (!pr || !Number.isFinite(pr.home) || !Number.isFinite(pr.away)) continue;
+      const r = matchResultOf(pr.home, pr.away);
+      out[r].pred++;
+      if (r === pm.result) out[r].hits++;
+    }
+    return out;
+  }
+
+  function calcBestMatch(matchDetails) {
+    let best = null;
+    for (const d of matchDetails || []) {
+      if (!d.match) continue;
+      if (!best || (d.points || 0) > best.points) best = { points: d.points || 0, matchId: d.match.id };
+    }
+    return best;
+  }
+
   function computeMatchConsensus(matchId, allPredictions) {
     const counts = { H: 0, D: 0, A: 0 };
     const scoreVotes = new Map();
@@ -433,6 +476,7 @@
     { key: 'plantillas', label: 'Plantillas' },
   ];
   const STATS_CONSISTENCY_SIGMA = 8;
+  const DONUT_RADIUS = 42;
   const LINE_COLORS = ['var(--accent-primary)', 'var(--accent-purple)', 'var(--accent-gold)', 'var(--accent-cyan)', '#EC4899', '#F97316', '#22C55E', '#3B82F6'];
   let currentSeriesMap = null;
 
@@ -994,12 +1038,15 @@
   global.calcTimesTopJornada = calcTimesTopJornada;
   global.calcMomentum = calcMomentum;
   global.calcConsistency = calcConsistency;
+  global.buildDonutSegments = buildDonutSegments;
+  global.calcPredictionBias = calcPredictionBias;
+  global.calcBestMatch = calcBestMatch;
   global.computeMatchConsensus = computeMatchConsensus;
   global.tallyChampions = tallyChampions;
   global.finalPredictionTeamIds = finalPredictionTeamIds;
   global.compareQuadroWithCommunity = compareQuadroWithCommunity;
   global.aggregateSquads = aggregateSquads;
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { emptySeries, buildTimeline, calcPredictionSeries, calcSquadSeries, calcClassificationSeries, calcEliminatoriasSeries, sumSeries, isLeagueComplete, getSeriesBySource, matchResultOf, extractPlayedMatches, calcReliabilityRow, calcReliabilityRows, buildCompletedLeagueData, calcStreaks, calcBestJornadas, calcUserBestJornada, calcPositionHistory, calcTimesTopJornada, calcMomentum, calcConsistency, computeMatchConsensus, tallyChampions, finalPredictionTeamIds, compareQuadroWithCommunity, aggregateSquads };
+    module.exports = { emptySeries, buildTimeline, calcPredictionSeries, calcSquadSeries, calcClassificationSeries, calcEliminatoriasSeries, sumSeries, isLeagueComplete, getSeriesBySource, matchResultOf, extractPlayedMatches, calcReliabilityRow, calcReliabilityRows, buildCompletedLeagueData, calcStreaks, calcBestJornadas, calcUserBestJornada, calcPositionHistory, calcTimesTopJornada, calcMomentum, calcConsistency, buildDonutSegments, calcPredictionBias, calcBestMatch, computeMatchConsensus, tallyChampions, finalPredictionTeamIds, compareQuadroWithCommunity, aggregateSquads };
   }
 })(typeof window !== 'undefined' ? window : globalThis);

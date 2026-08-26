@@ -3,6 +3,7 @@ const { matchResultOf, extractPlayedMatches, calcReliabilityRow, calcReliability
 const { buildCompletedLeagueData, calcStreaks, calcBestJornadas, calcUserBestJornada, calcPositionHistory, calcTimesTopJornada, calcMomentum, calcConsistency } = require('../js/stats.js');
 const { computeMatchConsensus, tallyChampions, finalPredictionTeamIds, compareQuadroWithCommunity } = require('../js/stats.js');
 const { aggregateSquads } = require('../js/stats.js');
+const { buildDonutSegments, calcPredictionBias, calcBestMatch } = require('../js/stats.js');
 
 function test_matchResultOf() {
   assert.strictEqual(matchResultOf(2, 1), 'H');
@@ -308,3 +309,51 @@ test_calcTimesTopJornada_empate_cuenta_para_ambos();
 test_calcMomentum_ultimas_3_vs_media();
 test_calcConsistency_desviacion_tipica();
 console.log('OK estadisticas-subtabs T5');
+
+function test_buildDonutSegments_geometria_y_filtrado() {
+  const segs = buildDonutSegments([
+    { key: 'p', label: 'Pronósticos', color: '#8B5CF6', value: 75 },
+    { key: 's', label: 'Plantilla', color: '#10B981', value: 25 },
+    { key: 'z', label: 'Cero', color: '#000000', value: 0 },
+  ]);
+  assert.strictEqual(segs.length, 2);
+  assert.strictEqual(segs[0].pct, 75);
+  assert.ok(Math.abs(parseFloat(segs[0].dasharray) - (2 * Math.PI * 42 * 0.75)) < 0.01);
+  assert.ok(Math.abs(parseFloat(segs[1].dashoffset) + (2 * Math.PI * 42 * 0.75)) < 0.01);
+  assert.strictEqual(buildDonutSegments([{ key: 'a', value: 0 }]).length, 0);
+  assert.strictEqual(buildDonutSegments([]).length, 0);
+}
+
+function test_calcPredictionBias_por_resultado_pronosticado() {
+  const preds = {
+    1: { home: 2, away: 1 },
+    2: { home: 0, away: 0 },
+    3: { home: 1, away: 3 },
+    4: { home: 0, away: 0 },
+  };
+  const played = [
+    { matchId: 1, home: 2, away: 1, result: 'H' },
+    { matchId: 2, home: 0, away: 0, result: 'D' },
+    { matchId: 3, home: 1, away: 3, result: 'A' },
+    { matchId: 4, home: 3, away: 1, result: 'H' },
+    { matchId: 5, home: 1, away: 0, result: 'H' },
+  ];
+  const bias = calcPredictionBias(preds, played);
+  assert.deepStrictEqual(bias.H, { pred: 1, hits: 1 });
+  assert.deepStrictEqual(bias.D, { pred: 2, hits: 1 });
+  assert.deepStrictEqual(bias.A, { pred: 1, hits: 1 });
+}
+
+function test_calcBestMatch_maximo_y_vacio() {
+  assert.deepStrictEqual(
+    calcBestMatch([{ match: { id: 7 }, points: 3 }, { match: { id: 9 }, points: 12 }]),
+    { points: 12, matchId: 9 }
+  );
+  assert.strictEqual(calcBestMatch([]), null);
+  assert.strictEqual(calcBestMatch(undefined), null);
+}
+
+test_buildDonutSegments_geometria_y_filtrado();
+test_calcPredictionBias_por_resultado_pronosticado();
+test_calcBestMatch_maximo_y_vacio();
+console.log('OK estadisticas-subtabs T6');
