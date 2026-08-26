@@ -1,5 +1,5 @@
 const assert = require('assert');
-const { matchResultOf, extractPlayedMatches, calcReliabilityRow, calcReliabilityRows } = require('../js/stats.js');
+const { matchResultOf, extractPlayedMatches, calcReliabilityRow } = require('../js/stats.js');
 const { buildCompletedLeagueData, calcStreaks, calcBestJornadas, calcUserBestJornada, calcPositionHistory, calcTimesTopJornada, calcMomentum, calcConsistency } = require('../js/stats.js');
 const { computeMatchConsensus, tallyChampions, finalPredictionTeamIds, compareQuadroWithCommunity } = require('../js/stats.js');
 const { aggregateSquads } = require('../js/stats.js');
@@ -65,34 +65,10 @@ function test_calcReliabilityRow_sin_pronosticos() {
   assert.strictEqual(r.ptsPerMatch, 0);
 }
 
-function test_calcReliabilityRows_orden_desc_y_desempate() {
-  const players = [{ name: 'ana' }, { name: 'bea' }, { name: 'cal' }];
-  const playedMatches = [
-    { matchId: 1, home: 1, away: 0, result: 'H' },
-    { matchId: 2, home: 1, away: 0, result: 'H' },
-  ];
-  const allPredictions = {
-    ana: { 1: { home: 1, away: 0 }, 2: { home: 0, away: 0 } },
-    bea: { 1: { home: 1, away: 0 }, 2: { home: 1, away: 0 } },
-    cal: { 1: { home: 0, away: 1 }, 2: { home: 0, away: 2 } },
-  };
-  const userPoints = {
-    ana: { matchDetails: [{ match: { id: 1 }, points: 15 }, { match: { id: 2 }, points: 3 }] },
-    bea: { matchDetails: [{ match: { id: 1 }, points: 15 }, { match: { id: 2 }, points: 15 }] },
-    cal: { matchDetails: [{ match: { id: 1 }, points: 12 }, { match: { id: 2 }, points: 8 }] },
-  };
-  const rows = calcReliabilityRows(players, playedMatches, allPredictions, userPoints);
-  assert.deepStrictEqual(rows.map(r => r.username), ['bea', 'ana', 'cal']);
-  assert.strictEqual(rows[0].pctResult, 100);
-  assert.strictEqual(rows[1].pctResult, 50);
-  assert.strictEqual(rows[2].hits, 0);
-}
-
 test_matchResultOf();
 test_extractPlayedMatches_solo_con_goles_finitos();
 test_calcReliabilityRow_metricas();
 test_calcReliabilityRow_sin_pronosticos();
-test_calcReliabilityRows_orden_desc_y_desempate();
 console.log('OK estadisticas-subtabs T1');
 
 function test_buildCompletedLeagueData_solo_jornadas_completas() {

@@ -150,19 +150,6 @@
     };
   }
 
-  function calcReliabilityRows(players, playedMatches, allPredictions, userPoints) {
-    const rows = [];
-    for (const p of players || []) {
-      rows.push(calcReliabilityRow(p.name, playedMatches, allPredictions, userPoints));
-    }
-    rows.sort((a, b) =>
-      b.pctResult - a.pctResult ||
-      b.ptsPerMatch - a.ptsPerMatch ||
-      String(a.username).localeCompare(String(b.username))
-    );
-    return rows;
-  }
-
   function buildCompletedLeagueData(leagueMatches, matchStatsById, matchDetailsByUser) {
     const totalByRonda = new Map();
     const doneByRonda = new Map();
@@ -507,7 +494,7 @@
   ];
   const SUBTABS = [
     { key: 'evolucion', label: 'Evolución' },
-    { key: 'fiabilidad', label: 'Fiabilid.' },
+    { key: 'individual', label: 'Individual' },
     { key: 'rachas', label: 'Rachas' },
     { key: 'consenso', label: 'Consenso' },
     { key: 'plantillas', label: 'Plantillas' },
@@ -554,6 +541,27 @@
       ));
     }
     return _userDataCache.get(username);
+  }
+
+  let _porraAvgBySource = null;
+
+  function getPorraAvgBySource() {
+    if (_porraAvgBySource) return _porraAvgBySource;
+    const keys = ['prediction', 'squad', 'classification', 'eliminatorias'];
+    const totals = { prediction: 0, squad: 0, classification: 0, eliminatorias: 0 };
+    const list = AppState.players || [];
+    for (const p of list) {
+      const s = sourceSplitFromUserData(AppState.userPoints[p.name]?.totalPoints, getCachedUserData(p.name));
+      for (const k of keys) totals[k] += s[k] || 0;
+    }
+    const n = list.length || 1;
+    _porraAvgBySource = {
+      prediction: Math.round((totals.prediction / n) * 10) / 10,
+      squad: Math.round((totals.squad / n) * 10) / 10,
+      classification: Math.round((totals.classification / n) * 10) / 10,
+      eliminatorias: Math.round((totals.eliminatorias / n) * 10) / 10,
+    };
+    return _porraAvgBySource;
   }
 
   function renderEstadisticasTab() {
@@ -626,14 +634,21 @@
       const ud = getCachedUserData(p.name);
       squadPointsByUser[p.name] = ud.squadPoints?.playerDetails?.length ? ud.squadPoints : null;
     }
+    const realPointsByUser = {};
+    for (const p of AppState.players || []) {
+      const s = sourceSplitFromUserData(AppState.userPoints[p.name]?.totalPoints, getCachedUserData(p.name));
+      realPointsByUser[p.name] = s.prediction + s.squad + s.classification + s.eliminatorias;
+    }
     return {
       reachedPhases: computeReachedPhases(AppState.matches, AppState.matchStats),
       matchesById,
       matchStatsById,
       playedMatches,
-      reliabilityRows: calcReliabilityRows(AppState.players, playedMatches, AppState.allPredictions, AppState.userPoints),
       completedRondas: league.completedRondas,
       streaks: calcStreaks(league.pointsByUserByJornada),
+      positionHistory: calcPositionHistory(league.pointsByUserByJornada),
+      timesTopJornada: calcTimesTopJornada(league.pointsByUserByJornada),
+      realPointsByUser,
       bestJornadas: calcBestJornadas(league.pointsByUserByJornada, 5),
       championsTally: tallyChampions(AppState.finalPredictionsCache),
       quadro: compareQuadroWithCommunity(AppState.currentUser?.name, AppState.finalPredictionsCache),
@@ -643,6 +658,7 @@
 
   function renderStatsContent() {
     _userDataCache = null;
+    _porraAvgBySource = null;
     const sub = AppState.estadisticasSubTab || 'evolucion';
     const aggregates = buildStatsAggregates();
 
@@ -652,7 +668,7 @@
 
     let body = '';
     if (sub === 'evolucion') body = renderEvolucionBody(aggregates);
-    else if (sub === 'fiabilidad') body = renderFiabilidadBody(aggregates);
+    else if (sub === 'individual') body = statsEmpty('Ficha individual: próximamente');
     else if (sub === 'rachas') body = renderRachasBody(aggregates);
     else if (sub === 'consenso') body = renderConsensoBody(aggregates);
     else body = renderPlantillasBody(aggregates);
@@ -662,37 +678,6 @@
         <div class="stats-subtabs">${subBar}</div>
       </div>
       ${body}`;
-  }
-
-  function renderFiabilidadBody(aggregates) {
-    const me = AppState.currentUser?.name;
-    const rows = aggregates.reliabilityRows || [];
-    if (!rows.length || !rows.some(r => r.played > 0)) {
-      return statsEmpty('Sin partidos con resultado suficientes');
-    }
-    const rankHtml = rows.map((r, i) => `
-      <div class="stats-rank-row ${r.username === me ? 'me' : ''}">
-        <span class="stats-rank-pos ${i < 3 ? `rank-${i + 1}` : 'rank-n'}">${i + 1}</span>
-        <span class="stats-rank-name">${esc(getPlayerMeta(r.username).avatar || '⚽')} ${esc(r.username)}</span>
-        <span class="stats-rank-main">${r.played ? `${r.pctResult}%` : '—'}</span>
-        <span class="stats-rank-sub">${r.ptsPerMatch} pts/part</span>
-      </div>`).join('');
-    const my = rows.find(r => r.username === me);
-    const kpis = my ? `
-      <div class="stats-kpi-grid">
-        <div class="stats-kpi"><div class="stats-kv">${my.ptsPerMatch}</div><div class="stats-kl">pts medios/partido</div></div>
-        <div class="stats-kpi"><div class="stats-kv">${my.exactScores}</div><div class="stats-kl">marcadores exactos</div></div>
-        <div class="stats-kpi"><div class="stats-kv">${my.perfect15}</div><div class="stats-kl">partidos de 15</div></div>
-      </div>` : '';
-    return `
-      <div class="stats-card">
-        <div class="stats-card-title">🎯 Ranking de fiabilidad (% resultado · pts/partido)</div>
-        ${rankHtml}
-      </div>
-      <div class="stats-card">
-        <div class="stats-card-title">Tu detalle</div>
-        ${kpis || statsEmpty('Sin pronósticos tuyos con resultado')}
-      </div>`;
   }
 
   function renderRachasBody(aggregates) {
@@ -1066,7 +1051,6 @@
   global.matchResultOf = matchResultOf;
   global.extractPlayedMatches = extractPlayedMatches;
   global.calcReliabilityRow = calcReliabilityRow;
-  global.calcReliabilityRows = calcReliabilityRows;
   global.buildCompletedLeagueData = buildCompletedLeagueData;
   global.calcStreaks = calcStreaks;
   global.calcBestJornadas = calcBestJornadas;
@@ -1087,6 +1071,6 @@
   global.compareQuadroWithCommunity = compareQuadroWithCommunity;
   global.aggregateSquads = aggregateSquads;
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { emptySeries, buildTimeline, calcPredictionSeries, calcSquadSeries, calcClassificationSeries, calcEliminatoriasSeries, sumSeries, isLeagueComplete, getSeriesBySource, matchResultOf, extractPlayedMatches, calcReliabilityRow, calcReliabilityRows, buildCompletedLeagueData, calcStreaks, calcBestJornadas, calcUserBestJornada, calcPositionHistory, calcTimesTopJornada, calcMomentum, calcConsistency, buildDonutSegments, calcPredictionBias, calcBestMatch, calcBestPlayersByPosition, calcMostProfitablePlayer, sourceSplitFromUserData, computeMatchConsensus, tallyChampions, finalPredictionTeamIds, compareQuadroWithCommunity, aggregateSquads };
+    module.exports = { emptySeries, buildTimeline, calcPredictionSeries, calcSquadSeries, calcClassificationSeries, calcEliminatoriasSeries, sumSeries, isLeagueComplete, getSeriesBySource, matchResultOf, extractPlayedMatches, calcReliabilityRow, buildCompletedLeagueData, calcStreaks, calcBestJornadas, calcUserBestJornada, calcPositionHistory, calcTimesTopJornada, calcMomentum, calcConsistency, buildDonutSegments, calcPredictionBias, calcBestMatch, calcBestPlayersByPosition, calcMostProfitablePlayer, sourceSplitFromUserData, computeMatchConsensus, tallyChampions, finalPredictionTeamIds, compareQuadroWithCommunity, aggregateSquads };
   }
 })(typeof window !== 'undefined' ? window : globalThis);
