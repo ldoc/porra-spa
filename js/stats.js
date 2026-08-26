@@ -329,6 +329,43 @@
     return best;
   }
 
+  function calcBestPlayersByPosition(playerDetails) {
+    const best = { G: null, D: null, M: null, F: null, top: null };
+    for (const pd of playerDetails || []) {
+      const pos = pd.jugador?.posicion;
+      const cur = pos && Object.prototype.hasOwnProperty.call(best, pos) ? best[pos] : undefined;
+      if (pos && cur !== undefined && (!cur || pd.puntosTotal > cur.puntosTotal)) {
+        best[pos] = { jugador: pd.jugador, puntosTotal: pd.puntosTotal };
+      }
+      if (!best.top || pd.puntosTotal > best.top.puntosTotal) {
+        best.top = { jugador: pd.jugador, puntosTotal: pd.puntosTotal };
+      }
+    }
+    return best;
+  }
+
+  function calcMostProfitablePlayer(playerDetails) {
+    let best = null;
+    for (const pd of playerDetails || []) {
+      const partidos = (pd.partidos || []).length;
+      if (partidos < 1) continue;
+      const per = Math.round((pd.puntosTotal / partidos) * 10) / 10;
+      if (!best || per > best.ptsPorPartido) {
+        best = { jugador: pd.jugador, ptsPorPartido: per, partidos };
+      }
+    }
+    return best;
+  }
+
+  function sourceSplitFromUserData(userTotalPoints, userData) {
+    return {
+      prediction: userTotalPoints || 0,
+      squad: userData?.squadPoints?.totalPoints || 0,
+      classification: userData?.classificationTotal || 0,
+      eliminatorias: (userData?.eliminatoriasTeamDetails || []).reduce((a, t) => a + (t.points || 0), 0),
+    };
+  }
+
   function computeMatchConsensus(matchId, allPredictions) {
     const counts = { H: 0, D: 0, A: 0 };
     const scoreVotes = new Map();
@@ -1041,12 +1078,15 @@
   global.buildDonutSegments = buildDonutSegments;
   global.calcPredictionBias = calcPredictionBias;
   global.calcBestMatch = calcBestMatch;
+  global.calcBestPlayersByPosition = calcBestPlayersByPosition;
+  global.calcMostProfitablePlayer = calcMostProfitablePlayer;
+  global.sourceSplitFromUserData = sourceSplitFromUserData;
   global.computeMatchConsensus = computeMatchConsensus;
   global.tallyChampions = tallyChampions;
   global.finalPredictionTeamIds = finalPredictionTeamIds;
   global.compareQuadroWithCommunity = compareQuadroWithCommunity;
   global.aggregateSquads = aggregateSquads;
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { emptySeries, buildTimeline, calcPredictionSeries, calcSquadSeries, calcClassificationSeries, calcEliminatoriasSeries, sumSeries, isLeagueComplete, getSeriesBySource, matchResultOf, extractPlayedMatches, calcReliabilityRow, calcReliabilityRows, buildCompletedLeagueData, calcStreaks, calcBestJornadas, calcUserBestJornada, calcPositionHistory, calcTimesTopJornada, calcMomentum, calcConsistency, buildDonutSegments, calcPredictionBias, calcBestMatch, computeMatchConsensus, tallyChampions, finalPredictionTeamIds, compareQuadroWithCommunity, aggregateSquads };
+    module.exports = { emptySeries, buildTimeline, calcPredictionSeries, calcSquadSeries, calcClassificationSeries, calcEliminatoriasSeries, sumSeries, isLeagueComplete, getSeriesBySource, matchResultOf, extractPlayedMatches, calcReliabilityRow, calcReliabilityRows, buildCompletedLeagueData, calcStreaks, calcBestJornadas, calcUserBestJornada, calcPositionHistory, calcTimesTopJornada, calcMomentum, calcConsistency, buildDonutSegments, calcPredictionBias, calcBestMatch, calcBestPlayersByPosition, calcMostProfitablePlayer, sourceSplitFromUserData, computeMatchConsensus, tallyChampions, finalPredictionTeamIds, compareQuadroWithCommunity, aggregateSquads };
   }
 })(typeof window !== 'undefined' ? window : globalThis);

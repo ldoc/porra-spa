@@ -4,6 +4,7 @@ const { buildCompletedLeagueData, calcStreaks, calcBestJornadas, calcUserBestJor
 const { computeMatchConsensus, tallyChampions, finalPredictionTeamIds, compareQuadroWithCommunity } = require('../js/stats.js');
 const { aggregateSquads } = require('../js/stats.js');
 const { buildDonutSegments, calcPredictionBias, calcBestMatch } = require('../js/stats.js');
+const { calcBestPlayersByPosition, calcMostProfitablePlayer, sourceSplitFromUserData } = require('../js/stats.js');
 
 function test_matchResultOf() {
   assert.strictEqual(matchResultOf(2, 1), 'H');
@@ -357,3 +358,49 @@ test_buildDonutSegments_geometria_y_filtrado();
 test_calcPredictionBias_por_resultado_pronosticado();
 test_calcBestMatch_maximo_y_vacio();
 console.log('OK estadisticas-subtabs T6');
+
+function test_calcBestPlayersByPosition_top_por_demarcacion() {
+  const details = [
+    { jugador: { nombre: 'Courtois', posicion: 'G' }, puntosTotal: 38, partidos: [{}, {}] },
+    { jugador: { nombre: 'Ederson', posicion: 'G' }, puntosTotal: 14, partidos: [{}] },
+    { jugador: { nombre: 'Hakimi', posicion: 'D' }, puntosTotal: 41, partidos: [{}] },
+    { jugador: { nombre: 'Mbappé', posicion: 'F' }, puntosTotal: 61, partidos: [{}] },
+  ];
+  const best = calcBestPlayersByPosition(details);
+  assert.strictEqual(best.G.jugador.nombre, 'Courtois');
+  assert.strictEqual(best.D.jugador.nombre, 'Hakimi');
+  assert.strictEqual(best.M, null);
+  assert.strictEqual(best.F.jugador.nombre, 'Mbappé');
+  assert.strictEqual(best.top.jugador.nombre, 'Mbappé');
+  assert.strictEqual(calcBestPlayersByPosition([]).top, null);
+}
+
+function test_calcMostProfitablePlayer_exige_partidos() {
+  const details = [
+    { jugador: { nombre: 'A' }, puntosTotal: 20, partidos: [{}, {}] },
+    { jugador: { nombre: 'B' }, puntosTotal: 9, partidos: [{}] },
+    { jugador: { nombre: 'C' }, puntosTotal: 50, partidos: [] },
+  ];
+  const best = calcMostProfitablePlayer(details);
+  assert.strictEqual(best.jugador.nombre, 'A');
+  assert.strictEqual(best.ptsPorPartido, 10);
+  assert.strictEqual(best.partidos, 2);
+  assert.strictEqual(calcMostProfitablePlayer([]), null);
+  assert.strictEqual(calcMostProfitablePlayer([{ jugador: { nombre: 'D' }, puntosTotal: 99, partidos: [] }]), null);
+}
+
+function test_sourceSplitFromUserData_reparte_cuatro_fuentes() {
+  const split = sourceSplitFromUserData(120, {
+    squadPoints: { totalPoints: 60 },
+    classificationTotal: 30,
+    eliminatoriasTeamDetails: [{ points: 10 }, { points: 5 }, { points: 0 }],
+  });
+  assert.deepStrictEqual(split, { prediction: 120, squad: 60, classification: 30, eliminatorias: 15 });
+  const vacio = sourceSplitFromUserData(undefined, {});
+  assert.deepStrictEqual(vacio, { prediction: 0, squad: 0, classification: 0, eliminatorias: 0 });
+}
+
+test_calcBestPlayersByPosition_top_por_demarcacion();
+test_calcMostProfitablePlayer_exige_partidos();
+test_sourceSplitFromUserData_reparte_cuatro_fuentes();
+console.log('OK estadisticas-subtabs T7');
