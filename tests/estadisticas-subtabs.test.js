@@ -1,6 +1,6 @@
 const assert = require('assert');
 const { matchResultOf, extractPlayedMatches, calcReliabilityRow, calcReliabilityRows } = require('../js/stats.js');
-const { buildCompletedLeagueData, calcStreaks, calcBestJornadas } = require('../js/stats.js');
+const { buildCompletedLeagueData, calcStreaks, calcBestJornadas, calcUserBestJornada, calcPositionHistory, calcTimesTopJornada, calcMomentum, calcConsistency } = require('../js/stats.js');
 const { computeMatchConsensus, tallyChampions, finalPredictionTeamIds, compareQuadroWithCommunity } = require('../js/stats.js');
 const { aggregateSquads } = require('../js/stats.js');
 
@@ -261,3 +261,50 @@ function test_aggregateSquads_vacio() {
 test_aggregateSquads_pts_posesion();
 test_aggregateSquads_vacio();
 console.log('OK estadisticas-subtabs T4');
+
+function test_calcUserBestJornada_maximo_y_vacio() {
+  assert.deepStrictEqual(calcUserBestJornada([30, 55, 40]), { idx: 1, pts: 55 });
+  assert.strictEqual(calcUserBestJornada([]), null);
+  assert.strictEqual(calcUserBestJornada(undefined), null);
+}
+
+function test_calcPositionHistory_empates_comparten_puesto() {
+  const hist = calcPositionHistory({
+    a: [10, 20],
+    b: [15, 15],
+    c: [15, 0],
+  });
+  assert.deepStrictEqual(hist.a, [3, 1]);
+  assert.deepStrictEqual(hist.b, [1, 1]);
+  assert.deepStrictEqual(hist.c, [1, 3]);
+}
+
+function test_calcTimesTopJornada_empate_cuenta_para_ambos() {
+  const tops = calcTimesTopJornada({
+    a: [10, 15],
+    b: [15, 15],
+    c: [15, 0],
+  });
+  assert.deepStrictEqual(tops, { a: 1, b: 2, c: 1 });
+}
+
+function test_calcMomentum_ultimas_3_vs_media() {
+  const m = calcMomentum([10, 10, 10, 25, 25, 35]);
+  assert.strictEqual(m.recent, 85);
+  assert.strictEqual(m.avg, 19.2);
+  assert.strictEqual(m.delta, 9.2);
+  assert.strictEqual(calcMomentum([10, 10]), null);
+}
+
+function test_calcConsistency_desviacion_tipica() {
+  assert.strictEqual(calcConsistency([10, 10, 10, 10]), 0);
+  assert.strictEqual(calcConsistency([0, 10]), 5);
+  assert.strictEqual(calcConsistency([10]), null);
+}
+
+test_calcUserBestJornada_maximo_y_vacio();
+test_calcPositionHistory_empates_comparten_puesto();
+test_calcTimesTopJornada_empate_cuenta_para_ambos();
+test_calcMomentum_ultimas_3_vs_media();
+test_calcConsistency_desviacion_tipica();
+console.log('OK estadisticas-subtabs T5');

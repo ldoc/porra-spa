@@ -221,6 +221,71 @@
     return items.slice(0, topN);
   }
 
+  function calcUserBestJornada(ptsArr) {
+    const arr = ptsArr || [];
+    if (!arr.length) return null;
+    let best = { idx: 0, pts: arr[0] };
+    for (let i = 1; i < arr.length; i++) {
+      if (arr[i] > best.pts) best = { idx: i, pts: arr[i] };
+    }
+    return best;
+  }
+
+  function calcPositionHistory(pointsByUserByJornada) {
+    const users = Object.keys(pointsByUserByJornada || {});
+    let totalRondas = 0;
+    for (const u of users) totalRondas = Math.max(totalRondas, (pointsByUserByJornada[u] || []).length);
+    const out = {};
+    const cum = {};
+    for (const u of users) { out[u] = []; cum[u] = 0; }
+    for (let j = 0; j < totalRondas; j++) {
+      for (const u of users) cum[u] += ((pointsByUserByJornada[u] || [])[j] || 0);
+      for (const u of users) {
+        let rank = 1;
+        for (const v of users) if (cum[v] > cum[u]) rank++;
+        out[u].push(rank);
+      }
+    }
+    return out;
+  }
+
+  function calcTimesTopJornada(pointsByUserByJornada) {
+    const entries = Object.entries(pointsByUserByJornada || {});
+    const out = {};
+    for (const [u] of entries) out[u] = 0;
+    if (!entries.length) return out;
+    let len = 0;
+    for (const [, arr] of entries) len = Math.max(len, arr.length);
+    for (let j = 0; j < len; j++) {
+      let max = null;
+      for (const [, arr] of entries) {
+        const v = arr[j] || 0;
+        if (max === null || v > max) max = v;
+      }
+      for (const [u, arr] of entries) {
+        if (max !== null && (arr[j] || 0) === max) out[u]++;
+      }
+    }
+    return out;
+  }
+
+  function calcMomentum(ptsArr) {
+    const arr = ptsArr || [];
+    if (arr.length < 3) return null;
+    const recent = arr.slice(-3).reduce((a, b) => a + b, 0);
+    const avg = arr.reduce((a, b) => a + b, 0) / arr.length;
+    const delta = Math.round((recent / 3 - avg) * 10) / 10;
+    return { recent, avg: Math.round(avg * 10) / 10, delta };
+  }
+
+  function calcConsistency(ptsArr) {
+    const arr = ptsArr || [];
+    if (arr.length < 2) return null;
+    const mean = arr.reduce((a, b) => a + b, 0) / arr.length;
+    const variance = arr.reduce((a, b) => a + (b - mean) ** 2, 0) / arr.length;
+    return Math.round(Math.sqrt(variance) * 10) / 10;
+  }
+
   function computeMatchConsensus(matchId, allPredictions) {
     const counts = { H: 0, D: 0, A: 0 };
     const scoreVotes = new Map();
@@ -367,6 +432,7 @@
     { key: 'consenso', label: 'Consenso' },
     { key: 'plantillas', label: 'Plantillas' },
   ];
+  const STATS_CONSISTENCY_SIGMA = 8;
   const LINE_COLORS = ['var(--accent-primary)', 'var(--accent-purple)', 'var(--accent-gold)', 'var(--accent-cyan)', '#EC4899', '#F97316', '#22C55E', '#3B82F6'];
   let currentSeriesMap = null;
 
@@ -923,12 +989,17 @@
   global.buildCompletedLeagueData = buildCompletedLeagueData;
   global.calcStreaks = calcStreaks;
   global.calcBestJornadas = calcBestJornadas;
+  global.calcUserBestJornada = calcUserBestJornada;
+  global.calcPositionHistory = calcPositionHistory;
+  global.calcTimesTopJornada = calcTimesTopJornada;
+  global.calcMomentum = calcMomentum;
+  global.calcConsistency = calcConsistency;
   global.computeMatchConsensus = computeMatchConsensus;
   global.tallyChampions = tallyChampions;
   global.finalPredictionTeamIds = finalPredictionTeamIds;
   global.compareQuadroWithCommunity = compareQuadroWithCommunity;
   global.aggregateSquads = aggregateSquads;
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { emptySeries, buildTimeline, calcPredictionSeries, calcSquadSeries, calcClassificationSeries, calcEliminatoriasSeries, sumSeries, isLeagueComplete, getSeriesBySource, matchResultOf, extractPlayedMatches, calcReliabilityRow, calcReliabilityRows, buildCompletedLeagueData, calcStreaks, calcBestJornadas, computeMatchConsensus, tallyChampions, finalPredictionTeamIds, compareQuadroWithCommunity, aggregateSquads };
+    module.exports = { emptySeries, buildTimeline, calcPredictionSeries, calcSquadSeries, calcClassificationSeries, calcEliminatoriasSeries, sumSeries, isLeagueComplete, getSeriesBySource, matchResultOf, extractPlayedMatches, calcReliabilityRow, calcReliabilityRows, buildCompletedLeagueData, calcStreaks, calcBestJornadas, calcUserBestJornada, calcPositionHistory, calcTimesTopJornada, calcMomentum, calcConsistency, computeMatchConsensus, tallyChampions, finalPredictionTeamIds, compareQuadroWithCommunity, aggregateSquads };
   }
 })(typeof window !== 'undefined' ? window : globalThis);
