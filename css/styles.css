@@ -5950,7 +5950,7 @@ html, body {
 }
 
 .stats-cmp-chip.up {
-  color: var(--accent-green);
+  color: var(--accent-primary);
 }
 
 .stats-cmp-chip.dn {

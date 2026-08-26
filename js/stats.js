@@ -1053,7 +1053,6 @@
     const players = AppState.players || [];
     const username = resolveIndividualUsername(players);
     if (!username) return statsEmpty('Sin usuarios disponibles');
-    const me = AppState.currentUser?.name;
 
     const options = players.map(p =>
       `<option value="${esc(p.name)}" ${p.name === username ? 'selected' : ''}>${esc(p.avatar || '⚽')} ${esc(p.name)}</option>`
