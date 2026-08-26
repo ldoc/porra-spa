@@ -668,7 +668,7 @@
 
     let body = '';
     if (sub === 'evolucion') body = renderEvolucionBody(aggregates);
-    else if (sub === 'individual') body = statsEmpty('Ficha individual: próximamente');
+    else if (sub === 'individual') body = renderIndividualBody(aggregates);
     else if (sub === 'rachas') body = renderRachasBody(aggregates);
     else if (sub === 'consenso') body = renderConsensoBody(aggregates);
     else body = renderPlantillasBody(aggregates);
@@ -967,6 +967,232 @@
     return `<div class="stats-legend">${items || statsEmpty('Añade jugadores para ver la leyenda')}</div>`;
   }
 
+  function jornadaPtsDeUsuario(aggregates, username) {
+    const rondas = aggregates.completedRondas || [];
+    const details = AppState.userPoints[username]?.matchDetails || [];
+    return rondas.map(r => (details || [])
+      .filter(d => d.match && d.match.fase === 'liga' && Number(d.match.ronda) === Number(r))
+      .reduce((a, d) => a + (d.points || 0), 0));
+  }
+
+  function resolveIndividualUsername(players) {
+    const list = players || [];
+    const wanted = AppState.estadisticasIndividualUser || AppState.currentUser?.name;
+    if (list.some(p => p.name === wanted)) return wanted;
+    const me = AppState.currentUser?.name;
+    if (list.some(p => p.name === me)) return me;
+    return list[0]?.name || null;
+  }
+
+  function individualOverallRank(realPointsByUser, username) {
+    const mine = realPointsByUser?.[username] || 0;
+    let rank = 1;
+    for (const u of Object.keys(realPointsByUser || {})) {
+      if ((realPointsByUser[u] || 0) > mine) rank++;
+    }
+    return rank;
+  }
+
+  function donutChartHtml(split) {
+    const defs = [
+      { key: 'prediction', label: 'Pronósticos', color: '#8B5CF6' },
+      { key: 'squad', label: 'Plantilla', color: '#10B981' },
+      { key: 'classification', label: 'Clasificación', color: '#22D3EE' },
+      { key: 'eliminatorias', label: 'Eliminatorias', color: '#F59E0B' },
+    ];
+    const parts = defs.map(d => ({ ...d, value: split[d.key] || 0 }));
+    const segs = buildDonutSegments(parts);
+    if (!segs.length) return statsEmpty('Sin puntos todavía');
+    const total = parts.reduce((a, p) => a + p.value, 0);
+    const circles = segs.map(s =>
+      `<circle cx="60" cy="60" r="${DONUT_RADIUS}" fill="none" stroke="${s.color}" stroke-width="18" stroke-dasharray="${s.dasharray}" stroke-dashoffset="${s.dashoffset}" transform="rotate(-90 60 60)"/>`
+    ).join('');
+    const legend = segs.map(s =>
+      `<span class="stats-donut-chip" style="background:${s.color}22;color:${s.color}"><i style="background:${s.color}"></i>${esc(s.label)} ${s.value} · ${s.pct}%</span>`
+    ).join('');
+    return `
+      <svg class="stats-donut" viewBox="0 0 120 120">
+        <circle cx="60" cy="60" r="${DONUT_RADIUS}" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="18"/>
+        ${circles}
+        <text x="60" y="57" text-anchor="middle" class="stats-donut-total">${total}</text>
+        <text x="60" y="72" text-anchor="middle" class="stats-donut-sub">puntos totales</text>
+      </svg>
+      <div class="stats-donut-legend">${legend}</div>`;
+  }
+
+  function comparativaHtml(split) {
+    const avg = getPorraAvgBySource();
+    const defs = [
+      ['prediction', 'Pronóst.'],
+      ['squad', 'Plantilla'],
+      ['classification', 'Clasif.'],
+      ['eliminatorias', 'Elims.'],
+    ];
+    return `<div class="stats-cmp-row">vs media de la porra: ` + defs.map(([k, lbl]) => {
+      const delta = Math.round(((split[k] || 0) - (avg[k] || 0)) * 10) / 10;
+      const cls = delta > 0 ? 'up' : delta < 0 ? 'dn' : '';
+      const sign = delta > 0 ? '+' : '';
+      return `<span class="stats-cmp-chip ${cls}">${lbl} ${sign}${delta}</span>`;
+    }).join('') + '</div>';
+  }
+
+  function momentumKpiHtml(m) {
+    if (!m) return '<div class="stats-kpi"><div class="stats-kv">—</div><div class="stats-kl">momentum</div></div>';
+    if (m.delta >= 2) return `<div class="stats-kpi"><div class="stats-kv">▲ ${m.delta}</div><div class="stats-kl">en forma</div></div>`;
+    if (m.delta <= -2) return `<div class="stats-kpi"><div class="stats-kv">▼ ${m.delta}</div><div class="stats-kl">bajón</div></div>`;
+    return '<div class="stats-kpi"><div class="stats-kv">→</div><div class="stats-kl">estable</div></div>';
+  }
+
+  function consistencyKpiHtml(sigma) {
+    if (sigma === null) return '<div class="stats-kpi"><div class="stats-kv">—</div><div class="stats-kl">consistencia</div></div>';
+    const lbl = sigma <= STATS_CONSISTENCY_SIGMA ? 'regular' : 'montaña rusa';
+    return `<div class="stats-kpi"><div class="stats-kv">${sigma}</div><div class="stats-kl">${lbl}</div></div>`;
+  }
+
+  function renderIndividualBody(aggregates) {
+    const players = AppState.players || [];
+    const username = resolveIndividualUsername(players);
+    if (!username) return statsEmpty('Sin usuarios disponibles');
+    const me = AppState.currentUser?.name;
+
+    const options = players.map(p =>
+      `<option value="${esc(p.name)}" ${p.name === username ? 'selected' : ''}>${esc(p.avatar || '⚽')} ${esc(p.name)}</option>`
+    ).join('');
+
+    const rank = individualOverallRank(aggregates.realPointsByUser, username);
+
+    const split = sourceSplitFromUserData(AppState.userPoints[username]?.totalPoints, getCachedUserData(username));
+
+    const row = calcReliabilityRow(username, aggregates.playedMatches, AppState.allPredictions, AppState.userPoints);
+    const fallidos = row.played - row.hits;
+    const conversion = row.hits ? Math.round((row.exactScores / row.hits) * 100) : null;
+    const bestMatch = calcBestMatch(AppState.userPoints[username]?.matchDetails);
+    let bestMatchLbl = '—';
+    if (bestMatch) {
+      const m = aggregates.matchesById?.[bestMatch.matchId];
+      bestMatchLbl = `${bestMatch.points} pts${m ? ` (${esc(m.homeTeam || '')} – ${esc(m.awayTeam || '')})` : ''}`;
+    }
+    const pronosticosCard = `
+      <div class="stats-card">
+        <div class="stats-card-title">⚽ Pronósticos (${row.played} partidos jugados)</div>
+        ${row.played ? `
+        <div class="stats-kpi-grid">
+          <div class="stats-kpi"><div class="stats-kv">${row.hits}</div><div class="stats-kl">1X2 ✔</div></div>
+          <div class="stats-kpi"><div class="stats-kv">${row.exactScores}</div><div class="stats-kl">exactos</div></div>
+          <div class="stats-kpi"><div class="stats-kv">${fallidos}</div><div class="stats-kl">fallidos</div></div>
+        </div>
+        <div class="stats-rank-sub">% conversión de exactos: ${conversion === null ? '—' : conversion + '%'} · Mejor partido: ${bestMatchLbl}</div>` : statsEmpty('Sin partidos pronosticados con resultado')}
+      </div>`;
+
+    const rondas = aggregates.completedRondas || [];
+    const hist = aggregates.positionHistory?.[username] || [];
+    const tops = aggregates.timesTopJornada?.[username] || 0;
+    const userJornadaPts = jornadaPtsDeUsuario(aggregates, username);
+    const bestJ = calcUserBestJornada(userJornadaPts);
+    const mediaJ = rondas.length ? Math.round(((split.prediction || 0) / rondas.length) * 10) / 10 : null;
+    const jornadasInner = rondas.length ? `
+      <div class="stats-kpi-grid" style="grid-template-columns:repeat(2,1fr)">
+        <div class="stats-kpi"><div class="stats-kv">${bestJ ? `J${rondas[bestJ.idx] ?? bestJ.idx + 1} · ${bestJ.pts}` : '—'}</div><div class="stats-kl">mejor jornada</div></div>
+        <div class="stats-kpi"><div class="stats-kv">${mediaJ ?? '—'}</div><div class="stats-kl">media/jornada</div></div>
+        <div class="stats-kpi"><div class="stats-kv">${tops}</div><div class="stats-kl">veces mejor</div></div>
+        <div class="stats-kpi"><div class="stats-kv">${hist.length ? `${Math.min(...hist)}º / ${Math.max(...hist)}º` : '—'}</div><div class="stats-kl">mejor/peor puesto</div></div>
+      </div>
+      <div class="stats-kpi-grid" style="margin-top:6px">
+        ${momentumKpiHtml(calcMomentum(userJornadaPts))}
+        ${consistencyKpiHtml(calcConsistency(userJornadaPts))}
+        <div class="stats-kpi"><div class="stats-kv">${rondas.length}</div><div class="stats-kl">jornadas completas</div></div>
+      </div>` : statsEmpty('Aún no hay jornadas completadas');
+    const jornadasCard = `
+      <div class="stats-card">
+        <div class="stats-card-title">📅 Jornadas</div>
+        ${jornadasInner}
+      </div>`;
+
+    const bias = calcPredictionBias(AppState.allPredictions?.[username], aggregates.playedMatches);
+    const biasDefs = [['1', 'H'], ['X', 'D'], ['2', 'A']];
+    const biasRows = biasDefs.map(([lbl, k]) => {
+      const pct = bias[k].pred ? Math.round((bias[k].hits / bias[k].pred) * 100) : null;
+      return `<div class="stats-consbar"><span class="lbl">${lbl}</span><div class="track"><div class="fill" style="width:${bias[k].pred ? pct : 0}%;background:var(--accent-primary)"></div></div><b style="color:var(--text-primary)">${bias[k].pred ? `${bias[k].hits}/${bias[k].pred} · ${pct}%` : '—'}</b></div>`;
+    }).join('');
+    const sesgoCard = `
+      <div class="stats-card">
+        <div class="stats-card-title">🎯 Sesgo 1/X/2 (pronosticado y acierto)</div>
+        ${row.played ? biasRows : statsEmpty('Sin partidos pronosticados con resultado')}
+      </div>`;
+
+    const ud = getCachedUserData(username);
+    const playerDetails = ud.squadPoints?.playerDetails || [];
+    let plantillaCard;
+    if (!playerDetails.length) {
+      plantillaCard = `
+      <div class="stats-card">
+        <div class="stats-card-title">👥 Plantilla ideal</div>
+        ${statsEmpty('Sin plantilla guardada')}
+      </div>`;
+    } else {
+      const best = calcBestPlayersByPosition(playerDetails);
+      const rentable = calcMostProfitablePlayer(playerDetails);
+      const posRow = (posKey, lbl) => {
+        const b = best[posKey];
+        if (!b) return '';
+        const ext = b.jugador.extension || 'webp';
+        const img = `<img class="stats-sq-img" src="data/imgJugadores/${b.jugador.id}.${ext}" alt="" loading="lazy"
+          onerror="this.outerHTML='<span class=&quot;stats-sq-img&quot; style=&quot;display:flex;align-items:center;justify-content:center&quot;>${squadPosEmoji(posKey)}</span>'">`;
+        return `
+        <div class="stats-squad-row">
+          ${img}
+          <div class="stats-sq-info">
+            <div class="stats-sq-name">${esc(b.jugador.nombre || '')}</div>
+            <div class="stats-sq-pos">Mejor ${esc(lbl)}</div>
+          </div>
+          <span class="stats-sq-pts">${b.puntosTotal} pts</span>
+        </div>`;
+      };
+      const topRow = best.top ? `
+        <div class="stats-squad-row" style="outline:1px solid var(--accent-gold)">
+          <span class="stats-sq-img" style="display:flex;align-items:center;justify-content:center">⭐</span>
+          <div class="stats-sq-info">
+            <div class="stats-sq-name">${esc(best.top.jugador.nombre || '')}</div>
+            <div class="stats-sq-pos">Mejor jugador</div>
+          </div>
+          <span class="stats-sq-pts">${best.top.puntosTotal} pts</span>
+        </div>` : '';
+      const rentableRow = rentable ? `
+        <div class="stats-squad-row">
+          <span class="stats-sq-img" style="display:flex;align-items:center;justify-content:center">💎</span>
+          <div class="stats-sq-info">
+            <div class="stats-sq-name">${esc(rentable.jugador.nombre || '')}</div>
+            <div class="stats-sq-pos">Más rentable · ${rentable.partidos} partido${rentable.partidos === 1 ? '' : 's'}</div>
+          </div>
+          <span class="stats-sq-pts">${rentable.ptsPorPartido} pts/part</span>
+        </div>` : '';
+      plantillaCard = `
+      <div class="stats-card">
+        <div class="stats-card-title">👥 Plantilla ideal — mejores por demarcación</div>
+        ${posRow('G', 'POR')}${posRow('D', 'DEF')}${posRow('M', 'MED')}${posRow('F', 'DEL')}
+        ${topRow}
+        ${rentableRow}
+      </div>`;
+    }
+
+    return `
+      <div class="stats-card">
+        <div style="display:flex;align-items:center;gap:10px">
+          <select id="stats-ind-select" class="stats-ind-select" aria-label="Seleccionar usuario">${options}</select>
+          <span class="stats-rank-main">#${rank}</span>
+        </div>
+      </div>
+      <div class="stats-card">
+        <div class="stats-card-title">🥧 Desglose de puntos</div>
+        ${donutChartHtml(split)}
+        ${comparativaHtml(split)}
+      </div>
+      ${pronosticosCard}
+      ${jornadasCard}
+      ${sesgoCard}
+      ${plantillaCard}`;
+  }
+
   function bindStatsEvents() {
     const container = document.getElementById('estadisticas-container');
     if (!container) return;
@@ -1022,6 +1248,14 @@
 
     container.querySelectorAll('.stats-cons-card').forEach(card => {
       card.addEventListener('click', () => card.classList.toggle('open'));
+    });
+
+    container.querySelectorAll('.stats-ind-select').forEach(sel => {
+      sel.addEventListener('change', () => {
+        AppState.estadisticasIndividualUser = sel.value;
+        container.innerHTML = renderStatsContent();
+        bindStatsEvents();
+      });
     });
 
     const prevBtn = container.querySelector('#btn-stats-cons-prev');
