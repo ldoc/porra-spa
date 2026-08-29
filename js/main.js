@@ -4547,7 +4547,7 @@ function removePlayerFromSquad(position, index) {
 }
 
 /** Renderiza las casillas de selección agrupadas por posición */
-function renderSquadSlots() {
+function renderSquadSlots(disabled = false) {
   const positions = ['G', 'D', 'M', 'F'];
 
   return positions.map(pos => {
@@ -4572,12 +4572,12 @@ function renderSquadSlots() {
                 <span class="squad-slot-team-name">${player.club}</span>
               </div>
             </div>
-            <button class="squad-slot-remove" data-position="${pos}" data-index="${i}" aria-label="Quitar ${player.nombre}">&times;</button>
+            <button class="squad-slot-remove" data-position="${pos}" data-index="${i}" aria-label="Quitar ${player.nombre}" ${disabled ? 'disabled' : ''}>&times;</button>
           </div>
         `);
       } else {
         slots.push(`
-          <div class="squad-slot empty" data-position="${pos}" data-index="${i}">
+          <div class="squad-slot empty ${disabled ? 'disabled' : ''}" data-position="${pos}" data-index="${i}" ${disabled ? 'style="cursor:not-allowed;opacity:0.5"' : ''}>
             <div class="squad-slot-empty-icon">+</div>
             <div>
               <div class="squad-slot-empty-text">Vacío</div>
