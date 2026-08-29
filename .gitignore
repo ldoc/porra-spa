@@ -151,3 +151,8 @@ server.mjs
 
 # Superpowers (brainstorm mockups, plans, specs workspace)
 .superpowers/
+
+# Local assets and rules
+data/img/
+reglas/*.pdf
+reglas/*.pdf:Zone.Identifier
