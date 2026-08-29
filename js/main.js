@@ -4626,7 +4626,7 @@ function renderPlantillaTab() {
                 Podrás seleccionar tu plantilla ideal a partir del <strong>${PLAYERS_AVAILABLE_DATE}</strong>.
               </p>
               <p class="squad-notice-text squad-notice-secondary">
-                Las listas A de jugadores convocados se publicarán el día 2 a las 23:59h.
+                Las listas A de jugadores convocados se publicarán el día 2.
               </p>
             </div>
           </div>
