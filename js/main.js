@@ -224,6 +224,8 @@ const SQUAD_FORMATION = {
   F: { count: 6, label: 'Delanteros' }
 };
 
+const PLAYERS_AVAILABLE_DATE = '3 de septiembre de 2026';
+
 // ============================================================
 // ARRANQUE
 // ============================================================
