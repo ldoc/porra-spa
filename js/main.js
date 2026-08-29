@@ -4605,6 +4605,7 @@ function renderPlantillaTab() {
 
   const totalSelected = AppState.squadPicks.length;
   const frozen = isSquadFrozen();
+  const playersAvailable = AppState.allPlayers.length > 0;
 
   container.innerHTML = `
     <div class="squad-picker-wrapper">
@@ -4612,86 +4613,106 @@ function renderPlantillaTab() {
       <!-- Cabecera fija -->
       <div class="squad-top-fixed">
         ${frozen ? '<div style="background:rgba(239,68,68,0.15);color:#ef4444;padding:8px 12px;border-radius:8px;margin-bottom:8px;font-size:13px;text-align:center;">🔒 Plantilla bloqueada — la competición ha comenzado</div>' : ''}
+        
+        ${!playersAvailable ? `
+          <div class="squad-players-unavailable-notice">
+            <div class="squad-notice-icon">⚠️</div>
+            <div class="squad-notice-content">
+              <p class="squad-notice-title">Jugadores no disponibles</p>
+              <p class="squad-notice-text">
+                Los jugadores convocados para la Champions League 2026/2027 aún no están disponibles.
+              </p>
+              <p class="squad-notice-text">
+                Podrás seleccionar tu plantilla ideal a partir del <strong>${PLAYERS_AVAILABLE_DATE}</strong>.
+              </p>
+              <p class="squad-notice-text squad-notice-secondary">
+                Las listas A de jugadores convocados se publicarán el día 2 a las 23:59h.
+              </p>
+            </div>
+          </div>
+        ` : ''}
+        
         <!-- Resumen -->
         <div class="squad-summary">
           <span class="squad-summary-text">Tu Plantilla (<span id="squad-count">${totalSelected}</span>/${SQUAD_SIZE})</span>
-          <button class="squad-save-btn" id="btn-save-squad" ${totalSelected === 0 || frozen ? 'disabled' : ''} ${frozen ? 'style="opacity:0.5"' : ''}>💾 Guardar</button>
+          <button class="squad-save-btn" id="btn-save-squad" ${totalSelected === 0 || frozen || !playersAvailable ? 'disabled' : ''} ${frozen || !playersAvailable ? 'style="opacity:0.5"' : ''}>💾 Guardar</button>
         </div>
       </div>
 
       <!-- Contenido con scroll -->
       <div class="squad-scroll-content" id="squad-slots">
-        ${renderSquadSlots()}
+        ${renderSquadSlots(!playersAvailable)}
       </div>
     </div>
 
-    <!-- Panel de búsqueda (overlay) -->
-    <div class="squad-search-panel" id="squad-search-panel">
-      <div class="squad-search-panel-content">
-        <div class="squad-search-panel-header">
-          <h3 class="squad-search-panel-title" id="squad-search-panel-title">Buscar jugador</h3>
-          <button class="squad-search-panel-close" id="btn-close-search">&times;</button>
-        </div>
-        <div class="squad-filters-row">
-          <div class="squad-team-filter" id="squad-team-filter"></div>
-          <div class="squad-search-input-row">
-            <div class="squad-search-wrapper">
-              <input type="text" class="squad-search-input" id="squad-search-input"
-                     placeholder="Buscar por nombre..." autocomplete="off" spellcheck="false">
-            </div>
-
+    <!-- Panel de búsqueda (overlay) - solo si hay jugadores disponibles -->
+    ${playersAvailable ? `
+      <div class="squad-search-panel" id="squad-search-panel">
+        <div class="squad-search-panel-content">
+          <div class="squad-search-panel-header">
+            <h3 class="squad-search-panel-title" id="squad-search-panel-title">Buscar jugador</h3>
+            <button class="squad-search-panel-close" id="btn-close-search">&times;</button>
           </div>
+          <div class="squad-filters-row">
+            <div class="squad-team-filter" id="squad-team-filter"></div>
+            <div class="squad-search-input-row">
+              <div class="squad-search-wrapper">
+                <input type="text" class="squad-search-input" id="squad-search-input"
+                       placeholder="Buscar por nombre..." autocomplete="off" spellcheck="false">
+              </div>
+            </div>
+          </div>
+          <div class="squad-players-list" id="squad-search-results"></div>
         </div>
-        <div class="squad-players-list" id="squad-search-results"></div>
       </div>
-    </div>
+    ` : ''}
   `;
 
-  // Eventos de casillas vacías
-  container.querySelectorAll('.squad-slot.empty').forEach(slot => {
-    slot.addEventListener('click', () => {
-      const position = slot.getAttribute('data-position');
-      const index = parseInt(slot.getAttribute('data-index'));
-      openSlotSearch(position, index);
+  // Eventos de casillas vacías (solo si hay jugadores disponibles)
+  if (playersAvailable) {
+    container.querySelectorAll('.squad-slot.empty').forEach(slot => {
+      slot.addEventListener('click', () => {
+        const position = slot.getAttribute('data-position');
+        const index = parseInt(slot.getAttribute('data-index'));
+        openSlotSearch(position, index);
+      });
     });
-  });
 
-  // Eventos de casillas llenas (quitar)
-  container.querySelectorAll('.squad-slot-remove').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const position = btn.getAttribute('data-position');
-      const index = parseInt(btn.getAttribute('data-index'));
-      removePlayerFromSquad(position, index);
+    // Eventos de casillas llenas (quitar)
+    container.querySelectorAll('.squad-slot-remove').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const position = btn.getAttribute('data-position');
+        const index = parseInt(btn.getAttribute('data-index'));
+        removePlayerFromSquad(position, index);
+      });
     });
-  });
 
-  // Cerrar panel de búsqueda
-  document.getElementById('btn-close-search')?.addEventListener('click', closeSlotSearch);
+    // Cerrar panel de búsqueda
+    document.getElementById('btn-close-search')?.addEventListener('click', closeSlotSearch);
 
-  // Búsqueda de jugadores
-  const searchInput = document.getElementById('squad-search-input');
-  const debouncedSearch = debounce((val) => { AppState.squadSearchOffset = 0; renderSearchResults(val); }, 300);
-  searchInput?.addEventListener('input', (e) => debouncedSearch(e.target.value));
+    // Búsqueda de jugadores
+    const searchInput = document.getElementById('squad-search-input');
+    const debouncedSearch = debounce((val) => { AppState.squadSearchOffset = 0; renderSearchResults(val); }, 300);
+    searchInput?.addEventListener('input', (e) => debouncedSearch(e.target.value));
 
-  // Lazy load: se configura en renderSearchResults via IntersectionObserver
+    // Seleccionar jugador de la lista
+    document.getElementById('squad-search-results')?.addEventListener('click', (e) => {
+      const row = e.target.closest('.squad-player-row');
+      if (row) {
+        const playerId = parseInt(row.getAttribute('data-player-id'));
+        selectPlayerForSlot(playerId);
+      }
+    });
 
-  // Seleccionar jugador de la lista
-  document.getElementById('squad-search-results')?.addEventListener('click', (e) => {
-    const row = e.target.closest('.squad-player-row');
-    if (row) {
-      const playerId = parseInt(row.getAttribute('data-player-id'));
-      selectPlayerForSlot(playerId);
-    }
-  });
+    // Cerrar panel al hacer clic fuera
+    document.getElementById('squad-search-panel')?.addEventListener('click', (e) => {
+      if (e.target.id === 'squad-search-panel') closeSlotSearch();
+    });
+  }
 
   // Guardar plantilla
   document.getElementById('btn-save-squad')?.addEventListener('click', saveSquadToBackend);
-
-  // Cerrar panel al hacer clic fuera
-  document.getElementById('squad-search-panel')?.addEventListener('click', (e) => {
-    if (e.target.id === 'squad-search-panel') closeSlotSearch();
-  });
 }
 
 async function saveSquadToBackend() {
