@@ -276,7 +276,7 @@ async function loadInitialData() {
       const teamsArr = await teamsRes.json();
       AppState.teamsMap = {};
       teamsArr.forEach(t => {
-        AppState.teamsMap[t.id] = { name: t.name, ext: t.extension || 'png' };
+        AppState.teamsMap[t.id] = { name: t.name, ext: t.extension || 'webp' };
       });
     }
 
@@ -1469,7 +1469,7 @@ async function renderEliminatoriasTab(container, username) {
         slots.push('<div class="drop-slot"></div>');
         continue;
       }
-      const ext = AppState.teamsMap[teamId]?.ext || 'png';
+      const ext = AppState.teamsMap[teamId]?.ext || 'webp';
       const pts = pointsByTeam[teamId] || 0;
       const status = getTeamEliminatoriasStatus(teamId, elimResult, realStandings);
       slots.push(`
@@ -1800,7 +1800,7 @@ function renderElimZona(title, emoji, zoneId, teamIds, max) {
   for (let i = 0; i < max; i++) {
     const teamId = teamIds[i];
     if (teamId) {
-      const ext = AppState.teamsMap[teamId]?.ext || 'png';
+      const ext = AppState.teamsMap[teamId]?.ext || 'webp';
       slots.push(`
         <div class="drop-slot filled">
           <img class="drop-slot-img" src="data/imgEquipos/${teamId}.${ext}" alt="${teamName(teamId)}" onerror="this.onerror=null;this.src='data/imgEquipos/default.webp'">
@@ -5066,7 +5066,7 @@ function calculateStandings() {
     teams.push({
       ...stats,
       name: teamInfo?.name || 'Desconocido',
-      badgeExt: teamInfo?.ext || 'png'
+      badgeExt: teamInfo?.ext || 'webp'
     });
     statsCache.set(teamId, stats);
   }
@@ -5334,7 +5334,7 @@ function calculateRealStandings() {
     teams.push({
       ...stats,
       name: teamInfo?.name || 'Desconocido',
-      badgeExt: teamInfo?.ext || 'png'
+      badgeExt: teamInfo?.ext || 'webp'
     });
     statsCache.set(teamId, stats);
   }
@@ -5462,7 +5462,7 @@ function calculateUserPredictedStandings(username) {
     teams.push({
       ...stats,
       name: teamInfo?.name || 'Desconocido',
-      badgeExt: teamInfo?.ext || 'png'
+      badgeExt: teamInfo?.ext || 'webp'
     });
     statsCache.set(teamId, stats);
   }
@@ -5587,7 +5587,7 @@ function calculatePredictedStandings() {
     teams.push({
       ...stats,
       name: teamInfo?.name || 'Desconocido',
-      badgeExt: teamInfo?.ext || 'png'
+      badgeExt: teamInfo?.ext || 'webp'
     });
     statsCache.set(teamId, stats);
   }
@@ -5791,7 +5791,7 @@ async function renderFinalPredictionsTab() {
   const savedScrollPositions = saveFinalScrollPositions();
 
   function getTeamImg(teamId) {
-    const ext = AppState.teamsMap[teamId]?.ext || 'png';
+    const ext = AppState.teamsMap[teamId]?.ext || 'webp';
     return `data/imgEquipos/${teamId}.${ext}`;
   }
 
@@ -5906,7 +5906,7 @@ function renderDropZone(title, zoneId, value, maxSlots, qualifiedTeams, frozen) 
     if (teamId) {
       const team = qualifiedTeams.find(t => t.id === teamId);
       if (team) {
-        const ext = AppState.teamsMap[teamId]?.ext || 'png';
+        const ext = AppState.teamsMap[teamId]?.ext || 'webp';
         slots.push(`
           <div class="drop-slot filled" data-zone="${zoneId}" data-index="${i}" data-team-id="${teamId}">
             <img class="drop-slot-img" src="data/imgEquipos/${teamId}.${ext}" alt="${team.name}" onerror="this.src='data/imgEquipos/default.webp'">
