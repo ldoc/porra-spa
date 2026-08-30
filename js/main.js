@@ -1398,13 +1398,6 @@ function buildClassificationRowHtml(team) {
 
 /** Renderiza la tab de clasificación en el modal de perfil */
 function renderClassificationTab(container, username) {
-  // Verificar si hay clasificación real disponible
-  if (!AppState.matchStats.length) {
-    container.innerHTML = '<div style="padding: 24px; text-align: center; color: var(--text-muted);">La clasificación real estará disponible cuando se disputen partidos.</div>';
-    return;
-  }
-
-  // Calcular puntos de clasificación del usuario
   const classData = calculateClassificationPoints(username);
 
   if (!classData.teamDetails.length) {
@@ -1412,14 +1405,27 @@ function renderClassificationTab(container, username) {
     return;
   }
 
-  // Tabla única de los 36 equipos ordenada por posición pronosticada
+  const leagueMatches = AppState.matches.filter(m => m.fase === 'liga');
+  const hasLeagueResult = leagueMatches.some(m =>
+    AppState.matchStats.some(ms =>
+      ms.eventId === m.id &&
+      ms.stats?.[m.homeTeamId] !== undefined &&
+      ms.stats?.[m.awayTeamId] !== undefined
+    )
+  );
+
   const sortedTeams = sortTeamsByPredicted(classData.teamDetails);
+
+  const noticeHtml = hasLeagueResult
+    ? '<div class="classification-notice">Los puntos por clasificación varían según la clasificación real después de cada partido</div>'
+    : '<div class="classification-notice notice-pre-jornada">Los puntos de clasificación empezarán a contarse cuando empiece la jornada 1</div>';
 
   const html = `
     <div class="profile-total-points">Puntos totales clasificación: <strong>${classData.totalPoints}</strong></div>
     <div class="classification-legend" style="padding: 8px 16px; font-size: 11px; color: var(--text-muted); text-align: center;">
       Solo puntúan equipos en posición 1-24 | Mínimo entre posición pronosticada y real
     </div>
+    ${noticeHtml}
     <div class="classification-section">
       <div class="classification-table">
         <div class="classification-header">
