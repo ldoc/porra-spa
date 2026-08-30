@@ -1380,7 +1380,8 @@ function sortTeamsByPredicted(teamDetails) {
  * @returns {string} Fila de 4 columnas: Pron | Equipo | Real | Pts
  */
 function buildClassificationRowHtml(team) {
-  const muted = team.realPos > 24 ? ' muted' : '';
+  const isPreJornada = team.realPos === '-';
+  const muted = isPreJornada ? '' : (team.realPos > 24 ? ' muted' : '');
   const ptsClass = team.points > 0 ? ' positive' : '';
   return `
     <div class="classification-row${muted}">
