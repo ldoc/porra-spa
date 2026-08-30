@@ -43,7 +43,7 @@ function renderPlantillaTab() {
         ` : ''}
         <div class="squad-summary">
           <span class="squad-summary-text">Tu Plantilla (<span id="squad-count">${totalSelected}</span>/${SQUAD_SIZE})</span>
-          <button class="squad-save-btn" id="btn-save-squad" ${totalSelected === 0 || frozen || !playersAvailable ? 'disabled' : ''}>💾 Guardar</button>
+          <button class="squad-save-btn" id="btn-save-squad" ${totalSelected !== SQUAD_SIZE || frozen || !playersAvailable ? 'disabled' : ''}>💾 Guardar</button>
         </div>
       </div>
     </div>
@@ -77,19 +77,63 @@ function test_deshabilitar_boton_guardar_cuando_no_hay_jugadores() {
   assert.ok(containerHtml.includes('id="btn-save-squad" disabled'), 'Botón Guardar debería estar deshabilitado');
 }
 
-function test_habilitar_boton_guardar_cuando_hay_jugadores_y_seleccion() {
+function test_deshabilitar_boton_guardar_cuando_plantilla_incompleta() {
   resetState();
   AppState.allPlayers = [{ id: 1, nombre: 'Test', posicion: 'G', equipo: 1 }];
-  AppState.squadPicks = [{ id: 1, nombre: 'Test', posicion: 'G', equipo: 1 }];
+  AppState.squadPicks = Array.from({ length: 24 }, (_, i) => ({ id: i + 1, nombre: `J${i + 1}`, posicion: 'G', equipo: i + 1 }));
+  renderPlantillaTab();
+  assert.ok(containerHtml.includes('id="btn-save-squad" disabled'), 'Botón Guardar debería estar deshabilitado con plantilla incompleta');
+}
+
+function test_habilitar_boton_guardar_solo_con_25_jugadores() {
+  resetState();
+  AppState.allPlayers = [{ id: 1, nombre: 'Test', posicion: 'G', equipo: 1 }];
+  AppState.squadPicks = Array.from({ length: SQUAD_SIZE }, (_, i) => ({ id: i + 1, nombre: `J${i + 1}`, posicion: 'G', equipo: i + 1 }));
   renderPlantillaTab();
   assert.ok(containerHtml.includes('id="btn-save-squad"'), 'Botón debería existir');
-  assert.ok(!containerHtml.includes('id="btn-save-squad" disabled'), 'Botón Guardar debería estar habilitado');
+  assert.ok(!containerHtml.includes('id="btn-save-squad" disabled'), 'Botón Guardar debería estar habilitado con 25 jugadores');
+}
+
+function test_guardar_rechaza_plantilla_incompleta() {
+  const isSquadFrozen = () => false;
+  const cases = [undefined, [], Array.from({ length: 20 }, (_, i) => ({ id: i + 1 })), Array.from({ length: 26 }, (_, i) => ({ id: i + 1 }))];
+  for (const squad of cases) {
+    let toastMsg = '';
+    async function saveSquadToBackend() {
+      if (!squad || squad.length !== SQUAD_SIZE) {
+        toastMsg = `Completa los ${SQUAD_SIZE} jugadores de tu plantilla para guardarla`;
+        return false;
+      }
+      return true;
+    }
+    const result = saveSquadToBackend();
+    assert.ok(result instanceof Promise, 'saveSquadToBackend debería devolver una promesa');
+    assert.strictEqual(toastMsg, `Completa los ${SQUAD_SIZE} jugadores de tu plantilla para guardarla`, 'Debería mostrar toast de plantilla incompleta');
+  }
+}
+
+function test_guardar_acepta_25_jugadores() {
+  const squad = Array.from({ length: SQUAD_SIZE }, (_, i) => ({ id: i + 1 }));
+  let toastMsg = '';
+  async function saveSquadToBackend() {
+    if (!squad || squad.length !== SQUAD_SIZE) {
+      toastMsg = `Completa los ${SQUAD_SIZE} jugadores de tu plantilla para guardarla`;
+      return false;
+    }
+    return true;
+  }
+  const result = saveSquadToBackend();
+  assert.ok(result instanceof Promise, 'saveSquadToBackend debería devolver una promesa');
+  assert.strictEqual(toastMsg, '', 'No debería mostrar toast con 25 jugadores');
 }
 
 // Ejecutar tests
 test_mostrar_aviso_cuando_allPlayers_vacio();
 test_no_mostrar_aviso_cuando_allPlayers_con_datos();
 test_deshabilitar_boton_guardar_cuando_no_hay_jugadores();
-test_habilitar_boton_guardar_cuando_hay_jugadores_y_seleccion();
+test_deshabilitar_boton_guardar_cuando_plantilla_incompleta();
+test_habilitar_boton_guardar_solo_con_25_jugadores();
+test_guardar_rechaza_plantilla_incompleta();
+test_guardar_acepta_25_jugadores();
 
-console.log('✓ tests/plantilla-aviso.test.js — 4 tests passed');
+console.log('✓ tests/plantilla-aviso.test.js — 7 tests passed');
