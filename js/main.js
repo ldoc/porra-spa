@@ -2051,6 +2051,22 @@ function renderMatchResult({ match, homeGoals, awayGoals, hasResult }) {
 // AUTENTICACION Y FLUJO DE REGISTRO
 // ============================================================
 
+/** Cierra la sesión por completo: limpia localStorage, estado, cachés y polling */
+function logout() {
+  localStorage.removeItem('porra_ucl_user');
+  localStorage.removeItem('session_token');
+  porraCache.clearPorraCaches();
+  AppState._allPredictionsSeeded = false;
+  AppState.currentUser = null;
+  AppState.sessionToken = null;
+  AppState.hasUnsavedChanges = false;
+  AppState.hasUnsavedSquadChanges = false;
+  AppState.hasUnsavedFinalChanges = false;
+  clearInicioCountdown();
+  stopMatchStatsPolling();
+  checkAuthStatus();
+}
+
 function checkAuthStatus() {
   const token = localStorage.getItem('session_token');
   const savedUser = localStorage.getItem('porra_ucl_user');
@@ -2955,7 +2971,8 @@ function showUnsavedFinalChangesModal(targetTab) {
 
   overlay.querySelector('#modal-save-final').addEventListener('click', async () => {
     overlay.remove();
-    await saveFinalPredictionsToBackend();
+    const ok = await saveFinalPredictionsToBackend();
+    if (!ok) return;
     AppState.hasUnsavedFinalChanges = false;
     forceNavigateToTab(targetTab);
   });
@@ -3007,31 +3024,20 @@ function showLogoutWithUnsavedModal() {
 
   overlay.querySelector('#modal-save-logout').addEventListener('click', async () => {
     overlay.remove();
-    if (hasPredictions) await savePredictionsToBackend();
-    if (hasSquad) await saveSquadToBackend();
-    localStorage.removeItem('porra_ucl_user');
-    localStorage.removeItem('session_token');
-    AppState.currentUser = null;
-    AppState.sessionToken = null;
-    AppState.hasUnsavedChanges = false;
-    AppState.hasUnsavedSquadChanges = false;
-    clearInicioCountdown();
-    stopMatchStatsPolling();
-    checkAuthStatus();
+    let ok = true;
+    if (hasPredictions) ok = (await savePredictionsToBackend()) === true && ok;
+    if (hasSquad) ok = (await saveSquadToBackend()) === true && ok;
+    if (!ok) {
+      showToast('No se pudieron guardar los cambios. La sesión no se ha cerrado.');
+      return;
+    }
+    logout();
     showToast('Sesion cerrada correctamente');
   });
 
   overlay.querySelector('#modal-discard-logout').addEventListener('click', () => {
     overlay.remove();
-    localStorage.removeItem('porra_ucl_user');
-    localStorage.removeItem('session_token');
-    AppState.currentUser = null;
-    AppState.sessionToken = null;
-    AppState.hasUnsavedChanges = false;
-    AppState.hasUnsavedSquadChanges = false;
-    clearInicioCountdown();
-    stopMatchStatsPolling();
-    checkAuthStatus();
+    logout();
     showToast('Sesion cerrada correctamente');
   });
 
@@ -3721,17 +3727,8 @@ function showProfileModal() {
       showLogoutWithUnsavedModal();
       return;
     }
-    localStorage.removeItem('porra_ucl_user');
-    localStorage.removeItem('session_token');
-    porraCache.clearPorraCaches();
-    AppState._allPredictionsSeeded = false;
-    AppState.currentUser = null;
-    AppState.sessionToken = null;
-    AppState.hasUnsavedChanges = false;
-    clearInicioCountdown();
-    stopMatchStatsPolling();
     modal.remove();
-    checkAuthStatus();
+    logout();
     showToast('Sesion cerrada correctamente');
   });
 
@@ -6161,13 +6158,13 @@ async function saveFinalPredictionsToBackend() {
   const token = AppState.sessionToken || localStorage.getItem('session_token');
   if (!token) {
     showToast('Debes iniciar sesión para guardar');
-    return;
+    return false;
   }
 
   const fp = AppState.finalPredictions;
   if (!fp) {
     showToast('No hay predicciones para guardar');
-    return;
+    return false;
   }
 
   try {
@@ -6193,12 +6190,15 @@ async function saveFinalPredictionsToBackend() {
       invalidatePredAllCache();
       AppState._allPredictionsTime = 0;
       showToast('✅ Predicciones guardadas correctamente');
+      return true;
     } else {
       showToast('❌ Error al guardar: ' + (data.error || 'Error desconocido'));
+      return false;
     }
   } catch (error) {
     console.error('Error saving final predictions:', error);
     showToast('❌ Error de conexión al guardar');
+    return false;
   }
 }
 
