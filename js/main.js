@@ -5630,8 +5630,8 @@ function calculatePredictedStandings() {
     if (b.wins !== a.wins) return b.wins - a.wins;
     if (b.awayWins !== a.awayWins) return b.awayWins - a.awayWins;
 
-    const aRivals = getRealRivalsStats(a.teamId, statsCache);
-    const bRivals = getRealRivalsStats(b.teamId, statsCache);
+    const aRivals = getRivalsStats(a.teamId, statsCache);
+    const bRivals = getRivalsStats(b.teamId, statsCache);
 
     if (bRivals.rivalPointsSum !== aRivals.rivalPointsSum) {
       return bRivals.rivalPointsSum - aRivals.rivalPointsSum;
