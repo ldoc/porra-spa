@@ -5669,8 +5669,7 @@ function calculateClassificationPoints(username) {
     return AppState.classificationPoints[username];
   }
 
-  const realStandings = calculateRealStandings();
-  if (!realStandings.length) {
+  if (!AppState.matchStats.length) {
     const predictedStandings = calculateUserPredictedStandings(username);
     if (!predictedStandings.length) {
       return { totalPoints: 0, teamDetails: [] };
@@ -5684,6 +5683,11 @@ function calculateClassificationPoints(username) {
       points: 0
     }));
     return { totalPoints: 0, teamDetails };
+  }
+
+  const realStandings = calculateRealStandings();
+  if (!realStandings.length) {
+    return { totalPoints: 0, teamDetails: [] };
   }
 
   const predictedStandings = calculateUserPredictedStandings(username);
