@@ -38,6 +38,7 @@ const AppState = {
   resultadosRound: null, // Ronda seleccionada en pestaña resultados
   allPredictions: {},   // { username: { matchId: { home, away } } }
   _allPredictionsSeeded: false, // flag SWR: ya se ha hidratado desde localStorage esta sesión (pred-all)
+  messages: [],         // mensajes del gestor (cacheados desde el backend)
   userPoints: {},       // { username: { totalPoints, matchDetails } }
   squadsCache: {},      // { username: squad[] } - caché de plantillas para resultados
   pointsReady: false,   // true cuando matchStats y allPredictions han cargado (botón 'Tus puntos')
@@ -2348,6 +2349,8 @@ async function enterApp() {
   fetchSquadFromBackend();
   startMatchStatsPolling();
 
+  porraMensajes.fetchMessages().then(() => porraMensajes.showMessagesEntryModal());
+
   const othersReady = Promise.all([
     refreshUserProfile(),
     fetchPredictionsFromBackend(),
@@ -2503,6 +2506,10 @@ function showAdminModal() {
       <button id="btn-admin-progress" class="btn-primary" style="background: linear-gradient(135deg, #10B981 0%, #059669 100%); color: #fff; margin-top: 8px; width: 100%;">
         📊 Progreso de jugadores
       </button>
+
+      <button id="btn-admin-mensajes" class="btn-primary" style="background: linear-gradient(135deg, #8B5CF6 0%, #6D28D9 100%); color: #fff; margin-top: 8px; width: 100%;">
+        💬 Gestión de Mensajes
+      </button>
     </div>
   `;
 
@@ -2549,6 +2556,14 @@ function showAdminModal() {
     progressBtn.addEventListener('click', () => {
       modal.remove();
       showAdminProgressModal();
+    });
+  }
+
+  const adminMensajesBtn = modal.querySelector('#btn-admin-mensajes');
+  if (adminMensajesBtn) {
+    adminMensajesBtn.addEventListener('click', () => {
+      modal.remove();
+      porraMensajes.showAdminMessagesModal();
     });
   }
 
@@ -3698,6 +3713,10 @@ function showProfileModal() {
         Cambiar Contraseña
       </button>
 
+      <button id="btn-mensajes" class="btn-primary" style="background: linear-gradient(135deg, #8B5CF6 0%, #6D28D9 100%); color: #fff; margin-top: 8px; width: 100%;">
+        💬 Mensajes
+      </button>
+
       <button id="btn-admin-panel" class="btn-primary" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #fff; margin-top: 8px; width: 100%; display: none;">
         Panel de Administración
       </button>
@@ -3727,6 +3746,13 @@ function showProfileModal() {
     modal.remove();
     showChangePasswordModal();
   });
+  const mensajesBtn = modal.querySelector('#btn-mensajes');
+  if (mensajesBtn) {
+    mensajesBtn.addEventListener('click', () => {
+      modal.remove();
+      porraMensajes.showProfileMessagesModal();
+    });
+  }
   if (adminBtn) {
     adminBtn.addEventListener('click', () => {
       modal.remove();
