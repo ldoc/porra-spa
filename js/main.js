@@ -2499,6 +2499,10 @@ function showAdminModal() {
       <button id="btn-manage-invitations" class="btn-primary" style="background: linear-gradient(135deg, #10B981 0%, #059669 100%); color: #fff; margin-top: 8px; width: 100%;">
         Gestionar Códigos de Invitación
       </button>
+
+      <button id="btn-admin-progress" class="btn-primary" style="background: linear-gradient(135deg, #10B981 0%, #059669 100%); color: #fff; margin-top: 8px; width: 100%;">
+        📊 Progreso de jugadores
+      </button>
     </div>
   `;
 
@@ -2537,6 +2541,14 @@ function showAdminModal() {
     manageInvitationsBtn.addEventListener('click', () => {
       modal.remove();
       showInvitationCodesModal();
+    });
+  }
+
+  const progressBtn = modal.querySelector('#btn-admin-progress');
+  if (progressBtn) {
+    progressBtn.addEventListener('click', () => {
+      modal.remove();
+      showAdminProgressModal();
     });
   }
 
