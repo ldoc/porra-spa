@@ -4,7 +4,8 @@ const {
   computeFinalSlotsFilled,
   computeProgressForUser,
   computeSummaries,
-  sortUsers
+  sortUsers,
+  buildProgressTableHtml
 } = require('../js/progresoAdmin.js');
 
 const LIGA_144 = Array.from({ length: 144 }, (_, i) => ({ id: String(i + 1), fase: 'liga' }));
@@ -106,6 +107,41 @@ function test_sortUsers_confirmados_primero() {
   assert.deepStrictEqual(sorted.map(u => u.username), ['marta7', 'luciab']);
 }
 
+function test_buildProgressTableHtml_celdas_estado() {
+  const list = [
+    { username: 'luciab', avatar: '⚽', isAdmin: false, predictionsConfirmed: false, byFase: { liga: { done: 89, total: 144 } }, finalFilled: 0, finalTotal: 24, finalLocked: true, squadCount: 18, squadTotal: 25 },
+    { username: 'marta7', avatar: '🏆', isAdmin: false, predictionsConfirmed: true, byFase: { liga: { done: 144, total: 144 } }, finalFilled: 24, finalTotal: 24, finalLocked: false, squadCount: 25, squadTotal: 25 }
+  ];
+  const html = buildProgressTableHtml(list, ['liga']);
+  assert.match(html, /89\/144/);
+  assert.match(html, /state-pending/);
+  assert.match(html, /144\/144/);
+  assert.match(html, /state-done/);
+  assert.match(html, /🔒/);
+  assert.match(html, /⏳/);
+  assert.match(html, /✅/);
+  assert.match(html, /Liguilla/);
+}
+
+function test_buildProgressTableHtml_fases_dinamicas() {
+  const list = [
+    { username: 'x', avatar: '👤', isAdmin: false, predictionsConfirmed: true, byFase: { liga: { done: 144, total: 144 }, '16': { done: 5, total: 16 } }, finalFilled: 24, finalTotal: 24, finalLocked: false, squadCount: 25, squadTotal: 25 }
+  ];
+  const html = buildProgressTableHtml(list, ['liga', '16']);
+  assert.match(html, /16avos/);
+  assert.match(html, /5\/16/);
+}
+
+function test_buildProgressTableHtml_sumario() {
+  const list = [
+    { username: 'marta7', avatar: '🏆', isAdmin: false, predictionsConfirmed: true, byFase: { liga: { done: 144, total: 144 } }, finalFilled: 24, finalTotal: 24, finalLocked: false, squadCount: 25, squadTotal: 25 }
+  ];
+  const html = buildProgressTableHtml(list, ['liga']);
+  assert.match(html, /👥 1/);
+  assert.match(html, /Liguilla 1\/1/);
+  assert.match(html, /Validados 1/);
+}
+
 const tests = [
   test_countPredictedMatches_cuenta_solo_numericos,
   test_computeFinalSlotsFilled_vacio,
@@ -116,7 +152,10 @@ const tests = [
   test_computeSummaries,
   test_sortUsers_nombre,
   test_sortUsers_liga_menos_completados_primero,
-  test_sortUsers_confirmados_primero
+  test_sortUsers_confirmados_primero,
+  test_buildProgressTableHtml_celdas_estado,
+  test_buildProgressTableHtml_fases_dinamicas,
+  test_buildProgressTableHtml_sumario
 ];
 let passed = 0, failed = 0;
 for (const t of tests) {
