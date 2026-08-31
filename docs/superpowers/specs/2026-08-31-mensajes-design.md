@@ -50,8 +50,8 @@ No existe modelo, colección ni endpoint de mensajes en `api-porra`, ni módulo 
 | `title` | String (req) | Máx 200 chars |
 | `content` | String (req) | Acepta HTML |
 | `type` | String (req) | enum: `noticia`, `aviso`, `felicitacion`, `resumen`, `mantenimiento` |
-| `fechaInicio` | Date / null | Sin límite inferior si `null` |
-| `fechaFin` | Date / null | Inclusivo al final del día (si `null`, sin límite superior) |
+| `fechaInicio` | String / null | `'YYYY-MM-DD'` o `null` (sin límite inferior) |
+| `fechaFin` | String / null | `'YYYY-MM-DD'` o `null` (sin límite superior) |
 | `readBy` | [String] | Usernames que han leído el mensaje (Enfoque A) |
 | `createdBy` | String / null | Username del admin que lo creó; `null` para resúmenes creados externamente |
 | `createdAt` | Date | default `Date.now` |
@@ -66,7 +66,7 @@ Patrón de módulos puros existente (`{ ok: true }` / `{ ok: false, error: '...'
   - `title`: string, trim no vacío, ≤ 200 chars.
   - `content`: string, trim no vacío.
   - `type`: uno de `['noticia','aviso','felicitacion','resumen','mantenimiento']`.
-  - `fechaInicio` / `fechaFin`: `null` o string de fecha válida (`YYYY-MM-DD`); si ambos presentes, `fechaInicio ≤ fechaFin`.
+  - `fechaInicio` / `fechaFin`: `null` o string `'YYYY-MM-DD'` (fecha de calendario válida); si ambos presentes, `fechaInicio ≤ fechaFin`.
 
 #### Endpoints (rutas `if` en `server.js`)
 
@@ -79,7 +79,7 @@ Patrón de módulos puros existente (`{ ok: true }` / `{ ok: false, error: '...'
 
 Convenciones aplicadas: `parseBody`, `sendJson`, `verifyAdmin` → 403 `'Acceso denegado. Se requieren permisos de administrador.'`, `try/catch` → 500 `'Error interno del servidor'`. El GET de mensajes no expone `readBy` ni `createdBy` (no se filtran campos internos al usuario).
 
-**Regla de actividad** (función pura en frontend, no se filtra en backend): un mensaje está activo si `ahora ≥ fechaInicio` y `ahora ≤ final del día de fechaFin`. El form envía `YYYY-MM-DD` (medianoche); `fechaFin` se interpreta como fin de ese día completo.
+**Regla de actividad** (función pura en frontend, no se filtra en backend): un mensaje está activo si `hoy ≥ fechaInicio` y `hoy ≤ fechaFin`, comparando fechas `'YYYY-MM-DD'` (el form usa `<input type="date">`). Se almacenan como **string** (no `Date`) para que la comparación por día sea independiente de la zona horaria del servidor/cliente; `fechaFin` incluye el día completo.
 
 ### Frontend (`porra-spa`)
 
