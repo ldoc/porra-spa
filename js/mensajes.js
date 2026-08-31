@@ -166,8 +166,8 @@
     render();
   }
 
-  function showProfileMessagesModal() {
-    const messages = [...(AppState.messages || [])].sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+  async function showProfileMessagesModal() {
+    const messages = [...(await fetchMessages())].sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
     const overlay = document.createElement('div');
     overlay.className = 'breakdown-modal-overlay';
     overlay.innerHTML = `
