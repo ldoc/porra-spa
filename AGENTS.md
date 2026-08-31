@@ -40,7 +40,7 @@ Definido en `js/main.js` (objeto `AppState`, líneas 17-55). Es la **fuente de v
 | `scorePredictions` | object | `{ matchId: { home, away } }` (pronósticos en edición) |
 | `squadPicks` | array | 25 jugadores seleccionados |
 | `blockedTeams` | Set | IDs de equipos ya usados en plantilla |
-| `appConfig` | object\|null | Config del torneo (faseJuego, totalMatches, squadFormation). Incluye `fasesFechas`: `{ FASE_X: { inicio, fin } }` — fechas de inicio/fin de cada fase (string ISO o `null` mientras no se conozcan) |
+| `appConfig` | object\|null | Config del torneo (faseJuego, totalMatches, squadFormation). Incluye `fasesFechas`: `{ FASE_X: { inicio, fin } }` — fechas de inicio/fin de cada fase (string ISO o `null` mientras no se conozcan) e `maintenance`: `{ enabled:boolean, message:string }` — modo mantenimiento (ver §5.7) |
 | `fases` | array | 13 fases desde `fases.json` |
 | `players` | array | Usuarios registrados (para clasificación) |
 | `matchStats` | array | Todos los matchstats del backend |
@@ -230,7 +230,7 @@ Si al finalizar el partido el equipo no ha recibido goles, el portero recibirá 
 ## 4. Normas para los Agentes de IA
 
 Cuando trabajes en este proyecto:
-1. **Preserva el enfoque móvil vertical**: No introduzcas diseños que rompan la experiencia en smartphones verticales.
+1. **Preserva el enfoque móvil vertical**: No introduzcas diseños que rompan la experiencia en smartphones verticales. Los modales `.profile-modal` deben ser scrolleables (`max-height:90dvh; overflow-y:auto` en `.profile-modal-content` y `padding:16px; overflow-y:auto` en `.profile-modal`, ver `css/styles.css:2103`) para evitar que paneles altos (ej. Admin) oculten la cabecera.
 2. **Revisa las variables de CSS**: Reutiliza las variables definidas en `:root` (colores, espaciados, bordes) antes de añadir valores estáticos directos.
 3. **Mantén el HTML semántico**: Usa identificadores `id` descriptivos y únicos para elementos interactivos.
 4. **Validación de código**: Comprueba siempre que el código JS no lance excepciones en la consola y que los estilos sean responsivos.
@@ -323,6 +323,7 @@ DELETE /api/admin/invitations/:code // Eliminar código no usado
 PUT    /api/admin/fase-juego        // Cambiar la fase del juego
 PUT    /api/admin/config            // Actualizar configuración completa
 PUT    /api/admin/fases-fechas      // Body: { fasesFechas } — actualizar fechas de fases (admin)
+PUT    /api/admin/maintenance       // Body: { enabled:boolean, message:string } — activar/desactivar mantenimiento (admin)
 ```
 
 #### Variables de Entorno Requeridas (Backend)
@@ -420,6 +421,8 @@ La configuración se obtiene del backend (`GET /api/config`), se almacena en Mon
 | `squadFormation.F` | `6` | Delanteros en plantilla |
 | `fasesFechas.FASE_X.inicio` | `null` | Fecha de inicio de la fase (string ISO o `null` si no se conoce) |
 | `fasesFechas.FASE_X.fin` | `null` | Fecha de fin de la fase (string ISO o `null` si no se conoce) |
+| `maintenance.enabled` | `false` | Si `true`, la web está en mantenimiento (solo admins pueden navegar) |
+| `maintenance.message` | `"Web en mantenimiento..."` | Mensaje mostrado en el overlay de mantenimiento (máx 500 chars) |
 
 #### Cierre de Sesión
 
@@ -1233,6 +1236,20 @@ Base = jugadores con pronóstico numérico completo para ese `matchId`. Para cad
 Tras añadir `js/hoyPartidos.js`, incrementar la versión de `js/main.js`, `css/styles.css` y `js/hoyPartidos.js` en `index.html` (regla de AGENTS.md).
 
 
+
+### 5.7. Modo mantenimiento
+
+Bloquea la web para usuarios normales mostrando un overlay; los admins siguen operando.
+
+**Backend:** campo `maintenance` en `GameConfig` (`api-porra/db/models/GameConfig.js`), expuesto en `GET /api/config` como `config.maintenance {enabled, message}` y mutable via `PUT /api/admin/maintenance` (solo admin, `message` máx 500 chars). Middleware global en `api-porra/server.js` tras `globalLimiter`: si `maintenance.enabled` y la ruta es `/api/*` (excepto allowlist `/api/config`, `/api/auth/login`, `/`, `/api/admin/maintenance`), verifica `verifyAdmin(req)`; si no es admin responde `503 {ok:false, error:'MAINTENANCE', message}`. Así se capa también a usuarios con la web ya abierta (su siguiente `fetch` falla).
+
+**Frontend (`porra-spa/js/main.js`):**
+- Estado: `AppState.appConfig.maintenance` (defaults si backend antiguo no lo envía).
+- Helpers: `isMaintenanceEnabled()`, `maintenanceMessage()`, `isCurrentUserAdmin()`, `showMaintenanceOverlay(msg)`, `hideMaintenanceOverlay()`, `showMaintenanceAdminBanner(msg)`, `checkMaintenanceMode()`.
+- `fetchWithPhase()` intercepta `503 MAINTENANCE` (antes de `409 PHASE_CHANGED`): si no es admin muestra overlay, devuelve `Response` 503 sintética `{error:'MAINTENANCE'}` para abortar el flujo.
+- `loadInitialData()` llama `checkMaintenanceMode()` tras `GET /api/config`; `refreshUserProfile()` lo re-evalúa tras conocer `isAdmin`. Los usuarios con la web ya abierta se enteran en su siguiente petición a `/api/*` (middleware responde `503 MAINTENANCE` y `fetchWithPhase` muestra el overlay).
+- Overlay para anónimos incluye botón “Acceso administradores” que oculta el overlay 10s para permitir login (login está en allowlist).
+- Admin UI: botón `🔧 Modo mantenimiento` en `showAdminModal()` abre modal dedicado `showAdminMaintenanceModal()` (estado con badge ACTIVO/Inactivo, toggle, textarea 500 chars, botón dinámico Activar/Desactivar/Guardar). Al activar desde `false→true` pide confirmación via `showMaintenanceConfirmModal(message)` (modal con advertencia 503 + preview del mensaje). Guarda con `PUT /api/admin/maintenance` y re-renderiza.
 
 ## Reglas básicas de la porra
 

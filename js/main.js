@@ -92,6 +92,26 @@ async function fetchWithPhase(url, options = {}) {
   }
   const res = await fetch(url, { ...options, headers });
 
+  if (res.status === 503) {
+    try {
+      const clone = res.clone();
+      const data = await clone.json();
+      if (data.error === 'MAINTENANCE') {
+        // Si es admin, no mostrar overlay (puede seguir operando)
+        if (!isCurrentUserAdmin()) {
+          showMaintenanceOverlay(data.message);
+        }
+        return new Response(JSON.stringify({ ok: false, error: 'MAINTENANCE', message: data.message }), {
+          status: 503,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+    } catch (e) {
+      // Ignore JSON parse errors
+    }
+    return res;
+  }
+
   if (res.status === 409) {
     try {
       const clone = res.clone();
@@ -176,6 +196,135 @@ function showPhaseChangeModal(previousPhase, currentPhase) {
   setTimeout(() => {
     window.location.reload();
   }, 3000);
+}
+
+function isMaintenanceEnabled() {
+  return AppState.appConfig?.maintenance?.enabled === true;
+}
+
+function maintenanceMessage() {
+  return AppState.appConfig?.maintenance?.message || 'Web en mantenimiento. Volvemos pronto.';
+}
+
+function isCurrentUserAdmin() {
+  return AppState.currentUser?.isAdmin === true;
+}
+
+function showMaintenanceOverlay(message) {
+  if (document.querySelector('.maintenance-overlay')) return;
+  // Admin bypass: mostrar banner en lugar de overlay bloqueante
+  if (isCurrentUserAdmin()) {
+    showMaintenanceAdminBanner(message);
+    return;
+  }
+  const isAnon = !AppState.currentUser;
+  const overlay = document.createElement('div');
+  overlay.className = 'maintenance-overlay';
+  overlay.innerHTML = `
+    <div class="maintenance-modal">
+      <div class="maintenance-icon">🔧</div>
+      <h3 class="maintenance-title">Mantenimiento</h3>
+      <p class="maintenance-text">${String(message || maintenanceMessage()).replace(/</g,'&lt;')}</p>
+      <p class="maintenance-subtext">Inténtalo de nuevo más tarde.</p>
+      ${isAnon ? '<button class="maintenance-admin-access" style="margin-top:16px;background:transparent;border:1px solid rgba(255,255,255,0.2);color:var(--text-secondary);padding:8px 14px;border-radius:8px;font-size:12px;cursor:pointer;">Acceso administradores</button>' : ''}
+    </div>
+  `;
+  Object.assign(overlay.style, {
+    position: 'fixed',
+    top: '0',
+    left: '0',
+    width: '100%',
+    height: '100%',
+    backgroundColor: 'rgba(5, 11, 24, 0.97)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: '10000',
+    opacity: '0',
+    transition: 'opacity 0.3s ease'
+  });
+  const modal = overlay.querySelector('.maintenance-modal');
+  Object.assign(modal.style, {
+    backgroundColor: '#1E293B',
+    borderRadius: '16px',
+    padding: '32px 24px',
+    textAlign: 'center',
+    maxWidth: '360px',
+    width: '90%',
+    boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
+    border: '1px solid rgba(245,158,11,0.25)'
+  });
+  const icon = overlay.querySelector('.maintenance-icon');
+  Object.assign(icon.style, { fontSize: '48px', marginBottom: '16px' });
+  const title = overlay.querySelector('.maintenance-title');
+  Object.assign(title.style, { color: '#F59E0B', fontSize: '1.3rem', marginBottom: '12px' });
+  const text = overlay.querySelector('.maintenance-text');
+  Object.assign(text.style, { color: '#F1F5F9', fontSize: '0.95rem', lineHeight: '1.6', marginBottom: '12px' });
+  const subtext = overlay.querySelector('.maintenance-subtext');
+  Object.assign(subtext.style, { color: '#64748B', fontSize: '0.8rem' });
+  const adminBtn = overlay.querySelector('.maintenance-admin-access');
+  if (adminBtn) {
+    adminBtn.addEventListener('click', () => {
+      overlay.remove();
+      // Mostrar login si estaba oculto tras mantenimiento
+      const authOverlay = document.getElementById('auth-overlay');
+      if (authOverlay && AppState.currentUser == null) {
+        authOverlay.style.display = 'flex';
+      }
+      // Re-chequear en 5s por si el admin no logra entrar, volver a mostrar
+      setTimeout(() => {
+        if (!isCurrentUserAdmin() && isMaintenanceEnabled() && !document.querySelector('.maintenance-overlay')) {
+          showMaintenanceOverlay(maintenanceMessage());
+        }
+      }, 10000);
+    });
+  }
+  document.body.appendChild(overlay);
+  requestAnimationFrame(() => { overlay.style.opacity = '1'; });
+}
+
+function hideMaintenanceOverlay() {
+  document.querySelector('.maintenance-overlay')?.remove();
+  document.querySelector('.maintenance-admin-banner')?.remove();
+}
+
+function showMaintenanceAdminBanner(message) {
+  if (document.querySelector('.maintenance-admin-banner')) return;
+  const banner = document.createElement('div');
+  banner.className = 'maintenance-admin-banner';
+  banner.innerHTML = `🔧 Mantenimiento activo: ${String(message || maintenanceMessage()).replace(/</g,'&lt;')} <span style="opacity:0.7">(solo admins pueden navegar)</span>`;
+  Object.assign(banner.style, {
+    position: 'fixed',
+    top: '0',
+    left: '0',
+    width: '100%',
+    backgroundColor: '#F59E0B',
+    color: '#000',
+    textAlign: 'center',
+    padding: '8px 12px',
+    fontSize: '12px',
+    fontWeight: '700',
+    zIndex: '10001',
+    boxShadow: '0 4px 12px rgba(0,0,0,0.3)'
+  });
+  document.body.appendChild(banner);
+  // Empujar viewport un poco si hace falta
+  const viewport = document.getElementById('app-viewport');
+  if (viewport) viewport.style.paddingTop = '32px';
+}
+
+function checkMaintenanceMode() {
+  if (isMaintenanceEnabled()) {
+    if (!isCurrentUserAdmin()) {
+      showMaintenanceOverlay(maintenanceMessage());
+    } else {
+      showMaintenanceAdminBanner(maintenanceMessage());
+    }
+  } else {
+    hideMaintenanceOverlay();
+    const viewport = document.getElementById('app-viewport');
+    if (viewport) viewport.style.paddingTop = '';
+  }
 }
 
 function isFasePretemporada() {
@@ -308,7 +457,14 @@ async function loadInitialData() {
     try {
       const configRes = await fetchWithPhase(`${API_BASE}/api/config`);
       const configData = await configRes.json();
-      if (configData.ok) AppState.appConfig = configData.config;
+      if (configData.ok) {
+        AppState.appConfig = configData.config;
+        // Asegurar defaults de maintenance si el backend antiguo no lo envía
+        if (!AppState.appConfig.maintenance) {
+          AppState.appConfig.maintenance = { enabled: false, message: 'Web en mantenimiento. Volvemos pronto.' };
+        }
+        checkMaintenanceMode();
+      }
     } catch (e) {
       // config por defecto si falla
       AppState.appConfig = {
@@ -322,7 +478,8 @@ async function loadInitialData() {
           M: 8,
           F: 6
         },
-        fasesFechas: {}
+        fasesFechas: {},
+        maintenance: { enabled: false, message: 'Web en mantenimiento. Volvemos pronto.' }
       };
     }
 
@@ -2317,6 +2474,8 @@ async function refreshUserProfile() {
       AppState.predictionsConfirmed = updatedUser.predictionsConfirmed;
       localStorage.setItem('porra_ucl_user', JSON.stringify(updatedUser));
       updateUserHeader();
+      // Reevaluar mantenimiento tras conocer isAdmin (admin bypass)
+      checkMaintenanceMode();
     }
   } catch (e) {
     console.error('Error refrescando perfil:', e);
@@ -2510,6 +2669,10 @@ function showAdminModal() {
       <button id="btn-admin-mensajes" class="btn-primary" style="background: linear-gradient(135deg, #8B5CF6 0%, #6D28D9 100%); color: #fff; margin-top: 8px; width: 100%;">
         💬 Gestión de Mensajes
       </button>
+
+      <button id="btn-admin-maintenance" class="btn-primary" style="background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%); color: #fff; margin-top: 8px; width: 100%;">
+        🔧 Modo mantenimiento ${isMaintenanceEnabled() ? '<span style="background:#fff;color:#D97706;padding:2px 6px;border-radius:8px;font-size:10px;margin-left:6px;">ACTIVO</span>' : ''}
+      </button>
     </div>
   `;
 
@@ -2567,8 +2730,112 @@ function showAdminModal() {
     });
   }
 
+  const maintenanceBtn = modal.querySelector('#btn-admin-maintenance');
+  if (maintenanceBtn) {
+    maintenanceBtn.addEventListener('click', () => {
+      modal.remove();
+      showAdminMaintenanceModal();
+    });
+  }
+
   modal.addEventListener('click', (e) => {
     if (e.target === modal) modal.remove();
+  });
+}
+
+function showAdminMaintenanceModal() {
+  const enabled = isMaintenanceEnabled();
+  const currentMsg = AppState.appConfig?.maintenance?.message || 'Web en mantenimiento. Volvemos pronto.';
+  const modal = document.createElement('div');
+  modal.className = 'profile-modal';
+  modal.innerHTML = `
+    <div class="profile-modal-content" style="max-width: 400px;">
+      <button class="profile-modal-close" id="close-maintenance-modal">&times;</button>
+      <div style="text-align: center; margin-bottom: 16px;">
+        <div style="font-size: 2rem; margin-bottom: 8px;">🔧</div>
+        <h2 style="font-size: 1.3rem; font-weight: 800; margin: 0;">Modo mantenimiento</h2>
+        <span class="ucl-tag" style="margin-top:8px; background:${enabled ? 'rgba(239,68,68,0.15)' : 'rgba(16,185,129,0.15)'}; color:${enabled ? '#fca5a5' : '#6ee7b7'}; border-color:${enabled ? 'rgba(239,68,68,0.3)' : 'rgba(16,185,129,0.3)'};">${enabled ? '● ACTIVO — solo admins' : '○ Inactivo'}</span>
+      </div>
+
+      <div style="width:100%; padding: 12px; background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.25); border-radius: var(--radius-md); margin-bottom: 12px;">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
+          <span style="font-size:13px; font-weight:800; color: var(--text-primary);">Activar mantenimiento</span>
+          <label style="position:relative; display:inline-block; width:44px; height:24px;">
+            <input type="checkbox" id="admin-maintenance-toggle" ${enabled ? 'checked' : ''} style="opacity:0; width:0; height:0;">
+            <span style="position:absolute; cursor:pointer; top:0; left:0; right:0; bottom:0; background-color:${enabled ? '#F59E0B' : '#334155'}; transition:.2s; border-radius:24px;"></span>
+            <span style="position:absolute; height:18px; width:18px; left:3px; bottom:3px; background-color:white; transition:.2s; border-radius:50%; transform:${enabled ? 'translateX(20px)' : 'translateX(0)'};"></span>
+          </label>
+        </div>
+        <p style="font-size:11px; color:var(--text-muted); margin:0; line-height:1.4;">Si está activo, los usuarios normales verán el mensaje de mantenimiento y no podrán usar la web. Los que ya la tenían abierta serán bloqueados en su siguiente petición (503). Solo los administradores podrán seguir navegando.</p>
+      </div>
+
+      <div style="width:100%; text-align:left; margin-bottom: 12px;">
+        <label style="font-size:11px; color: var(--text-muted); font-weight:700; display:block; margin-bottom:6px;">Mensaje a mostrar</label>
+        <textarea id="admin-maintenance-message" rows="3" style="width:100%; padding:10px; border-radius:8px; border:1px solid var(--ucl-border); background: var(--ucl-surface); color: var(--text-primary); font-size:13px; resize:vertical;" placeholder="Web en mantenimiento. Volvemos pronto.">${String(currentMsg).replace(/</g,'&lt;').replace(/"/g,'&quot;')}</textarea>
+      </div>
+
+      <button id="btn-admin-maintenance-save" class="btn-primary" style="background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%); color:#fff; width:100%;">
+        ${enabled ? 'Guardar cambios' : '🔧 Activar mantenimiento'}
+      </button>
+      <p style="font-size:10px; color:var(--text-muted); margin:8px 0 0 0; text-align:center;">Al activar se pedirá confirmación.</p>
+    </div>
+  `;
+  document.body.appendChild(modal);
+
+  const closeBtn = modal.querySelector('#close-maintenance-modal');
+  const toggle = modal.querySelector('#admin-maintenance-toggle');
+  const saveBtn = modal.querySelector('#btn-admin-maintenance-save');
+  const messageInput = modal.querySelector('#admin-maintenance-message');
+
+  function updateSaveLabel() {
+    if (!saveBtn || !toggle) return;
+    saveBtn.textContent = toggle.checked ? '🔧 Activar mantenimiento' : '✅ Desactivar mantenimiento';
+    if (toggle.checked && !enabled) saveBtn.textContent = '🔧 Activar mantenimiento';
+    else if (!toggle.checked && enabled) saveBtn.textContent = '✅ Desactivar mantenimiento';
+    else saveBtn.textContent = 'Guardar cambios';
+  }
+  if (toggle) {
+    toggle.addEventListener('change', updateSaveLabel);
+    updateSaveLabel();
+  }
+
+  const backToAdmin = () => { modal.remove(); showAdminModal(); };
+  closeBtn.addEventListener('click', backToAdmin);
+  modal.addEventListener('click', (e) => { if (e.target === modal) backToAdmin(); });
+
+  saveBtn.addEventListener('click', async () => {
+    const newEnabled = toggle?.checked || false;
+    const newMessage = messageInput?.value?.trim() || 'Web en mantenimiento. Volvemos pronto.';
+    const wasEnabled = isMaintenanceEnabled();
+    if (newEnabled && !wasEnabled) {
+      const confirmed = await showMaintenanceConfirmModal(newMessage);
+      if (!confirmed) return;
+    }
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Guardando...';
+    try {
+      const res = await fetchWithPhase(`${API_BASE}/api/admin/maintenance`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        body: JSON.stringify({ enabled: newEnabled, message: newMessage })
+      });
+      const data = await res.json();
+      if (data.ok) {
+        AppState.appConfig.maintenance = data.maintenance;
+        showToast(newEnabled ? 'Mantenimiento activado' : 'Mantenimiento desactivado');
+        checkMaintenanceMode();
+        modal.remove();
+        showAdminModal();
+      } else {
+        showToast(data.error || 'Error guardando mantenimiento');
+        saveBtn.disabled = false;
+        updateSaveLabel();
+      }
+    } catch (e) {
+      showToast('Error de conexión');
+      saveBtn.disabled = false;
+      updateSaveLabel();
+    }
   });
 }
 
@@ -2817,6 +3084,45 @@ function showPhaseConfirmModal(targetPhase) {
 
   modal.addEventListener('click', (e) => {
     if (e.target === modal) modal.remove();
+  });
+}
+
+function showMaintenanceConfirmModal(pendingMessage) {
+  return new Promise(resolve => {
+    const modal = document.createElement('div');
+    modal.className = 'profile-modal';
+    modal.innerHTML = `
+      <div class="profile-modal-content" style="max-width: 400px;">
+        <button class="profile-modal-close" id="close-maint-confirm">&times;</button>
+        <div style="font-size: 2rem; margin-bottom: 8px;">🔧</div>
+        <h2 style="font-size: 1.2rem; font-weight: 800; margin-bottom: 12px;">Activar modo mantenimiento</h2>
+        <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 12px;">
+          ¿Seguro que quieres <strong style="color: var(--text-primary);">activar el mantenimiento</strong>?
+        </p>
+        <div style="width: 100%; background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.25); border-radius: var(--radius-md); padding: 12px; margin-bottom: 12px;">
+          <p style="font-size: 12px; color: #fca5a5; margin: 0 0 8px 0; font-weight: 700;">⛔ La web quedará bloqueada:</p>
+          <ul style="font-size: 12px; color: var(--text-muted); margin: 0; padding-left: 16px; text-align:left;">
+            <li>Usuarios normales verán el mensaje y no podrán navegar</li>
+            <li>Usuarios con la web ya abierta serán bloqueados en su siguiente acción (API responde 503)</li>
+            <li>Solo los <strong>administradores</strong> podrán seguir entrando</li>
+          </ul>
+        </div>
+        <div style="width:100%; background: var(--ucl-surface); padding:10px; border-radius:8px; margin-bottom:16px; text-align:left;">
+          <p style="font-size:11px; color:var(--text-muted); margin:0 0 4px 0; font-weight:700;">Mensaje que verán los usuarios:</p>
+          <p style="font-size:13px; color:var(--text-primary); margin:0; font-style:italic;">“${String(pendingMessage || 'Web en mantenimiento. Volvemos pronto.').replace(/</g,'&lt;')}”</p>
+        </div>
+        <div style="display: flex; gap: 10px; width: 100%;">
+          <button id="btn-cancel-maint" class="btn-primary" style="flex: 1; background: var(--ucl-surface); color: var(--text-primary);">Cancelar</button>
+          <button id="btn-confirm-maint" class="btn-primary" style="flex: 1; background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%); color: #fff;">Activar</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+    const close = () => { modal.remove(); resolve(false); };
+    modal.querySelector('#close-maint-confirm').addEventListener('click', close);
+    modal.querySelector('#btn-cancel-maint').addEventListener('click', close);
+    modal.querySelector('#btn-confirm-maint').addEventListener('click', () => { modal.remove(); resolve(true); });
+    modal.addEventListener('click', e => { if (e.target === modal) close(); });
   });
 }
 

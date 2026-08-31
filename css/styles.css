@@ -2113,7 +2113,9 @@ html, body {
   z-index: 99999;
   animation: fadeIn 0.2s ease;
   margin: 0;
-  padding: 0;
+  padding: 16px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .profile-modal-content {
@@ -2123,12 +2125,16 @@ html, body {
   padding: 24px;
   width: 90%;
   max-width: 340px;
+  max-height: 90dvh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 12px;
   position: relative;
   box-shadow: var(--shadow-card);
+  margin: auto;
 }
 
 .profile-modal-close {
