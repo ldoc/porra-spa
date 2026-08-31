@@ -94,8 +94,8 @@
         return c ? countCellHtml(c.done, c.total) : '<td class="count state-pending">-</td>';
       });
       const valCell = p.predictionsConfirmed
-        ? '<td class="val state-done">✅</td>'
-        : '<td class="val state-pending">⏳</td>';
+        ? '<td class="val state-done">✅ Validado</td>'
+        : '<td class="val state-pending">⏳ Pendiente</td>';
       const finalCell = p.finalLocked
         ? '<td class="count state-locked">🔒</td>'
         : countCellHtml(p.finalFilled, p.finalTotal);
@@ -122,7 +122,10 @@
         return;
       }
       data = await res.json();
-      if (!data.ok || !data.users) throw new Error('Respuesta inválida');
+      if (!data.ok || !data.users) {
+        contentEl.innerHTML = '<div style="padding: 24px; text-align: center; color: #ef4444;">Error del servidor</div>';
+        return;
+      }
     } catch (e) {
       contentEl.innerHTML = '<div style="padding: 24px; text-align: center; color: #ef4444;">Error de conexión<br><button id="admin-progress-retry" class="btn-primary" style="margin-top: 12px;">Reintentar</button></div>';
       contentEl.querySelector('#admin-progress-retry')?.addEventListener('click', () => loadAdminProgress(contentEl));

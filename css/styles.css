@@ -6080,7 +6080,8 @@ html, body {
   color: var(--text-secondary);
 }
 .admin-progress-table-wrap {
-  overflow-x: auto;
+  overflow: auto;
+  max-height: 60vh;
 }
 .admin-progress-table {
   width: 100%;
