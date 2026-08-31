@@ -1,7 +1,7 @@
 (function (global) {
   const FASE_LABELS = { liga: 'Liguilla', '16': '16avos', '8': 'Octavos', '4': 'Cuartos', semis: 'Semifinales', final: 'Final' };
 
-  function countPredictedInPhase(matches, predictions) {
+  function countPredictedMatches(matches, predictions) {
     let done = 0;
     for (const m of matches || []) {
       const p = predictions && predictions[m.id];
@@ -27,7 +27,7 @@
     const byFase = {};
     for (const [fase, matches] of Object.entries(matchesByFase || {})) {
       byFase[fase] = {
-        done: countPredictedInPhase(matches, user.predictions),
+        done: countPredictedMatches(matches, user.predictions),
         total: (matches || []).length
       };
     }
@@ -67,12 +67,12 @@
   }
 
   global.FASE_LABELS = FASE_LABELS;
-  global.countPredictedInPhase = countPredictedInPhase;
+  global.countPredictedMatches = countPredictedMatches;
   global.computeFinalSlotsFilled = computeFinalSlotsFilled;
   global.computeProgressForUser = computeProgressForUser;
   global.computeSummaries = computeSummaries;
   global.sortUsers = sortUsers;
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { FASE_LABELS, countPredictedInPhase, computeFinalSlotsFilled, computeProgressForUser, computeSummaries, sortUsers };
+    module.exports = { FASE_LABELS, countPredictedMatches, computeFinalSlotsFilled, computeProgressForUser, computeSummaries, sortUsers };
   }
 })(typeof window !== 'undefined' ? window : globalThis);

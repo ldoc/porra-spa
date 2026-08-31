@@ -1,6 +1,6 @@
 const assert = require('assert');
 const {
-  countPredictedInPhase,
+  countPredictedMatches,
   computeFinalSlotsFilled,
   computeProgressForUser,
   computeSummaries,
@@ -9,12 +9,12 @@ const {
 
 const LIGA_144 = Array.from({ length: 144 }, (_, i) => ({ id: String(i + 1), fase: 'liga' }));
 
-function test_countPredictedInPhase_cuenta_solo_numericos() {
+function test_countPredictedMatches_cuenta_solo_numericos() {
   const matches = [{ id: '1', fase: 'liga' }, { id: '2', fase: 'liga' }, { id: '3', fase: 'liga' }];
   const predictions = { '1': { home: 2, away: 1 }, '2': { home: null, away: null } };
-  assert.strictEqual(countPredictedInPhase(matches, predictions), 1);
-  assert.strictEqual(countPredictedInPhase(matches, null), 0);
-  assert.strictEqual(countPredictedInPhase(matches, {}), 0);
+  assert.strictEqual(countPredictedMatches(matches, predictions), 1);
+  assert.strictEqual(countPredictedMatches(matches, null), 0);
+  assert.strictEqual(countPredictedMatches(matches, {}), 0);
 }
 
 function test_computeFinalSlotsFilled_vacio() {
@@ -107,7 +107,7 @@ function test_sortUsers_confirmados_primero() {
 }
 
 const tests = [
-  test_countPredictedInPhase_cuenta_solo_numericos,
+  test_countPredictedMatches_cuenta_solo_numericos,
   test_computeFinalSlotsFilled_vacio,
   test_computeFinalSlotsFilled_parcial,
   test_computeFinalSlotsFilled_completo_24,
