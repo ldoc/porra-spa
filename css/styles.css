@@ -6138,3 +6138,146 @@ html, body {
   color: var(--text-muted);
 }
 
+/* ==========================================================================
+   GESTOR DE MENSAJES
+   ========================================================================== */
+.mensajes-modal, .mensajes-entry-modal, .mensajes-admin-modal {
+  max-width: 460px;
+  width: 100%;
+  height: 100dvh;
+  max-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: var(--ucl-navy, #0A142F);
+}
+
+.mensajes-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+  text-align: center;
+}
+
+.mensajes-entry-icon {
+  font-size: 3.5rem;
+  line-height: 1;
+  margin-bottom: 8px;
+}
+
+.mensajes-entry-type {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent-cyan, #06B6D4);
+  margin-bottom: 6px;
+}
+
+.mensajes-entry-title {
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin: 0 0 12px 0;
+}
+
+.mensajes-entry-body {
+  text-align: left;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  color: var(--text-secondary);
+  word-wrap: break-word;
+}
+
+.mensajes-entry-actions {
+  padding: 16px 20px calc(16px + var(--safe-bottom, 0px));
+  border-top: 1px solid var(--border-color, rgba(255,255,255,0.1));
+}
+
+.mensajes-list {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.mensajes-card {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  background: var(--ucl-card, #121E3D);
+  border: 1px solid var(--border-color, rgba(255,255,255,0.1));
+  border-radius: var(--radius-md, 14px);
+  padding: 12px;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.mensajes-card:active {
+  background: var(--ucl-card-hover, #19284F);
+}
+
+.mensajes-card-read {
+  opacity: 0.72;
+}
+
+.mensajes-card-icon {
+  font-size: 1.6rem;
+  line-height: 1.2;
+  flex-shrink: 0;
+}
+
+.mensajes-card-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.mensajes-card-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  word-break: break-word;
+}
+
+.mensajes-card-meta {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.mensajes-card-content {
+  margin-top: 8px;
+  font-size: 0.9rem;
+  line-height: 1.55;
+  color: var(--text-secondary);
+  word-wrap: break-word;
+}
+
+.mensajes-admin-form {
+  background: var(--ucl-card, #121E3D);
+  border: 1px solid var(--border-color, rgba(255,255,255,0.1));
+  border-radius: var(--radius-md, 14px);
+  padding: 14px;
+}
+
+.mensajes-admin-row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  background: var(--ucl-card, #121E3D);
+  border: 1px solid var(--border-color, rgba(255,255,255,0.1));
+  border-radius: var(--radius-md, 14px);
+  padding: 12px;
+  margin-bottom: 10px;
+}
+
+.mensajes-admin-delete {
+  min-width: 44px;
+  min-height: 44px;
+  background: rgba(239, 68, 68, 0.15);
+  border: none;
+  border-radius: var(--radius-sm, 8px);
+  font-size: 1rem;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
