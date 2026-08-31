@@ -11,10 +11,14 @@ class MemoryStorage {
 }
 globalThis.localStorage = new MemoryStorage();
 
-const { KEYS, predKey, cacheGet, cacheSet, cacheRemove, clearPorraCaches, mergeMatchStats } = require('../js/cacheStore.js');
+const { KEYS, predKey, messagesKey, cacheGet, cacheSet, cacheRemove, clearPorraCaches, mergeMatchStats } = require('../js/cacheStore.js');
 
 test('predKey versiona por usuario', () => {
   assert.equal(predKey('ana'), 'porra_cache_predall_v1_ana');
+});
+
+test('messagesKey versiona por usuario', () => {
+  assert.equal(messagesKey('ana'), 'porra_cache_messages_v1_ana');
 });
 
 test('cacheSet/cacheGet roundtrip con serverTime', () => {
@@ -54,6 +58,14 @@ test('clearPorraCaches borra solo las claves propias', () => {
   assert.equal(cacheGet(predKey('ana')), null);
   assert.equal(localStorage.getItem('session_token'), 't');
   assert.equal(localStorage.getItem('porra_ucl_user'), '{}');
+});
+
+test('clearPorraCaches borra también las claves de mensajes', () => {
+  cacheSet(messagesKey('luis'), [{ id: '1' }], null);
+  localStorage.setItem('session_token', 't');
+  clearPorraCaches();
+  assert.equal(cacheGet(messagesKey('luis')), null);
+  assert.equal(localStorage.getItem('session_token'), 't');
 });
 
 test('mergeMatchStats añade partidos nuevos al final', () => {

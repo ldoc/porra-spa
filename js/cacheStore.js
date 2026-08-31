@@ -3,10 +3,15 @@
     matchstats: 'porra_cache_matchstats_v1'
   };
   const PREDALL_PREFIX = 'porra_cache_predall_v1_';
+  const MESSAGES_PREFIX = 'porra_cache_messages_v1_';
   const MAX_BYTES = 2 * 1024 * 1024;
 
   function predKey(username) {
     return `${PREDALL_PREFIX}${username}`;
+  }
+
+  function messagesKey(username) {
+    return `${MESSAGES_PREFIX}${username}`;
   }
 
   function serialize(payload, serverTime) {
@@ -59,7 +64,7 @@
       const toRemove = [];
       for (let i = 0; i < global.localStorage.length; i++) {
         const k = global.localStorage.key(i);
-        if (k && (k === KEYS.matchstats || k.indexOf(PREDALL_PREFIX) === 0)) toRemove.push(k);
+        if (k && (k === KEYS.matchstats || k.indexOf(PREDALL_PREFIX) === 0 || k.indexOf(MESSAGES_PREFIX) === 0)) toRemove.push(k);
       }
       toRemove.forEach(k => global.localStorage.removeItem(k));
     } catch (e) {
@@ -80,7 +85,7 @@
     return Array.from(map.values());
   }
 
-  const porraCache = { KEYS, predKey, cacheGet, cacheSet, cacheRemove, clearPorraCaches, mergeMatchStats };
+  const porraCache = { KEYS, MESSAGES_PREFIX, predKey, messagesKey, cacheGet, cacheSet, cacheRemove, clearPorraCaches, mergeMatchStats };
 
   global.porraCache = porraCache;
   if (typeof module !== 'undefined' && module.exports) {
