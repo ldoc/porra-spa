@@ -307,8 +307,12 @@
       });
     }
 
-    overlay.querySelector('#mensajes-admin-close').addEventListener('click', () => overlay.remove());
-    overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+    const closeAdminMessages = () => {
+      overlay.remove();
+      if (typeof showAdminModal === 'function') showAdminModal();
+    };
+    overlay.querySelector('#mensajes-admin-close').addEventListener('click', closeAdminMessages);
+    overlay.addEventListener('click', e => { if (e.target === overlay) closeAdminMessages(); });
     overlay.querySelector('#btn-crear-mensaje').addEventListener('click', async () => {
       const title = overlay.querySelector('#mensaje-titulo').value;
       const type = overlay.querySelector('#mensaje-tipo').value;
