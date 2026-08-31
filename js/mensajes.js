@@ -61,7 +61,7 @@
 
   function messagesCacheKey() {
     const username = AppState.currentUser?.username;
-    return username ? porraCache.messagesKey(username) : null;
+    return username && typeof porraCache?.messagesKey === 'function' ? porraCache.messagesKey(username) : null;
   }
 
   function persistMessages(messages) {
