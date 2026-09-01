@@ -625,8 +625,19 @@
     const mostRep = partidos.mostRepeated ? `<span class="stats-pill gold">${esc(partidos.mostRepeated.score)} · ${partidos.mostRepeated.votes} votos · ${partidos.mostRepeated.pct}%</span>` : '<span class="stats-pill">—</span>';
     const leastRep = partidos.leastRepeated ? `<span class="stats-pill">${esc(partidos.leastRepeated.score)} · ${partidos.leastRepeated.votes} voto${partidos.leastRepeated.votes===1?'':'s'} · ${partidos.leastRepeated.pct}%</span>` : '<span class="stats-pill">—</span>';
     const raro = partidos.raro ? `<span class="stats-pill cyan">${esc(partidos.raro.score)} · ${partidos.raro.votes} voto${partidos.raro.votes===1?'':'s'}</span>` : '<span class="stats-pill">—</span>';
-    const acuerdoKpi = partidos.mostConsensus ? `<div class="stats-kpi"><div class="stats-kv">${partidos.mostConsensus.pct}%</div><div class="stats-kl">acuerdo ${esc(partidos.mostConsensus.result)} · #${partidos.mostConsensus.matchId}</div></div>` : '<div class="stats-kpi"><div class="stats-kv">—</div><div class="stats-kl">acuerdo</div></div>';
-    const divided = partidos.mostDivided ? `<div class="stats-kpi"><div class="stats-kv">${partidos.mostDivided.entropy}</div><div class="stats-kl">más dividido · #${partidos.mostDivided.matchId}</div></div>` : '<div class="stats-kpi"><div class="stats-kv">—</div><div class="stats-kl">dividido</div></div>';
+    const resultLabel = { H:'1', D:'X', A:'2' };
+    function matchLabel(id){
+      try{
+        const list = (typeof AppState!=='undefined' && (AppState.leagueMatches?.length ? AppState.leagueMatches : AppState.matches)) || [];
+        const m = list.find(x=> String(x.id)===String(id));
+        if(!m) return `#${id}`;
+        const hn = (typeof AppState!=='undefined' && AppState.teamsMap?.[m.homeTeamId]?.name) || m.homeTeam || m.homeTeamId;
+        const an = (typeof AppState!=='undefined' && AppState.teamsMap?.[m.awayTeamId]?.name) || m.awayTeam || m.awayTeamId;
+        return `${esc(hn)} – ${esc(an)}`;
+      }catch(e){ return `#${id}`; }
+    }
+    const acuerdoKpi = partidos.mostConsensus ? `<div class="stats-kpi"><div class="stats-kv">${partidos.mostConsensus.pct}%</div><div class="stats-kl">acuerdo ${esc(resultLabel[partidos.mostConsensus.result]||partidos.mostConsensus.result)} · ${matchLabel(partidos.mostConsensus.matchId)}</div></div>` : '<div class="stats-kpi"><div class="stats-kv">—</div><div class="stats-kl">acuerdo</div></div>';
+    const divided = partidos.mostDivided ? `<div class="stats-kpi"><div class="stats-kv">${partidos.mostDivided.entropy}</div><div class="stats-kl">más dividido · ${matchLabel(partidos.mostDivided.matchId)}</div></div>` : '<div class="stats-kpi"><div class="stats-kv">—</div><div class="stats-kl">dividido</div></div>';
     const gAvg = `<div class="stats-kpi-grid" style="margin-top:6px"><div class="stats-kpi"><div class="stats-kv">${partidos.localAvg}</div><div class="stats-kl">media local</div></div><div class="stats-kpi"><div class="stats-kv">${partidos.visitanteAvg}</div><div class="stats-kl">media visitante</div></div><div class="stats-kpi"><div class="stats-kv">${partidos.delta>0?'+':''}${partidos.delta}</div><div class="stats-kl">delta</div></div></div>`;
     const cons = partidos.conservador ? `<span class="stats-pill">${esc(partidos.conservador.username)} · ${partidos.conservador.avg} gol/part</span>` : '<span class="stats-pill">—</span>';
     const arr = partidos.arriesgado ? `<span class="stats-pill gold">${esc(partidos.arriesgado.username)} · ${partidos.arriesgado.avg} gol/part</span>` : '<span class="stats-pill">—</span>';
