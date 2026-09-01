@@ -505,6 +505,52 @@ function calcPronosticosPartidosStats(allPredictions, leagueMatches){
   };
 }
 
+function getTeamStatsForPreds(preds, teamId, matches){
+  let PJ=0,V=0,E=0,D=0,GF=0,GC=0,awayWins=0,awayGoals=0;
+  for(const m of matches||[]){
+    const pr=preds?.[m.id]; if(!pr||!Number.isFinite(pr.home)||!Number.isFinite(pr.away)) continue;
+    const isHome=m.homeTeamId===teamId, isAway=m.awayTeamId===teamId;
+    if(!isHome&&!isAway) continue;
+    PJ++; const gf=isHome?pr.home:pr.away, gc=isHome?pr.away:pr.home;
+    GF+=gf; GC+=gc;
+    if(gf>gc){ V++; if(isAway) awayWins++; }
+    else if(gf===gc) E++;
+    else D++;
+    if(isAway) awayGoals+=gf;
+  }
+  return { teamId, PJ, V, E, D, GF, GC, DG: GF-GC, Pts: V*3+E, awayWins, awayGoals };
+}
+function calcPredictedStandingsForPreds(preds, matches, teamsMap){
+  const ids=Object.keys(teamsMap||{}).map(Number);
+  const stats=ids.map(id=> getTeamStatsForPreds(preds,id,matches));
+  stats.sort((a,b)=> b.Pts-a.Pts || b.DG-a.DG || b.GF-a.GF || b.awayGoals-a.awayGoals || b.V-a.V || b.awayWins-a.awayWins);
+  return stats;
+}
+function calcClasificacionPronosticosStats(allPredictions, matches, teamsMap){
+  const freqPrimero=new Map(), freqTop8=new Map(), freqFuera24=new Map(), posLists=new Map();
+  const users=Object.keys(allPredictions||{});
+  for(const u of users){
+    const standings=calcPredictedStandingsForPreds(allPredictions[u], matches, teamsMap);
+    standings.forEach((s,i)=>{
+      const pos=i+1;
+      if(!posLists.has(s.teamId)) posLists.set(s.teamId, []);
+      posLists.get(s.teamId).push(pos);
+      if(pos===1) freqPrimero.set(s.teamId,(freqPrimero.get(s.teamId)||0)+1);
+      if(pos<=8) freqTop8.set(s.teamId,(freqTop8.get(s.teamId)||0)+1);
+      if(pos>24) freqFuera24.set(s.teamId,(freqFuera24.get(s.teamId)||0)+1);
+    });
+  }
+  const mediaPos=new Map(), dispersion=new Map();
+  for(const [tid,arr] of posLists){
+    const mean=arr.reduce((a,b)=>a+b,0)/arr.length;
+    mediaPos.set(tid, Math.round(mean*10)/10);
+    const vari=arr.reduce((a,b)=>a+(b-mean)**2,0)/arr.length;
+    dispersion.set(tid, Math.round(Math.sqrt(vari)*10)/10);
+  }
+  const topMedia5=[...mediaPos.entries()].sort((a,b)=>a[1]-b[1]).slice(0,5).map(([tid])=>tid);
+  return { freqPrimero, freqTop8, freqFuera24, mediaPos, dispersion, posLists, topMedia5, users: users.length };
+}
+
   function getSeriesBySource(source, userData) {
     switch (source) {
       case 'pronosticos':
@@ -1354,7 +1400,10 @@ function calcPronosticosPartidosStats(allPredictions, leagueMatches){
   global.compareQuadroWithCommunity = compareQuadroWithCommunity;
   global.aggregateSquads = aggregateSquads;
   global.calcPronosticosPartidosStats = calcPronosticosPartidosStats;
+  global.getTeamStatsForPreds = getTeamStatsForPreds;
+  global.calcPredictedStandingsForPreds = calcPredictedStandingsForPreds;
+  global.calcClasificacionPronosticosStats = calcClasificacionPronosticosStats;
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { emptySeries, buildTimeline, calcPredictionSeries, calcSquadSeries, calcClassificationSeries, calcEliminatoriasSeries, sumSeries, isLeagueComplete, getSeriesBySource, matchResultOf, extractPlayedMatches, calcReliabilityRow, buildCompletedLeagueData, calcStreaks, calcBestJornadas, calcUserBestJornada, calcPositionHistory, calcTimesTopJornada, calcMomentum, calcConsistency, buildDonutSegments, calcPredictionBias, calcBestMatch, calcBestPlayersByPosition, calcMostProfitablePlayer, sourceSplitFromUserData, computeMatchConsensus, tallyChampions, finalPredictionTeamIds, compareQuadroWithCommunity, aggregateSquads, calcPronosticosPartidosStats };
+    module.exports = { emptySeries, buildTimeline, calcPredictionSeries, calcSquadSeries, calcClassificationSeries, calcEliminatoriasSeries, sumSeries, isLeagueComplete, getSeriesBySource, matchResultOf, extractPlayedMatches, calcReliabilityRow, buildCompletedLeagueData, calcStreaks, calcBestJornadas, calcUserBestJornada, calcPositionHistory, calcTimesTopJornada, calcMomentum, calcConsistency, buildDonutSegments, calcPredictionBias, calcBestMatch, calcBestPlayersByPosition, calcMostProfitablePlayer, sourceSplitFromUserData, computeMatchConsensus, tallyChampions, finalPredictionTeamIds, compareQuadroWithCommunity, aggregateSquads, calcPronosticosPartidosStats, getTeamStatsForPreds, calcPredictedStandingsForPreds, calcClasificacionPronosticosStats };
   }
 })(typeof window !== 'undefined' ? window : globalThis);
