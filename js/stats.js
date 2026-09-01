@@ -577,9 +577,10 @@ function calcEliminatoriasPronosticosStats(finalPredictionsCache){
     } else {
       const first = Object.keys(finalPredictionsCache || {})[0] || null;
       quadro = first ? compareQuadroWithCommunity(first, finalPredictionsCache) : { users: 0, avgCommon: 0, avgPct: 0, veryDiffCount: 0 };
-      if (!username) quadro._note = 'no currentUser, used first';
     }
   } catch(e){ quadro = { users: 0, avgCommon: 0, avgPct: 0, veryDiffCount: 0 }; }
+  // Return shallow copy to avoid mutating compareQuadroWithCommunity result (pure, 4 keys only)
+  quadro = { users: quadro.users, avgCommon: quadro.avgCommon, avgPct: quadro.avgPct, veryDiffCount: quadro.veryDiffCount };
   return { championTally, finalTally, semisFreq, quadro };
 }
 
