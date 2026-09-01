@@ -615,17 +615,6 @@
     const title='<div class="stats-card-title">⚽ Pronósticos de partidos</div>';
     if(!hasData) return `<div class="stats-pronosticos-partidos">${title}${statsEmpty('Aún no hay pronósticos')}</div>`;
     const pct = partidos.globalPct || {H:0,D:0,A:0};
-    const bars = [
-      ['1','H','var(--accent-primary)'],
-      ['X','D','var(--accent-gold)'],
-      ['2','A','var(--accent-purple)']
-    ].map(([lbl,k,color])=>`
-      <div class="stats-consbar"><span class="lbl">${lbl}</span><div class="track"><div class="fill" style="width:${pct[k]||0}%;background:${color}"></div></div><b style="color:var(--text-primary)">${pct[k]||0}%</b></div>`
-    ).join('');
-    const mostRep = partidos.mostRepeated ? `<span class="stats-pill gold">${esc(partidos.mostRepeated.score)} · ${partidos.mostRepeated.votes} votos · ${partidos.mostRepeated.pct}%</span>` : '<span class="stats-pill">—</span>';
-    const leastRep = partidos.leastRepeated ? `<span class="stats-pill">${esc(partidos.leastRepeated.score)} · ${partidos.leastRepeated.votes} voto${partidos.leastRepeated.votes===1?'':'s'} · ${partidos.leastRepeated.pct}%</span>` : '<span class="stats-pill">—</span>';
-    const raro = partidos.raro ? `<span class="stats-pill cyan">${esc(partidos.raro.score)} · ${partidos.raro.votes} voto${partidos.raro.votes===1?'':'s'}</span>` : '<span class="stats-pill">—</span>';
-    const resultLabel = { H:'1', D:'X', A:'2' };
     function matchLabel(id){
       try{
         const list = (typeof AppState!=='undefined' && (AppState.leagueMatches?.length ? AppState.leagueMatches : AppState.matches)) || [];
@@ -636,17 +625,37 @@
         return `${esc(hn)} – ${esc(an)}`;
       }catch(e){ return `#${id}`; }
     }
-    const acuerdoKpi = partidos.mostConsensus ? `<div class="stats-kpi"><div class="stats-kv">${partidos.mostConsensus.pct}%</div><div class="stats-kl">acuerdo ${esc(resultLabel[partidos.mostConsensus.result]||partidos.mostConsensus.result)} · ${matchLabel(partidos.mostConsensus.matchId)}</div></div>` : '<div class="stats-kpi"><div class="stats-kv">—</div><div class="stats-kl">acuerdo</div></div>';
-    const divided = partidos.mostDivided ? `<div class="stats-kpi"><div class="stats-kv">${partidos.mostDivided.entropy}</div><div class="stats-kl">más dividido · ${matchLabel(partidos.mostDivided.matchId)}</div></div>` : '<div class="stats-kpi"><div class="stats-kv">—</div><div class="stats-kl">dividido</div></div>';
-    const gAvg = `<div class="stats-kpi-grid" style="margin-top:6px"><div class="stats-kpi"><div class="stats-kv">${partidos.localAvg}</div><div class="stats-kl">media local</div></div><div class="stats-kpi"><div class="stats-kv">${partidos.visitanteAvg}</div><div class="stats-kl">media visitante</div></div><div class="stats-kpi"><div class="stats-kv">${partidos.delta>0?'+':''}${partidos.delta}</div><div class="stats-kl">delta</div></div></div>`;
-    const cons = partidos.conservador ? `<span class="stats-pill">${esc(partidos.conservador.username)} · ${partidos.conservador.avg} gol/part</span>` : '<span class="stats-pill">—</span>';
-    const arr = partidos.arriesgado ? `<span class="stats-pill gold">${esc(partidos.arriesgado.username)} · ${partidos.arriesgado.avg} gol/part</span>` : '<span class="stats-pill">—</span>';
+    const resultLabel = { H:'1', D:'X', A:'2' };
+    const mostRep = partidos.mostRepeated;
+    const leastRep = partidos.leastRepeated;
+    const raro = partidos.raro;
+    const cons = partidos.mostConsensus;
+    const div = partidos.mostDivided;
+    const headline = pct.H >= 50 ? 'Somos optimistas en casa y nos cuesta creer en el 0-0' : pct.D >= 30 ? 'La porra huele a empates' : 'Atrevidos fuera de casa';
     return `<div class="stats-pronosticos-partidos">${title}
-      <div class="stats-consbar" style="flex-direction:column;gap:6px">${bars}</div>
-      <div class="stats-kpi-grid" style="margin-top:8px">${acuerdoKpi}${divided}<div class="stats-kpi"><div class="stats-kv">${esc(partidos.mostRepeated?.score||'—')}</div><div class="stats-kl">más repetido</div></div></div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">Más repetido: ${mostRep} Menos repetido: ${leastRep} Raro: ${raro}</div>
-      ${gAvg}
-      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">Conservador: ${cons} Arriesgado: ${arr}</div>
+      <div style="font-size:10px; font-weight:900; letter-spacing:0.4px; color:var(--accent-primary); margin-bottom:2px;">LA PORRA DICE…</div>
+      <div style="font-size:13px; font-weight:800; line-height:1.3; margin-bottom:10px;">${esc(headline)}</div>
+      <div style="background:rgba(255,255,255,0.04); border-radius:10px; padding:10px; display:flex; gap:8px; margin-bottom:10px;">
+        <div style="flex:1; text-align:center;"><div style="font-size:16px;">🏠</div><div style="font-weight:900; font-size:16px; color:var(--accent-primary);">${pct.H||0}%</div><div style="font-size:9px; color:var(--text-muted); font-weight:700;">LOCAL</div></div>
+        <div style="width:1px; background:rgba(255,255,255,0.06);"></div>
+        <div style="flex:1; text-align:center;"><div style="font-size:16px;">🤝</div><div style="font-weight:900; font-size:16px; color:var(--accent-gold);">${pct.D||0}%</div><div style="font-size:9px; color:var(--text-muted); font-weight:700;">EMPATE</div></div>
+        <div style="width:1px; background:rgba(255,255,255,0.06);"></div>
+        <div style="flex:1; text-align:center;"><div style="font-size:16px;">✈️</div><div style="font-weight:900; font-size:16px; color:var(--accent-purple);">${pct.A||0}%</div><div style="font-size:9px; color:var(--text-muted); font-weight:700;">VISITANTE</div></div>
+      </div>
+      <div style="font-size:11px; line-height:1.6; color:var(--text-secondary);">
+        El <b style="color:var(--accent-gold);">${esc(mostRep?.score||'—')}</b> es el rey (${mostRep?.pct||0}% · ${mostRep?.votes||0} votos). El <b>${esc(leastRep?.score||'—')}</b> apenas existe (${leastRep?.pct||0}%). ${raro ? `Y hay un valiente: <b style="color:var(--accent-cyan);">${esc(raro.score)} · ${raro.votes} voto${raro.votes===1?'':'s'}</b> 🤯` : ''}
+      </div>
+      <div style="margin-top:10px; padding:9px; background:rgba(16,185,129,0.07); border-radius:10px; border:1px solid rgba(16,185,129,0.18);">
+        <div style="font-size:11px; font-weight:800; color:var(--accent-primary);">🤝 Todos de acuerdo</div>
+        <div style="font-size:11px; margin-top:3px;">${cons ? `<b>${matchLabel(cons.matchId)}</b> · ${cons.pct}% al <b>${esc(resultLabel[cons.result]||cons.result)}</b>` : '—'}</div>
+        <div style="font-size:11px; font-weight:800; color:var(--accent-gold); margin-top:8px;">⚖️ Nadie se aclara</div>
+        <div style="font-size:11px; margin-top:3px;">${div ? `<b>${matchLabel(div.matchId)}</b> · entropía ${div.entropy}` : '—'}</div>
+      </div>
+      <div style="display:flex; gap:6px; margin-top:10px; font-size:10px; color:var(--text-muted); justify-content:space-between;">
+        <span>${partidos.conservador ? `🛡️ ${esc(partidos.conservador.username)} prudente · ${partidos.conservador.avg} gol/part` : ''}</span>
+        <span>${partidos.arriesgado ? `🔥 ${esc(partidos.arriesgado.username)} loco · ${partidos.arriesgado.avg} gol/part` : ''}</span>
+      </div>
+      <div style="font-size:10px; color:var(--text-muted); margin-top:6px; text-align:center;">Media: <b>${partidos.localAvg} local</b> / ${partidos.visitanteAvg} visitante · Δ ${partidos.delta>0?'+':''}${partidos.delta}</div>
     </div>`;
   }
 
@@ -655,27 +664,22 @@
     if(!clasif || !clasif.users) return `<div class="stats-pronosticos-clasificacion">${title}${statsEmpty('Aún no hay pronósticos')}</div>`;
     const freqPrimero = [...(clasif.freqPrimero||new Map()).entries()].sort((a,b)=>b[1]-a[1]).slice(0,3);
     const topMedia = (clasif.topMedia5||[]).slice(0,5);
-    const freqHtml = freqPrimero.length ? freqPrimero.map(([tid,cnt])=>`
-      <div class="stats-rank-row"><img class="stats-sq-img" src="data/imgEquipos/${tid}.${(typeof AppState!=='undefined'&&AppState.teamsMap?.[tid]?.ext)||'webp'}" alt="" onerror="this.style.visibility='hidden'"><span class="stats-rank-name">${esc((typeof AppState!=='undefined'&&AppState.teamsMap?.[tid]?.name)||tid)}</span><span class="stats-rank-main">${cnt}/${clasif.users}</span></div>`
-    ).join('') : statsEmpty('Aún no hay pronósticos');
-    const mediaHtml = topMedia.length ? topMedia.map(tid=>`
-      <div class="stats-rank-row"><img class="stats-sq-img" src="data/imgEquipos/${tid}.${(typeof AppState!=='undefined'&&AppState.teamsMap?.[tid]?.ext)||'webp'}" alt="" onerror="this.style.visibility='hidden'"><span class="stats-rank-name">${esc((typeof AppState!=='undefined'&&AppState.teamsMap?.[tid]?.name)||tid)}</span><span class="stats-rank-main">pos media ${clasif.mediaPos?.get(tid)??'—'}</span></div>`
-    ).join('') : '';
-    const fuera = [...(clasif.freqFuera24||new Map()).entries()].sort((a,b)=>b[1]-a[1]).slice(0,2).map(([tid,cnt])=>`<span class="stats-pill">${esc((typeof AppState!=='undefined'&&AppState.teamsMap?.[tid]?.name)||tid)} · ${cnt}</span>`).join('');
-    const freqTop8Entries = [...(clasif.freqTop8||new Map()).entries()].sort((a,b)=>b[1]-a[1]).slice(0,3);
-    const freqTop8Html = freqTop8Entries.length ? freqTop8Entries.map(([tid,cnt])=>`
-      <div class="stats-rank-row"><img class="stats-sq-img" src="data/imgEquipos/${tid}.${(typeof AppState!=='undefined'&&AppState.teamsMap?.[tid]?.ext)||'webp'}" alt="" onerror="this.style.visibility='hidden'"><span class="stats-rank-name">${esc((typeof AppState!=='undefined'&&AppState.teamsMap?.[tid]?.name)||tid)}</span><span class="stats-rank-main">${cnt}/${clasif.users}</span></div>`
-    ).join('') : '';
     const maxDisp = [...(clasif.dispersion||new Map()).entries()].sort((a,b)=>b[1]-a[1])[0] || null;
-    const dispersionHtml = maxDisp ? `<div class="stats-rank-row"><img class="stats-sq-img" src="data/imgEquipos/${maxDisp[0]}.${(typeof AppState!=='undefined'&&AppState.teamsMap?.[maxDisp[0]]?.ext)||'webp'}" alt="" onerror="this.style.visibility='hidden'"><span class="stats-rank-name">${esc((typeof AppState!=='undefined'&&AppState.teamsMap?.[maxDisp[0]]?.name)||maxDisp[0])}</span><span class="stats-rank-main">σ ${maxDisp[1]}</span></div>` : '';
+    const teamName = (tid)=> esc((typeof AppState!=='undefined'&&AppState.teamsMap?.[tid]?.name)||tid);
+    const teamImg = (tid)=> `<img class="stats-sq-img" src="data/imgEquipos/${tid}.${(typeof AppState!=='undefined'&&AppState.teamsMap?.[tid]?.ext)||'webp'}" alt="" onerror="this.style.visibility='hidden'">`;
+    const headline = freqPrimero[0] ? `Todos ven a ${teamName(freqPrimero[0][0])} arriba, pero nadie se aclara con ${maxDisp ? teamName(maxDisp[0]) : 'el resto'}` : 'Aún sin favoritos claros';
     return `<div class="stats-pronosticos-clasificacion">${title}
-      <div class="stats-card-title" style="font-size:11px;color:var(--text-muted)">Más veces 1º</div>
-      ${freqHtml}
-      ${freqTop8Html?`<div class="stats-card-title" style="font-size:11px;color:var(--text-muted);margin-top:8px">Más veces Top8</div>${freqTop8Html}`:''}
-      ${dispersionHtml?`<div class="stats-card-title" style="font-size:11px;color:var(--text-muted);margin-top:8px">Mayor dispersión</div>${dispersionHtml}`:''}
-      <div class="stats-card-title" style="font-size:11px;color:var(--text-muted);margin-top:8px">Mejor media (top 5)</div>
-      ${mediaHtml || statsEmpty('Aún no hay pronósticos')}
-      ${fuera?`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">Más veces fuera Top24: ${fuera}</div>`:''}
+      <div style="font-size:10px; font-weight:900; letter-spacing:0.4px; color:var(--accent-cyan);">EL ORDEN SOÑADO</div>
+      <div style="font-size:13px; font-weight:800; line-height:1.3; margin:4px 0 10px;">${headline}</div>
+      ${freqPrimero.length ? `<div style="background:rgba(6,182,212,0.07); border-radius:10px; padding:9px; border:1px solid rgba(6,182,212,0.15);">
+        <div style="font-size:11px; font-weight:800; color:var(--accent-cyan);">👑 Más veces 1º</div>
+        ${freqPrimero.map(([tid,cnt])=>`<div class="stats-rank-row" style="background:transparent; border:none; padding:6px 0;">${teamImg(tid)}<span class="stats-rank-name">${teamName(tid)}</span><span class="stats-rank-main">${cnt}/${clasif.users} · ${Math.round(cnt/clasif.users*100)}%</span></div>`).join('')}
+      </div>` : ''}
+      ${maxDisp ? `<div style="margin-top:8px; padding:8px; background:rgba(245,158,11,0.07); border-radius:10px; border:1px solid rgba(245,158,11,0.15); font-size:11px;">
+        <span style="font-weight:800; color:var(--accent-gold);">🌪️ Polémico</span> · <b>${teamName(maxDisp[0])}</b> divide opiniones <span style="color:var(--text-muted);">σ ${maxDisp[1]}</span>
+      </div>` : ''}
+      <div style="margin-top:10px; font-size:11px; font-weight:800; color:var(--text-muted);">Mejor media (top 5)</div>
+      ${topMedia.length ? topMedia.map(tid=>`<div class="stats-rank-row">${teamImg(tid)}<span class="stats-rank-name">${teamName(tid)}</span><span class="stats-rank-main">pos ${clasif.mediaPos?.get(tid)??'—'}</span></div>`).join('') : statsEmpty('Aún no hay pronósticos')}
     </div>`;
   }
 
@@ -683,52 +687,67 @@
     const title='<div class="stats-card-title">🏆 Eliminatorias</div>';
     if(!elims || !elims.championTally || !elims.championTally.teams?.length) return `<div class="stats-pronosticos-eliminatorias">${title}${statsEmpty('Aún no hay pronósticos')}</div>`;
     const champ = elims.championTally;
-    const champHtml = champ.teams.slice(0,3).map(t=>`
-      <div class="stats-rank-row"><img class="stats-sq-img" src="data/imgEquipos/${t.teamId}.${(typeof AppState!=='undefined'&&AppState.teamsMap?.[t.teamId]?.ext)||'webp'}" alt="" onerror="this.style.visibility='hidden'"><span class="stats-rank-name">${esc((typeof AppState!=='undefined'&&AppState.teamsMap?.[t.teamId]?.name)||t.teamId)}</span><span class="stats-rank-main">${t.votes}/${champ.total}</span></div>`
-    ).join('');
-    const finalHtml = (elims.finalTally||[]).slice(0,2).map(f=>{
-      const parts=f.pair.split('-');
-      const cName=esc((typeof AppState!=='undefined'&&AppState.teamsMap?.[parts[0]]?.name)||parts[0]);
-      const rName=esc((typeof AppState!=='undefined'&&AppState.teamsMap?.[parts[1]]?.name)||parts[1]);
-      return `<div class="stats-rank-row"><span class="stats-rank-name">${cName} – ${rName}</span><span class="stats-rank-main">${f.votes}</span></div>`;
-    }).join('');
-    const semisEntries = [...(elims.semisFreq||new Map()).entries()].sort((a,b)=>b[1]-a[1]).slice(0,4).map(([tid,cnt])=>`<span class="stats-pill">${esc((typeof AppState!=='undefined'&&AppState.teamsMap?.[tid]?.name)||tid)} · ${cnt}</span>`).join('');
+    const topChamp = champ.teams[0];
+    const cname = esc((typeof AppState!=='undefined'&&AppState.teamsMap?.[topChamp.teamId]?.name)||topChamp.teamId);
+    const champPct = Math.round(topChamp.votes/champ.total*100);
+    const finalTop = (elims.finalTally||[])[0];
+    const finalLabel = finalTop ? (()=>{
+      const p=finalTop.pair.split('-'); const a=esc((typeof AppState!=='undefined'&&AppState.teamsMap?.[p[0]]?.name)||p[0]); const b=esc((typeof AppState!=='undefined'&&AppState.teamsMap?.[p[1]]?.name)||p[1]);
+      return `${a} – ${b} · ${finalTop.votes} votos`;
+    })() : '—';
+    const semisTop = [...(elims.semisFreq||new Map()).entries()].sort((a,b)=>b[1]-a[1])[0];
+    const semisName = semisTop ? esc((typeof AppState!=='undefined'&&AppState.teamsMap?.[semisTop[0]]?.name)||semisTop[0]) : '—';
     const q = elims.quadro || {};
-    const quadroHtml = q.users ? `<div class="stats-kpi-grid" style="margin-top:8px"><div class="stats-kpi"><div class="stats-kv">${q.avgPct}%</div><div class="stats-kl">coincidencia media</div></div><div class="stats-kpi"><div class="stats-kv">${q.avgCommon}/24</div><div class="stats-kl">equipos en común</div></div><div class="stats-kpi"><div class="stats-kv">${q.veryDiffCount}</div><div class="stats-kl">muy distintos</div></div></div>` : '';
     return `<div class="stats-pronosticos-eliminatorias">${title}
-      <div class="stats-card-title" style="font-size:11px;color:var(--text-muted)">Campeón más votado (${champ.total} votos)</div>
-      ${champHtml}
-      ${finalHtml?`<div class="stats-card-title" style="font-size:11px;color:var(--text-muted);margin-top:8px">Final más repetida</div>${finalHtml}`:''}
-      ${semisEntries?`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">Semis frecuentes: ${semisEntries}</div>`:''}
-      ${quadroHtml}
+      <div style="font-size:10px; font-weight:900; letter-spacing:0.4px; color:var(--accent-purple);">EL SUEÑO COLECTIVO</div>
+      <div style="font-size:13px; font-weight:800; line-height:1.3; margin:4px 0 10px;">${cname} es el campeón del corazón · <span style="color:var(--accent-purple);">${champPct}%</span> lo ve levantando la copa</div>
+      <div style="background:rgba(139,92,246,0.07); border-radius:10px; padding:9px; border:1px solid rgba(139,92,246,0.15);">
+        <div style="display:flex; gap:8px; align-items:center;">
+          <img class="stats-sq-img" src="data/imgEquipos/${topChamp.teamId}.${(typeof AppState!=='undefined'&&AppState.teamsMap?.[topChamp.teamId]?.ext)||'webp'}" alt="" onerror="this.style.visibility='hidden'" style="width:36px;height:36px;">
+          <div style="flex:1;"><div style="font-weight:900;">${cname}</div><div style="font-size:11px; color:var(--text-muted);">${topChamp.votes}/${champ.total} votos · ${champPct}%</div></div>
+          <div style="font-size:18px;">👑</div>
+        </div>
+      </div>
+      <div style="margin-top:10px; padding:9px; background:rgba(255,255,255,0.04); border-radius:10px;">
+        <div style="font-size:11px; font-weight:800; color:var(--accent-cyan);">💭 Final soñada</div>
+        <div style="font-size:11px; margin-top:3px;"><b>${finalLabel}</b></div>
+        <div style="font-size:11px; font-weight:800; color:var(--accent-gold); margin-top:8px;">⚔️ Fijo en semis</div>
+        <div style="font-size:11px; margin-top:3px;"><b>${semisName}</b> ${semisTop ? `· ${semisTop[1]} votos` : ''}</div>
+      </div>
+      ${q.users ? `<div style="margin-top:8px; font-size:10px; color:var(--text-muted); text-align:center;">Tu cuadro coincide un <b>${q.avgPct}%</b> · ${q.avgCommon}/24 equipos · ${q.veryDiffCount} cuadros muy distintos</div>` : ''}
     </div>`;
   }
 
   function renderPronosticosPlantillaCard(plantilla, squadAgg){
     const title='<div class="stats-card-title">👥 Plantilla</div>';
     if(!squadAgg || !squadAgg.rows?.length) return `<div class="stats-pronosticos-plantilla">${title}${statsEmpty('Aún no hay pronósticos')}</div>`;
+    const imp = (plantilla?.imprescindible||[])[0];
+    const dif = (plantilla?.diferencial||[])[0];
+    const headline = imp ? `Todos quieren a ${esc(imp.player.nombre||imp.player.id)}, pero ${dif ? esc(dif.player.nombre||dif.player.id) : 'el diferencial'} es tu arma secreta` : 'Cada plantilla cuenta una historia';
     const top3 = plantilla?.top3ByPos || {G:[],D:[],M:[],F:[]};
-    const posOrder=['G','D','M','F'];
-    const posLabels={G:'POR',D:'DEF',M:'MED',F:'DEL'};
-    const topHtml = posOrder.map(pos=>{
-      const arr=top3[pos]||[];
-      if(!arr.length) return '';
-      return `<div class="stats-card-title" style="font-size:11px;color:var(--text-muted);margin-top:8px">${posLabels[pos]}</div>` + arr.slice(0,3).map(r=>`
-        <div class="stats-squad-row"><img class="stats-sq-img" src="data/imgJugadores/${r.player.id}.${r.player.extension||'webp'}" alt="" loading="lazy" onerror="this.style.visibility='hidden'"><div class="stats-sq-info"><div class="stats-sq-name">${esc(r.player.nombre||'')}</div><div class="stats-sq-pos">${r.possessionPct}% · ${r.ownerCount}/${squadAgg.usersWithSquad}</div></div><span class="stats-sq-pts">${r.pts} pts</span></div>`
-      ).join('');
-    }).join('');
-    const imp = (plantilla?.imprescindible||[]).slice(0,3).map(r=>`<span class="stats-pill gold">⭐ ${esc(r.player.nombre||r.player.id)} · ${r.possessionPct}%</span>`).join('');
-    const dif = (plantilla?.diferencial||[]).slice(0,3).map(r=>`<span class="stats-pill cyan">🎯 ${esc(r.player.nombre||r.player.id)} · ${r.possessionPct}%</span>`).join('');
-    const equipoMas = plantilla?.equipoMas ? `<span class="stats-pill">${esc((typeof AppState!=='undefined'&&AppState.teamsMap?.[plantilla.equipoMas.equipo]?.name)||plantilla.equipoMas.equipo)} · ${plantilla.equipoMas.count}</span>` : '<span class="stats-pill">—</span>';
-    const equipoMenos = plantilla?.equipoMenos ? `<span class="stats-pill">${esc((typeof AppState!=='undefined'&&AppState.teamsMap?.[plantilla.equipoMenos.equipo]?.name)||plantilla.equipoMenos.equipo)} · ${plantilla.equipoMenos.count}</span>` : '<span class="stats-pill">—</span>';
-    const hip = plantilla?.hipster ? `<span class="stats-pill">${esc(plantilla.hipster.username)} · ${plantilla.hipster.avgCommon}</span>` : '<span class="stats-pill">—</span>';
-    const main = plantilla?.mainstream ? `<span class="stats-pill gold">${esc(plantilla.mainstream.username)} · ${plantilla.mainstream.avgCommon}</span>` : '<span class="stats-pill">—</span>';
+    const equipoMas = plantilla?.equipoMas;
+    const equipoMenos = plantilla?.equipoMenos;
     return `<div class="stats-pronosticos-plantilla">${title}
-      ${topHtml || statsEmpty('Aún no hay pronósticos')}
-      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">Imprescindibles: ${imp||'<span class="stats-pill">—</span>'} </div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">Diferenciales: ${dif||'<span class="stats-pill">—</span>'} </div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">Equipo más elegido: ${equipoMas} Equipo menos elegido: ${equipoMenos}</div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">Hipster: ${hip} Mainstream: ${main}</div>
+      <div style="font-size:10px; font-weight:900; letter-spacing:0.4px; color:var(--accent-gold);">EL VESTUARIO</div>
+      <div style="font-size:13px; font-weight:800; line-height:1.3; margin:4px 0 10px;">${headline}</div>
+      ${imp ? `<div style="background:rgba(245,158,11,0.08); border-radius:10px; padding:9px; border:1px solid rgba(245,158,11,0.15); display:flex; gap:8px; align-items:center;">
+        <img class="stats-sq-img" src="data/imgJugadores/${imp.player.id}.${imp.player.extension||'webp'}" alt="" onerror="this.style.visibility='hidden'" style="width:36px;height:36px;">
+        <div style="flex:1;"><div style="font-weight:900;">⭐ ${esc(imp.player.nombre||imp.player.id)}</div><div style="font-size:11px; color:var(--text-muted);">Imprescindible · ${imp.possessionPct}% lo tiene</div></div>
+        <div style="font-weight:900; color:var(--accent-gold);">${imp.possessionPct}%</div>
+      </div>` : ''}
+      ${dif ? `<div style="margin-top:8px; background:rgba(6,182,212,0.07); border-radius:10px; padding:9px; border:1px solid rgba(6,182,212,0.15); display:flex; gap:8px; align-items:center;">
+        <img class="stats-sq-img" src="data/imgJugadores/${dif.player.id}.${dif.player.extension||'webp'}" alt="" onerror="this.style.visibility='hidden'" style="width:36px;height:36px;">
+        <div style="flex:1;"><div style="font-weight:900;">🎯 ${esc(dif.player.nombre||dif.player.id)}</div><div style="font-size:11px; color:var(--text-muted);">Diferencial · solo ${dif.possessionPct}% lo tiene</div></div>
+      </div>` : ''}
+      <div style="margin-top:10px; display:grid; grid-template-columns:1fr 1fr; gap:6px; font-size:11px;">
+        <div style="background:rgba(255,255,255,0.04); border-radius:8px; padding:8px; text-align:center;"><div style="font-weight:800; color:var(--accent-primary);">${equipoMas ? esc((typeof AppState!=='undefined'&&AppState.teamsMap?.[equipoMas.equipo]?.name)||equipoMas.equipo) : '—'}</div><div style="font-size:9px; color:var(--text-muted);">MÁS ELEGIDO · ${equipoMas?.count||0}</div></div>
+        <div style="background:rgba(255,255,255,0.04); border-radius:8px; padding:8px; text-align:center;"><div style="font-weight:800;">${equipoMenos ? esc((typeof AppState!=='undefined'&&AppState.teamsMap?.[equipoMenos.equipo]?.name)||equipoMenos.equipo) : '—'}</div><div style="font-size:9px; color:var(--text-muted);">MENOS ELEGIDO</div></div>
+      </div>
+      <div style="margin-top:8px; font-size:10px; color:var(--text-muted); display:flex; justify-content:space-between;">
+        <span>🪞 Hipster: ${plantilla?.hipster ? esc(plantilla.hipster.username) : '—'}</span>
+        <span>👥 Mainstream: ${plantilla?.mainstream ? esc(plantilla.mainstream.username) : '—'}</span>
+      </div>
+      <div style="margin-top:8px; font-size:10px; color:var(--text-muted); text-align:center;">Top por posición disponible en Plantillas →</div>
     </div>`;
   }
 
