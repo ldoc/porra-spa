@@ -551,6 +551,92 @@ function calcClasificacionPronosticosStats(allPredictions, matches, teamsMap){
   return { freqPrimero, freqTop8, freqFuera24, mediaPos, dispersion, posLists, topMedia5, users: users.length };
 }
 
+function calcEliminatoriasPronosticosStats(finalPredictionsCache){
+  const championTally = tallyChampions(finalPredictionsCache);
+  const pairVotes = new Map();
+  for (const fp of Object.values(finalPredictionsCache || {})){
+    const c = fp?.champion, r = fp?.runnerUp;
+    if (!Number.isFinite(c) || !Number.isFinite(r)) continue;
+    const pair = `${c}-${r}`;
+    pairVotes.set(pair, (pairVotes.get(pair) || 0) + 1);
+  }
+  const finalTally = [...pairVotes.entries()].map(([pair, votes]) => ({ pair, votes })).sort((a,b)=> b.votes - a.votes || a.pair.localeCompare(b.pair));
+  const semisFreq = new Map();
+  for (const fp of Object.values(finalPredictionsCache || {})){
+    for (const id of (Array.isArray(fp?.semiFinalists) ? fp.semiFinalists : [])){
+      if (!Number.isFinite(id)) continue;
+      semisFreq.set(id, (semisFreq.get(id) || 0) + 1);
+    }
+  }
+  let quadro;
+  try {
+    let username = null;
+    if (typeof AppState !== 'undefined' && AppState.currentUser && AppState.currentUser.name) username = AppState.currentUser.name;
+    if (username && finalPredictionsCache && finalPredictionsCache[username]) {
+      quadro = compareQuadroWithCommunity(username, finalPredictionsCache);
+    } else {
+      const first = Object.keys(finalPredictionsCache || {})[0] || null;
+      quadro = first ? compareQuadroWithCommunity(first, finalPredictionsCache) : { users: 0, avgCommon: 0, avgPct: 0, veryDiffCount: 0 };
+      if (!username) quadro._note = 'no currentUser, used first';
+    }
+  } catch(e){ quadro = { users: 0, avgCommon: 0, avgPct: 0, veryDiffCount: 0 }; }
+  return { championTally, finalTally, semisFreq, quadro };
+}
+
+function calcPlantillaPronosticosExtras(aggOrPts, squadsCache){
+  let agg, squads;
+  if (aggOrPts && Array.isArray(aggOrPts.rows)) {
+    agg = aggOrPts;
+    squads = squadsCache || {};
+  } else {
+    squads = squadsCache || {};
+    agg = aggregateSquads(aggOrPts || {}, squads);
+  }
+  const byPos = { G: [], D: [], M: [], F: [] };
+  for (const pos of Object.keys(byPos)){
+    const filtered = (agg.rows || []).filter(r => r.player && r.player.posicion === pos);
+    filtered.sort((a,b)=> b.possessionPct - a.possessionPct || b.pts - a.pts);
+    byPos[pos] = filtered.slice(0,3);
+  }
+  const equipoCount = new Map();
+  for (const squad of Object.values(squads || {})){
+    if (!Array.isArray(squad)) continue;
+    for (const pl of squad){
+      const eq = pl?.equipo;
+      if (!Number.isFinite(eq)) continue;
+      equipoCount.set(eq, (equipoCount.get(eq) || 0) + 1);
+    }
+  }
+  let equipoMas = null, equipoMenos = null;
+  for (const [equipo, count] of equipoCount){
+    if (!equipoMas || count > equipoMas.count) equipoMas = { equipo, count };
+    if (!equipoMenos || count < equipoMenos.count) equipoMenos = { equipo, count };
+  }
+  const imprescindible = (agg.rows || []).filter(r => r.possessionPct >= 70);
+  const diferencial = (agg.rows || []).filter(r => r.possessionPct <= 30);
+  const userIds = {};
+  for (const [username, squad] of Object.entries(squads || {})){
+    if (!Array.isArray(squad) || !squad.length) continue;
+    userIds[username] = new Set(squad.map(p => String(p.id)));
+  }
+  const usernames = Object.keys(userIds);
+  let hipster = null, mainstream = null;
+  for (const u of usernames){
+    let sum = 0, n = 0;
+    for (const v of usernames){
+      if (u === v) continue;
+      let common = 0;
+      for (const id of userIds[u]) if (userIds[v].has(id)) common++;
+      sum += common; n++;
+    }
+    const avgCommon = n ? Math.round((sum / n) * 10) / 10 : 0;
+    const entry = { username: u, avgCommon };
+    if (!hipster || avgCommon < hipster.avgCommon) hipster = entry;
+    if (!mainstream || avgCommon > mainstream.avgCommon) mainstream = entry;
+  }
+  return { top3ByPos: byPos, equipoMas, equipoMenos, imprescindible, diferencial, hipster, mainstream };
+}
+
   function getSeriesBySource(source, userData) {
     switch (source) {
       case 'pronosticos':
@@ -1403,7 +1489,9 @@ function calcClasificacionPronosticosStats(allPredictions, matches, teamsMap){
   global.getTeamStatsForPreds = getTeamStatsForPreds;
   global.calcPredictedStandingsForPreds = calcPredictedStandingsForPreds;
   global.calcClasificacionPronosticosStats = calcClasificacionPronosticosStats;
+  global.calcEliminatoriasPronosticosStats = calcEliminatoriasPronosticosStats;
+  global.calcPlantillaPronosticosExtras = calcPlantillaPronosticosExtras;
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { emptySeries, buildTimeline, calcPredictionSeries, calcSquadSeries, calcClassificationSeries, calcEliminatoriasSeries, sumSeries, isLeagueComplete, getSeriesBySource, matchResultOf, extractPlayedMatches, calcReliabilityRow, buildCompletedLeagueData, calcStreaks, calcBestJornadas, calcUserBestJornada, calcPositionHistory, calcTimesTopJornada, calcMomentum, calcConsistency, buildDonutSegments, calcPredictionBias, calcBestMatch, calcBestPlayersByPosition, calcMostProfitablePlayer, sourceSplitFromUserData, computeMatchConsensus, tallyChampions, finalPredictionTeamIds, compareQuadroWithCommunity, aggregateSquads, calcPronosticosPartidosStats, getTeamStatsForPreds, calcPredictedStandingsForPreds, calcClasificacionPronosticosStats };
+    module.exports = { emptySeries, buildTimeline, calcPredictionSeries, calcSquadSeries, calcClassificationSeries, calcEliminatoriasSeries, sumSeries, isLeagueComplete, getSeriesBySource, matchResultOf, extractPlayedMatches, calcReliabilityRow, buildCompletedLeagueData, calcStreaks, calcBestJornadas, calcUserBestJornada, calcPositionHistory, calcTimesTopJornada, calcMomentum, calcConsistency, buildDonutSegments, calcPredictionBias, calcBestMatch, calcBestPlayersByPosition, calcMostProfitablePlayer, sourceSplitFromUserData, computeMatchConsensus, tallyChampions, finalPredictionTeamIds, compareQuadroWithCommunity, aggregateSquads, calcPronosticosPartidosStats, getTeamStatsForPreds, calcPredictedStandingsForPreds, calcClasificacionPronosticosStats, calcEliminatoriasPronosticosStats, calcPlantillaPronosticosExtras };
   }
 })(typeof window !== 'undefined' ? window : globalThis);
