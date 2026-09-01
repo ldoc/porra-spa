@@ -493,10 +493,10 @@
     { key: 'eliminatorias', label: 'Eliminat.' },
   ];
   const SUBTABS = [
+    { key: 'pronosticos', label: 'Pronósticos' },
     { key: 'evolucion', label: 'Evolución' },
     { key: 'individual', label: 'Individual' },
     { key: 'rachas', label: 'Rachas' },
-    { key: 'consenso', label: 'Consenso' },
     { key: 'plantillas', label: 'Plantillas' },
   ];
   const STATS_CONSISTENCY_SIGMA = 8;
@@ -575,10 +575,6 @@
 
     container.innerHTML = skeletonRows(4);
     Promise.all([fetchPlayers(), fetchMatchStats(), fetchAllPredictions()]).then(() => {
-      if (!AppState.matchStats.length) {
-        container.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text-muted)">No hay resultados disponibles aún</div>';
-        return;
-      }
       for (const p of AppState.players || []) {
         AppState.userPoints[p.name] = calculateUserTotalPoints(p.name);
       }
@@ -610,7 +606,7 @@
   }
 
   function initStatsState(seriesMap) {
-    if (!AppState.estadisticasSubTab) AppState.estadisticasSubTab = 'evolucion';
+    if (!AppState.estadisticasSubTab) AppState.estadisticasSubTab = 'pronosticos';
     if (!AppState.estadisticasPointType) AppState.estadisticasPointType = 'total';
     if (!AppState.estadisticasVisibleUsers) {
       const me = AppState.currentUser?.name;
