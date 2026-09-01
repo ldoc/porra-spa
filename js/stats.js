@@ -357,7 +357,8 @@
     const votes = new Map();
     let total = 0;
     for (const fp of Object.values(finalPredictionsCache || {})) {
-      const c = fp?.champion;
+      let c = fp?.champion;
+      if (c != null && typeof c === 'string' && c !== '') c = Number(c);
       if (!Number.isFinite(c)) continue;
       total++;
       votes.set(c, (votes.get(c) || 0) + 1);
@@ -527,7 +528,9 @@
   const championTally = tallyChampions(finalPredictionsCache);
   const pairVotes = new Map();
   for (const fp of Object.values(finalPredictionsCache || {})){
-    const c = fp?.champion, r = fp?.runnerUp;
+    let c = fp?.champion, r = fp?.runnerUp;
+    if (c != null && typeof c === 'string' && c !== '') c = Number(c);
+    if (r != null && typeof r === 'string' && r !== '') r = Number(r);
     if (!Number.isFinite(c) || !Number.isFinite(r)) continue;
     const pair = `${c}-${r}`;
     pairVotes.set(pair, (pairVotes.get(pair) || 0) + 1);
@@ -535,7 +538,8 @@
   const finalTally = [...pairVotes.entries()].map(([pair, votes]) => ({ pair, votes })).sort((a,b)=> b.votes - a.votes || a.pair.localeCompare(b.pair));
   const semisFreq = new Map();
   for (const fp of Object.values(finalPredictionsCache || {})){
-    for (const id of (Array.isArray(fp?.semiFinalists) ? fp.semiFinalists : [])){
+    for (let id of (Array.isArray(fp?.semiFinalists) ? fp.semiFinalists : [])){
+      if (id != null && typeof id === 'string' && id !== '') id = Number(id);
       if (!Number.isFinite(id)) continue;
       semisFreq.set(id, (semisFreq.get(id) || 0) + 1);
     }
@@ -685,11 +689,12 @@
 
   function renderPronosticosEliminatoriasCard(elims){
     const title='<div class="stats-card-title">🏆 Eliminatorias</div>';
-    if(!elims || !elims.championTally || !elims.championTally.teams?.length) return `<div class="stats-pronosticos-eliminatorias">${title}${statsEmpty('Aún no hay pronósticos')}</div>`;
-    const champ = elims.championTally;
+    const hasAny = elims && ((elims.championTally?.teams?.length||0) + (elims.finalTally?.length||0) + (elims.semisFreq?.size||0) > 0);
+    if(!hasAny) return `<div class="stats-pronosticos-eliminatorias">${title}${statsEmpty('Aún no hay pronósticos')}</div>`;
+    const champ = elims.championTally && elims.championTally.teams?.length ? elims.championTally : { total:0, teams:[] };
     const topChamp = champ.teams[0];
-    const cname = esc((typeof AppState!=='undefined'&&AppState.teamsMap?.[topChamp.teamId]?.name)||topChamp.teamId);
-    const champPct = Math.round(topChamp.votes/champ.total*100);
+    const cname = topChamp ? esc((typeof AppState!=='undefined'&&AppState.teamsMap?.[topChamp.teamId]?.name)||topChamp.teamId) : '—';
+    const champPct = topChamp ? Math.round(topChamp.votes/champ.total*100) : 0;
     const finalTop = (elims.finalTally||[])[0];
     const finalLabel = finalTop ? (()=>{
       const p=finalTop.pair.split('-'); const a=esc((typeof AppState!=='undefined'&&AppState.teamsMap?.[p[0]]?.name)||p[0]); const b=esc((typeof AppState!=='undefined'&&AppState.teamsMap?.[p[1]]?.name)||p[1]);
@@ -698,8 +703,7 @@
     const semisTop = [...(elims.semisFreq||new Map()).entries()].sort((a,b)=>b[1]-a[1])[0];
     const semisName = semisTop ? esc((typeof AppState!=='undefined'&&AppState.teamsMap?.[semisTop[0]]?.name)||semisTop[0]) : '—';
     const q = elims.quadro || {};
-    return `<div class="stats-pronosticos-eliminatorias">${title}
-      <div style="font-size:10px; font-weight:900; letter-spacing:0.4px; color:var(--accent-purple);">EL SUEÑO COLECTIVO</div>
+    const champBlock = topChamp ? `<div style="font-size:10px; font-weight:900; letter-spacing:0.4px; color:var(--accent-purple);">EL SUEÑO COLECTIVO</div>
       <div style="font-size:13px; font-weight:800; line-height:1.3; margin:4px 0 10px;">${cname} es el campeón del corazón · <span style="color:var(--accent-purple);">${champPct}%</span> lo ve levantando la copa</div>
       <div style="background:rgba(139,92,246,0.07); border-radius:10px; padding:9px; border:1px solid rgba(139,92,246,0.15);">
         <div style="display:flex; gap:8px; align-items:center;">
@@ -707,7 +711,9 @@
           <div style="flex:1;"><div style="font-weight:900;">${cname}</div><div style="font-size:11px; color:var(--text-muted);">${topChamp.votes}/${champ.total} votos · ${champPct}%</div></div>
           <div style="font-size:18px;">👑</div>
         </div>
-      </div>
+      </div>` : '';
+    return `<div class="stats-pronosticos-eliminatorias">${title}
+      ${champBlock}
       <div style="margin-top:10px; padding:9px; background:rgba(255,255,255,0.04); border-radius:10px;">
         <div style="font-size:11px; font-weight:800; color:var(--accent-cyan);">💭 Final soñada</div>
         <div style="font-size:11px; margin-top:3px;"><b>${finalLabel}</b></div>
