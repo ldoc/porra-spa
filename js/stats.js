@@ -575,6 +575,10 @@
 
     container.innerHTML = skeletonRows(4);
     Promise.all([fetchPlayers(), fetchMatchStats(), fetchAllPredictions()]).then(() => {
+      if (!AppState.matchStats.length) {
+        container.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text-muted)">No hay resultados disponibles aún</div>';
+        return;
+      }
       for (const p of AppState.players || []) {
         AppState.userPoints[p.name] = calculateUserTotalPoints(p.name);
       }
@@ -655,7 +659,7 @@
   function renderStatsContent() {
     _userDataCache = null;
     _porraAvgBySource = null;
-    const sub = AppState.estadisticasSubTab || 'evolucion';
+    const sub = AppState.estadisticasSubTab || 'pronosticos';
     const aggregates = buildStatsAggregates();
 
     const subBar = SUBTABS.map(s =>
