@@ -108,7 +108,7 @@ git commit -m "feat: endpoint admin GET /api/admin/progress"
 **Interfaces:**
 - Consumes: nada (funciones puras; solo estructuras de datos).
 - Produces (exportadas vía `module.exports` y `global`):
-  - `countPredictedInPhase(matches, predictions) → number`
+  - `countPredictedMatches(matches, predictions) → number`
   - `computeFinalSlotsFilled(finalPredictions) → number`
   - `computeProgressForUser(user, matchesByFase) → { username, avatar, isAdmin, predictionsConfirmed, byFase: { [fase]: { done, total } }, finalFilled, finalTotal, finalLocked, squadCount, squadTotal }`
   - `computeSummaries(progressList) → { total, ligaComplete, confirmed, squadComplete, finalComplete }`
@@ -122,7 +122,7 @@ Crear `porra-spa/tests/progresoAdmin.test.js`:
 ```js
 const assert = require('assert');
 const {
-  countPredictedInPhase,
+  countPredictedMatches,
   computeFinalSlotsFilled,
   computeProgressForUser,
   computeSummaries,
@@ -131,12 +131,12 @@ const {
 
 const LIGA_144 = Array.from({ length: 144 }, (_, i) => ({ id: String(i + 1), fase: 'liga' }));
 
-function test_countPredictedInPhase_cuenta_solo_numericos() {
+function test_countPredictedMatches_cuenta_solo_numericos() {
   const matches = [{ id: '1', fase: 'liga' }, { id: '2', fase: 'liga' }, { id: '3', fase: 'liga' }];
   const predictions = { '1': { home: 2, away: 1 }, '2': { home: null, away: null } };
-  assert.strictEqual(countPredictedInPhase(matches, predictions), 1);
-  assert.strictEqual(countPredictedInPhase(matches, null), 0);
-  assert.strictEqual(countPredictedInPhase(matches, {}), 0);
+  assert.strictEqual(countPredictedMatches(matches, predictions), 1);
+  assert.strictEqual(countPredictedMatches(matches, null), 0);
+  assert.strictEqual(countPredictedMatches(matches, {}), 0);
 }
 
 function test_computeFinalSlotsFilled_vacio() {
@@ -229,7 +229,7 @@ function test_sortUsers_confirmados_primero() {
 }
 
 const tests = [
-  test_countPredictedInPhase_cuenta_solo_numericos,
+  test_countPredictedMatches_cuenta_solo_numericos,
   test_computeFinalSlotsFilled_vacio,
   test_computeFinalSlotsFilled_parcial,
   test_computeFinalSlotsFilled_completo_24,
@@ -262,7 +262,7 @@ Crear `porra-spa/js/progresoAdmin.js`:
 (function (global) {
   const FASE_LABELS = { liga: 'Liguilla', '16': '16avos', '8': 'Octavos', '4': 'Cuartos', semis: 'Semifinales', final: 'Final' };
 
-  function countPredictedInPhase(matches, predictions) {
+  function countPredictedMatches(matches, predictions) {
     let done = 0;
     for (const m of matches || []) {
       const p = predictions && predictions[m.id];
@@ -288,7 +288,7 @@ Crear `porra-spa/js/progresoAdmin.js`:
     const byFase = {};
     for (const [fase, matches] of Object.entries(matchesByFase || {})) {
       byFase[fase] = {
-        done: countPredictedInPhase(matches, user.predictions),
+        done: countPredictedMatches(matches, user.predictions),
         total: (matches || []).length
       };
     }
@@ -328,13 +328,13 @@ Crear `porra-spa/js/progresoAdmin.js`:
   }
 
   global.FASE_LABELS = FASE_LABELS;
-  global.countPredictedInPhase = countPredictedInPhase;
+  global.countPredictedMatches = countPredictedMatches;
   global.computeFinalSlotsFilled = computeFinalSlotsFilled;
   global.computeProgressForUser = computeProgressForUser;
   global.computeSummaries = computeSummaries;
   global.sortUsers = sortUsers;
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { FASE_LABELS, countPredictedInPhase, computeFinalSlotsFilled, computeProgressForUser, computeSummaries, sortUsers };
+    module.exports = { FASE_LABELS, countPredictedMatches, computeFinalSlotsFilled, computeProgressForUser, computeSummaries, sortUsers };
   }
 })(typeof window !== 'undefined' ? window : globalThis);
 ```
@@ -412,7 +412,7 @@ Añadir `buildProgressTableHtml` al `require` del test:
 
 ```js
 const {
-  countPredictedInPhase,
+  countPredictedMatches,
   computeFinalSlotsFilled,
   computeProgressForUser,
   computeSummaries,
@@ -560,7 +560,7 @@ En `js/progresoAdmin.js`, justo antes del bloque `global.FASE_LABELS = ...`, añ
 Y añadir `buildProgressTableHtml` (y `showAdminProgressModal`/`loadAdminProgress` si se quieren exponer en CommonJS) al `module.exports`:
 
 ```js
-    module.exports = { FASE_LABELS, countPredictedInPhase, computeFinalSlotsFilled, computeProgressForUser, computeSummaries, sortUsers, buildProgressTableHtml };
+    module.exports = { FASE_LABELS, countPredictedMatches, computeFinalSlotsFilled, computeProgressForUser, computeSummaries, sortUsers, buildProgressTableHtml };
 ```
 
 - [ ] **Step 4: Ejecutar el test para verificar que pasa**

@@ -29,7 +29,7 @@
 
 ---
 
-### Tarea 1: Añadir constante de fecha
+### Task 1: Añadir constante de fecha
 
 **Archivos:**
 - Modificar: `js/main.js:170-180` (junto a otras constantes)
@@ -57,7 +57,7 @@ git commit -m "feat: add PLAYERS_AVAILABLE_DATE constant for squad availability 
 
 ---
 
-### Tarea 2: Añadir estilos CSS para el aviso
+### Task 2: Añadir estilos CSS para el aviso
 
 **Archivos:**
 - Modificar: `css/styles.css` (al final de la sección de estilos de plantilla)
@@ -151,7 +151,7 @@ git commit -m "feat: add CSS styles for squad players unavailable notice"
 
 ---
 
-### Tarea 3: Modificar renderSquadSlots() para aceptar parámetro disabled
+### Task 3: Modificar renderSquadSlots() para aceptar parámetro disabled
 
 **Archivos:**
 - Modificar: `js/main.js:4560-4590` (función `renderSquadSlots`)
@@ -217,7 +217,7 @@ git commit -m "feat: modify renderSquadSlots() to accept disabled parameter"
 
 ---
 
-### Tarea 4: Modificar renderPlantillaTab() para mostrar aviso
+### Task 4: Modificar renderPlantillaTab() para mostrar aviso
 
 **Archivos:**
 - Modificar: `js/main.js:4591-4684` (función `renderPlantillaTab`)
@@ -359,7 +359,7 @@ git commit -m "feat: modify renderPlantillaTab() to show notice when players una
 
 ---
 
-### Tarea 5: Añadir tests para la nueva funcionalidad
+### Task 5: Añadir tests para la nueva funcionalidad
 
 **Archivos:**
 - Crear: `tests/plantilla-aviso.test.js`
@@ -483,7 +483,7 @@ git commit -m "test: add tests for squad players unavailable notice"
 
 ---
 
-### Tarea 6: Verificación final y cache-busting
+### Task 6: Verificación final y cache-busting
 
 **Archivos:**
 - Modificar: `index.html` (incrementar versión de CSS y JS)
