@@ -6039,6 +6039,12 @@ html, body {
   color: var(--accent-danger, #EF4444);
 }
 
+.stats-pronosticos-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+@media (max-width:520px){.stats-pronosticos-grid{grid-template-columns:1fr}}
+.stats-pronosticos-partidos,.stats-pronosticos-clasificacion,.stats-pronosticos-eliminatorias,.stats-pronosticos-plantilla{display:flex;flex-direction:column;gap:8px}
+.stats-pill{display:inline-flex;align-items:center}
+.stats-pronosticos-grid .stats-card{padding:12px}
+
 /* ==========================================================================
    ADMIN PROGRESS
    ========================================================================== */
