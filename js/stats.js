@@ -427,7 +427,7 @@
     return { usersWithSquad, uniquePlayers: rows.length, rows };
   }
 
-function calcPronosticosPartidosStats(allPredictions, leagueMatches){
+  function calcPronosticosPartidosStats(allPredictions, leagueMatches){
   const counts={H:0,D:0,A:0};
   const scoreVotes=new Map();
   let total=0, sumLocal=0, sumVisit=0;
@@ -454,7 +454,7 @@ function calcPronosticosPartidosStats(allPredictions, leagueMatches){
   const leastRepeated=scoreRows[scoreRows.length-1]||null;
   const raro=scoreRows.find(s=> s.votes===1 || s.pct<5) ? [...scoreRows].reverse().find(s=> s.votes===1 || s.pct<5) : null; // el más raro (menos votos que cumple)
   // alternativas: filtrar raros y coger último
-  let mostConsensus=null, mostDivided=null, maxPct=-1, minEntropy=Infinity;
+  let mostConsensus=null, mostDivided=null, maxPct=-1;
   // entropy: -sum(p log p)
   for(const [matchId,mc] of matchConsensus){
     const pctMax=Math.max(mc.H,mc.D,mc.A)/mc.total*100;
@@ -477,7 +477,7 @@ function calcPronosticosPartidosStats(allPredictions, leagueMatches){
   };
 }
 
-function getTeamStatsForPreds(preds, teamId, matches){
+  function getTeamStatsForPreds(preds, teamId, matches){
   let PJ=0,V=0,E=0,D=0,GF=0,GC=0,awayWins=0,awayGoals=0;
   for(const m of matches||[]){
     const pr=preds?.[m.id]; if(!pr||!Number.isFinite(pr.home)||!Number.isFinite(pr.away)) continue;
@@ -492,13 +492,13 @@ function getTeamStatsForPreds(preds, teamId, matches){
   }
   return { teamId, PJ, V, E, D, GF, GC, DG: GF-GC, Pts: V*3+E, awayWins, awayGoals };
 }
-function calcPredictedStandingsForPreds(preds, matches, teamsMap){
+  function calcPredictedStandingsForPreds(preds, matches, teamsMap){
   const ids=Object.keys(teamsMap||{}).map(Number);
   const stats=ids.map(id=> getTeamStatsForPreds(preds,id,matches));
   stats.sort((a,b)=> b.Pts-a.Pts || b.DG-a.DG || b.GF-a.GF || b.awayGoals-a.awayGoals || b.V-a.V || b.awayWins-a.awayWins);
   return stats;
 }
-function calcClasificacionPronosticosStats(allPredictions, matches, teamsMap){
+  function calcClasificacionPronosticosStats(allPredictions, matches, teamsMap){
   const freqPrimero=new Map(), freqTop8=new Map(), freqFuera24=new Map(), posLists=new Map();
   const users=Object.keys(allPredictions||{});
   for(const u of users){
@@ -523,7 +523,7 @@ function calcClasificacionPronosticosStats(allPredictions, matches, teamsMap){
   return { freqPrimero, freqTop8, freqFuera24, mediaPos, dispersion, posLists, topMedia5, users: users.length };
 }
 
-function calcEliminatoriasPronosticosStats(finalPredictionsCache){
+  function calcEliminatoriasPronosticosStats(finalPredictionsCache){
   const championTally = tallyChampions(finalPredictionsCache);
   const pairVotes = new Map();
   for (const fp of Object.values(finalPredictionsCache || {})){
@@ -556,7 +556,7 @@ function calcEliminatoriasPronosticosStats(finalPredictionsCache){
   return { championTally, finalTally, semisFreq, quadro };
 }
 
-function calcPlantillaPronosticosExtras(aggOrPts, squadsCache){
+  function calcPlantillaPronosticosExtras(aggOrPts, squadsCache){
   let agg, squads;
   if (aggOrPts && Array.isArray(aggOrPts.rows)) {
     agg = aggOrPts;
@@ -623,6 +623,7 @@ function calcPlantillaPronosticosExtras(aggOrPts, squadsCache){
       <div class="stats-consbar"><span class="lbl">${lbl}</span><div class="track"><div class="fill" style="width:${pct[k]||0}%;background:${color}"></div></div><b style="color:var(--text-primary)">${pct[k]||0}%</b></div>`
     ).join('');
     const mostRep = partidos.mostRepeated ? `<span class="stats-pill gold">${esc(partidos.mostRepeated.score)} · ${partidos.mostRepeated.votes} votos · ${partidos.mostRepeated.pct}%</span>` : '<span class="stats-pill">—</span>';
+    const leastRep = partidos.leastRepeated ? `<span class="stats-pill">${esc(partidos.leastRepeated.score)} · ${partidos.leastRepeated.votes} voto${partidos.leastRepeated.votes===1?'':'s'} · ${partidos.leastRepeated.pct}%</span>` : '<span class="stats-pill">—</span>';
     const raro = partidos.raro ? `<span class="stats-pill cyan">${esc(partidos.raro.score)} · ${partidos.raro.votes} voto${partidos.raro.votes===1?'':'s'}</span>` : '<span class="stats-pill">—</span>';
     const acuerdoKpi = partidos.mostConsensus ? `<div class="stats-kpi"><div class="stats-kv">${partidos.mostConsensus.pct}%</div><div class="stats-kl">acuerdo ${esc(partidos.mostConsensus.result)} · #${partidos.mostConsensus.matchId}</div></div>` : '<div class="stats-kpi"><div class="stats-kv">—</div><div class="stats-kl">acuerdo</div></div>';
     const divided = partidos.mostDivided ? `<div class="stats-kpi"><div class="stats-kv">${partidos.mostDivided.entropy}</div><div class="stats-kl">más dividido · #${partidos.mostDivided.matchId}</div></div>` : '<div class="stats-kpi"><div class="stats-kv">—</div><div class="stats-kl">dividido</div></div>';
@@ -632,7 +633,7 @@ function calcPlantillaPronosticosExtras(aggOrPts, squadsCache){
     return `<div class="stats-pronosticos-partidos">${title}
       <div class="stats-consbar" style="flex-direction:column;gap:6px">${bars}</div>
       <div class="stats-kpi-grid" style="margin-top:8px">${acuerdoKpi}${divided}<div class="stats-kpi"><div class="stats-kv">${esc(partidos.mostRepeated?.score||'—')}</div><div class="stats-kl">más repetido</div></div></div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">Más repetido: ${mostRep} Raro: ${raro}</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">Más repetido: ${mostRep} Menos repetido: ${leastRep} Raro: ${raro}</div>
       ${gAvg}
       <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">Conservador: ${cons} Arriesgado: ${arr}</div>
     </div>`;
@@ -650,9 +651,17 @@ function calcPlantillaPronosticosExtras(aggOrPts, squadsCache){
       <div class="stats-rank-row"><img class="stats-sq-img" src="data/imgEquipos/${tid}.${(typeof AppState!=='undefined'&&AppState.teamsMap?.[tid]?.ext)||'webp'}" alt="" onerror="this.style.visibility='hidden'"><span class="stats-rank-name">${esc((typeof AppState!=='undefined'&&AppState.teamsMap?.[tid]?.name)||tid)}</span><span class="stats-rank-main">pos media ${clasif.mediaPos?.get(tid)??'—'}</span></div>`
     ).join('') : '';
     const fuera = [...(clasif.freqFuera24||new Map()).entries()].sort((a,b)=>b[1]-a[1]).slice(0,2).map(([tid,cnt])=>`<span class="stats-pill">${esc((typeof AppState!=='undefined'&&AppState.teamsMap?.[tid]?.name)||tid)} · ${cnt}</span>`).join('');
+    const freqTop8Entries = [...(clasif.freqTop8||new Map()).entries()].sort((a,b)=>b[1]-a[1]).slice(0,3);
+    const freqTop8Html = freqTop8Entries.length ? freqTop8Entries.map(([tid,cnt])=>`
+      <div class="stats-rank-row"><img class="stats-sq-img" src="data/imgEquipos/${tid}.${(typeof AppState!=='undefined'&&AppState.teamsMap?.[tid]?.ext)||'webp'}" alt="" onerror="this.style.visibility='hidden'"><span class="stats-rank-name">${esc((typeof AppState!=='undefined'&&AppState.teamsMap?.[tid]?.name)||tid)}</span><span class="stats-rank-main">${cnt}/${clasif.users}</span></div>`
+    ).join('') : '';
+    const maxDisp = [...(clasif.dispersion||new Map()).entries()].sort((a,b)=>b[1]-a[1])[0] || null;
+    const dispersionHtml = maxDisp ? `<div class="stats-rank-row"><img class="stats-sq-img" src="data/imgEquipos/${maxDisp[0]}.${(typeof AppState!=='undefined'&&AppState.teamsMap?.[maxDisp[0]]?.ext)||'webp'}" alt="" onerror="this.style.visibility='hidden'"><span class="stats-rank-name">${esc((typeof AppState!=='undefined'&&AppState.teamsMap?.[maxDisp[0]]?.name)||maxDisp[0])}</span><span class="stats-rank-main">σ ${maxDisp[1]}</span></div>` : '';
     return `<div class="stats-pronosticos-clasificacion">${title}
       <div class="stats-card-title" style="font-size:11px;color:var(--text-muted)">Más veces 1º</div>
       ${freqHtml}
+      ${freqTop8Html?`<div class="stats-card-title" style="font-size:11px;color:var(--text-muted);margin-top:8px">Más veces Top8</div>${freqTop8Html}`:''}
+      ${dispersionHtml?`<div class="stats-card-title" style="font-size:11px;color:var(--text-muted);margin-top:8px">Mayor dispersión</div>${dispersionHtml}`:''}
       <div class="stats-card-title" style="font-size:11px;color:var(--text-muted);margin-top:8px">Mejor media (top 5)</div>
       ${mediaHtml || statsEmpty('Aún no hay pronósticos')}
       ${fuera?`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">Más veces fuera Top24: ${fuera}</div>`:''}
@@ -700,13 +709,14 @@ function calcPlantillaPronosticosExtras(aggOrPts, squadsCache){
     const imp = (plantilla?.imprescindible||[]).slice(0,3).map(r=>`<span class="stats-pill gold">⭐ ${esc(r.player.nombre||r.player.id)} · ${r.possessionPct}%</span>`).join('');
     const dif = (plantilla?.diferencial||[]).slice(0,3).map(r=>`<span class="stats-pill cyan">🎯 ${esc(r.player.nombre||r.player.id)} · ${r.possessionPct}%</span>`).join('');
     const equipoMas = plantilla?.equipoMas ? `<span class="stats-pill">${esc((typeof AppState!=='undefined'&&AppState.teamsMap?.[plantilla.equipoMas.equipo]?.name)||plantilla.equipoMas.equipo)} · ${plantilla.equipoMas.count}</span>` : '<span class="stats-pill">—</span>';
+    const equipoMenos = plantilla?.equipoMenos ? `<span class="stats-pill">${esc((typeof AppState!=='undefined'&&AppState.teamsMap?.[plantilla.equipoMenos.equipo]?.name)||plantilla.equipoMenos.equipo)} · ${plantilla.equipoMenos.count}</span>` : '<span class="stats-pill">—</span>';
     const hip = plantilla?.hipster ? `<span class="stats-pill">${esc(plantilla.hipster.username)} · ${plantilla.hipster.avgCommon}</span>` : '<span class="stats-pill">—</span>';
     const main = plantilla?.mainstream ? `<span class="stats-pill gold">${esc(plantilla.mainstream.username)} · ${plantilla.mainstream.avgCommon}</span>` : '<span class="stats-pill">—</span>';
     return `<div class="stats-pronosticos-plantilla">${title}
       ${topHtml || statsEmpty('Aún no hay pronósticos')}
       <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">Imprescindibles: ${imp||'<span class="stats-pill">—</span>'} </div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">Diferenciales: ${dif||'<span class="stats-pill">—</span>'} </div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">Equipo más elegido: ${equipoMas}</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">Equipo más elegido: ${equipoMas} Equipo menos elegido: ${equipoMenos}</div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">Hipster: ${hip} Mainstream: ${main}</div>
     </div>`;
   }
@@ -856,7 +866,7 @@ function calcPlantillaPronosticosExtras(aggOrPts, squadsCache){
 
     container.innerHTML = skeletonRows(4);
     Promise.all([fetchPlayers(), fetchMatchStats(), fetchAllPredictions()]).then(() => {
-      if (!AppState.matchStats.length) {
+      if (!AppState.matchStats.length && AppState.estadisticasSubTab !== 'pronosticos') {
         container.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text-muted)">No hay resultados disponibles aún</div>';
         return;
       }
