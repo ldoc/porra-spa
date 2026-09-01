@@ -455,6 +455,56 @@
     return { usersWithSquad, uniquePlayers: rows.length, rows };
   }
 
+function calcPronosticosPartidosStats(allPredictions, leagueMatches){
+  const counts={H:0,D:0,A:0};
+  const scoreVotes=new Map();
+  let total=0, sumLocal=0, sumVisit=0;
+  const perUserAvg={};
+  const matchConsensus=new Map(); // matchId -> {H,D,A}
+  for(const [username,preds] of Object.entries(allPredictions||{})){
+    let gSum=0,gN=0;
+    for(const m of leagueMatches||[]){
+      const pr=preds?.[m.id];
+      if(!pr||!Number.isFinite(pr.home)||!Number.isFinite(pr.away)) continue;
+      const res=matchResultOf(pr.home,pr.away);
+      counts[res]++; total++;
+      const key=`${pr.home}-${pr.away}`;
+      scoreVotes.set(key,(scoreVotes.get(key)||0)+1);
+      sumLocal+=pr.home; sumVisit+=pr.away;
+      gSum+=pr.home+pr.away; gN++;
+      if(!matchConsensus.has(m.id)) matchConsensus.set(m.id,{H:0,D:0,A:0,total:0});
+      const mc=matchConsensus.get(m.id); mc[res]++; mc.total++;
+    }
+    if(gN) perUserAvg[username]= Math.round((gSum/gN)*10)/10;
+  }
+  const scoreRows=[...scoreVotes.entries()].map(([score,votes])=>({score,votes,pct: total?Math.round(votes/total*100):0})).sort((a,b)=>b.votes-a.votes);
+  const mostRepeated=scoreRows[0]||null;
+  const leastRepeated=scoreRows[scoreRows.length-1]||null;
+  const raro=scoreRows.find(s=> s.votes===1 || s.pct<5) ? [...scoreRows].reverse().find(s=> s.votes===1 || s.pct<5) : null; // el más raro (menos votos que cumple)
+  // alternativas: filtrar raros y coger último
+  let mostConsensus=null, mostDivided=null, maxPct=-1, minEntropy=Infinity;
+  // entropy: -sum(p log p)
+  for(const [matchId,mc] of matchConsensus){
+    const pctMax=Math.max(mc.H,mc.D,mc.A)/mc.total*100;
+    if(pctMax>maxPct){ maxPct=pctMax; mostConsensus={matchId, pct:Math.round(pctMax), result: mc.H>=mc.D&&mc.H>=mc.A?'H':mc.D>=mc.A?'D':'A'}; }
+    const ps=[mc.H,mc.D,mc.A].map(c=>c/mc.total).filter(p=>p>0);
+    const ent=-ps.reduce((a,p)=>a+p*Math.log2(p),0);
+    // max entropy = most divided (cerca de 1.58 para 3 iguales)
+    if(mostDivided===null || ent>mostDivided.entropy) mostDivided={matchId, entropy: Math.round(ent*100)/100};
+  }
+  const entries=Object.entries(perUserAvg).map(([username,avg])=>({username,avg})).sort((a,b)=>a.avg-b.avg);
+  const globalPct={ H: total?Math.round(counts.H/total*100):0, D: total?Math.round(counts.D/total*100):0, A: total?Math.round(counts.A/total*100):0 };
+  return {
+    globalCounts:counts, globalPct, scoreVotes:scoreRows, mostRepeated, leastRepeated, raro,
+    mostConsensus, mostDivided, sesgo: globalPct,
+    avgGoalsByUser: entries,
+    conservador: entries[0]||null, arriesgado: entries[entries.length-1]||null,
+    localAvg: total?Math.round((sumLocal/total)*10)/10:0,
+    visitanteAvg: total?Math.round((sumVisit/total)*10)/10:0,
+    delta: total?Math.round(((sumLocal-sumVisit)/total)*10)/10:0,
+  };
+}
+
   function getSeriesBySource(source, userData) {
     switch (source) {
       case 'pronosticos':
@@ -1303,7 +1353,8 @@
   global.finalPredictionTeamIds = finalPredictionTeamIds;
   global.compareQuadroWithCommunity = compareQuadroWithCommunity;
   global.aggregateSquads = aggregateSquads;
+  global.calcPronosticosPartidosStats = calcPronosticosPartidosStats;
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { emptySeries, buildTimeline, calcPredictionSeries, calcSquadSeries, calcClassificationSeries, calcEliminatoriasSeries, sumSeries, isLeagueComplete, getSeriesBySource, matchResultOf, extractPlayedMatches, calcReliabilityRow, buildCompletedLeagueData, calcStreaks, calcBestJornadas, calcUserBestJornada, calcPositionHistory, calcTimesTopJornada, calcMomentum, calcConsistency, buildDonutSegments, calcPredictionBias, calcBestMatch, calcBestPlayersByPosition, calcMostProfitablePlayer, sourceSplitFromUserData, computeMatchConsensus, tallyChampions, finalPredictionTeamIds, compareQuadroWithCommunity, aggregateSquads };
+    module.exports = { emptySeries, buildTimeline, calcPredictionSeries, calcSquadSeries, calcClassificationSeries, calcEliminatoriasSeries, sumSeries, isLeagueComplete, getSeriesBySource, matchResultOf, extractPlayedMatches, calcReliabilityRow, buildCompletedLeagueData, calcStreaks, calcBestJornadas, calcUserBestJornada, calcPositionHistory, calcTimesTopJornada, calcMomentum, calcConsistency, buildDonutSegments, calcPredictionBias, calcBestMatch, calcBestPlayersByPosition, calcMostProfitablePlayer, sourceSplitFromUserData, computeMatchConsensus, tallyChampions, finalPredictionTeamIds, compareQuadroWithCommunity, aggregateSquads, calcPronosticosPartidosStats };
   }
 })(typeof window !== 'undefined' ? window : globalThis);
