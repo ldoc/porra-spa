@@ -353,34 +353,6 @@
     };
   }
 
-  function computeMatchConsensus(matchId, allPredictions) {
-    const counts = { H: 0, D: 0, A: 0 };
-    const scoreVotes = new Map();
-    let total = 0;
-    for (const preds of Object.values(allPredictions || {})) {
-      const pr = preds?.[matchId];
-      if (!pr || !Number.isFinite(pr.home) || !Number.isFinite(pr.away)) continue;
-      total++;
-      counts[matchResultOf(pr.home, pr.away)]++;
-      const key = `${pr.home}-${pr.away}`;
-      scoreVotes.set(key, (scoreVotes.get(key) || 0) + 1);
-    }
-    const topScores = [...scoreVotes.entries()]
-      .map(([score, votes]) => ({ score, votes, pct: Math.round((votes / total) * 100) }))
-      .sort((a, b) => b.votes - a.votes || a.score.localeCompare(b.score))
-      .slice(0, 6);
-    let majorityResult = null;
-    if (total) {
-      majorityResult = 'H';
-      for (const k of ['D', 'A']) {
-        if (counts[k] > counts[majorityResult]) majorityResult = k;
-      }
-    }
-    const pct = {};
-    for (const k of ['H', 'D', 'A']) pct[k] = total ? Math.round((counts[k] / total) * 100) : 0;
-    return { counts, pct, total, topScores, majorityResult };
-  }
-
   function tallyChampions(finalPredictionsCache) {
     const votes = new Map();
     let total = 0;
@@ -652,14 +624,14 @@ function calcPlantillaPronosticosExtras(aggOrPts, squadsCache){
     ).join('');
     const mostRep = partidos.mostRepeated ? `<span class="stats-pill gold">${esc(partidos.mostRepeated.score)} · ${partidos.mostRepeated.votes} votos · ${partidos.mostRepeated.pct}%</span>` : '<span class="stats-pill">—</span>';
     const raro = partidos.raro ? `<span class="stats-pill cyan">${esc(partidos.raro.score)} · ${partidos.raro.votes} voto${partidos.raro.votes===1?'':'s'}</span>` : '<span class="stats-pill">—</span>';
-    const consenso = partidos.mostConsensus ? `<div class="stats-kpi"><div class="stats-kv">${partidos.mostConsensus.pct}%</div><div class="stats-kl">consenso ${esc(partidos.mostConsensus.result)} · #${partidos.mostConsensus.matchId}</div></div>` : '<div class="stats-kpi"><div class="stats-kv">—</div><div class="stats-kl">consenso</div></div>';
+    const acuerdoKpi = partidos.mostConsensus ? `<div class="stats-kpi"><div class="stats-kv">${partidos.mostConsensus.pct}%</div><div class="stats-kl">acuerdo ${esc(partidos.mostConsensus.result)} · #${partidos.mostConsensus.matchId}</div></div>` : '<div class="stats-kpi"><div class="stats-kv">—</div><div class="stats-kl">acuerdo</div></div>';
     const divided = partidos.mostDivided ? `<div class="stats-kpi"><div class="stats-kv">${partidos.mostDivided.entropy}</div><div class="stats-kl">más dividido · #${partidos.mostDivided.matchId}</div></div>` : '<div class="stats-kpi"><div class="stats-kv">—</div><div class="stats-kl">dividido</div></div>';
     const gAvg = `<div class="stats-kpi-grid" style="margin-top:6px"><div class="stats-kpi"><div class="stats-kv">${partidos.localAvg}</div><div class="stats-kl">media local</div></div><div class="stats-kpi"><div class="stats-kv">${partidos.visitanteAvg}</div><div class="stats-kl">media visitante</div></div><div class="stats-kpi"><div class="stats-kv">${partidos.delta>0?'+':''}${partidos.delta}</div><div class="stats-kl">delta</div></div></div>`;
     const cons = partidos.conservador ? `<span class="stats-pill">${esc(partidos.conservador.username)} · ${partidos.conservador.avg} gol/part</span>` : '<span class="stats-pill">—</span>';
     const arr = partidos.arriesgado ? `<span class="stats-pill gold">${esc(partidos.arriesgado.username)} · ${partidos.arriesgado.avg} gol/part</span>` : '<span class="stats-pill">—</span>';
     return `<div class="stats-pronosticos-partidos">${title}
       <div class="stats-consbar" style="flex-direction:column;gap:6px">${bars}</div>
-      <div class="stats-kpi-grid" style="margin-top:8px">${consenso}${divided}<div class="stats-kpi"><div class="stats-kv">${esc(partidos.mostRepeated?.score||'—')}</div><div class="stats-kl">más repetido</div></div></div>
+      <div class="stats-kpi-grid" style="margin-top:8px">${acuerdoKpi}${divided}<div class="stats-kpi"><div class="stats-kv">${esc(partidos.mostRepeated?.score||'—')}</div><div class="stats-kl">más repetido</div></div></div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">Más repetido: ${mostRep} Raro: ${raro}</div>
       ${gAvg}
       <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">Conservador: ${cons} Arriesgado: ${arr}</div>
@@ -980,7 +952,6 @@ function calcPlantillaPronosticosExtras(aggOrPts, squadsCache){
     else if (sub === 'evolucion') body = renderEvolucionBody(aggregates);
     else if (sub === 'individual') body = renderIndividualBody(aggregates);
     else if (sub === 'rachas') body = renderRachasBody(aggregates);
-    else if (sub === 'consenso') body = renderConsensoBody(aggregates);
     else body = renderPlantillasBody(aggregates);
 
     return `
@@ -1025,128 +996,6 @@ function calcPlantillaPronosticosExtras(aggOrPts, squadsCache){
         <div class="stats-card-title">📈 Mejores jornadas históricas</div>
         ${bestHtml || statsEmpty('Aún no hay jornadas completadas')}
       </div>`;
-  }
-
-  function getDefaultConsensoRonda(matchStatsById) {
-    let best = 0;
-    for (const m of AppState.leagueMatches || []) {
-      const home = matchStatsById?.[m.id]?.stats?.[m.homeTeamId]?.goles;
-      const away = matchStatsById?.[m.id]?.stats?.[m.awayTeamId]?.goles;
-      if (Number.isFinite(home) && Number.isFinite(away) && Number(m.ronda) > best) {
-        best = Number(m.ronda);
-      }
-    }
-    return best || 1;
-  }
-
-  function normalizeConsensoRonda(aggregates) {
-    let r = Number(AppState.estadisticasConsensoRonda);
-    if (!(r >= 1 && r <= 8)) r = getDefaultConsensoRonda(aggregates.matchStatsById);
-    AppState.estadisticasConsensoRonda = r;
-    return r;
-  }
-
-  function consensoBars(cons) {
-    const defs = [['1', 'H', 'var(--accent-primary)'], ['X', 'D', 'var(--accent-gold)'], ['2', 'A', 'var(--accent-purple)']];
-    return defs.map(([lbl, k, color]) => `
-      <div class="stats-consbar">
-        <span class="lbl">${lbl}</span>
-        <div class="track"><div class="fill" style="width:${cons.pct[k]}%;background:${color}"></div></div>
-        <b style="color:var(--text-primary)">${cons.pct[k]}%</b>
-      </div>`).join('');
-  }
-
-  function consensoScoreGrid(cons, myPr) {
-    const cells = cons.topScores.map(t => ({
-      score: t.score, label: `${t.votes} voto${t.votes === 1 ? '' : 's'} · ${t.pct}%`,
-      mine: !!myPr && t.score === `${myPr.home}-${myPr.away}`,
-    }));
-    if (myPr && Number.isFinite(myPr.home) && Number.isFinite(myPr.away)) {
-      const myKey = `${myPr.home}-${myPr.away}`;
-      if (!cells.some(c => c.mine)) cells.push({ score: myKey, label: 'tu marcador', mine: true });
-    }
-    if (!cells.length) return statsEmpty('Aún no hay pronósticos en este partido');
-    return `<div class="stats-scoregrid">${cells.map(c => `
-      <div class="stats-scorecell ${c.mine ? 'mine' : ''}">
-        <div class="stats-sv">${esc(c.score)}</div>
-        <div class="stats-sp">${esc(c.label)}</div>
-      </div>`).join('')}</div>`;
-  }
-
-  function renderConsensoBody(aggregates) {
-    const ronda = normalizeConsensoRonda(aggregates);
-    const me = AppState.currentUser?.name;
-    const matches = (AppState.leagueMatches || [])
-      .filter(m => Number(m.ronda) === ronda)
-      .sort((a, b) => (a.fechaTs || 0) - (b.fechaTs || 0));
-
-    const cardsHtml = matches.map(m => {
-      const cons = computeMatchConsensus(m.id, AppState.allPredictions);
-      const myPr = AppState.allPredictions?.[me]?.[m.id];
-      let pill = '';
-      if (cons.majorityResult && myPr && Number.isFinite(myPr.home) && Number.isFinite(myPr.away)) {
-        pill = matchResultOf(myPr.home, myPr.away) === cons.majorityResult
-          ? '<span class="stats-pill cyan">con la mayoría</span>'
-          : '<span class="stats-pill">⚖️ contra corriente</span>';
-      }
-      const ms = aggregates.matchStatsById?.[m.id];
-      const rh = ms?.stats?.[m.homeTeamId]?.goles;
-      const ra = ms?.stats?.[m.awayTeamId]?.goles;
-      let realInfo = '';
-      if (Number.isFinite(rh) && Number.isFinite(ra)) {
-        const acertaron = cons.counts[matchResultOf(rh, ra)];
-        realInfo = `<span class="stats-rank-sub">Real ${rh}-${ra} · ${acertaron}/${cons.total} acertaron</span>`;
-      }
-      const homeName = AppState.teamsMap?.[m.homeTeamId]?.name || m.homeTeam || '';
-      const awayName = AppState.teamsMap?.[m.awayTeamId]?.name || m.awayTeam || '';
-      return `
-      <div class="stats-cons-card" data-match="${m.id}">
-        <div class="stats-cons-head">
-          <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(homeName)} – ${esc(awayName)}</span>
-          ${pill}${realInfo}
-        </div>
-        ${consensoBars(cons)}
-        <div class="stats-cons-extra">
-          <div class="stats-card-title">Marcadores más votados</div>
-          ${consensoScoreGrid(cons, myPr)}
-        </div>
-      </div>`;
-    }).join('');
-
-    const champ = aggregates.championsTally || { total: 0, teams: [] };
-    const champHtml = champ.teams.length ? `
-      <div class="stats-card">
-        <div class="stats-card-title">👑 Campeón más votado (${champ.total} votos)</div>
-        ${champ.teams.map(t => `
-          <div class="stats-rank-row">
-            <img class="stats-sq-img" src="data/imgEquipos/${t.teamId}.${AppState.teamsMap?.[t.teamId]?.ext || 'webp'}" alt="" onerror="this.style.visibility='hidden'">
-            <span class="stats-rank-name">${esc(AppState.teamsMap?.[t.teamId]?.name || t.teamId)}</span>
-            <span class="stats-rank-main">${t.votes}/${champ.total}</span>
-          </div>`).join('')}
-      </div>` : '';
-
-    const q = aggregates.quadro || {};
-    const quadroHtml = q.users ? `
-      <div class="stats-card">
-        <div class="stats-card-title">🧩 Tu cuadro vs la porra</div>
-        <div class="stats-kpi-grid">
-          <div class="stats-kpi"><div class="stats-kv">${q.avgPct}%</div><div class="stats-kl">coincidencia media</div></div>
-          <div class="stats-kpi"><div class="stats-kv">${q.avgCommon}/24</div><div class="stats-kl">equipos en común</div></div>
-          <div class="stats-kpi"><div class="stats-kv">${q.veryDiffCount}</div><div class="stats-kl">cuadros muy distintos (&ge;12)</div></div>
-        </div>
-      </div>` : '';
-
-    return `
-      <div class="stats-card">
-        <div class="resultados-round-nav">
-          <button class="resultados-round-btn" id="btn-stats-cons-prev" ${ronda <= 1 ? 'disabled' : ''}>◀</button>
-          <span class="resultados-round-label">Jornada ${ronda}</span>
-          <button class="resultados-round-btn" id="btn-stats-cons-next" ${ronda >= 8 ? 'disabled' : ''}>▶</button>
-        </div>
-        ${cardsHtml || statsEmpty('No hay partidos en esta jornada')}
-      </div>
-      ${champHtml}
-      ${quadroHtml}`;
   }
 
   function squadPosLabel(pos) {
@@ -1555,29 +1404,12 @@ function calcPlantillaPronosticosExtras(aggOrPts, squadsCache){
       });
     });
 
-    container.querySelectorAll('.stats-cons-card').forEach(card => {
-      card.addEventListener('click', () => card.classList.toggle('open'));
-    });
-
     container.querySelectorAll('.stats-ind-select').forEach(sel => {
       sel.addEventListener('change', () => {
         AppState.estadisticasIndividualUser = sel.value;
         container.innerHTML = renderStatsContent();
         bindStatsEvents();
       });
-    });
-
-    const prevBtn = container.querySelector('#btn-stats-cons-prev');
-    const nextBtn = container.querySelector('#btn-stats-cons-next');
-    if (prevBtn) prevBtn.addEventListener('click', () => {
-      AppState.estadisticasConsensoRonda = Math.max(1, (AppState.estadisticasConsensoRonda || 1) - 1);
-      container.innerHTML = renderStatsContent();
-      bindStatsEvents();
-    });
-    if (nextBtn) nextBtn.addEventListener('click', () => {
-      AppState.estadisticasConsensoRonda = Math.min(8, (AppState.estadisticasConsensoRonda || 1) + 1);
-      container.innerHTML = renderStatsContent();
-      bindStatsEvents();
     });
   }
 
@@ -1608,7 +1440,6 @@ function calcPlantillaPronosticosExtras(aggOrPts, squadsCache){
   global.calcBestPlayersByPosition = calcBestPlayersByPosition;
   global.calcMostProfitablePlayer = calcMostProfitablePlayer;
   global.sourceSplitFromUserData = sourceSplitFromUserData;
-  global.computeMatchConsensus = computeMatchConsensus;
   global.tallyChampions = tallyChampions;
   global.finalPredictionTeamIds = finalPredictionTeamIds;
   global.compareQuadroWithCommunity = compareQuadroWithCommunity;
@@ -1627,6 +1458,6 @@ function calcPlantillaPronosticosExtras(aggOrPts, squadsCache){
   global.renderStatsContent = renderStatsContent;
   global.buildStatsAggregates = buildStatsAggregates;
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { emptySeries, buildTimeline, calcPredictionSeries, calcSquadSeries, calcClassificationSeries, calcEliminatoriasSeries, sumSeries, isLeagueComplete, getSeriesBySource, matchResultOf, extractPlayedMatches, calcReliabilityRow, buildCompletedLeagueData, calcStreaks, calcBestJornadas, calcUserBestJornada, calcPositionHistory, calcTimesTopJornada, calcMomentum, calcConsistency, buildDonutSegments, calcPredictionBias, calcBestMatch, calcBestPlayersByPosition, calcMostProfitablePlayer, sourceSplitFromUserData, computeMatchConsensus, tallyChampions, finalPredictionTeamIds, compareQuadroWithCommunity, aggregateSquads, calcPronosticosPartidosStats, getTeamStatsForPreds, calcPredictedStandingsForPreds, calcClasificacionPronosticosStats, calcEliminatoriasPronosticosStats, calcPlantillaPronosticosExtras, renderPronosticosBody, renderPronosticosPartidosCard, renderPronosticosClasificacionCard, renderPronosticosEliminatoriasCard, renderPronosticosPlantillaCard, renderStatsContent, buildStatsAggregates };
+    module.exports = { emptySeries, buildTimeline, calcPredictionSeries, calcSquadSeries, calcClassificationSeries, calcEliminatoriasSeries, sumSeries, isLeagueComplete, getSeriesBySource, matchResultOf, extractPlayedMatches, calcReliabilityRow, buildCompletedLeagueData, calcStreaks, calcBestJornadas, calcUserBestJornada, calcPositionHistory, calcTimesTopJornada, calcMomentum, calcConsistency, buildDonutSegments, calcPredictionBias, calcBestMatch, calcBestPlayersByPosition, calcMostProfitablePlayer, sourceSplitFromUserData, tallyChampions, finalPredictionTeamIds, compareQuadroWithCommunity, aggregateSquads, calcPronosticosPartidosStats, getTeamStatsForPreds, calcPredictedStandingsForPreds, calcClasificacionPronosticosStats, calcEliminatoriasPronosticosStats, calcPlantillaPronosticosExtras, renderPronosticosBody, renderPronosticosPartidosCard, renderPronosticosClasificacionCard, renderPronosticosEliminatoriasCard, renderPronosticosPlantillaCard, renderStatsContent, buildStatsAggregates };
   }
 })(typeof window !== 'undefined' ? window : globalThis);

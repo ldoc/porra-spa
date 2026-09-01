@@ -48,7 +48,6 @@ const AppState = {
   classificationPoints: {}, // { username: { totalPoints, teamDetails } }
   resultadosTab: 'jornadas', // Tab seleccionado en resultados: 'jornadas' o 'clasificacion'
   estadisticasSubTab: 'pronosticos', // Sub-tab activa en estadísticas
-  estadisticasConsensoRonda: null, // Ronda seleccionada en sub-tab Consenso (1-8)
   estadisticasIndividualUser: null, // usuario mostrado en sub-tab Individual (null -> currentUser)
   finalPredictions: null, // { champion, runnerUp, semiFinalists, quarterFinalists, roundOf16, roundOf32 }
   hasUnsavedFinalChanges: false, // flag de cambios sin guardar en fase final

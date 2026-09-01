@@ -1,7 +1,7 @@
 const assert = require('assert');
 const { matchResultOf, extractPlayedMatches, calcReliabilityRow } = require('../js/stats.js');
 const { buildCompletedLeagueData, calcStreaks, calcBestJornadas, calcUserBestJornada, calcPositionHistory, calcTimesTopJornada, calcMomentum, calcConsistency } = require('../js/stats.js');
-const { computeMatchConsensus, tallyChampions, finalPredictionTeamIds, compareQuadroWithCommunity } = require('../js/stats.js');
+const { tallyChampions, finalPredictionTeamIds, compareQuadroWithCommunity } = require('../js/stats.js');
 const { aggregateSquads } = require('../js/stats.js');
 const { buildDonutSegments, calcPredictionBias, calcBestMatch } = require('../js/stats.js');
 const { calcBestPlayersByPosition, calcMostProfitablePlayer, sourceSplitFromUserData } = require('../js/stats.js');
@@ -134,33 +134,6 @@ test_calcStreaks_corte_al_cambiar_direccion();
 test_calcBestJornadas_top_n();
 console.log('OK estadisticas-subtabs T2');
 
-function test_computeMatchConsensus_barras_y_marcadores() {
-  const allPredictions = {
-    ana: { 7: { home: 2, away: 1 } },
-    bea: { 7: { home: 2, away: 1 } },
-    cal: { 7: { home: 1, away: 1 } },
-    dan: { 7: { home: 1, away: 0 } },
-    eve: { 7: { home: 2, away: 1 } },
-    fin: { 8: { home: 1, away: 0 } },
-    gil: {},
-  };
-  const c = computeMatchConsensus(7, allPredictions);
-  assert.strictEqual(c.total, 5);
-  assert.deepStrictEqual(c.counts, { H: 4, D: 1, A: 0 });
-  assert.strictEqual(c.majorityResult, 'H');
-  assert.strictEqual(c.topScores[0].score, '2-1');
-  assert.strictEqual(c.topScores[0].votes, 3);
-  assert.strictEqual(c.topScores[0].pct, 60);
-  assert.strictEqual(c.topScores.length, 3);
-}
-
-function test_computeMatchConsensus_vacio() {
-  const c = computeMatchConsensus(99, {});
-  assert.strictEqual(c.total, 0);
-  assert.strictEqual(c.majorityResult, null);
-  assert.deepStrictEqual(c.topScores, []);
-}
-
 function test_tallyChampions() {
   const t = tallyChampions({
     ana: { champion: 100 },
@@ -199,8 +172,6 @@ function test_compareQuadroWithCommunity() {
   assert.strictEqual(r.veryDiffCount, 2);
 }
 
-test_computeMatchConsensus_barras_y_marcadores();
-test_computeMatchConsensus_vacio();
 test_tallyChampions();
 test_finalPredictionTeamIds_24_slots();
 test_compareQuadroWithCommunity();
