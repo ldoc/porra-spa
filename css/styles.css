@@ -5132,11 +5132,13 @@ html, body {
    ============================================================ */
 .stats-card {
   background: var(--ucl-card);
+  border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
   padding: 12px;
   display: flex;
   flex-direction: column;
   gap: 10px;
+  box-shadow: var(--shadow-card);
 }
 
 .stats-card-title {
@@ -5167,8 +5169,9 @@ html, body {
 }
 
 .stats-source.active {
-  background: var(--accent-purple);
-  color: #fff;
+  background: var(--accent-primary);
+  color: #021319;
+  box-shadow: 0 0 12px var(--accent-glow);
 }
 
 .stats-chips-header {
@@ -5184,15 +5187,18 @@ html, body {
 }
 
 .stats-chips-action {
-  background: none;
-  border: none;
-  color: var(--accent-purple);
-  font-size: var(--font-size-xs);
+  background: var(--ucl-surface);
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  font-size: 10px;
   font-weight: 700;
   cursor: pointer;
-  padding: 6px 4px;
+  padding: 6px 10px;
   min-height: 32px;
+  border-radius: var(--radius-full);
+  transition: all 0.15s ease;
 }
+.stats-chips-action:active{transform:scale(0.96);border-color:var(--accent-primary);color:var(--accent-primary)}
 
 .stats-chips-row {
   display: flex;
@@ -5229,11 +5235,28 @@ html, body {
 .stats-chip.off {
   opacity: 0.45;
 }
+.stats-chip.me{border-color:var(--accent-gold);color:var(--accent-gold)}
+.stats-chip.me.active{background:rgba(245,158,11,0.15);border-color:var(--accent-gold);color:var(--accent-gold)}
+.stats-evo-search-wrap{position:relative;display:flex;align-items:center;margin:4px 0}
+.stats-evo-search-icon{position:absolute;left:12px;color:var(--text-muted);font-size:13px;pointer-events:none}
+.stats-evo-search{width:100%;background:var(--ucl-surface);border:1px solid var(--border-color);border-radius:12px;padding:10px 36px 10px 36px;color:var(--text-primary);font-family:var(--font-family);font-size:13px;font-weight:600;outline:none;transition:border-color 0.15s ease}
+.stats-evo-search:focus{border-color:var(--accent-cyan);box-shadow:0 0 0 2px rgba(6,182,212,0.2)}
+.stats-evo-clear{position:absolute;right:8px;width:28px;height:28px;border-radius:50%;border:1px solid var(--border-color);background:rgba(255,255,255,0.06);color:var(--text-muted);font-size:16px;line-height:1;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.stats-evo-clear:active{transform:scale(0.92)}
 
 .stats-line-chart {
   width: 100%;
   height: auto;
+  display:block;
 }
+.stats-donut-hero{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.stats-donut-compact{width:110px;flex-shrink:0}
+.stats-donut-side{flex:1;min-width:140px;display:flex;flex-direction:column;gap:10px}
+.stats-donut-legend.compact{justify-content:flex-start}
+.stats-streak-bar{flex:1;height:6px;border-radius:9999px;background:rgba(255,255,255,0.08);overflow:hidden;margin:0 6px}
+.stats-streak-fill{height:100%;border-radius:9999px}
+.stats-streak-fill.up{background:var(--accent-primary)}
+.stats-streak-fill.down{background:#EF4444}
 
 .stats-legend {
   display: flex;
@@ -5255,6 +5278,10 @@ html, body {
   align-items: center;
   gap: 4px;
 }
+.stats-legend-item{border:1px solid var(--border-color);background:var(--ucl-surface);color:var(--text-secondary);font-size:10px;font-weight:700;padding:6px 10px;border-radius:9999px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:all 0.15s ease}
+.stats-legend-item:hover{border-color:var(--legend-color);color:var(--text-primary)}
+.stats-legend-item:active{transform:scale(0.96)}
+.stats-pronosticos-accordion-head:focus-visible{outline:none;box-shadow:0 0 0 2px var(--accent-cyan),0 0 12px var(--accent-glow);border-radius:12px}
 
 .stats-empty {
   padding: 20px 12px;
@@ -5710,7 +5737,8 @@ html, body {
 
 .stats-subtab.active {
   background: var(--accent-primary);
-  color: #fff;
+  color: #021319;
+  box-shadow: 0 0 12px rgba(16,185,129,0.25);
 }
 
 .stats-rank-row {
@@ -5977,6 +6005,11 @@ html, body {
   background: #1E293B;
   color: var(--text-primary);
 }
+.stats-ind-pill{display:flex;align-items:center;gap:10px;background:var(--ucl-card);border:1px solid var(--border-color);border-radius:14px;padding:8px 12px;box-shadow:var(--shadow-card)}
+.stats-ind-avatar{width:32px;height:32px;border-radius:50%;background:var(--ucl-surface);border:1px solid var(--border-color);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.stats-ind-select-pill{flex:1;min-width:0;padding:10px 36px 10px 12px;font-size:14px;font-weight:700;color:var(--text-primary);background:var(--ucl-surface);border:1px solid var(--border-color);border-radius:12px;appearance:none;background-image:url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%2306B6D4' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;outline:none}
+.stats-ind-select-pill:focus{border-color:var(--accent-cyan);box-shadow:0 0 0 2px rgba(6,182,212,0.2)}
+.stats-ind-rank{font-size:13px;font-weight:800;color:var(--accent-gold);white-space:nowrap}
 
 .stats-donut {
   display: block;
@@ -6039,11 +6072,20 @@ html, body {
   color: var(--accent-danger, #EF4444);
 }
 
-.stats-pronosticos-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-@media (max-width:520px){.stats-pronosticos-grid{grid-template-columns:1fr}}
-.stats-pronosticos-partidos,.stats-pronosticos-clasificacion,.stats-pronosticos-eliminatorias,.stats-pronosticos-plantilla{display:flex;flex-direction:column;gap:8px}
+.stats-pronosticos-grid{display:flex;flex-direction:column;gap:10px}
+.stats-pronosticos-partidos,.stats-pronosticos-clasificacion,.stats-pronosticos-eliminatorias,.stats-pronosticos-plantilla{display:flex;flex-direction:column;gap:10px}
 .stats-pill{display:inline-flex;align-items:center}
-.stats-pronosticos-grid .stats-card{padding:12px}
+.stats-pronosticos-card{cursor:pointer;transition:transform 0.15s ease,border-color 0.15s ease}
+.stats-pronosticos-card:active{transform:scale(0.99)}
+.stats-pronosticos-card .stats-card-title{font-size:0.82rem;font-weight:800;letter-spacing:-0.01em}
+.stats-pronosticos-accordion-head{display:flex;align-items:center;gap:10px;cursor:pointer;min-height:44px}
+.stats-pronosticos-accordion-head .stats-accordion-icon{width:32px;height:32px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;border:1px solid rgba(255,255,255,0.08)}
+.stats-pronosticos-accordion-head .stats-accordion-title{flex:1;font-size:0.9rem;font-weight:800;line-height:1.2}
+.stats-pronosticos-accordion-head .stats-accordion-sub{font-size:11px;color:var(--text-muted);font-weight:600}
+.stats-pronosticos-accordion-head .stats-accordion-chev{color:var(--text-muted);transition:transform 0.2s ease;font-size:12px}
+.stats-pronosticos-card.open .stats-accordion-chev{transform:rotate(180deg)}
+.stats-pronosticos-extra{display:none;flex-direction:column;gap:10px;padding-top:10px;border-top:1px solid var(--border-color);margin-top:10px}
+.stats-pronosticos-card.open .stats-pronosticos-extra{display:flex}
 
 /* ==========================================================================
    ADMIN PROGRESS

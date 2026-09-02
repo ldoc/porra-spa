@@ -773,12 +773,65 @@
       }catch(e){ squadAgg={usersWithSquad:0,uniquePlayers:0,rows:[]}; }
     }
     try{ plantilla=calcPlantillaPronosticosExtras(squadAgg, (typeof AppState!=='undefined'&&AppState.squadsCache)||{}); }catch(e){ plantilla={top3ByPos:{G:[],D:[],M:[],F:[]},equipoMas:null,equipoMenos:null,imprescindible:[],diferencial:[],hipster:null,mainstream:null}; }
+    function stripCardTitle(html){
+      return html.replace(/<div class="stats-card-title">.*?<\/div>/, '');
+    }
+    const partidosRaw = renderPronosticosPartidosCard(partidos);
+    const clasifRaw = renderPronosticosClasificacionCard(clasif);
+    const elimsRaw = renderPronosticosEliminatoriasCard(elims);
+    const plantillaRaw = renderPronosticosPlantillaCard(plantilla, squadAgg);
+    const hasPartidos = partidos && ((partidos.globalCounts?.H||0)+(partidos.globalCounts?.D||0)+(partidos.globalCounts?.A||0))>0;
+    const pct = partidos?.globalPct || {H:0,D:0,A:0};
+    const headPartidosSub = hasPartidos ? `${pct.H}% local · ${pct.D}% empate · ${pct.A}% visitante` : 'Aún sin datos';
+    const headClasifSub = clasif?.freqPrimero?.size ? `${[...clasif.freqPrimero.entries()].sort((a,b)=>b[1]-a[1])[0][1]}/${clasif.users} ven al mismo líder` : 'Sin consenso aún';
+    const headElimsSub = elims?.championTally?.teams?.[0] ? `${esc((typeof AppState!=='undefined'&&AppState.teamsMap?.[elims.championTally.teams[0].teamId]?.name)||elims.championTally.teams[0].teamId)} · ${Math.round(elims.championTally.teams[0].votes/elims.championTally.total*100)}%` : 'Aún sin campeón claro';
+    const headPlantillaSub = plantilla?.imprescindible?.[0] ? `${esc(plantilla.imprescindible[0].player.nombre||'')} · ${plantilla.imprescindible[0].possessionPct}% lo tiene` : 'Plantillas por revelar';
     return `
     <div class="stats-pronosticos-grid">
-      <div class="stats-card" style="border-left:3px solid var(--accent-primary)">${renderPronosticosPartidosCard(partidos)}</div>
-      <div class="stats-card" style="border-left:3px solid var(--accent-cyan)">${renderPronosticosClasificacionCard(clasif)}</div>
-      <div class="stats-card" style="border-left:3px solid var(--accent-purple)">${renderPronosticosEliminatoriasCard(elims)}</div>
-      <div class="stats-card" style="border-left:3px solid var(--accent-gold)">${renderPronosticosPlantillaCard(plantilla, squadAgg)}</div>
+      <div class="stats-card stats-pronosticos-card open" data-pronostico="partidos">
+        <div class="stats-pronosticos-accordion-head" role="button" tabindex="0" aria-expanded="true" aria-controls="panel-partidos" id="head-partidos">
+          <div class="stats-accordion-icon" style="background:rgba(16,185,129,0.12);border-color:rgba(16,185,129,0.25);color:var(--accent-primary)">⚽</div>
+          <div style="flex:1;min-width:0">
+            <div class="stats-accordion-title">Pronósticos de partidos</div>
+            <div class="stats-accordion-sub">${esc(headPartidosSub)}</div>
+          </div>
+          <span class="stats-accordion-chev" aria-hidden="true">▾</span>
+        </div>
+        <div class="stats-pronosticos-extra" id="panel-partidos" role="region" aria-labelledby="head-partidos">${stripCardTitle(partidosRaw)}</div>
+      </div>
+      <div class="stats-card stats-pronosticos-card" data-pronostico="clasif">
+        <div class="stats-pronosticos-accordion-head" role="button" tabindex="0" aria-expanded="false" aria-controls="panel-clasif" id="head-clasif">
+          <div class="stats-accordion-icon" style="background:rgba(6,182,212,0.12);border-color:rgba(6,182,212,0.25);color:var(--accent-cyan)">📊</div>
+          <div style="flex:1;min-width:0">
+            <div class="stats-accordion-title">Clasificación pronosticada</div>
+            <div class="stats-accordion-sub">${esc(headClasifSub)}</div>
+          </div>
+          <span class="stats-accordion-chev" aria-hidden="true">▾</span>
+        </div>
+        <div class="stats-pronosticos-extra" id="panel-clasif" role="region" aria-labelledby="head-clasif">${stripCardTitle(clasifRaw)}</div>
+      </div>
+      <div class="stats-card stats-pronosticos-card" data-pronostico="elims">
+        <div class="stats-pronosticos-accordion-head" role="button" tabindex="0" aria-expanded="false" aria-controls="panel-elims" id="head-elims">
+          <div class="stats-accordion-icon" style="background:rgba(139,92,246,0.12);border-color:rgba(139,92,246,0.25);color:var(--accent-purple)">🏆</div>
+          <div style="flex:1;min-width:0">
+            <div class="stats-accordion-title">Eliminatorias</div>
+            <div class="stats-accordion-sub">${esc(headElimsSub)}</div>
+          </div>
+          <span class="stats-accordion-chev" aria-hidden="true">▾</span>
+        </div>
+        <div class="stats-pronosticos-extra" id="panel-elims" role="region" aria-labelledby="head-elims">${stripCardTitle(elimsRaw)}</div>
+      </div>
+      <div class="stats-card stats-pronosticos-card" data-pronostico="plantilla">
+        <div class="stats-pronosticos-accordion-head" role="button" tabindex="0" aria-expanded="false" aria-controls="panel-plantilla" id="head-plantilla">
+          <div class="stats-accordion-icon" style="background:rgba(245,158,11,0.12);border-color:rgba(245,158,11,0.25);color:var(--accent-gold)">👥</div>
+          <div style="flex:1;min-width:0">
+            <div class="stats-accordion-title">Plantilla</div>
+            <div class="stats-accordion-sub">${esc(headPlantillaSub)}</div>
+          </div>
+          <span class="stats-accordion-chev" aria-hidden="true">▾</span>
+        </div>
+        <div class="stats-pronosticos-extra" id="panel-plantilla" role="region" aria-labelledby="head-plantilla">${stripCardTitle(plantillaRaw)}</div>
+      </div>
     </div>`;
   }
 
@@ -1012,14 +1065,19 @@
       .filter(([, s]) => s)
       .sort((a, b) => b[1].len - a[1].len || b[1].lastPts - a[1].lastPts);
     const me = AppState.currentUser?.name;
-    const streakHtml = streakEntries.length ? streakEntries.map(([u, s]) => `
+    const maxStreak = Math.max(...streakEntries.map(([,s])=>s.len), 1);
+    const streakHtml = streakEntries.length ? streakEntries.map(([u, s]) => {
+      const pct = Math.round((s.len / maxStreak)*100);
+      return `
       <div class="stats-rank-row ${u === me ? 'me' : ''}">
         <span class="stats-rank-pos rank-n">${esc(getPlayerMeta(u).avatar || '⚽')}</span>
         <span class="stats-rank-name">${esc(u)}</span>
+        <div class="stats-streak-bar" aria-hidden="true"><div class="stats-streak-fill ${s.dir}" style="width:${pct}%"></div></div>
         ${s.dir === 'up'
-          ? `<span class="stats-badge-up">▲ ${s.len} mejorando</span>`
-          : `<span class="stats-badge-dn">▼ ${s.len} empeorando</span>`}
-      </div>`).join('') : '';
+          ? `<span class="stats-badge-up">▲ ${s.len}</span>`
+          : `<span class="stats-badge-dn">▼ ${s.len}</span>`}
+      </div>`;
+    }).join('') : '';
 
     const medals = ['🥇', '🥈', '🥉'];
     const bestHtml = (aggregates.bestJornadas || []).length ? aggregates.bestJornadas.map((b, i) => {
@@ -1055,17 +1113,21 @@
   function renderPlantillasBody(aggregates) {
     const agg = aggregates.squadOwnership || { rows: [] };
     if (!agg.rows.length) return statsEmpty('Aún no hay plantillas guardadas');
-    const top = agg.rows.slice(0, 25);
-    const rowsHtml = top.map(r => {
-      const badge = r.possessionPct >= 70
-        ? '<span class="stats-pill gold">⭐ imprescindible</span>'
-        : r.possessionPct <= 30
-          ? '<span class="stats-pill cyan">🎯 diferencial</span>'
-          : '';
-      const ext = r.player.extension || 'webp';
-      const img = `<img class="stats-sq-img" src="data/imgJugadores/${r.player.id}.${ext}" alt="" loading="lazy"
-        onerror="this.outerHTML='<span class=&quot;stats-sq-img&quot; style=&quot;display:flex;align-items:center;justify-content:center&quot;>${squadPosEmoji(r.player.posicion)}</span>'">`;
-      return `
+    const posOrder = ['G','D','M','F'];
+    const grouped = posOrder.map(pos => ({ pos, label: squadPosLabel(pos), emoji: squadPosEmoji(pos), rows: agg.rows.filter(r => r.player.posicion === pos).slice(0,6) }));
+    const hasGrouped = grouped.some(g => g.rows.length);
+    if (!hasGrouped) {
+      const top = agg.rows.slice(0, 25);
+      const rowsHtml = top.map(r => {
+        const badge = r.possessionPct >= 70
+          ? '<span class="stats-pill gold">⭐ imprescindible</span>'
+          : r.possessionPct <= 30
+            ? '<span class="stats-pill cyan">🎯 diferencial</span>'
+            : '';
+        const ext = r.player.extension || 'webp';
+        const img = `<img class="stats-sq-img" src="data/imgJugadores/${r.player.id}.${ext}" alt="" loading="lazy"
+          onerror="this.outerHTML='<span class=&quot;stats-sq-img&quot; style=&quot;display:flex;align-items:center;justify-content:center&quot;>${squadPosEmoji(r.player.posicion)}</span>'">`;
+        return `
       <div class="stats-squad-row">
         ${img}
         <div class="stats-sq-info">
@@ -1078,10 +1140,27 @@
     }).join('');
     return `
       <div class="stats-card">
-        <div class="stats-card-title">⭐ Jugadores estrella de las plantillas</div>
+        <div class="stats-card-title">⭐ Jugadores estrella — top global</div>
         ${rowsHtml}
         <div class="stats-rank-sub">Top 25 de ${agg.uniquePlayers} jugadores únicos · posesión sobre ${agg.usersWithSquad} usuarios con plantilla</div>
       </div>`;
+    }
+    const groupedHtml = grouped.map(g => {
+      if (!g.rows.length) return '';
+      const rowsHtml = g.rows.map(r => {
+        const badge = r.possessionPct >= 70
+          ? '<span class="stats-pill gold">⭐ imprescindible</span>'
+          : r.possessionPct <= 30
+            ? '<span class="stats-pill cyan">🎯 diferencial</span>'
+            : '';
+        const ext = r.player.extension || 'webp';
+        const img = `<img class="stats-sq-img" src="data/imgJugadores/${r.player.id}.${ext}" alt="" loading="lazy"
+          onerror="this.outerHTML='<span class=&quot;stats-sq-img&quot; style=&quot;display:flex;align-items:center;justify-content:center&quot;>${squadPosEmoji(g.pos)}</span>'">`;
+        return `<div class="stats-squad-row">${img}<div class="stats-sq-info"><div class="stats-sq-name">${esc(r.player.nombre||'')}</div><div class="stats-sq-pos">${esc(g.label)} · ${r.ownerCount}/${agg.usersWithSquad}</div></div>${badge}<span class="stats-sq-pts">${r.pts} pts</span></div>`;
+      }).join('');
+      return `<div class="stats-card"><div class="stats-card-title">${g.emoji} ${esc(g.label)} — top ${g.rows.length}</div>${rowsHtml}</div>`;
+    }).join('');
+    return groupedHtml + `<div class="stats-card"><div class="stats-rank-sub">Agrupado por demarcación G/D/M/F · ${agg.uniquePlayers} únicos · ${agg.usersWithSquad} plantillas</div></div>`;
   }
 
   function renderEvolucionBody(aggregates) {
@@ -1091,15 +1170,20 @@
     initStatsState(seriesMap);
     const visibleSet = AppState.estadisticasVisibleUsers;
     const players = orderPlayers(seriesMap);
+    const me = AppState.currentUser?.name;
+    const search = (AppState.estadisticasEvoSearch || '').toLowerCase();
 
     const segButtons = SOURCES.map(s =>
       `<button class="stats-source ${s.key === source ? 'active' : ''}" data-source="${s.key}">${s.label}</button>`
     ).join('');
 
-    const chips = players.map(p => {
+    const filtered = search ? players.filter(p => p.name.toLowerCase().includes(search) || (p.avatar||'').includes(search)) : players;
+    const chips = filtered.map(p => {
       const on = visibleSet.has(p.name);
-      return `<button class="stats-chip ${on ? 'active' : 'off'}" data-user="${esc(p.name)}">${esc(p.avatar || '⚽')} ${esc(p.name)}</button>`;
+      const isMe = p.name === me;
+      return `<button class="stats-chip ${on ? 'active' : 'off'} ${isMe ? 'me' : ''}" data-user="${esc(p.name)}" aria-pressed="${on ? 'true' : 'false'}" title="${esc(p.name)}">${esc(p.avatar || '⚽')} ${esc(p.name)}${isMe ? ' · tú' : ''}</button>`;
     }).join('');
+    const hasNoMatch = search && !filtered.length;
 
     return `
       <div class="stats-card">
@@ -1112,7 +1196,12 @@
           <button class="stats-chips-action" data-action="nadie">Nadie</button>
         </div>
         <div class="stats-card-title">Evolución de puntos por jornada</div>
-        <div class="stats-chips-row">${chips}</div>
+        <div class="stats-evo-search-wrap">
+          <span class="stats-evo-search-icon">🔍</span>
+          <input id="stats-evo-search" class="stats-evo-search" type="search" placeholder="Buscar jugador…" value="${esc(AppState.estadisticasEvoSearch || '')}" aria-label="Buscar jugador" autocomplete="off" spellcheck="false">
+          ${search ? '<button class="stats-evo-clear" data-action="clear-search" aria-label="Limpiar búsqueda">×</button>' : ''}
+        </div>
+        <div class="stats-chips-row">${hasNoMatch ? '<span class="stats-empty" style="padding:8px 0">Sin coincidencias</span>' : chips}</div>
         ${buildLineChart(players, visibleSet, seriesMap)}
         ${buildLegend(players, visibleSet, seriesMap)}
       </div>`;
@@ -1126,7 +1215,7 @@
     const visible = playersWithData(players, visibleSet, seriesMap);
     if (!visible.length) return statsEmpty('Añade jugadores para ver el gráfico');
 
-    const W = 320, H = 170, PAD = 26;
+    const W = 340, H = 184, PAD = 28;
     const x = (p) => PAD + (p / 12) * (W - PAD * 2);
     let maxVal = 10;
     for (const p of visible) {
@@ -1140,10 +1229,11 @@
       const pts = series.map((v, pi) => `${x(pi).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
       const last = series.length - 1;
       const lx = x(last), ly = y(series[last]);
+      const isMe = p.name === AppState.currentUser?.name;
       return `
-        <polyline points="${pts}" fill="none" stroke="${color}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-        <circle cx="${lx}" cy="${ly}" r="4" fill="${color}" stroke="#0F172A" stroke-width="1.5" class="stats-lastpoint" data-user="${esc(p.name)}"/>
-        <circle cx="${lx}" cy="${ly}" r="10" fill="transparent" class="stats-lastpoint" data-user="${esc(p.name)}"/>`;
+        <polyline points="${pts}" fill="none" stroke="${color}" stroke-width="${isMe ? 3.2 : 2.2}" stroke-linecap="round" stroke-linejoin="round" opacity="${isMe ? 1 : 0.92}"/>
+        <circle cx="${lx}" cy="${ly}" r="${isMe ? 5 : 4}" fill="${color}" stroke="#0F172A" stroke-width="1.5" class="stats-lastpoint" data-user="${esc(p.name)}"/>
+        <circle cx="${lx}" cy="${ly}" r="12" fill="transparent" class="stats-lastpoint" data-user="${esc(p.name)}"/>`;
     }).join('');
 
     const grid = [0, 0.5, 1].map(f => y(maxVal * f));
@@ -1165,11 +1255,17 @@
 
   function buildLegend(players, visibleSet, seriesMap) {
     const visible = playersWithData(players, visibleSet, seriesMap);
-    const items = visible.map((p, i) => {
+    if (!visible.length) return `<div class="stats-legend">${statsEmpty('Añade jugadores para ver la leyenda')}</div>`;
+    const sorted = [...visible].sort((a,b) => (seriesMap.get(b.name).series[12]||0) - (seriesMap.get(a.name).series[12]||0));
+    const items = sorted.map(p => {
+      const idx = visible.indexOf(p);
+      const color = LINE_COLORS[idx % LINE_COLORS.length];
       const r = seriesMap.get(p.name);
-      return `<span><i style="background:${LINE_COLORS[i % LINE_COLORS.length]}"></i>${esc(p.name)} · ${r.series[12] || 0}</span>`;
+      const total = r.series[12] || 0;
+      const rank = sorted.indexOf(p) + 1;
+      return `<button class="stats-legend-item" data-user="${esc(p.name)}" style="--legend-color:${color}" title="Ocultar/mostrar ${esc(p.name)}"><i style="background:${color}"></i>${esc(p.avatar||'⚽')} ${esc(p.name)} · ${total} pts · #${rank}</button>`;
     }).join('');
-    return `<div class="stats-legend">${items || statsEmpty('Añade jugadores para ver la leyenda')}</div>`;
+    return `<div class="stats-legend">${items}</div>`;
   }
 
   function jornadaPtsDeUsuario(aggregates, username) {
@@ -1216,13 +1312,18 @@
       `<span class="stats-donut-chip" style="background:${s.color}22;color:${s.color}"><i style="background:${s.color}"></i>${esc(s.label)} ${s.value} · ${s.pct}%</span>`
     ).join('');
     return `
-      <svg class="stats-donut" viewBox="0 0 120 120">
-        <circle cx="60" cy="60" r="${DONUT_RADIUS}" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="18"/>
-        ${circles}
-        <text x="60" y="57" text-anchor="middle" class="stats-donut-total">${total}</text>
-        <text x="60" y="72" text-anchor="middle" class="stats-donut-sub">puntos totales</text>
-      </svg>
-      <div class="stats-donut-legend">${legend}</div>`;
+      <div class="stats-donut-hero">
+        <svg class="stats-donut stats-donut-compact" viewBox="0 0 120 120">
+          <circle cx="60" cy="60" r="${DONUT_RADIUS}" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="18"/>
+          ${circles}
+          <text x="60" y="57" text-anchor="middle" class="stats-donut-total">${total}</text>
+          <text x="60" y="72" text-anchor="middle" class="stats-donut-sub">puntos</text>
+        </svg>
+        <div class="stats-donut-side">
+          <div class="stats-donut-legend compact">${legend}</div>
+          <div class="stats-donut-vs">${comparativaHtml(split)}</div>
+        </div>
+      </div>`;
   }
 
   function comparativaHtml(split) {
@@ -1379,17 +1480,18 @@
       </div>`;
     }
 
+    const indAvatar = esc(getPlayerMeta(username).avatar || '⚽');
     return `
       <div class="stats-card">
-        <div style="display:flex;align-items:center;gap:10px">
-          <select id="stats-ind-select" class="stats-ind-select" aria-label="Seleccionar usuario">${options}</select>
-          <span class="stats-rank-main">#${rank}</span>
+        <div class="stats-ind-pill">
+          <span class="stats-ind-avatar" aria-hidden="true">${indAvatar}</span>
+          <select id="stats-ind-select" class="stats-ind-select-pill" aria-label="Seleccionar usuario">${options}</select>
+          <span class="stats-ind-rank">#${rank}</span>
         </div>
       </div>
       <div class="stats-card">
         <div class="stats-card-title">🥧 Desglose de puntos</div>
         ${donutChartHtml(split)}
-        ${comparativaHtml(split)}
       </div>
       ${pronosticosCard}
       ${jornadasCard}
@@ -1450,11 +1552,77 @@
       });
     });
 
+    const evoSearch = container.querySelector('#stats-evo-search');
+    if (evoSearch) {
+      evoSearch.addEventListener('input', () => {
+        AppState.estadisticasEvoSearch = evoSearch.value;
+        container.innerHTML = renderStatsContent();
+        bindStatsEvents();
+        const next = container.querySelector('#stats-evo-search');
+        if (next) { next.focus(); const v = next.value; next.setSelectionRange(v.length, v.length); }
+      });
+    }
+    container.querySelectorAll('[data-action="clear-search"]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        AppState.estadisticasEvoSearch = '';
+        container.innerHTML = renderStatsContent();
+        bindStatsEvents();
+      });
+    });
+    container.querySelectorAll('.stats-legend-item').forEach(item => {
+      item.addEventListener('click', () => {
+        const user = item.dataset.user;
+        const set = AppState.estadisticasVisibleUsers;
+        if (set.has(user)) set.delete(user); else set.add(user);
+        container.innerHTML = renderStatsContent();
+        bindStatsEvents();
+      });
+      item.addEventListener('mouseenter', () => {
+        const user = item.dataset.user;
+        container.querySelectorAll(`.stats-lastpoint[data-user="${CSS.escape(user)}"]`).forEach(c => {
+          const orig = c.getAttribute('r');
+          if (c.tagName.toLowerCase() === 'circle' && orig === '4') { c.setAttribute('r','6'); c.style.filter='drop-shadow(0 0 6px currentColor)'; }
+        });
+      });
+      item.addEventListener('mouseleave', () => {
+        container.querySelectorAll('.stats-lastpoint').forEach(c => {
+          if (c.getAttribute('r') === '6') { c.setAttribute('r','4'); c.style.filter=''; }
+        });
+      });
+    });
+    container.querySelectorAll('.stats-ind-select-pill').forEach(sel => {
+      sel.addEventListener('change', () => {
+        AppState.estadisticasIndividualUser = sel.value;
+        container.innerHTML = renderStatsContent();
+        bindStatsEvents();
+      });
+    });
     container.querySelectorAll('.stats-ind-select').forEach(sel => {
       sel.addEventListener('change', () => {
         AppState.estadisticasIndividualUser = sel.value;
         container.innerHTML = renderStatsContent();
         bindStatsEvents();
+      });
+    });
+
+    function togglePronosticoCard(head){
+      const card = head.closest('.stats-pronosticos-card');
+      if (!card) return;
+      const isOpen = card.classList.contains('open');
+      container.querySelectorAll('.stats-pronosticos-card').forEach(c => {
+        c.classList.remove('open');
+        const h = c.querySelector('.stats-pronosticos-accordion-head');
+        if (h) h.setAttribute('aria-expanded','false');
+      });
+      if (!isOpen) {
+        card.classList.add('open');
+        head.setAttribute('aria-expanded','true');
+      }
+    }
+    container.querySelectorAll('.stats-pronosticos-accordion-head').forEach(head => {
+      head.addEventListener('click', () => togglePronosticoCard(head));
+      head.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); togglePronosticoCard(head); }
       });
     });
   }
