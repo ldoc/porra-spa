@@ -1,1 +1,6833 @@
-[]
+[
+  {
+    "id": 319129,
+    "nombre": "Luka Jović",
+    "posicion": "F",
+    "club": "AEK Athens",
+    "equipo": 3250,
+    "extension": "webp"
+  },
+  {
+    "id": 852434,
+    "nombre": "Barnabás Varga",
+    "posicion": "F",
+    "club": "AEK Athens",
+    "equipo": 3250,
+    "extension": "webp"
+  },
+  {
+    "id": 1002334,
+    "nombre": "Zini",
+    "posicion": "F",
+    "club": "AEK Athens",
+    "equipo": 3250,
+    "extension": "webp"
+  },
+  {
+    "id": 841947,
+    "nombre": "Lovro Majer",
+    "posicion": "M",
+    "club": "AEK Athens",
+    "equipo": 3250,
+    "extension": "webp"
+  },
+  {
+    "id": 279563,
+    "nombre": "Răzvan Marin",
+    "posicion": "M",
+    "club": "AEK Athens",
+    "equipo": 3250,
+    "extension": "webp"
+  },
+  {
+    "id": 1083832,
+    "nombre": "Kervin Arriaga",
+    "posicion": "M",
+    "club": "AEK Athens",
+    "equipo": 3250,
+    "extension": "webp"
+  },
+  {
+    "id": 890110,
+    "nombre": "Aboubakary Koita",
+    "posicion": "M",
+    "club": "AEK Athens",
+    "equipo": 3250,
+    "extension": "webp"
+  },
+  {
+    "id": 353282,
+    "nombre": "Oleksandr Zubkov",
+    "posicion": "M",
+    "club": "AEK Athens",
+    "equipo": 3250,
+    "extension": "webp"
+  },
+  {
+    "id": 80465,
+    "nombre": "Petros Mantalos",
+    "posicion": "M",
+    "club": "AEK Athens",
+    "equipo": 3250,
+    "extension": "webp"
+  },
+  {
+    "id": 190917,
+    "nombre": "Mijat Gaćinović",
+    "posicion": "M",
+    "club": "AEK Athens",
+    "equipo": 3250,
+    "extension": "webp"
+  },
+  {
+    "id": 1098193,
+    "nombre": "Milán Vitális",
+    "posicion": "M",
+    "club": "AEK Athens",
+    "equipo": 3250,
+    "extension": "webp"
+  },
+  {
+    "id": 547862,
+    "nombre": "Kaan Kairinen",
+    "posicion": "M",
+    "club": "AEK Athens",
+    "equipo": 3250,
+    "extension": "webp"
+  },
+  {
+    "id": 97001,
+    "nombre": "João Mário",
+    "posicion": "M",
+    "club": "AEK Athens",
+    "equipo": 3250,
+    "extension": "webp"
+  },
+  {
+    "id": 51225,
+    "nombre": "Domagoj Vida",
+    "posicion": "D",
+    "club": "AEK Athens",
+    "equipo": 3250,
+    "extension": "webp"
+  },
+  {
+    "id": 941338,
+    "nombre": "Lazaros Rota",
+    "posicion": "D",
+    "club": "AEK Athens",
+    "equipo": 3250,
+    "extension": "webp"
+  },
+  {
+    "id": 795128,
+    "nombre": "Harold Moukoudi",
+    "posicion": "D",
+    "club": "AEK Athens",
+    "equipo": 3250,
+    "extension": "webp"
+  },
+  {
+    "id": 974076,
+    "nombre": "Stavros Pilios",
+    "posicion": "D",
+    "club": "AEK Athens",
+    "equipo": 3250,
+    "extension": "webp"
+  },
+  {
+    "id": 1131931,
+    "nombre": "Filipe Relvas",
+    "posicion": "D",
+    "club": "AEK Athens",
+    "equipo": 3250,
+    "extension": "webp"
+  },
+  {
+    "id": 98212,
+    "nombre": "Charalampos Lykogiannis",
+    "posicion": "D",
+    "club": "AEK Athens",
+    "equipo": 3250,
+    "extension": "webp"
+  },
+  {
+    "id": 227212,
+    "nombre": "Thomas Strakosha",
+    "posicion": "G",
+    "club": "AEK Athens",
+    "equipo": 3250,
+    "extension": "webp"
+  },
+  {
+    "id": 142904,
+    "nombre": "Alberto Brignoli",
+    "posicion": "G",
+    "club": "AEK Athens",
+    "equipo": 3250,
+    "extension": "webp"
+  },
+  {
+    "id": 256219,
+    "nombre": "Paulo Dybala",
+    "posicion": "F",
+    "club": "AS Roma",
+    "equipo": 2702,
+    "extension": "webp"
+  },
+  {
+    "id": 803039,
+    "nombre": "Donyell Malen",
+    "posicion": "F",
+    "club": "AS Roma",
+    "equipo": 2702,
+    "extension": "webp"
+  },
+  {
+    "id": 1082406,
+    "nombre": "Matías Soulé",
+    "posicion": "F",
+    "club": "AS Roma",
+    "equipo": 2702,
+    "extension": "webp"
+  },
+  {
+    "id": 1116577,
+    "nombre": "Santiago Castro",
+    "posicion": "F",
+    "club": "AS Roma",
+    "equipo": 2702,
+    "extension": "webp"
+  },
+  {
+    "id": 555540,
+    "nombre": "Lorenzo Pellegrini",
+    "posicion": "F",
+    "club": "AS Roma",
+    "equipo": 2702,
+    "extension": "webp"
+  },
+  {
+    "id": 1923599,
+    "nombre": "Antonio Arena",
+    "posicion": "F",
+    "club": "AS Roma",
+    "equipo": 2702,
+    "extension": "webp"
+  },
+  {
+    "id": 1134200,
+    "nombre": "Wesley",
+    "posicion": "M",
+    "club": "AS Roma",
+    "equipo": 2702,
+    "extension": "webp"
+  },
+  {
+    "id": 974087,
+    "nombre": "Manu Koné",
+    "posicion": "M",
+    "club": "AS Roma",
+    "equipo": 2702,
+    "extension": "webp"
+  },
+  {
+    "id": 1410240,
+    "nombre": "Rodrigo Mora",
+    "posicion": "M",
+    "club": "AS Roma",
+    "equipo": 2702,
+    "extension": "webp"
+  },
+  {
+    "id": 1175821,
+    "nombre": "Niccolò Pisilli",
+    "posicion": "M",
+    "club": "AS Roma",
+    "equipo": 2702,
+    "extension": "webp"
+  },
+  {
+    "id": 186855,
+    "nombre": "Bryan Cristante",
+    "posicion": "M",
+    "club": "AS Roma",
+    "equipo": 2702,
+    "extension": "webp"
+  },
+  {
+    "id": 982778,
+    "nombre": "Devyne Rensch",
+    "posicion": "M",
+    "club": "AS Roma",
+    "equipo": 2702,
+    "extension": "webp"
+  },
+  {
+    "id": 100389,
+    "nombre": "Marten de Roon",
+    "posicion": "M",
+    "club": "AS Roma",
+    "equipo": 2702,
+    "extension": "webp"
+  },
+  {
+    "id": 1955992,
+    "nombre": "Emanuele Lulli",
+    "posicion": "M",
+    "club": "AS Roma",
+    "equipo": 2702,
+    "extension": "webp"
+  },
+  {
+    "id": 831799,
+    "nombre": "Nahuel Molina",
+    "posicion": "D",
+    "club": "AS Roma",
+    "equipo": 2702,
+    "extension": "webp"
+  },
+  {
+    "id": 848287,
+    "nombre": "Evan Ndicka",
+    "posicion": "D",
+    "club": "AS Roma",
+    "equipo": 2702,
+    "extension": "webp"
+  },
+  {
+    "id": 928236,
+    "nombre": "Leonardo Balerdi",
+    "posicion": "D",
+    "club": "AS Roma",
+    "equipo": 2702,
+    "extension": "webp"
+  },
+  {
+    "id": 1184855,
+    "nombre": "Konstantinos Koulierakis",
+    "posicion": "D",
+    "club": "AS Roma",
+    "equipo": 2702,
+    "extension": "webp"
+  },
+  {
+    "id": 611210,
+    "nombre": "Gianluca Mancini",
+    "posicion": "D",
+    "club": "AS Roma",
+    "equipo": 2702,
+    "extension": "webp"
+  },
+  {
+    "id": 353130,
+    "nombre": "Mario Hermoso",
+    "posicion": "D",
+    "club": "AS Roma",
+    "equipo": 2702,
+    "extension": "webp"
+  },
+  {
+    "id": 1384847,
+    "nombre": "Daniele Ghilardi",
+    "posicion": "D",
+    "club": "AS Roma",
+    "equipo": 2702,
+    "extension": "webp"
+  },
+  {
+    "id": 793986,
+    "nombre": "Mile Svilar",
+    "posicion": "G",
+    "club": "AS Roma",
+    "equipo": 2702,
+    "extension": "webp"
+  },
+  {
+    "id": 329175,
+    "nombre": "Pierluigi Gollini",
+    "posicion": "G",
+    "club": "AS Roma",
+    "equipo": 2702,
+    "extension": "webp"
+  },
+  {
+    "id": 804508,
+    "nombre": "Viktor Gyökeres",
+    "posicion": "F",
+    "club": "Arsenal",
+    "equipo": 42,
+    "extension": "webp"
+  },
+  {
+    "id": 934235,
+    "nombre": "Bukayo Saka",
+    "posicion": "F",
+    "club": "Arsenal",
+    "equipo": 42,
+    "extension": "webp"
+  },
+  {
+    "id": 836705,
+    "nombre": "Kai Havertz",
+    "posicion": "F",
+    "club": "Arsenal",
+    "equipo": 42,
+    "extension": "webp"
+  },
+  {
+    "id": 966547,
+    "nombre": "Noni Madueke",
+    "posicion": "F",
+    "club": "Arsenal",
+    "equipo": 42,
+    "extension": "webp"
+  },
+  {
+    "id": 547410,
+    "nombre": "Martin Ødegaard",
+    "posicion": "M",
+    "club": "Arsenal",
+    "equipo": 42,
+    "extension": "webp"
+  },
+  {
+    "id": 856714,
+    "nombre": "Declan Rice",
+    "posicion": "M",
+    "club": "Arsenal",
+    "equipo": 42,
+    "extension": "webp"
+  },
+  {
+    "id": 864921,
+    "nombre": "Eberechi Eze",
+    "posicion": "M",
+    "club": "Arsenal",
+    "equipo": 42,
+    "extension": "webp"
+  },
+  {
+    "id": 866469,
+    "nombre": "Bruno Guimarães",
+    "posicion": "M",
+    "club": "Arsenal",
+    "equipo": 42,
+    "extension": "webp"
+  },
+  {
+    "id": 592010,
+    "nombre": "Mikel Merino",
+    "posicion": "M",
+    "club": "Arsenal",
+    "equipo": 42,
+    "extension": "webp"
+  },
+  {
+    "id": 1031259,
+    "nombre": "Christos Tzolis",
+    "posicion": "M",
+    "club": "Arsenal",
+    "equipo": 42,
+    "extension": "webp"
+  },
+  {
+    "id": 966837,
+    "nombre": "Martín Zubimendi",
+    "posicion": "M",
+    "club": "Arsenal",
+    "equipo": 42,
+    "extension": "webp"
+  },
+  {
+    "id": 869792,
+    "nombre": "Gabriel Magalhães",
+    "posicion": "D",
+    "club": "Arsenal",
+    "equipo": 42,
+    "extension": "webp"
+  },
+  {
+    "id": 941168,
+    "nombre": "William Saliba",
+    "posicion": "D",
+    "club": "Arsenal",
+    "equipo": 42,
+    "extension": "webp"
+  },
+  {
+    "id": 1002837,
+    "nombre": "Piero Hincapié",
+    "posicion": "D",
+    "club": "Arsenal",
+    "equipo": 42,
+    "extension": "webp"
+  },
+  {
+    "id": 958959,
+    "nombre": "Jurriën Timber",
+    "posicion": "D",
+    "club": "Arsenal",
+    "equipo": 42,
+    "extension": "webp"
+  },
+  {
+    "id": 957602,
+    "nombre": "Riccardo Calafiori",
+    "posicion": "D",
+    "club": "Arsenal",
+    "equipo": 42,
+    "extension": "webp"
+  },
+  {
+    "id": 1144630,
+    "nombre": "Cristhian Mosquera",
+    "posicion": "D",
+    "club": "Arsenal",
+    "equipo": 42,
+    "extension": "webp"
+  },
+  {
+    "id": 846036,
+    "nombre": "Ben White",
+    "posicion": "D",
+    "club": "Arsenal",
+    "equipo": 42,
+    "extension": "webp"
+  },
+  {
+    "id": 827679,
+    "nombre": "Ezri Konsa",
+    "posicion": "D",
+    "club": "Arsenal",
+    "equipo": 42,
+    "extension": "webp"
+  },
+  {
+    "id": 581310,
+    "nombre": "David Raya",
+    "posicion": "G",
+    "club": "Arsenal",
+    "equipo": 42,
+    "extension": "webp"
+  },
+  {
+    "id": 232422,
+    "nombre": "Kepa Arrizabalaga",
+    "posicion": "G",
+    "club": "Arsenal",
+    "equipo": 42,
+    "extension": "webp"
+  },
+  {
+    "id": 906076,
+    "nombre": "Illan Meslier",
+    "posicion": "G",
+    "club": "Arsenal",
+    "equipo": 42,
+    "extension": "webp"
+  },
+  {
+    "id": 1135873,
+    "nombre": "Alejandro Garnacho",
+    "posicion": "F",
+    "club": "Aston Villa",
+    "equipo": 40,
+    "extension": "webp"
+  },
+  {
+    "id": 1085381,
+    "nombre": "Nicolas Jackson",
+    "posicion": "F",
+    "club": "Aston Villa",
+    "equipo": 40,
+    "extension": "webp"
+  },
+  {
+    "id": 1590918,
+    "nombre": "Ibrahim Mbaye",
+    "posicion": "F",
+    "club": "Aston Villa",
+    "equipo": 40,
+    "extension": "webp"
+  },
+  {
+    "id": 610766,
+    "nombre": "Tammy Abraham",
+    "posicion": "F",
+    "club": "Aston Villa",
+    "equipo": 40,
+    "extension": "webp"
+  },
+  {
+    "id": 1015267,
+    "nombre": "João Gomes",
+    "posicion": "M",
+    "club": "Aston Villa",
+    "equipo": 40,
+    "extension": "webp"
+  },
+  {
+    "id": 1518931,
+    "nombre": "Johan Manzambi",
+    "posicion": "M",
+    "club": "Aston Villa",
+    "equipo": 40,
+    "extension": "webp"
+  },
+  {
+    "id": 184661,
+    "nombre": "Leon Goretzka",
+    "posicion": "M",
+    "club": "Aston Villa",
+    "equipo": 40,
+    "extension": "webp"
+  },
+  {
+    "id": 783126,
+    "nombre": "Emiliano Buendía",
+    "posicion": "M",
+    "club": "Aston Villa",
+    "equipo": 40,
+    "extension": "webp"
+  },
+  {
+    "id": 250223,
+    "nombre": "John McGinn",
+    "posicion": "M",
+    "club": "Aston Villa",
+    "equipo": 40,
+    "extension": "webp"
+  },
+  {
+    "id": 826204,
+    "nombre": "Boubacar Kamara",
+    "posicion": "M",
+    "club": "Aston Villa",
+    "equipo": 40,
+    "extension": "webp"
+  },
+  {
+    "id": 1631879,
+    "nombre": "Alysson",
+    "posicion": "M",
+    "club": "Aston Villa",
+    "equipo": 40,
+    "extension": "webp"
+  },
+  {
+    "id": 98435,
+    "nombre": "Ross Barkley",
+    "posicion": "M",
+    "club": "Aston Villa",
+    "equipo": 40,
+    "extension": "webp"
+  },
+  {
+    "id": 1089388,
+    "nombre": "Lamare Bogarde",
+    "posicion": "M",
+    "club": "Aston Villa",
+    "equipo": 40,
+    "extension": "webp"
+  },
+  {
+    "id": 863653,
+    "nombre": "Aaron Wan-Bissaka",
+    "posicion": "D",
+    "club": "Aston Villa",
+    "equipo": 40,
+    "extension": "webp"
+  },
+  {
+    "id": 833956,
+    "nombre": "Matty Cash",
+    "posicion": "D",
+    "club": "Aston Villa",
+    "equipo": 40,
+    "extension": "webp"
+  },
+  {
+    "id": 143334,
+    "nombre": "Victor Lindelöf",
+    "posicion": "D",
+    "club": "Aston Villa",
+    "equipo": 40,
+    "extension": "webp"
+  },
+  {
+    "id": 976263,
+    "nombre": "Ian Maatsen",
+    "posicion": "D",
+    "club": "Aston Villa",
+    "equipo": 40,
+    "extension": "webp"
+  },
+  {
+    "id": 864169,
+    "nombre": "Pau Torres",
+    "posicion": "D",
+    "club": "Aston Villa",
+    "equipo": 40,
+    "extension": "webp"
+  },
+  {
+    "id": 965011,
+    "nombre": "Matteo Ruggeri",
+    "posicion": "D",
+    "club": "Aston Villa",
+    "equipo": 40,
+    "extension": "webp"
+  },
+  {
+    "id": 303638,
+    "nombre": "Tyrone Mings",
+    "posicion": "D",
+    "club": "Aston Villa",
+    "equipo": 40,
+    "extension": "webp"
+  },
+  {
+    "id": 905351,
+    "nombre": "Zion Suzuki",
+    "posicion": "G",
+    "club": "Aston Villa",
+    "equipo": 40,
+    "extension": "webp"
+  },
+  {
+    "id": 100390,
+    "nombre": "Marco Bizot",
+    "posicion": "G",
+    "club": "Aston Villa",
+    "equipo": 40,
+    "extension": "webp"
+  },
+  {
+    "id": 1138445,
+    "nombre": "James Wright",
+    "posicion": "G",
+    "club": "Aston Villa",
+    "equipo": 40,
+    "extension": "webp"
+  },
+  {
+    "id": 944656,
+    "nombre": "Julián Alvarez",
+    "posicion": "F",
+    "club": "Atlético Madrid",
+    "equipo": 2836,
+    "extension": "webp"
+  },
+  {
+    "id": 824200,
+    "nombre": "Ademola Lookman",
+    "posicion": "F",
+    "club": "Atlético Madrid",
+    "equipo": 2836,
+    "extension": "webp"
+  },
+  {
+    "id": 935564,
+    "nombre": "Jonathan David",
+    "posicion": "F",
+    "club": "Atlético Madrid",
+    "equipo": 2836,
+    "extension": "webp"
+  },
+  {
+    "id": 309078,
+    "nombre": "Alexander Sørloth",
+    "posicion": "F",
+    "club": "Atlético Madrid",
+    "equipo": 2836,
+    "extension": "webp"
+  },
+  {
+    "id": 917087,
+    "nombre": "Kang-in Lee",
+    "posicion": "M",
+    "club": "Atlético Madrid",
+    "equipo": 2836,
+    "extension": "webp"
+  },
+  {
+    "id": 1099352,
+    "nombre": "Giuliano Simeone",
+    "posicion": "M",
+    "club": "Atlético Madrid",
+    "equipo": 2836,
+    "extension": "webp"
+  },
+  {
+    "id": 910031,
+    "nombre": "Alex Baena",
+    "posicion": "M",
+    "club": "Atlético Madrid",
+    "equipo": 2836,
+    "extension": "webp"
+  },
+  {
+    "id": 177177,
+    "nombre": "Alejandro Grimaldo",
+    "posicion": "M",
+    "club": "Atlético Madrid",
+    "equipo": 2836,
+    "extension": "webp"
+  },
+  {
+    "id": 1119345,
+    "nombre": "Obed Vargas",
+    "posicion": "M",
+    "club": "Atlético Madrid",
+    "equipo": 2836,
+    "extension": "webp"
+  },
+  {
+    "id": 1142588,
+    "nombre": "Pablo Barrios",
+    "posicion": "M",
+    "club": "Atlético Madrid",
+    "equipo": 2836,
+    "extension": "webp"
+  },
+  {
+    "id": 990169,
+    "nombre": "Johnny Cardoso",
+    "posicion": "M",
+    "club": "Atlético Madrid",
+    "equipo": 2836,
+    "extension": "webp"
+  },
+  {
+    "id": 84539,
+    "nombre": "Koke",
+    "posicion": "M",
+    "club": "Atlético Madrid",
+    "equipo": 2836,
+    "extension": "webp"
+  },
+  {
+    "id": 859917,
+    "nombre": "Morten Hjulmand",
+    "posicion": "M",
+    "club": "Atlético Madrid",
+    "equipo": 2836,
+    "extension": "webp"
+  },
+  {
+    "id": 1391752,
+    "nombre": "Rodrigo Mendoza",
+    "posicion": "M",
+    "club": "Atlético Madrid",
+    "equipo": 2836,
+    "extension": "webp"
+  },
+  {
+    "id": 1143553,
+    "nombre": "Arnau Ortiz",
+    "posicion": "M",
+    "club": "Atlético Madrid",
+    "equipo": 2836,
+    "extension": "webp"
+  },
+  {
+    "id": 829932,
+    "nombre": "Cristian Romero",
+    "posicion": "D",
+    "club": "Atlético Madrid",
+    "equipo": 2836,
+    "extension": "webp"
+  },
+  {
+    "id": 353138,
+    "nombre": "Marcos Llorente",
+    "posicion": "D",
+    "club": "Atlético Madrid",
+    "equipo": 2836,
+    "extension": "webp"
+  },
+  {
+    "id": 787751,
+    "nombre": "Robin Le Normand",
+    "posicion": "D",
+    "club": "Atlético Madrid",
+    "equipo": 2836,
+    "extension": "webp"
+  },
+  {
+    "id": 1094106,
+    "nombre": "Marc Pubill",
+    "posicion": "D",
+    "club": "Atlético Madrid",
+    "equipo": 2836,
+    "extension": "webp"
+  },
+  {
+    "id": 807771,
+    "nombre": "Dávid Hancko",
+    "posicion": "D",
+    "club": "Atlético Madrid",
+    "equipo": 2836,
+    "extension": "webp"
+  },
+  {
+    "id": 1414932,
+    "nombre": "Dani Martinez",
+    "posicion": "D",
+    "club": "Atlético Madrileño",
+    "equipo": 2836,
+    "extension": "webp"
+  },
+  {
+    "id": 997025,
+    "nombre": "Arnau Solà",
+    "posicion": "D",
+    "club": "Atlético Madrid",
+    "equipo": 2836,
+    "extension": "webp"
+  },
+  {
+    "id": 263651,
+    "nombre": "Juan Musso",
+    "posicion": "G",
+    "club": "Atlético Madrid",
+    "equipo": 2836,
+    "extension": "webp"
+  },
+  {
+    "id": 69768,
+    "nombre": "Jan Oblak",
+    "posicion": "G",
+    "club": "Atlético Madrid",
+    "equipo": 2836,
+    "extension": "webp"
+  },
+  {
+    "id": 838805,
+    "nombre": "Jens Petter Hauge",
+    "posicion": "F",
+    "club": "Bodø/Glimt",
+    "equipo": 656,
+    "extension": "webp"
+  },
+  {
+    "id": 1007769,
+    "nombre": "Ole Didrik Blomberg",
+    "posicion": "F",
+    "club": "Bodø/Glimt",
+    "equipo": 656,
+    "extension": "webp"
+  },
+  {
+    "id": 877364,
+    "nombre": "Ola Brynhildsen",
+    "posicion": "F",
+    "club": "Bodø/Glimt",
+    "equipo": 656,
+    "extension": "webp"
+  },
+  {
+    "id": 793524,
+    "nombre": "Andreas Helmersen",
+    "posicion": "F",
+    "club": "Bodø/Glimt",
+    "equipo": 656,
+    "extension": "webp"
+  },
+  {
+    "id": 943193,
+    "nombre": "August Mikkelsen",
+    "posicion": "F",
+    "club": "Bodø/Glimt",
+    "equipo": 656,
+    "extension": "webp"
+  },
+  {
+    "id": 355174,
+    "nombre": "Patrick Berg",
+    "posicion": "M",
+    "club": "Bodø/Glimt",
+    "equipo": 656,
+    "extension": "webp"
+  },
+  {
+    "id": 892943,
+    "nombre": "Håkon Evjen",
+    "posicion": "M",
+    "club": "Bodø/Glimt",
+    "equipo": 656,
+    "extension": "webp"
+  },
+  {
+    "id": 151700,
+    "nombre": "Ulrik Saltnes",
+    "posicion": "M",
+    "club": "Bodø/Glimt",
+    "equipo": 656,
+    "extension": "webp"
+  },
+  {
+    "id": 567236,
+    "nombre": "Sondre Fet",
+    "posicion": "M",
+    "club": "Bodø/Glimt",
+    "equipo": 656,
+    "extension": "webp"
+  },
+  {
+    "id": 1027091,
+    "nombre": "Joel Mugisha Mvuka",
+    "posicion": "M",
+    "club": "Bodø/Glimt",
+    "equipo": 656,
+    "extension": "webp"
+  },
+  {
+    "id": 913584,
+    "nombre": "Joshua Kitolano",
+    "posicion": "M",
+    "club": "Bodø/Glimt",
+    "equipo": 656,
+    "extension": "webp"
+  },
+  {
+    "id": 1029163,
+    "nombre": "Sondre Auklend",
+    "posicion": "M",
+    "club": "Bodø/Glimt",
+    "equipo": 656,
+    "extension": "webp"
+  },
+  {
+    "id": 1120290,
+    "nombre": "Magnus Riisnæs",
+    "posicion": "M",
+    "club": "Bodø/Glimt",
+    "equipo": 656,
+    "extension": "webp"
+  },
+  {
+    "id": 1172777,
+    "nombre": "Fredrik Sjøvold",
+    "posicion": "D",
+    "club": "Bodø/Glimt",
+    "equipo": 656,
+    "extension": "webp"
+  },
+  {
+    "id": 795154,
+    "nombre": "Fredrik André Bjørkan",
+    "posicion": "D",
+    "club": "Bodø/Glimt",
+    "equipo": 656,
+    "extension": "webp"
+  },
+  {
+    "id": 1506781,
+    "nombre": "Villads Nielsen",
+    "posicion": "D",
+    "club": "Bodø/Glimt",
+    "equipo": 656,
+    "extension": "webp"
+  },
+  {
+    "id": 929978,
+    "nombre": "Odin Luras Bjørtuft",
+    "posicion": "D",
+    "club": "Bodø/Glimt",
+    "equipo": 656,
+    "extension": "webp"
+  },
+  {
+    "id": 980915,
+    "nombre": "Isak Dybvik Määttä",
+    "posicion": "D",
+    "club": "Bodø/Glimt",
+    "equipo": 656,
+    "extension": "webp"
+  },
+  {
+    "id": 548692,
+    "nombre": "Jostein Gundersen",
+    "posicion": "D",
+    "club": "Bodø/Glimt",
+    "equipo": 656,
+    "extension": "webp"
+  },
+  {
+    "id": 250319,
+    "nombre": "Haitam Aleesami",
+    "posicion": "D",
+    "club": "Bodø/Glimt",
+    "equipo": 656,
+    "extension": "webp"
+  },
+  {
+    "id": 1104398,
+    "nombre": "Assan Sanyang",
+    "posicion": "D",
+    "club": "Bodø/Glimt",
+    "equipo": 656,
+    "extension": "webp"
+  },
+  {
+    "id": 792624,
+    "nombre": "Nikita Haikin",
+    "posicion": "G",
+    "club": "Bodø/Glimt",
+    "equipo": 656,
+    "extension": "webp"
+  },
+  {
+    "id": 814784,
+    "nombre": "Julian Lund",
+    "posicion": "G",
+    "club": "Bodø/Glimt",
+    "equipo": 656,
+    "extension": "webp"
+  },
+  {
+    "id": 328027,
+    "nombre": "Serhou Guirassy",
+    "posicion": "F",
+    "club": "Borussia Dortmund",
+    "equipo": 2673,
+    "extension": "webp"
+  },
+  {
+    "id": 980628,
+    "nombre": "Maximilian Beier",
+    "posicion": "F",
+    "club": "Borussia Dortmund",
+    "equipo": 2673,
+    "extension": "webp"
+  },
+  {
+    "id": 954076,
+    "nombre": "Fábio Silva",
+    "posicion": "F",
+    "club": "Borussia Dortmund",
+    "equipo": 2673,
+    "extension": "webp"
+  },
+  {
+    "id": 1134083,
+    "nombre": "Jobe Bellingham",
+    "posicion": "M",
+    "club": "Borussia Dortmund",
+    "equipo": 2673,
+    "extension": "webp"
+  },
+  {
+    "id": 1401702,
+    "nombre": "Ethan Nwaneri",
+    "posicion": "M",
+    "club": "Borussia Dortmund",
+    "equipo": 2673,
+    "extension": "webp"
+  },
+  {
+    "id": 1468744,
+    "nombre": "Konstantinos Karetsas",
+    "posicion": "M",
+    "club": "Borussia Dortmund",
+    "equipo": 2673,
+    "extension": "webp"
+  },
+  {
+    "id": 994556,
+    "nombre": "Carney Chukwuemeka",
+    "posicion": "M",
+    "club": "Borussia Dortmund",
+    "equipo": 2673,
+    "extension": "webp"
+  },
+  {
+    "id": 907463,
+    "nombre": "Felix Nmecha",
+    "posicion": "M",
+    "club": "Borussia Dortmund",
+    "equipo": 2673,
+    "extension": "webp"
+  },
+  {
+    "id": 133908,
+    "nombre": "Marcel Sabitzer",
+    "posicion": "M",
+    "club": "Borussia Dortmund",
+    "equipo": 2673,
+    "extension": "webp"
+  },
+  {
+    "id": 800951,
+    "nombre": "Julian Ryerson",
+    "posicion": "M",
+    "club": "Borussia Dortmund",
+    "equipo": 2673,
+    "extension": "webp"
+  },
+  {
+    "id": 850816,
+    "nombre": "Joey Veerman",
+    "posicion": "M",
+    "club": "Borussia Dortmund",
+    "equipo": 2673,
+    "extension": "webp"
+  },
+  {
+    "id": 1021272,
+    "nombre": "Daniel Svensson",
+    "posicion": "M",
+    "club": "Borussia Dortmund",
+    "equipo": 2673,
+    "extension": "webp"
+  },
+  {
+    "id": 1931662,
+    "nombre": "Mussa Kaba",
+    "posicion": "M",
+    "club": "Borussia Dortmund",
+    "equipo": 2673,
+    "extension": "webp"
+  },
+  {
+    "id": 1957706,
+    "nombre": "Enzo Duarte",
+    "posicion": "M",
+    "club": "Borussia Dortmund",
+    "equipo": 2673,
+    "extension": "webp"
+  },
+  {
+    "id": 577726,
+    "nombre": "Ramy Bensebaini",
+    "posicion": "D",
+    "club": "Borussia Dortmund",
+    "equipo": 2673,
+    "extension": "webp"
+  },
+  {
+    "id": 940871,
+    "nombre": "Nico Schlotterbeck",
+    "posicion": "D",
+    "club": "Borussia Dortmund",
+    "equipo": 2673,
+    "extension": "webp"
+  },
+  {
+    "id": 799046,
+    "nombre": "Waldemar Anton",
+    "posicion": "D",
+    "club": "Borussia Dortmund",
+    "equipo": 2673,
+    "extension": "webp"
+  },
+  {
+    "id": 1137131,
+    "nombre": "Filippo Mané",
+    "posicion": "D",
+    "club": "Borussia Dortmund",
+    "equipo": 2673,
+    "extension": "webp"
+  },
+  {
+    "id": 1887796,
+    "nombre": "Kauã Prates",
+    "posicion": "D",
+    "club": "Borussia Dortmund",
+    "equipo": 2673,
+    "extension": "webp"
+  },
+  {
+    "id": 1471049,
+    "nombre": "Joane Gadou",
+    "posicion": "D",
+    "club": "Borussia Dortmund",
+    "equipo": 2673,
+    "extension": "webp"
+  },
+  {
+    "id": 556866,
+    "nombre": "Gregor Kobel",
+    "posicion": "G",
+    "club": "Borussia Dortmund",
+    "equipo": 2673,
+    "extension": "webp"
+  },
+  {
+    "id": 138491,
+    "nombre": "Alexander Meyer",
+    "posicion": "G",
+    "club": "Borussia Dortmund",
+    "equipo": 2673,
+    "extension": "webp"
+  },
+  {
+    "id": 1140591,
+    "nombre": "Silas Ostrzinski",
+    "posicion": "G",
+    "club": "Borussia Dortmund",
+    "equipo": 2673,
+    "extension": "webp"
+  },
+  {
+    "id": 132607,
+    "nombre": "Patrick Drewes",
+    "posicion": "G",
+    "club": "Borussia Dortmund",
+    "equipo": 2673,
+    "extension": "webp"
+  },
+  {
+    "id": 1177167,
+    "nombre": "Nicolò Tresoldi",
+    "posicion": "F",
+    "club": "Club Brugge KV",
+    "equipo": 2888,
+    "extension": "webp"
+  },
+  {
+    "id": 1495876,
+    "nombre": "Mamadou Diakhon",
+    "posicion": "F",
+    "club": "Club Brugge KV",
+    "equipo": 2888,
+    "extension": "webp"
+  },
+  {
+    "id": 1976732,
+    "nombre": "Wisdom Mike",
+    "posicion": "F",
+    "club": "Club Brugge KV",
+    "equipo": 2888,
+    "extension": "webp"
+  },
+  {
+    "id": 1069336,
+    "nombre": "Romeo Vermant",
+    "posicion": "F",
+    "club": "Club Brugge KV",
+    "equipo": 2888,
+    "extension": "webp"
+  },
+  {
+    "id": 1542032,
+    "nombre": "Andrej Vasovic",
+    "posicion": "F",
+    "club": "Club Brugge KV",
+    "equipo": 2888,
+    "extension": "webp"
+  },
+  {
+    "id": 1069486,
+    "nombre": "Carlos Forbs",
+    "posicion": "M",
+    "club": "Club Brugge KV",
+    "equipo": 2888,
+    "extension": "webp"
+  },
+  {
+    "id": 1939173,
+    "nombre": "Jan Virgili",
+    "posicion": "M",
+    "club": "Club Brugge KV",
+    "equipo": 2888,
+    "extension": "webp"
+  },
+  {
+    "id": 118085,
+    "nombre": "Hans Vanaken",
+    "posicion": "M",
+    "club": "Club Brugge KV",
+    "equipo": 2888,
+    "extension": "webp"
+  },
+  {
+    "id": 877236,
+    "nombre": "Hugo Vetlesen",
+    "posicion": "M",
+    "club": "Club Brugge KV",
+    "equipo": 2888,
+    "extension": "webp"
+  },
+  {
+    "id": 1939849,
+    "nombre": "Tian Nai Koren",
+    "posicion": "M",
+    "club": "Club Brugge KV",
+    "equipo": 2888,
+    "extension": "webp"
+  },
+  {
+    "id": 1130942,
+    "nombre": "Félix Lemaréchal",
+    "posicion": "M",
+    "club": "Club Brugge KV",
+    "equipo": 2888,
+    "extension": "webp"
+  },
+  {
+    "id": 1089582,
+    "nombre": "Freddie Potts",
+    "posicion": "M",
+    "club": "Club Brugge KV",
+    "equipo": 2888,
+    "extension": "webp"
+  },
+  {
+    "id": 1417029,
+    "nombre": "Cheveyo Tsawa",
+    "posicion": "M",
+    "club": "Club Brugge KV",
+    "equipo": 2888,
+    "extension": "webp"
+  },
+  {
+    "id": 1067539,
+    "nombre": "Lynnt Audoor",
+    "posicion": "M",
+    "club": "Club Brugge KV",
+    "equipo": 2888,
+    "extension": "webp"
+  },
+  {
+    "id": 1128428,
+    "nombre": "Milan Robberechts",
+    "posicion": "M",
+    "club": "Club Brugge KV",
+    "equipo": 2888,
+    "extension": "webp"
+  },
+  {
+    "id": 1187275,
+    "nombre": "Joel Ordóñez",
+    "posicion": "D",
+    "club": "Club Brugge KV",
+    "equipo": 2888,
+    "extension": "webp"
+  },
+  {
+    "id": 248331,
+    "nombre": "Brandon Mechele",
+    "posicion": "D",
+    "club": "Club Brugge KV",
+    "equipo": 2888,
+    "extension": "webp"
+  },
+  {
+    "id": 1002448,
+    "nombre": "Han-Beom Lee",
+    "posicion": "D",
+    "club": "Club Brugge KV",
+    "equipo": 2888,
+    "extension": "webp"
+  },
+  {
+    "id": 1162305,
+    "nombre": "Matteo Dams",
+    "posicion": "D",
+    "club": "Club Brugge KV",
+    "equipo": 2888,
+    "extension": "webp"
+  },
+  {
+    "id": 983041,
+    "nombre": "Hugo Siquet",
+    "posicion": "D",
+    "club": "Club Brugge KV",
+    "equipo": 2888,
+    "extension": "webp"
+  },
+  {
+    "id": 2267145,
+    "nombre": "Samba Coulibaly",
+    "posicion": "D",
+    "club": "Club Brugge KV",
+    "equipo": 2888,
+    "extension": "webp"
+  },
+  {
+    "id": 1465817,
+    "nombre": "Samuel Gomez Van Hoogen",
+    "posicion": "D",
+    "club": "Club Brugge KV",
+    "equipo": 2888,
+    "extension": "webp"
+  },
+  {
+    "id": 1901084,
+    "nombre": "Andre Garcia",
+    "posicion": "D",
+    "club": "Club Brugge KV",
+    "equipo": 2888,
+    "extension": "webp"
+  },
+  {
+    "id": 16206,
+    "nombre": "Yann Sommer",
+    "posicion": "G",
+    "club": "Club Brugge KV",
+    "equipo": 2888,
+    "extension": "webp"
+  },
+  {
+    "id": 361722,
+    "nombre": "Nordin Jackers",
+    "posicion": "G",
+    "club": "Club Brugge KV",
+    "equipo": 2888,
+    "extension": "webp"
+  },
+  {
+    "id": 835601,
+    "nombre": "Moise Kean",
+    "posicion": "F",
+    "club": "Como",
+    "equipo": 2704,
+    "extension": "webp"
+  },
+  {
+    "id": 894863,
+    "nombre": "Anastasios Douvikas",
+    "posicion": "F",
+    "club": "Como",
+    "equipo": 2704,
+    "extension": "webp"
+  },
+  {
+    "id": 1475557,
+    "nombre": "Mattia Liberali",
+    "posicion": "F",
+    "club": "Como",
+    "equipo": 2704,
+    "extension": "webp"
+  },
+  {
+    "id": 1171451,
+    "nombre": "Nico Paz",
+    "posicion": "M",
+    "club": "Como",
+    "equipo": 2704,
+    "extension": "webp"
+  },
+  {
+    "id": 1493689,
+    "nombre": "Assane Diao",
+    "posicion": "M",
+    "club": "Como",
+    "equipo": 2704,
+    "extension": "webp"
+  },
+  {
+    "id": 1090019,
+    "nombre": "Martin Baturina",
+    "posicion": "M",
+    "club": "Como",
+    "equipo": 2704,
+    "extension": "webp"
+  },
+  {
+    "id": 1086286,
+    "nombre": "Máximo Perrone",
+    "posicion": "M",
+    "club": "Como",
+    "equipo": 2704,
+    "extension": "webp"
+  },
+  {
+    "id": 1002813,
+    "nombre": "Yan Couto",
+    "posicion": "M",
+    "club": "Como",
+    "equipo": 2704,
+    "extension": "webp"
+  },
+  {
+    "id": 1800245,
+    "nombre": "Jesús Rodriguez",
+    "posicion": "M",
+    "club": "Como",
+    "equipo": 2704,
+    "extension": "webp"
+  },
+  {
+    "id": 930189,
+    "nombre": "Samuele Ricci",
+    "posicion": "M",
+    "club": "Como",
+    "equipo": 2704,
+    "extension": "webp"
+  },
+  {
+    "id": 911848,
+    "nombre": "Lucas Da Cunha",
+    "posicion": "M",
+    "club": "Como",
+    "equipo": 2704,
+    "extension": "webp"
+  },
+  {
+    "id": 811629,
+    "nombre": "Luis Milla",
+    "posicion": "M",
+    "club": "Como",
+    "equipo": 2704,
+    "extension": "webp"
+  },
+  {
+    "id": 826134,
+    "nombre": "Trevoh Chalobah",
+    "posicion": "D",
+    "club": "Como",
+    "equipo": 2704,
+    "extension": "webp"
+  },
+  {
+    "id": 1403348,
+    "nombre": "Jacobo Ramón",
+    "posicion": "D",
+    "club": "Como",
+    "equipo": 2704,
+    "extension": "webp"
+  },
+  {
+    "id": 1142238,
+    "nombre": "Álex Valle",
+    "posicion": "D",
+    "club": "Como",
+    "equipo": 2704,
+    "extension": "webp"
+  },
+  {
+    "id": 1112484,
+    "nombre": "Kaiki",
+    "posicion": "D",
+    "club": "Como",
+    "equipo": 2704,
+    "extension": "webp"
+  },
+  {
+    "id": 974581,
+    "nombre": "Ivan Smolčić",
+    "posicion": "D",
+    "club": "Como",
+    "equipo": 2704,
+    "extension": "webp"
+  },
+  {
+    "id": 226974,
+    "nombre": "Marc Kempf",
+    "posicion": "D",
+    "club": "Como",
+    "equipo": 2704,
+    "extension": "webp"
+  },
+  {
+    "id": 870211,
+    "nombre": "Alberto Dossena",
+    "posicion": "D",
+    "club": "Como",
+    "equipo": 2704,
+    "extension": "webp"
+  },
+  {
+    "id": 920546,
+    "nombre": "Robert Sánchez",
+    "posicion": "G",
+    "club": "Como",
+    "equipo": 2704,
+    "extension": "webp"
+  },
+  {
+    "id": 599114,
+    "nombre": "Jean Butez",
+    "posicion": "G",
+    "club": "Como",
+    "equipo": 2704,
+    "extension": "webp"
+  },
+  {
+    "id": 914902,
+    "nombre": "Anthony Gordon",
+    "posicion": "F",
+    "club": "FC Barcelona",
+    "equipo": 2817,
+    "extension": "webp"
+  },
+  {
+    "id": 1961596,
+    "nombre": "Hamza Abdelkarim",
+    "posicion": "F",
+    "club": "FC Barcelona",
+    "equipo": 2817,
+    "extension": "webp"
+  },
+  {
+    "id": 794839,
+    "nombre": "Gabriel Jesus",
+    "posicion": "F",
+    "club": "FC Barcelona",
+    "equipo": 2817,
+    "extension": "webp"
+  },
+  {
+    "id": 940054,
+    "nombre": "Karim Adeyemi",
+    "posicion": "F",
+    "club": "FC Barcelona",
+    "equipo": 2817,
+    "extension": "webp"
+  },
+  {
+    "id": 1402912,
+    "nombre": "Lamine Yamal",
+    "posicion": "M",
+    "club": "FC Barcelona",
+    "equipo": 2817,
+    "extension": "webp"
+  },
+  {
+    "id": 831005,
+    "nombre": "Raphinha",
+    "posicion": "M",
+    "club": "FC Barcelona",
+    "equipo": 2817,
+    "extension": "webp"
+  },
+  {
+    "id": 992587,
+    "nombre": "Pedri",
+    "posicion": "M",
+    "club": "FC Barcelona",
+    "equipo": 2817,
+    "extension": "webp"
+  },
+  {
+    "id": 1103693,
+    "nombre": "Gavi",
+    "posicion": "M",
+    "club": "FC Barcelona",
+    "equipo": 2817,
+    "extension": "webp"
+  },
+  {
+    "id": 795222,
+    "nombre": "Frenkie de Jong",
+    "posicion": "M",
+    "club": "FC Barcelona",
+    "equipo": 2817,
+    "extension": "webp"
+  },
+  {
+    "id": 1153270,
+    "nombre": "Fermín López",
+    "posicion": "M",
+    "club": "FC Barcelona",
+    "equipo": 2817,
+    "extension": "webp"
+  },
+  {
+    "id": 789071,
+    "nombre": "Dani Olmo",
+    "posicion": "M",
+    "club": "FC Barcelona",
+    "equipo": 2817,
+    "extension": "webp"
+  },
+  {
+    "id": 827606,
+    "nombre": "Rodri",
+    "posicion": "M",
+    "club": "FC Barcelona",
+    "equipo": 2817,
+    "extension": "webp"
+  },
+  {
+    "id": 1526618,
+    "nombre": "Marc Bernal",
+    "posicion": "M",
+    "club": "FC Barcelona",
+    "equipo": 2817,
+    "extension": "webp"
+  },
+  {
+    "id": 1506988,
+    "nombre": "Jesse Bisiwu",
+    "posicion": "M",
+    "club": "FC Barcelona",
+    "equipo": 2817,
+    "extension": "webp"
+  },
+  {
+    "id": 1402913,
+    "nombre": "Pau Cubarsí",
+    "posicion": "D",
+    "club": "FC Barcelona",
+    "equipo": 2817,
+    "extension": "webp"
+  },
+  {
+    "id": 827212,
+    "nombre": "Jules Koundé",
+    "posicion": "D",
+    "club": "FC Barcelona",
+    "equipo": 2817,
+    "extension": "webp"
+  },
+  {
+    "id": 997035,
+    "nombre": "Alejandro Balde",
+    "posicion": "D",
+    "club": "FC Barcelona",
+    "equipo": 2817,
+    "extension": "webp"
+  },
+  {
+    "id": 138892,
+    "nombre": "João Cancelo",
+    "posicion": "D",
+    "club": "FC Barcelona",
+    "equipo": 2817,
+    "extension": "webp"
+  },
+  {
+    "id": 186795,
+    "nombre": "Andreas Christensen",
+    "posicion": "D",
+    "club": "FC Barcelona",
+    "equipo": 2817,
+    "extension": "webp"
+  },
+  {
+    "id": 876214,
+    "nombre": "Eric García",
+    "posicion": "D",
+    "club": "FC Barcelona",
+    "equipo": 2817,
+    "extension": "webp"
+  },
+  {
+    "id": 1094827,
+    "nombre": "Gerard Martín",
+    "posicion": "D",
+    "club": "FC Barcelona",
+    "equipo": 2817,
+    "extension": "webp"
+  },
+  {
+    "id": 1546073,
+    "nombre": "Xavi Espart",
+    "posicion": "D",
+    "club": "FC Barcelona",
+    "equipo": 2817,
+    "extension": "webp"
+  },
+  {
+    "id": 930267,
+    "nombre": "Joan García",
+    "posicion": "G",
+    "club": "FC Barcelona",
+    "equipo": 2817,
+    "extension": "webp"
+  },
+  {
+    "id": 50490,
+    "nombre": "Wojciech Szczęsny",
+    "posicion": "G",
+    "club": "FC Barcelona",
+    "equipo": 2817,
+    "extension": "webp"
+  },
+  {
+    "id": 190419,
+    "nombre": "Dominik Livaković",
+    "posicion": "G",
+    "club": "FC Barcelona",
+    "equipo": 2817,
+    "extension": "webp"
+  },
+  {
+    "id": 108579,
+    "nombre": "Harry Kane",
+    "posicion": "F",
+    "club": "FC Bayern München",
+    "equipo": 2672,
+    "extension": "webp"
+  },
+  {
+    "id": 2361805,
+    "nombre": "Bastian Assomo",
+    "posicion": "F",
+    "club": "FC Bayern München",
+    "equipo": 2672,
+    "extension": "webp"
+  },
+  {
+    "id": 978838,
+    "nombre": "Michael Olise",
+    "posicion": "M",
+    "club": "FC Bayern München",
+    "equipo": 2672,
+    "extension": "webp"
+  },
+  {
+    "id": 883537,
+    "nombre": "Luis Díaz",
+    "posicion": "M",
+    "club": "FC Bayern München",
+    "equipo": 2672,
+    "extension": "webp"
+  },
+  {
+    "id": 1010231,
+    "nombre": "Jamal Musiala",
+    "posicion": "M",
+    "club": "FC Bayern München",
+    "equipo": 2672,
+    "extension": "webp"
+  },
+  {
+    "id": 1063767,
+    "nombre": "Ismael Saibari",
+    "posicion": "M",
+    "club": "FC Bayern München",
+    "equipo": 2672,
+    "extension": "webp"
+  },
+  {
+    "id": 259117,
+    "nombre": "Joshua Kimmich",
+    "posicion": "M",
+    "club": "FC Bayern München",
+    "equipo": 2672,
+    "extension": "webp"
+  },
+  {
+    "id": 187433,
+    "nombre": "Serge Gnabry",
+    "posicion": "M",
+    "club": "FC Bayern München",
+    "equipo": 2672,
+    "extension": "webp"
+  },
+  {
+    "id": 1142251,
+    "nombre": "Aleksandar Pavlović",
+    "posicion": "M",
+    "club": "FC Bayern München",
+    "equipo": 2672,
+    "extension": "webp"
+  },
+  {
+    "id": 2427970,
+    "nombre": "Bara Sapoko Ndiaye",
+    "posicion": "M",
+    "club": "FC Bayern München",
+    "equipo": 2672,
+    "extension": "webp"
+  },
+  {
+    "id": 1129935,
+    "nombre": "Tom Bischof",
+    "posicion": "M",
+    "club": "FC Bayern München",
+    "equipo": 2672,
+    "extension": "webp"
+  },
+  {
+    "id": 2236502,
+    "nombre": "Maycon Cardozo",
+    "posicion": "M",
+    "club": "FC Bayern München",
+    "equipo": 2672,
+    "extension": "webp"
+  },
+  {
+    "id": 843665,
+    "nombre": "Alphonso Davies",
+    "posicion": "D",
+    "club": "FC Bayern München",
+    "equipo": 2672,
+    "extension": "webp"
+  },
+  {
+    "id": 798583,
+    "nombre": "Dayot Upamecano",
+    "posicion": "D",
+    "club": "FC Bayern München",
+    "equipo": 2672,
+    "extension": "webp"
+  },
+  {
+    "id": 896569,
+    "nombre": "Kim Min-jae",
+    "posicion": "D",
+    "club": "FC Bayern München",
+    "equipo": 2672,
+    "extension": "webp"
+  },
+  {
+    "id": 980418,
+    "nombre": "Sacha Boey",
+    "posicion": "D",
+    "club": "FC Bayern München",
+    "equipo": 2672,
+    "extension": "webp"
+  },
+  {
+    "id": 227672,
+    "nombre": "Jonathan Tah",
+    "posicion": "D",
+    "club": "FC Bayern München",
+    "equipo": 2672,
+    "extension": "webp"
+  },
+  {
+    "id": 927407,
+    "nombre": "Josip Stanišić",
+    "posicion": "D",
+    "club": "FC Bayern München",
+    "equipo": 2672,
+    "extension": "webp"
+  },
+  {
+    "id": 355492,
+    "nombre": "Konrad Laimer",
+    "posicion": "D",
+    "club": "FC Bayern München",
+    "equipo": 2672,
+    "extension": "webp"
+  },
+  {
+    "id": 1159759,
+    "nombre": "Nathaniel Brown",
+    "posicion": "D",
+    "club": "FC Bayern München",
+    "equipo": 2672,
+    "extension": "webp"
+  },
+  {
+    "id": 873106,
+    "nombre": "Hiroki Itō",
+    "posicion": "D",
+    "club": "FC Bayern München",
+    "equipo": 2672,
+    "extension": "webp"
+  },
+  {
+    "id": 8959,
+    "nombre": "Manuel Neuer",
+    "posicion": "G",
+    "club": "FC Bayern München",
+    "equipo": 2672,
+    "extension": "webp"
+  },
+  {
+    "id": 1130647,
+    "nombre": "Jonas Urbig",
+    "posicion": "G",
+    "club": "FC Bayern München",
+    "equipo": 2672,
+    "extension": "webp"
+  },
+  {
+    "id": 26768,
+    "nombre": "Sven Ulreich",
+    "posicion": "G",
+    "club": "FC Bayern München",
+    "equipo": 2672,
+    "extension": "webp"
+  },
+  {
+    "id": 892141,
+    "nombre": "Santiago Giménez",
+    "posicion": "F",
+    "club": "FC Porto",
+    "equipo": 3002,
+    "extension": "webp"
+  },
+  {
+    "id": 1503836,
+    "nombre": "Samu Aghehowa",
+    "posicion": "F",
+    "club": "FC Porto",
+    "equipo": 3002,
+    "extension": "webp"
+  },
+  {
+    "id": 1548929,
+    "nombre": "Oskar Pietuszewski",
+    "posicion": "F",
+    "club": "FC Porto",
+    "equipo": 3002,
+    "extension": "webp"
+  },
+  {
+    "id": 190159,
+    "nombre": "André Silva",
+    "posicion": "F",
+    "club": "FC Porto",
+    "equipo": 3002,
+    "extension": "webp"
+  },
+  {
+    "id": 1639250,
+    "nombre": "William Gomes",
+    "posicion": "F",
+    "club": "FC Porto",
+    "equipo": 3002,
+    "extension": "webp"
+  },
+  {
+    "id": 882664,
+    "nombre": "Pepê",
+    "posicion": "F",
+    "club": "FC Porto",
+    "equipo": 3002,
+    "extension": "webp"
+  },
+  {
+    "id": 992567,
+    "nombre": "Borja Sainz",
+    "posicion": "F",
+    "club": "FC Porto",
+    "equipo": 3002,
+    "extension": "webp"
+  },
+  {
+    "id": 191188,
+    "nombre": "Seko Fofana",
+    "posicion": "M",
+    "club": "FC Porto",
+    "equipo": 3002,
+    "extension": "webp"
+  },
+  {
+    "id": 889689,
+    "nombre": "Hwang In-beom",
+    "posicion": "M",
+    "club": "FC Porto",
+    "equipo": 3002,
+    "extension": "webp"
+  },
+  {
+    "id": 1066560,
+    "nombre": "Alan Varela",
+    "posicion": "M",
+    "club": "FC Porto",
+    "equipo": 3002,
+    "extension": "webp"
+  },
+  {
+    "id": 1010505,
+    "nombre": "Gabri Veiga",
+    "posicion": "M",
+    "club": "FC Porto",
+    "equipo": 3002,
+    "extension": "webp"
+  },
+  {
+    "id": 1406639,
+    "nombre": "Victor Froholdt",
+    "posicion": "M",
+    "club": "FC Porto",
+    "equipo": 3002,
+    "extension": "webp"
+  },
+  {
+    "id": 804472,
+    "nombre": "Pablo Rosario",
+    "posicion": "M",
+    "club": "FC Porto",
+    "equipo": 3002,
+    "extension": "webp"
+  },
+  {
+    "id": 976037,
+    "nombre": "Jakub Kiwior",
+    "posicion": "D",
+    "club": "FC Porto",
+    "equipo": 3002,
+    "extension": "webp"
+  },
+  {
+    "id": 286085,
+    "nombre": "Jan Bednarek",
+    "posicion": "D",
+    "club": "FC Porto",
+    "equipo": 3002,
+    "extension": "webp"
+  },
+  {
+    "id": 1482340,
+    "nombre": "Souza",
+    "posicion": "D",
+    "club": "FC Porto",
+    "equipo": 3002,
+    "extension": "webp"
+  },
+  {
+    "id": 913401,
+    "nombre": "Nehuén Pérez",
+    "posicion": "D",
+    "club": "FC Porto",
+    "equipo": 3002,
+    "extension": "webp"
+  },
+  {
+    "id": 987510,
+    "nombre": "Zaidu Sanusi",
+    "posicion": "D",
+    "club": "FC Porto",
+    "equipo": 3002,
+    "extension": "webp"
+  },
+  {
+    "id": 1160957,
+    "nombre": "Alberto Costa",
+    "posicion": "D",
+    "club": "FC Porto",
+    "equipo": 3002,
+    "extension": "webp"
+  },
+  {
+    "id": 985138,
+    "nombre": "Francisco Moura",
+    "posicion": "D",
+    "club": "FC Porto",
+    "equipo": 3002,
+    "extension": "webp"
+  },
+  {
+    "id": 843115,
+    "nombre": "Diogo Costa",
+    "posicion": "G",
+    "club": "FC Porto",
+    "equipo": 3002,
+    "extension": "webp"
+  },
+  {
+    "id": 116372,
+    "nombre": "Cláudio Ramos",
+    "posicion": "G",
+    "club": "FC Porto",
+    "equipo": 3002,
+    "extension": "webp"
+  },
+  {
+    "id": 788365,
+    "nombre": "João Costa",
+    "posicion": "G",
+    "club": "FC Porto",
+    "equipo": 3002,
+    "extension": "webp"
+  },
+  {
+    "id": 1961855,
+    "nombre": "João Afonso",
+    "posicion": "G",
+    "club": "FC Porto B",
+    "equipo": 3002,
+    "extension": "webp"
+  },
+  {
+    "id": 78893,
+    "nombre": "Romelu Lukaku",
+    "posicion": "F",
+    "club": "Fenerbahçe",
+    "equipo": 3052,
+    "extension": "webp"
+  },
+  {
+    "id": 903324,
+    "nombre": "Kerem Aktürkoğlu",
+    "posicion": "F",
+    "club": "Fenerbahçe",
+    "equipo": 3052,
+    "extension": "webp"
+  },
+  {
+    "id": 310874,
+    "nombre": "Vedat Muriqi",
+    "posicion": "F",
+    "club": "Fenerbahçe",
+    "equipo": 3052,
+    "extension": "webp"
+  },
+  {
+    "id": 1102788,
+    "nombre": "Dorgeles Nene",
+    "posicion": "F",
+    "club": "Fenerbahçe",
+    "equipo": 3052,
+    "extension": "webp"
+  },
+  {
+    "id": 942116,
+    "nombre": "Mason Greenwood",
+    "posicion": "M",
+    "club": "Fenerbahçe",
+    "equipo": 3052,
+    "extension": "webp"
+  },
+  {
+    "id": 234148,
+    "nombre": "N'Golo Kanté",
+    "posicion": "M",
+    "club": "Fenerbahçe",
+    "equipo": 3052,
+    "extension": "webp"
+  },
+  {
+    "id": 361004,
+    "nombre": "Marco Asensio",
+    "posicion": "M",
+    "club": "Fenerbahçe",
+    "equipo": 3052,
+    "extension": "webp"
+  },
+  {
+    "id": 852404,
+    "nombre": "Mattéo Guendouzi",
+    "posicion": "M",
+    "club": "Fenerbahçe",
+    "equipo": 3052,
+    "extension": "webp"
+  },
+  {
+    "id": 226986,
+    "nombre": "İrfan Can Kahveci",
+    "posicion": "M",
+    "club": "Fenerbahçe",
+    "equipo": 3052,
+    "extension": "webp"
+  },
+  {
+    "id": 999396,
+    "nombre": "Oğuz Aydın",
+    "posicion": "M",
+    "club": "Fenerbahçe",
+    "equipo": 3052,
+    "extension": "webp"
+  },
+  {
+    "id": 952600,
+    "nombre": "İsmail Yüksek",
+    "posicion": "M",
+    "club": "Fenerbahçe",
+    "equipo": 3052,
+    "extension": "webp"
+  },
+  {
+    "id": 997165,
+    "nombre": "Bartuğ Elmaz",
+    "posicion": "M",
+    "club": "Fenerbahçe",
+    "equipo": 3052,
+    "extension": "webp"
+  },
+  {
+    "id": 149663,
+    "nombre": "Nathan Aké",
+    "posicion": "D",
+    "club": "Fenerbahçe",
+    "equipo": 3052,
+    "extension": "webp"
+  },
+  {
+    "id": 187205,
+    "nombre": "Milan Škriniar",
+    "posicion": "D",
+    "club": "Fenerbahçe",
+    "equipo": 3052,
+    "extension": "webp"
+  },
+  {
+    "id": 252821,
+    "nombre": "Nélson Semedo",
+    "posicion": "D",
+    "club": "Fenerbahçe",
+    "equipo": 3052,
+    "extension": "webp"
+  },
+  {
+    "id": 1009738,
+    "nombre": "Archie Brown",
+    "posicion": "D",
+    "club": "Fenerbahçe",
+    "equipo": 3052,
+    "extension": "webp"
+  },
+  {
+    "id": 836683,
+    "nombre": "Mert Müldür",
+    "posicion": "D",
+    "club": "Fenerbahçe",
+    "equipo": 3052,
+    "extension": "webp"
+  },
+  {
+    "id": 1473092,
+    "nombre": "Kojo Peprah Oppong",
+    "posicion": "D",
+    "club": "Fenerbahçe",
+    "equipo": 3052,
+    "extension": "webp"
+  },
+  {
+    "id": 1085938,
+    "nombre": "Levent Mercan",
+    "posicion": "D",
+    "club": "Fenerbahçe",
+    "equipo": 3052,
+    "extension": "webp"
+  },
+  {
+    "id": 1146274,
+    "nombre": "Ognjen Mimović",
+    "posicion": "D",
+    "club": "Fenerbahçe",
+    "equipo": 3052,
+    "extension": "webp"
+  },
+  {
+    "id": 1133200,
+    "nombre": "Yiğit Efe Demir",
+    "posicion": "D",
+    "club": "Fenerbahçe",
+    "equipo": 3052,
+    "extension": "webp"
+  },
+  {
+    "id": 254491,
+    "nombre": "Ederson",
+    "posicion": "G",
+    "club": "Fenerbahçe",
+    "equipo": 3052,
+    "extension": "webp"
+  },
+  {
+    "id": 39573,
+    "nombre": "Mert Günok",
+    "posicion": "G",
+    "club": "Fenerbahçe",
+    "equipo": 3052,
+    "extension": "webp"
+  },
+  {
+    "id": 913985,
+    "nombre": "Tarık Çetin",
+    "posicion": "G",
+    "club": "Fenerbahçe",
+    "equipo": 3052,
+    "extension": "webp"
+  },
+  {
+    "id": 1196903,
+    "nombre": "Nacho Ferri",
+    "posicion": "F",
+    "club": "Feyenoord",
+    "equipo": 2959,
+    "extension": "webp"
+  },
+  {
+    "id": 2256582,
+    "nombre": "Jerayno Schaken",
+    "posicion": "F",
+    "club": "Feyenoord",
+    "equipo": 2959,
+    "extension": "webp"
+  },
+  {
+    "id": 1218066,
+    "nombre": "Anis Hadj Moussa",
+    "posicion": "M",
+    "club": "Feyenoord",
+    "equipo": 2959,
+    "extension": "webp"
+  },
+  {
+    "id": 1095731,
+    "nombre": "Oussama Targhalline",
+    "posicion": "M",
+    "club": "Feyenoord",
+    "equipo": 2959,
+    "extension": "webp"
+  },
+  {
+    "id": 886242,
+    "nombre": "Jakub Moder",
+    "posicion": "M",
+    "club": "Feyenoord",
+    "equipo": 2959,
+    "extension": "webp"
+  },
+  {
+    "id": 944467,
+    "nombre": "Sem Steijn",
+    "posicion": "M",
+    "club": "Feyenoord",
+    "equipo": 2959,
+    "extension": "webp"
+  },
+  {
+    "id": 1918931,
+    "nombre": "Gaoussou Diarra",
+    "posicion": "M",
+    "club": "Feyenoord",
+    "equipo": 2959,
+    "extension": "webp"
+  },
+  {
+    "id": 1121400,
+    "nombre": "Luciano Valente",
+    "posicion": "M",
+    "club": "Feyenoord",
+    "equipo": 2959,
+    "extension": "webp"
+  },
+  {
+    "id": 1433802,
+    "nombre": "Gjivai Zechiël",
+    "posicion": "M",
+    "club": "Feyenoord",
+    "equipo": 2959,
+    "extension": "webp"
+  },
+  {
+    "id": 979221,
+    "nombre": "Gonçalo Borges",
+    "posicion": "M",
+    "club": "Feyenoord",
+    "equipo": 2959,
+    "extension": "webp"
+  },
+  {
+    "id": 928033,
+    "nombre": "Charles Vanhoutte",
+    "posicion": "M",
+    "club": "Feyenoord",
+    "equipo": 2959,
+    "extension": "webp"
+  },
+  {
+    "id": 826139,
+    "nombre": "Reiss Nelson",
+    "posicion": "M",
+    "club": "Feyenoord",
+    "equipo": 2959,
+    "extension": "webp"
+  },
+  {
+    "id": 979145,
+    "nombre": "Mika Medina",
+    "posicion": "M",
+    "club": "Feyenoord",
+    "equipo": 2959,
+    "extension": "webp"
+  },
+  {
+    "id": 1144138,
+    "nombre": "Jordan Bos",
+    "posicion": "D",
+    "club": "Feyenoord",
+    "equipo": 2959,
+    "extension": "webp"
+  },
+  {
+    "id": 942213,
+    "nombre": "Tsuyoshi Watanabe",
+    "posicion": "D",
+    "club": "Feyenoord",
+    "equipo": 2959,
+    "extension": "webp"
+  },
+  {
+    "id": 787640,
+    "nombre": "Jeremiah St Juste",
+    "posicion": "D",
+    "club": "Feyenoord",
+    "equipo": 2959,
+    "extension": "webp"
+  },
+  {
+    "id": 945404,
+    "nombre": "Javi López",
+    "posicion": "D",
+    "club": "Feyenoord",
+    "equipo": 2959,
+    "extension": "webp"
+  },
+  {
+    "id": 794013,
+    "nombre": "Mats Deijl",
+    "posicion": "D",
+    "club": "Feyenoord",
+    "equipo": 2959,
+    "extension": "webp"
+  },
+  {
+    "id": 860160,
+    "nombre": "Gijs Smal",
+    "posicion": "D",
+    "club": "Feyenoord",
+    "equipo": 2959,
+    "extension": "webp"
+  },
+  {
+    "id": 797279,
+    "nombre": "Bart Nieuwkoop",
+    "posicion": "D",
+    "club": "Feyenoord",
+    "equipo": 2959,
+    "extension": "webp"
+  },
+  {
+    "id": 1019319,
+    "nombre": "Tjark Ernst",
+    "posicion": "G",
+    "club": "Feyenoord",
+    "equipo": 2959,
+    "extension": "webp"
+  },
+  {
+    "id": 795024,
+    "nombre": "Florian Kastenmeier",
+    "posicion": "G",
+    "club": "Feyenoord",
+    "equipo": 2959,
+    "extension": "webp"
+  },
+  {
+    "id": 307364,
+    "nombre": "Liam Bossin",
+    "posicion": "G",
+    "club": "Feyenoord",
+    "equipo": 2959,
+    "extension": "webp"
+  },
+  {
+    "id": 1390118,
+    "nombre": "Mannou Berger",
+    "posicion": "G",
+    "club": "Feyenoord",
+    "equipo": 2959,
+    "extension": "webp"
+  },
+  {
+    "id": 822471,
+    "nombre": "Victor Osimhen",
+    "posicion": "F",
+    "club": "Galatasaray",
+    "equipo": 3061,
+    "extension": "webp"
+  },
+  {
+    "id": 851284,
+    "nombre": "Rafael Leão",
+    "posicion": "F",
+    "club": "Galatasaray",
+    "equipo": 3061,
+    "extension": "webp"
+  },
+  {
+    "id": 1407720,
+    "nombre": "Deniz Gül",
+    "posicion": "F",
+    "club": "Galatasaray",
+    "equipo": 3061,
+    "extension": "webp"
+  },
+  {
+    "id": 45853,
+    "nombre": "İlkay Gündoğan",
+    "posicion": "M",
+    "club": "Galatasaray",
+    "equipo": 3061,
+    "extension": "webp"
+  },
+  {
+    "id": 293519,
+    "nombre": "Leroy Sané",
+    "posicion": "M",
+    "club": "Galatasaray",
+    "equipo": 3061,
+    "extension": "webp"
+  },
+  {
+    "id": 913593,
+    "nombre": "Gabriel Sara",
+    "posicion": "M",
+    "club": "Galatasaray",
+    "equipo": 3061,
+    "extension": "webp"
+  },
+  {
+    "id": 904096,
+    "nombre": "Barış Alper Yılmaz",
+    "posicion": "M",
+    "club": "Galatasaray",
+    "equipo": 3061,
+    "extension": "webp"
+  },
+  {
+    "id": 307284,
+    "nombre": "Mario Lemina",
+    "posicion": "M",
+    "club": "Galatasaray",
+    "equipo": 3061,
+    "extension": "webp"
+  },
+  {
+    "id": 857738,
+    "nombre": "Yunus Akgün",
+    "posicion": "M",
+    "club": "Galatasaray",
+    "equipo": 3061,
+    "extension": "webp"
+  },
+  {
+    "id": 754794,
+    "nombre": "Lucas Torreira",
+    "posicion": "M",
+    "club": "Galatasaray",
+    "equipo": 3061,
+    "extension": "webp"
+  },
+  {
+    "id": 1415147,
+    "nombre": "Aleksey Batrakov",
+    "posicion": "M",
+    "club": "Galatasaray",
+    "equipo": 3061,
+    "extension": "webp"
+  },
+  {
+    "id": 1048916,
+    "nombre": "Lesley Ugochukwu",
+    "posicion": "M",
+    "club": "Galatasaray",
+    "equipo": 3061,
+    "extension": "webp"
+  },
+  {
+    "id": 2119726,
+    "nombre": "Renato Nhaga",
+    "posicion": "M",
+    "club": "Galatasaray",
+    "equipo": 3061,
+    "extension": "webp"
+  },
+  {
+    "id": 978285,
+    "nombre": "Wilfried Singo",
+    "posicion": "D",
+    "club": "Galatasaray",
+    "equipo": 3061,
+    "extension": "webp"
+  },
+  {
+    "id": 566102,
+    "nombre": "Davinson Sánchez",
+    "posicion": "D",
+    "club": "Galatasaray",
+    "equipo": 3061,
+    "extension": "webp"
+  },
+  {
+    "id": 355088,
+    "nombre": "Roland Sallai",
+    "posicion": "D",
+    "club": "Galatasaray",
+    "equipo": 3061,
+    "extension": "webp"
+  },
+  {
+    "id": 897291,
+    "nombre": "Ismail Jakobs",
+    "posicion": "D",
+    "club": "Galatasaray",
+    "equipo": 3061,
+    "extension": "webp"
+  },
+  {
+    "id": 178963,
+    "nombre": "Abdülkerim Bardakcı",
+    "posicion": "D",
+    "club": "Galatasaray",
+    "equipo": 3061,
+    "extension": "webp"
+  },
+  {
+    "id": 981483,
+    "nombre": "Eren Elmalı",
+    "posicion": "D",
+    "club": "Galatasaray",
+    "equipo": 3061,
+    "extension": "webp"
+  },
+  {
+    "id": 1048009,
+    "nombre": "El Chadaille Bitshiabu",
+    "posicion": "D",
+    "club": "Galatasaray",
+    "equipo": 3061,
+    "extension": "webp"
+  },
+  {
+    "id": 754330,
+    "nombre": "Uğurcan Çakır",
+    "posicion": "G",
+    "club": "Galatasaray",
+    "equipo": 3061,
+    "extension": "webp"
+  },
+  {
+    "id": 103457,
+    "nombre": "Günay Güvenç",
+    "posicion": "G",
+    "club": "Galatasaray",
+    "equipo": 3061,
+    "extension": "webp"
+  },
+  {
+    "id": 1210422,
+    "nombre": "Jankat Yılmaz",
+    "posicion": "G",
+    "club": "Galatasaray",
+    "equipo": 3061,
+    "extension": "webp"
+  },
+  {
+    "id": 1405619,
+    "nombre": "Enes Emre Büyük",
+    "posicion": "G",
+    "club": "Galatasaray",
+    "equipo": 3061,
+    "extension": "webp"
+  },
+  {
+    "id": 823984,
+    "nombre": "Lautaro Martínez",
+    "posicion": "F",
+    "club": "Inter",
+    "equipo": 2697,
+    "extension": "webp"
+  },
+  {
+    "id": 791702,
+    "nombre": "Marcus Thuram",
+    "posicion": "F",
+    "club": "Inter",
+    "equipo": 2697,
+    "extension": "webp"
+  },
+  {
+    "id": 1086223,
+    "nombre": "Ange-Yoan Bonny",
+    "posicion": "F",
+    "club": "Inter",
+    "equipo": 2697,
+    "extension": "webp"
+  },
+  {
+    "id": 135700,
+    "nombre": "Hakan Çalhanoğlu",
+    "posicion": "M",
+    "club": "Inter",
+    "equipo": 2697,
+    "extension": "webp"
+  },
+  {
+    "id": 363856,
+    "nombre": "Nicolò Barella",
+    "posicion": "M",
+    "club": "Inter",
+    "equipo": 2697,
+    "extension": "webp"
+  },
+  {
+    "id": 138605,
+    "nombre": "Piotr Zieliński",
+    "posicion": "M",
+    "club": "Inter",
+    "equipo": 2697,
+    "extension": "webp"
+  },
+  {
+    "id": 927353,
+    "nombre": "Curtis Jones",
+    "posicion": "M",
+    "club": "Inter",
+    "equipo": 2697,
+    "extension": "webp"
+  },
+  {
+    "id": 284361,
+    "nombre": "Federico Dimarco",
+    "posicion": "M",
+    "club": "Inter",
+    "equipo": 2697,
+    "extension": "webp"
+  },
+  {
+    "id": 1091303,
+    "nombre": "Petar Sučić",
+    "posicion": "M",
+    "club": "Inter",
+    "equipo": 2697,
+    "extension": "webp"
+  },
+  {
+    "id": 37151,
+    "nombre": "Henrikh Mkhitaryan",
+    "posicion": "M",
+    "club": "Inter",
+    "equipo": 2697,
+    "extension": "webp"
+  },
+  {
+    "id": 977679,
+    "nombre": "Luís Henrique",
+    "posicion": "M",
+    "club": "Inter",
+    "equipo": 2697,
+    "extension": "webp"
+  },
+  {
+    "id": 1048889,
+    "nombre": "Andy Diouf",
+    "posicion": "M",
+    "club": "Inter",
+    "equipo": 2697,
+    "extension": "webp"
+  },
+  {
+    "id": 383560,
+    "nombre": "Manuel Akanji",
+    "posicion": "D",
+    "club": "Inter",
+    "equipo": 2697,
+    "extension": "webp"
+  },
+  {
+    "id": 152077,
+    "nombre": "John Stones",
+    "posicion": "D",
+    "club": "Inter",
+    "equipo": 2697,
+    "extension": "webp"
+  },
+  {
+    "id": 826188,
+    "nombre": "Alessandro Bastoni",
+    "posicion": "D",
+    "club": "Inter",
+    "equipo": 2697,
+    "extension": "webp"
+  },
+  {
+    "id": 945798,
+    "nombre": "Djed Spence",
+    "posicion": "D",
+    "club": "Inter",
+    "equipo": 2697,
+    "extension": "webp"
+  },
+  {
+    "id": 787505,
+    "nombre": "Benjamin Pavard",
+    "posicion": "D",
+    "club": "Inter",
+    "equipo": 2697,
+    "extension": "webp"
+  },
+  {
+    "id": 929199,
+    "nombre": "Carlos Augusto",
+    "posicion": "D",
+    "club": "Inter",
+    "equipo": 2697,
+    "extension": "webp"
+  },
+  {
+    "id": 906275,
+    "nombre": "Yann Bisseck",
+    "posicion": "D",
+    "club": "Inter",
+    "equipo": 2697,
+    "extension": "webp"
+  },
+  {
+    "id": 1495720,
+    "nombre": "Mattia Marello",
+    "posicion": "D",
+    "club": "Inter",
+    "equipo": 2697,
+    "extension": "webp"
+  },
+  {
+    "id": 845291,
+    "nombre": "Josep Martínez",
+    "posicion": "G",
+    "club": "Inter",
+    "equipo": 2697,
+    "extension": "webp"
+  },
+  {
+    "id": 308182,
+    "nombre": "Ivan Provedel",
+    "posicion": "G",
+    "club": "Inter",
+    "equipo": 2697,
+    "extension": "webp"
+  },
+  {
+    "id": 301162,
+    "nombre": "Raffaele Di Gennaro",
+    "posicion": "G",
+    "club": "Inter",
+    "equipo": 2697,
+    "extension": "webp"
+  },
+  {
+    "id": 870038,
+    "nombre": "Saša Kalajdžić",
+    "posicion": "F",
+    "club": "LASK",
+    "equipo": 2058,
+    "extension": "webp"
+  },
+  {
+    "id": 1215061,
+    "nombre": "Moses Usor",
+    "posicion": "F",
+    "club": "LASK",
+    "equipo": 2058,
+    "extension": "webp"
+  },
+  {
+    "id": 1068299,
+    "nombre": "Samuel Adeniran",
+    "posicion": "F",
+    "club": "LASK",
+    "equipo": 2058,
+    "extension": "webp"
+  },
+  {
+    "id": 1104216,
+    "nombre": "Christoph Lang",
+    "posicion": "F",
+    "club": "LASK",
+    "equipo": 2058,
+    "extension": "webp"
+  },
+  {
+    "id": 2147798,
+    "nombre": "Nael Kane",
+    "posicion": "F",
+    "club": "LASK",
+    "equipo": 2058,
+    "extension": "webp"
+  },
+  {
+    "id": 935308,
+    "nombre": "Robert Ljubičić",
+    "posicion": "M",
+    "club": "LASK",
+    "equipo": 2058,
+    "extension": "webp"
+  },
+  {
+    "id": 931742,
+    "nombre": "George Bello",
+    "posicion": "M",
+    "club": "LASK",
+    "equipo": 2058,
+    "extension": "webp"
+  },
+  {
+    "id": 961672,
+    "nombre": "Melayro Bogarde",
+    "posicion": "M",
+    "club": "LASK",
+    "equipo": 2058,
+    "extension": "webp"
+  },
+  {
+    "id": 147776,
+    "nombre": "Alessandro Schöpf",
+    "posicion": "M",
+    "club": "LASK",
+    "equipo": 2058,
+    "extension": "webp"
+  },
+  {
+    "id": 282093,
+    "nombre": "Sascha Horvath",
+    "posicion": "M",
+    "club": "LASK",
+    "equipo": 2058,
+    "extension": "webp"
+  },
+  {
+    "id": 1009833,
+    "nombre": "Krystof Daněk",
+    "posicion": "M",
+    "club": "LASK",
+    "equipo": 2058,
+    "extension": "webp"
+  },
+  {
+    "id": 978952,
+    "nombre": "Kasper Jørgensen",
+    "posicion": "M",
+    "club": "LASK",
+    "equipo": 2058,
+    "extension": "webp"
+  },
+  {
+    "id": 787543,
+    "nombre": "Florian Flecker",
+    "posicion": "M",
+    "club": "LASK",
+    "equipo": 2058,
+    "extension": "webp"
+  },
+  {
+    "id": 841802,
+    "nombre": "Andrés Andrade",
+    "posicion": "D",
+    "club": "LASK",
+    "equipo": 2058,
+    "extension": "webp"
+  },
+  {
+    "id": 974020,
+    "nombre": "Xavier Mbuyamba",
+    "posicion": "D",
+    "club": "LASK",
+    "equipo": 2058,
+    "extension": "webp"
+  },
+  {
+    "id": 945532,
+    "nombre": "Daniel Elfadli",
+    "posicion": "D",
+    "club": "LASK",
+    "equipo": 2058,
+    "extension": "webp"
+  },
+  {
+    "id": 1103553,
+    "nombre": "Yvan Dibango",
+    "posicion": "D",
+    "club": "LASK",
+    "equipo": 2058,
+    "extension": "webp"
+  },
+  {
+    "id": 2214471,
+    "nombre": "Manoël Verhaeghe",
+    "posicion": "D",
+    "club": "LASK",
+    "equipo": 2058,
+    "extension": "webp"
+  },
+  {
+    "id": 1435912,
+    "nombre": "Miguel Freckleton",
+    "posicion": "D",
+    "club": "LASK",
+    "equipo": 2058,
+    "extension": "webp"
+  },
+  {
+    "id": 1031170,
+    "nombre": "Lukas Jungwirth",
+    "posicion": "G",
+    "club": "LASK",
+    "equipo": 2058,
+    "extension": "webp"
+  },
+  {
+    "id": 355480,
+    "nombre": "Tobias Schützenauer",
+    "posicion": "G",
+    "club": "LASK",
+    "equipo": 2058,
+    "extension": "webp"
+  },
+  {
+    "id": 1566223,
+    "nombre": "Fabian Schillinger",
+    "posicion": "G",
+    "club": "LASK",
+    "equipo": 2058,
+    "extension": "webp"
+  },
+  {
+    "id": 39070,
+    "nombre": "Olivier Giroud",
+    "posicion": "F",
+    "club": "Lille",
+    "equipo": 1643,
+    "extension": "webp"
+  },
+  {
+    "id": 985823,
+    "nombre": "Ayase Ueda",
+    "posicion": "F",
+    "club": "Lille",
+    "equipo": 1643,
+    "extension": "webp"
+  },
+  {
+    "id": 1936816,
+    "nombre": "Soriba Diaoune",
+    "posicion": "F",
+    "club": "Lille 2",
+    "equipo": 1643,
+    "extension": "webp"
+  },
+  {
+    "id": 1402698,
+    "nombre": "Ethan Mbappé",
+    "posicion": "M",
+    "club": "Lille",
+    "equipo": 1643,
+    "extension": "webp"
+  },
+  {
+    "id": 1391541,
+    "nombre": "Ngal'ayel Mukau",
+    "posicion": "M",
+    "club": "Lille",
+    "equipo": 1643,
+    "extension": "webp"
+  },
+  {
+    "id": 368120,
+    "nombre": "Nabil Bentaleb",
+    "posicion": "M",
+    "club": "Lille",
+    "equipo": 1643,
+    "extension": "webp"
+  },
+  {
+    "id": 965357,
+    "nombre": "Osame Sahraoui",
+    "posicion": "M",
+    "club": "Lille",
+    "equipo": 1643,
+    "extension": "webp"
+  },
+  {
+    "id": 963298,
+    "nombre": "Dilane Bakwa",
+    "posicion": "M",
+    "club": "Lille",
+    "equipo": 1643,
+    "extension": "webp"
+  },
+  {
+    "id": 1138804,
+    "nombre": "Hakon Arnar Haraldsson",
+    "posicion": "M",
+    "club": "Lille",
+    "equipo": 1643,
+    "extension": "webp"
+  },
+  {
+    "id": 987818,
+    "nombre": "Maurits Kjaergaard",
+    "posicion": "M",
+    "club": "Lille",
+    "equipo": 1643,
+    "extension": "webp"
+  },
+  {
+    "id": 1193676,
+    "nombre": "Başar Önal",
+    "posicion": "M",
+    "club": "Lille",
+    "equipo": 1643,
+    "extension": "webp"
+  },
+  {
+    "id": 51665,
+    "nombre": "Benjamin André",
+    "posicion": "M",
+    "club": "Lille",
+    "equipo": 1643,
+    "extension": "webp"
+  },
+  {
+    "id": 827506,
+    "nombre": "Gaëtan Perrin",
+    "posicion": "M",
+    "club": "Lille",
+    "equipo": 1643,
+    "extension": "webp"
+  },
+  {
+    "id": 361780,
+    "nombre": "Calvin Verdonk",
+    "posicion": "D",
+    "club": "Lille",
+    "equipo": 1643,
+    "extension": "webp"
+  },
+  {
+    "id": 1049775,
+    "nombre": "Alexsandro Ribeiro",
+    "posicion": "D",
+    "club": "Lille",
+    "equipo": 1643,
+    "extension": "webp"
+  },
+  {
+    "id": 1119487,
+    "nombre": "Nathan Ngoy",
+    "posicion": "D",
+    "club": "Lille",
+    "equipo": 1643,
+    "extension": "webp"
+  },
+  {
+    "id": 1087364,
+    "nombre": "Tiago Santos",
+    "posicion": "D",
+    "club": "Lille",
+    "equipo": 1643,
+    "extension": "webp"
+  },
+  {
+    "id": 1003007,
+    "nombre": "Tanguy Nianzou",
+    "posicion": "D",
+    "club": "Lille",
+    "equipo": 1643,
+    "extension": "webp"
+  },
+  {
+    "id": 827519,
+    "nombre": "Romain Perraud",
+    "posicion": "D",
+    "club": "Lille",
+    "equipo": 1643,
+    "extension": "webp"
+  },
+  {
+    "id": 1936804,
+    "nombre": "Isaac Cossier",
+    "posicion": "D",
+    "club": "Lille",
+    "equipo": 1643,
+    "extension": "webp"
+  },
+  {
+    "id": 1417059,
+    "nombre": "Loun Srdanovic",
+    "posicion": "D",
+    "club": "Lille",
+    "equipo": 1643,
+    "extension": "webp"
+  },
+  {
+    "id": 991709,
+    "nombre": "Orlando Gill",
+    "posicion": "G",
+    "club": "Lille",
+    "equipo": 1643,
+    "extension": "webp"
+  },
+  {
+    "id": 847494,
+    "nombre": "Berke Özer",
+    "posicion": "G",
+    "club": "Lille",
+    "equipo": 1643,
+    "extension": "webp"
+  },
+  {
+    "id": 823941,
+    "nombre": "Alexander Isak",
+    "posicion": "F",
+    "club": "Liverpool FC",
+    "equipo": 44,
+    "extension": "webp"
+  },
+  {
+    "id": 1048422,
+    "nombre": "Hugo Ekitiké",
+    "posicion": "F",
+    "club": "Liverpool FC",
+    "equipo": 44,
+    "extension": "webp"
+  },
+  {
+    "id": 996952,
+    "nombre": "Bradley Barcola",
+    "posicion": "F",
+    "club": "Liverpool FC",
+    "equipo": 44,
+    "extension": "webp"
+  },
+  {
+    "id": 1145642,
+    "nombre": "Víctor Muñoz",
+    "posicion": "F",
+    "club": "Liverpool FC",
+    "equipo": 44,
+    "extension": "webp"
+  },
+  {
+    "id": 1019322,
+    "nombre": "Florian Wirtz",
+    "posicion": "M",
+    "club": "Liverpool FC",
+    "equipo": 44,
+    "extension": "webp"
+  },
+  {
+    "id": 869856,
+    "nombre": "Dominik Szoboszlai",
+    "posicion": "M",
+    "club": "Liverpool FC",
+    "equipo": 44,
+    "extension": "webp"
+  },
+  {
+    "id": 895324,
+    "nombre": "Alexis Mac Allister",
+    "posicion": "M",
+    "club": "Liverpool FC",
+    "equipo": 44,
+    "extension": "webp"
+  },
+  {
+    "id": 862967,
+    "nombre": "Cody Gakpo",
+    "posicion": "M",
+    "club": "Liverpool FC",
+    "equipo": 44,
+    "extension": "webp"
+  },
+  {
+    "id": 904897,
+    "nombre": "Ryan Gravenberch",
+    "posicion": "M",
+    "club": "Liverpool FC",
+    "equipo": 44,
+    "extension": "webp"
+  },
+  {
+    "id": 1134530,
+    "nombre": "Luke Chambers",
+    "posicion": "M",
+    "club": "Liverpool FC",
+    "equipo": 44,
+    "extension": "webp"
+  },
+  {
+    "id": 1148511,
+    "nombre": "Isaac Mabaya",
+    "posicion": "M",
+    "club": "Liverpool FC",
+    "equipo": 44,
+    "extension": "webp"
+  },
+  {
+    "id": 1138428,
+    "nombre": "James McConnell",
+    "posicion": "M",
+    "club": "Liverpool FC",
+    "equipo": 44,
+    "extension": "webp"
+  },
+  {
+    "id": 925097,
+    "nombre": "Ronald Araújo",
+    "posicion": "D",
+    "club": "Liverpool FC",
+    "equipo": 44,
+    "extension": "webp"
+  },
+  {
+    "id": 151545,
+    "nombre": "Virgil van Dijk",
+    "posicion": "D",
+    "club": "Liverpool FC",
+    "equipo": 44,
+    "extension": "webp"
+  },
+  {
+    "id": 970361,
+    "nombre": "Jeremie Frimpong",
+    "posicion": "D",
+    "club": "Liverpool FC",
+    "equipo": 44,
+    "extension": "webp"
+  },
+  {
+    "id": 1097425,
+    "nombre": "Miloš Kerkez",
+    "posicion": "D",
+    "club": "Liverpool FC",
+    "equipo": 44,
+    "extension": "webp"
+  },
+  {
+    "id": 1008402,
+    "nombre": "Conor Bradley",
+    "posicion": "D",
+    "club": "Liverpool FC",
+    "equipo": 44,
+    "extension": "webp"
+  },
+  {
+    "id": 786259,
+    "nombre": "Kostas Tsimikas",
+    "posicion": "D",
+    "club": "Liverpool FC",
+    "equipo": 44,
+    "extension": "webp"
+  },
+  {
+    "id": 1445625,
+    "nombre": "Jérémy Jacquet",
+    "posicion": "D",
+    "club": "Liverpool FC",
+    "equipo": 44,
+    "extension": "webp"
+  },
+  {
+    "id": 1473137,
+    "nombre": "Giovanni Leoni",
+    "posicion": "D",
+    "club": "Liverpool FC",
+    "equipo": 44,
+    "extension": "webp"
+  },
+  {
+    "id": 318927,
+    "nombre": "Joe Gomez",
+    "posicion": "D",
+    "club": "Liverpool FC",
+    "equipo": 44,
+    "extension": "webp"
+  },
+  {
+    "id": 243609,
+    "nombre": "Alisson",
+    "posicion": "G",
+    "club": "Liverpool FC",
+    "equipo": 44,
+    "extension": "webp"
+  },
+  {
+    "id": 930997,
+    "nombre": "Giorgi Mamardashvili",
+    "posicion": "G",
+    "club": "Liverpool FC",
+    "equipo": 44,
+    "extension": "webp"
+  },
+  {
+    "id": 284417,
+    "nombre": "Freddie Woodman",
+    "posicion": "G",
+    "club": "Liverpool FC",
+    "equipo": 44,
+    "extension": "webp"
+  },
+  {
+    "id": 927359,
+    "nombre": "Vítězslav Jaroš",
+    "posicion": "G",
+    "club": "Liverpool FC",
+    "equipo": 44,
+    "extension": "webp"
+  },
+  {
+    "id": 839956,
+    "nombre": "Erling Haaland",
+    "posicion": "F",
+    "club": "Manchester City",
+    "equipo": 17,
+    "extension": "webp"
+  },
+  {
+    "id": 859765,
+    "nombre": "Phil Foden",
+    "posicion": "M",
+    "club": "Manchester City",
+    "equipo": 17,
+    "extension": "webp"
+  },
+  {
+    "id": 974505,
+    "nombre": "Enzo Fernández",
+    "posicion": "M",
+    "club": "Manchester City",
+    "equipo": 17,
+    "extension": "webp"
+  },
+  {
+    "id": 934354,
+    "nombre": "Antoine Semenyo",
+    "posicion": "M",
+    "club": "Manchester City",
+    "equipo": 17,
+    "extension": "webp"
+  },
+  {
+    "id": 979128,
+    "nombre": "Rayan Cherki",
+    "posicion": "M",
+    "club": "Manchester City",
+    "equipo": 17,
+    "extension": "webp"
+  },
+  {
+    "id": 934386,
+    "nombre": "Jérémy Doku",
+    "posicion": "M",
+    "club": "Manchester City",
+    "equipo": 17,
+    "extension": "webp"
+  },
+  {
+    "id": 914309,
+    "nombre": "Iliman Ndiaye",
+    "posicion": "M",
+    "club": "Manchester City",
+    "equipo": 17,
+    "extension": "webp"
+  },
+  {
+    "id": 1564180,
+    "nombre": "Ayyoub Bouaddi",
+    "posicion": "M",
+    "club": "Manchester City",
+    "equipo": 17,
+    "extension": "webp"
+  },
+  {
+    "id": 136710,
+    "nombre": "Mateo Kovačić",
+    "posicion": "M",
+    "club": "Manchester City",
+    "equipo": 17,
+    "extension": "webp"
+  },
+  {
+    "id": 994546,
+    "nombre": "Elliot Anderson",
+    "posicion": "M",
+    "club": "Manchester City",
+    "equipo": 17,
+    "extension": "webp"
+  },
+  {
+    "id": 1835889,
+    "nombre": "Allan",
+    "posicion": "M",
+    "club": "Manchester City",
+    "equipo": 17,
+    "extension": "webp"
+  },
+  {
+    "id": 1194333,
+    "nombre": "Abdukodir Khusanov",
+    "posicion": "D",
+    "club": "Manchester City",
+    "equipo": 17,
+    "extension": "webp"
+  },
+  {
+    "id": 964994,
+    "nombre": "Joško Gvardiol",
+    "posicion": "D",
+    "club": "Manchester City",
+    "equipo": 17,
+    "extension": "webp"
+  },
+  {
+    "id": 931278,
+    "nombre": "Rayan Aït-Nouri",
+    "posicion": "D",
+    "club": "Manchester City",
+    "equipo": 17,
+    "extension": "webp"
+  },
+  {
+    "id": 318941,
+    "nombre": "Rúben Dias",
+    "posicion": "D",
+    "club": "Manchester City",
+    "equipo": 17,
+    "extension": "webp"
+  },
+  {
+    "id": 877994,
+    "nombre": "Marc Guéhi",
+    "posicion": "D",
+    "club": "Manchester City",
+    "equipo": 17,
+    "extension": "webp"
+  },
+  {
+    "id": 945122,
+    "nombre": "Matheus Nunes",
+    "posicion": "D",
+    "club": "Manchester City",
+    "equipo": 17,
+    "extension": "webp"
+  },
+  {
+    "id": 1136731,
+    "nombre": "Rico Lewis",
+    "posicion": "D",
+    "club": "Manchester City",
+    "equipo": 17,
+    "extension": "webp"
+  },
+  {
+    "id": 1485300,
+    "nombre": "Vitor Reis",
+    "posicion": "D",
+    "club": "Manchester City",
+    "equipo": 17,
+    "extension": "webp"
+  },
+  {
+    "id": 824509,
+    "nombre": "Gianluigi Donnarumma",
+    "posicion": "G",
+    "club": "Manchester City",
+    "equipo": 17,
+    "extension": "webp"
+  },
+  {
+    "id": 128383,
+    "nombre": "Gerónimo Rulli",
+    "posicion": "G",
+    "club": "Manchester City",
+    "equipo": 17,
+    "extension": "webp"
+  },
+  {
+    "id": 257993,
+    "nombre": "Marcus Bettinelli",
+    "posicion": "G",
+    "club": "Manchester City",
+    "equipo": 17,
+    "extension": "webp"
+  },
+  {
+    "id": 2245589,
+    "nombre": "Max-Edgar Chabot",
+    "posicion": "G",
+    "club": "Manchester City",
+    "equipo": 17,
+    "extension": "webp"
+  },
+  {
+    "id": 814590,
+    "nombre": "Marcus Rashford",
+    "posicion": "F",
+    "club": "Manchester United",
+    "equipo": 35,
+    "extension": "webp"
+  },
+  {
+    "id": 927083,
+    "nombre": "Bryan Mbeumo",
+    "posicion": "F",
+    "club": "Manchester United",
+    "equipo": 35,
+    "extension": "webp"
+  },
+  {
+    "id": 986397,
+    "nombre": "Benjamin Šeško",
+    "posicion": "F",
+    "club": "Manchester United",
+    "equipo": 35,
+    "extension": "webp"
+  },
+  {
+    "id": 886363,
+    "nombre": "Matheus Cunha",
+    "posicion": "F",
+    "club": "Manchester United",
+    "equipo": 35,
+    "extension": "webp"
+  },
+  {
+    "id": 917007,
+    "nombre": "Joshua Zirkzee",
+    "posicion": "F",
+    "club": "Manchester United",
+    "equipo": 35,
+    "extension": "webp"
+  },
+  {
+    "id": 1899445,
+    "nombre": "Tynan Thompson",
+    "posicion": "F",
+    "club": "Manchester United",
+    "equipo": 35,
+    "extension": "webp"
+  },
+  {
+    "id": 288205,
+    "nombre": "Bruno Fernandes",
+    "posicion": "M",
+    "club": "Manchester United",
+    "equipo": 35,
+    "extension": "webp"
+  },
+  {
+    "id": 971037,
+    "nombre": "Amad Diallo",
+    "posicion": "M",
+    "club": "Manchester United",
+    "equipo": 35,
+    "extension": "webp"
+  },
+  {
+    "id": 836694,
+    "nombre": "Mason Mount",
+    "posicion": "M",
+    "club": "Manchester United",
+    "equipo": 35,
+    "extension": "webp"
+  },
+  {
+    "id": 1105779,
+    "nombre": "Andrey Santos",
+    "posicion": "M",
+    "club": "Manchester United",
+    "equipo": 35,
+    "extension": "webp"
+  },
+  {
+    "id": 1199043,
+    "nombre": "Carlos Baleba",
+    "posicion": "M",
+    "club": "Manchester United",
+    "equipo": 35,
+    "extension": "webp"
+  },
+  {
+    "id": 1397168,
+    "nombre": "Patrick Dorgu",
+    "posicion": "M",
+    "club": "Manchester United",
+    "equipo": 35,
+    "extension": "webp"
+  },
+  {
+    "id": 331737,
+    "nombre": "Youri Tielemans",
+    "posicion": "M",
+    "club": "Manchester United",
+    "equipo": 35,
+    "extension": "webp"
+  },
+  {
+    "id": 846425,
+    "nombre": "Manuel Ugarte",
+    "posicion": "M",
+    "club": "Manchester United",
+    "equipo": 35,
+    "extension": "webp"
+  },
+  {
+    "id": 847030,
+    "nombre": "Noussair Mazraoui",
+    "posicion": "D",
+    "club": "Manchester United",
+    "equipo": 35,
+    "extension": "webp"
+  },
+  {
+    "id": 859999,
+    "nombre": "Lisandro Martínez",
+    "posicion": "D",
+    "club": "Manchester United",
+    "equipo": 35,
+    "extension": "webp"
+  },
+  {
+    "id": 803031,
+    "nombre": "Matthijs de Ligt",
+    "posicion": "D",
+    "club": "Manchester United",
+    "equipo": 35,
+    "extension": "webp"
+  },
+  {
+    "id": 149380,
+    "nombre": "Harry Maguire",
+    "posicion": "D",
+    "club": "Manchester United",
+    "equipo": 35,
+    "extension": "webp"
+  },
+  {
+    "id": 843200,
+    "nombre": "Diogo Dalot",
+    "posicion": "D",
+    "club": "Manchester United",
+    "equipo": 35,
+    "extension": "webp"
+  },
+  {
+    "id": 190839,
+    "nombre": "Luke Shaw",
+    "posicion": "D",
+    "club": "Manchester United",
+    "equipo": 35,
+    "extension": "webp"
+  },
+  {
+    "id": 1445799,
+    "nombre": "Ayden Heaven",
+    "posicion": "D",
+    "club": "Manchester United",
+    "equipo": 35,
+    "extension": "webp"
+  },
+  {
+    "id": 964753,
+    "nombre": "Senne Lammens",
+    "posicion": "G",
+    "club": "Manchester United",
+    "equipo": 35,
+    "extension": "webp"
+  },
+  {
+    "id": 18122,
+    "nombre": "Tom Heaton",
+    "posicion": "G",
+    "club": "Manchester United",
+    "equipo": 35,
+    "extension": "webp"
+  },
+  {
+    "id": 123689,
+    "nombre": "Karl Darlow",
+    "posicion": "G",
+    "club": "Manchester United",
+    "equipo": 35,
+    "extension": "webp"
+  },
+  {
+    "id": 1005664,
+    "nombre": "Dermot Mee",
+    "posicion": "G",
+    "club": "Manchester United",
+    "equipo": 35,
+    "extension": "webp"
+  },
+  {
+    "id": 1136110,
+    "nombre": "Esmir Bajraktarević",
+    "posicion": "F",
+    "club": "PSV Eindhoven",
+    "equipo": 2952,
+    "extension": "webp"
+  },
+  {
+    "id": 986395,
+    "nombre": "Ricardo Pepi",
+    "posicion": "F",
+    "club": "PSV Eindhoven",
+    "equipo": 2952,
+    "extension": "webp"
+  },
+  {
+    "id": 1212550,
+    "nombre": "Ruben van Bommel",
+    "posicion": "F",
+    "club": "PSV Eindhoven",
+    "equipo": 2952,
+    "extension": "webp"
+  },
+  {
+    "id": 804901,
+    "nombre": "Sam Lammers",
+    "posicion": "F",
+    "club": "PSV Eindhoven",
+    "equipo": 2952,
+    "extension": "webp"
+  },
+  {
+    "id": 38710,
+    "nombre": "Ivan Perišić",
+    "posicion": "M",
+    "club": "PSV Eindhoven",
+    "equipo": 2952,
+    "extension": "webp"
+  },
+  {
+    "id": 812145,
+    "nombre": "Dennis Man",
+    "posicion": "M",
+    "club": "PSV Eindhoven",
+    "equipo": 2952,
+    "extension": "webp"
+  },
+  {
+    "id": 126588,
+    "nombre": "Filip Kostić",
+    "posicion": "M",
+    "club": "PSV Eindhoven",
+    "equipo": 2952,
+    "extension": "webp"
+  },
+  {
+    "id": 1146018,
+    "nombre": "Paul Wanner",
+    "posicion": "M",
+    "club": "PSV Eindhoven",
+    "equipo": 2952,
+    "extension": "webp"
+  },
+  {
+    "id": 845798,
+    "nombre": "Guus Til",
+    "posicion": "M",
+    "club": "PSV Eindhoven",
+    "equipo": 2952,
+    "extension": "webp"
+  },
+  {
+    "id": 1184054,
+    "nombre": "Kodai Sano",
+    "posicion": "M",
+    "club": "PSV Eindhoven",
+    "equipo": 2952,
+    "extension": "webp"
+  },
+  {
+    "id": 192308,
+    "nombre": "Alassane Pléa",
+    "posicion": "M",
+    "club": "PSV Eindhoven",
+    "equipo": 2952,
+    "extension": "webp"
+  },
+  {
+    "id": 980671,
+    "nombre": "Sven Mijnans",
+    "posicion": "M",
+    "club": "PSV Eindhoven",
+    "equipo": 2952,
+    "extension": "webp"
+  },
+  {
+    "id": 1394147,
+    "nombre": "Sami Ouaissa",
+    "posicion": "M",
+    "club": "PSV Eindhoven",
+    "equipo": 2952,
+    "extension": "webp"
+  },
+  {
+    "id": 1648751,
+    "nombre": "Ayoni Santos",
+    "posicion": "M",
+    "club": "PSV Eindhoven",
+    "equipo": 2952,
+    "extension": "webp"
+  },
+  {
+    "id": 906021,
+    "nombre": "Sergiño Dest",
+    "posicion": "D",
+    "club": "PSV Eindhoven",
+    "equipo": 2952,
+    "extension": "webp"
+  },
+  {
+    "id": 856739,
+    "nombre": "Lutsharel Geertruida",
+    "posicion": "D",
+    "club": "PSV Eindhoven",
+    "equipo": 2952,
+    "extension": "webp"
+  },
+  {
+    "id": 1184317,
+    "nombre": "Yarek Gasiorowski",
+    "posicion": "D",
+    "club": "PSV Eindhoven",
+    "equipo": 2952,
+    "extension": "webp"
+  },
+  {
+    "id": 1046960,
+    "nombre": "Ryan Flamingo",
+    "posicion": "D",
+    "club": "PSV Eindhoven",
+    "equipo": 2952,
+    "extension": "webp"
+  },
+  {
+    "id": 893499,
+    "nombre": "Mauro Júnior",
+    "posicion": "D",
+    "club": "PSV Eindhoven",
+    "equipo": 2952,
+    "extension": "webp"
+  },
+  {
+    "id": 1014222,
+    "nombre": "Kiliann Sildillia",
+    "posicion": "D",
+    "club": "PSV Eindhoven",
+    "equipo": 2952,
+    "extension": "webp"
+  },
+  {
+    "id": 825838,
+    "nombre": "Armando Obispo",
+    "posicion": "D",
+    "club": "PSV Eindhoven",
+    "equipo": 2952,
+    "extension": "webp"
+  },
+  {
+    "id": 927366,
+    "nombre": "Matěj Kovář",
+    "posicion": "G",
+    "club": "PSV Eindhoven",
+    "equipo": 2952,
+    "extension": "webp"
+  },
+  {
+    "id": 227192,
+    "nombre": "Nick Olij",
+    "posicion": "G",
+    "club": "PSV Eindhoven",
+    "equipo": 2952,
+    "extension": "webp"
+  },
+  {
+    "id": 818244,
+    "nombre": "Ousmane Dembélé",
+    "posicion": "F",
+    "club": "Paris Saint-Germain",
+    "equipo": 1644,
+    "extension": "webp"
+  },
+  {
+    "id": 855833,
+    "nombre": "Ferran Torres",
+    "posicion": "F",
+    "club": "Paris Saint-Germain",
+    "equipo": 1644,
+    "extension": "webp"
+  },
+  {
+    "id": 889259,
+    "nombre": "Khvicha Kvaratskhelia",
+    "posicion": "F",
+    "club": "Paris Saint-Germain",
+    "equipo": 1644,
+    "extension": "webp"
+  },
+  {
+    "id": 1154605,
+    "nombre": "Désiré Doué",
+    "posicion": "F",
+    "club": "Paris Saint-Germain",
+    "equipo": 1644,
+    "extension": "webp"
+  },
+  {
+    "id": 1149146,
+    "nombre": "Mika Godts",
+    "posicion": "F",
+    "club": "Paris Saint-Germain",
+    "equipo": 1644,
+    "extension": "webp"
+  },
+  {
+    "id": 1861665,
+    "nombre": "Quentin Ndjantou",
+    "posicion": "F",
+    "club": "Paris Saint-Germain",
+    "equipo": 1644,
+    "extension": "webp"
+  },
+  {
+    "id": 902029,
+    "nombre": "Vitinha",
+    "posicion": "M",
+    "club": "Paris Saint-Germain",
+    "equipo": 1644,
+    "extension": "webp"
+  },
+  {
+    "id": 1926085,
+    "nombre": "Dro Fernández",
+    "posicion": "M",
+    "club": "Paris Saint-Germain",
+    "equipo": 1644,
+    "extension": "webp"
+  },
+  {
+    "id": 1190933,
+    "nombre": "João Neves",
+    "posicion": "M",
+    "club": "Paris Saint-Germain",
+    "equipo": 1644,
+    "extension": "webp"
+  },
+  {
+    "id": 784655,
+    "nombre": "Fabián Ruiz",
+    "posicion": "M",
+    "club": "Paris Saint-Germain",
+    "equipo": 1644,
+    "extension": "webp"
+  },
+  {
+    "id": 1473491,
+    "nombre": "Senny Mayulu",
+    "posicion": "M",
+    "club": "Paris Saint-Germain",
+    "equipo": 1644,
+    "extension": "webp"
+  },
+  {
+    "id": 1142672,
+    "nombre": "Warren Zaïre-Emery",
+    "posicion": "M",
+    "club": "Paris Saint-Germain",
+    "equipo": 1644,
+    "extension": "webp"
+  },
+  {
+    "id": 1130939,
+    "nombre": "Maghnes Akliouche",
+    "posicion": "M",
+    "club": "Paris Saint-Germain",
+    "equipo": 1644,
+    "extension": "webp"
+  },
+  {
+    "id": 814594,
+    "nombre": "Achraf Hakimi",
+    "posicion": "D",
+    "club": "Paris Saint-Germain",
+    "equipo": 1644,
+    "extension": "webp"
+  },
+  {
+    "id": 989768,
+    "nombre": "Nuno Mendes",
+    "posicion": "D",
+    "club": "Paris Saint-Germain",
+    "equipo": 1644,
+    "extension": "webp"
+  },
+  {
+    "id": 155995,
+    "nombre": "Marquinhos",
+    "posicion": "D",
+    "club": "Paris Saint-Germain",
+    "equipo": 1644,
+    "extension": "webp"
+  },
+  {
+    "id": 979480,
+    "nombre": "Willian Pacho",
+    "posicion": "D",
+    "club": "Paris Saint-Germain",
+    "equipo": 1644,
+    "extension": "webp"
+  },
+  {
+    "id": 1108441,
+    "nombre": "Lucas Beraldo",
+    "posicion": "D",
+    "club": "Paris Saint-Germain",
+    "equipo": 1644,
+    "extension": "webp"
+  },
+  {
+    "id": 1023567,
+    "nombre": "Ilya Zabarnyi",
+    "posicion": "D",
+    "club": "Paris Saint-Germain",
+    "equipo": 1644,
+    "extension": "webp"
+  },
+  {
+    "id": 352370,
+    "nombre": "Lucas Hernández",
+    "posicion": "D",
+    "club": "Paris Saint-Germain",
+    "equipo": 1644,
+    "extension": "webp"
+  },
+  {
+    "id": 96538,
+    "nombre": "Lucas Digne",
+    "posicion": "D",
+    "club": "Paris Saint-Germain",
+    "equipo": 1644,
+    "extension": "webp"
+  },
+  {
+    "id": 800749,
+    "nombre": "Matvey Safonov",
+    "posicion": "G",
+    "club": "Paris Saint-Germain",
+    "equipo": 1644,
+    "extension": "webp"
+  },
+  {
+    "id": 996953,
+    "nombre": "Lucas Chevalier",
+    "posicion": "G",
+    "club": "Paris Saint-Germain",
+    "equipo": 1644,
+    "extension": "webp"
+  },
+  {
+    "id": 1823902,
+    "nombre": "Alessandro Longoni",
+    "posicion": "G",
+    "club": "Paris Saint-Germain",
+    "equipo": 1644,
+    "extension": "webp"
+  },
+  {
+    "id": 769333,
+    "nombre": "Christopher Nkunku",
+    "posicion": "F",
+    "club": "RB Leipzig",
+    "equipo": 36360,
+    "extension": "webp"
+  },
+  {
+    "id": 1414933,
+    "nombre": "Marc Guiu",
+    "posicion": "F",
+    "club": "RB Leipzig",
+    "equipo": 36360,
+    "extension": "webp"
+  },
+  {
+    "id": 1088896,
+    "nombre": "Johan Bakayoko",
+    "posicion": "F",
+    "club": "RB Leipzig",
+    "equipo": 36360,
+    "extension": "webp"
+  },
+  {
+    "id": 1133743,
+    "nombre": "Rômulo",
+    "posicion": "F",
+    "club": "RB Leipzig",
+    "equipo": 36360,
+    "extension": "webp"
+  },
+  {
+    "id": 1426577,
+    "nombre": "Tidiam Gomis",
+    "posicion": "F",
+    "club": "RB Leipzig",
+    "equipo": 36360,
+    "extension": "webp"
+  },
+  {
+    "id": 1128530,
+    "nombre": "Neil El Aynaoui",
+    "posicion": "M",
+    "club": "RB Leipzig",
+    "equipo": 36360,
+    "extension": "webp"
+  },
+  {
+    "id": 1406171,
+    "nombre": "Andrija Maksimović",
+    "posicion": "M",
+    "club": "RB Leipzig",
+    "equipo": 36360,
+    "extension": "webp"
+  },
+  {
+    "id": 1198075,
+    "nombre": "Brajan Gruda",
+    "posicion": "M",
+    "club": "RB Leipzig",
+    "equipo": 36360,
+    "extension": "webp"
+  },
+  {
+    "id": 825956,
+    "nombre": "Christoph Baumgartner",
+    "posicion": "M",
+    "club": "RB Leipzig",
+    "equipo": 36360,
+    "extension": "webp"
+  },
+  {
+    "id": 976575,
+    "nombre": "Nicolas Seiwald",
+    "posicion": "M",
+    "club": "RB Leipzig",
+    "equipo": 36360,
+    "extension": "webp"
+  },
+  {
+    "id": 1155383,
+    "nombre": "Ezechiel Banzuzi",
+    "posicion": "M",
+    "club": "RB Leipzig",
+    "equipo": 36360,
+    "extension": "webp"
+  },
+  {
+    "id": 1048650,
+    "nombre": "Rocco Reitz",
+    "posicion": "M",
+    "club": "RB Leipzig",
+    "equipo": 36360,
+    "extension": "webp"
+  },
+  {
+    "id": 976421,
+    "nombre": "Castello Lukeba",
+    "posicion": "D",
+    "club": "RB Leipzig",
+    "equipo": 36360,
+    "extension": "webp"
+  },
+  {
+    "id": 136924,
+    "nombre": "Willi Orbán",
+    "posicion": "D",
+    "club": "RB Leipzig",
+    "equipo": 36360,
+    "extension": "webp"
+  },
+  {
+    "id": 856076,
+    "nombre": "David Raum",
+    "posicion": "D",
+    "club": "RB Leipzig",
+    "equipo": 36360,
+    "extension": "webp"
+  },
+  {
+    "id": 1117223,
+    "nombre": "Maxime Estève",
+    "posicion": "D",
+    "club": "RB Leipzig",
+    "equipo": 36360,
+    "extension": "webp"
+  },
+  {
+    "id": 856553,
+    "nombre": "Ridle Baku",
+    "posicion": "D",
+    "club": "RB Leipzig",
+    "equipo": 36360,
+    "extension": "webp"
+  },
+  {
+    "id": 319857,
+    "nombre": "Benjamin Henrichs",
+    "posicion": "D",
+    "club": "RB Leipzig",
+    "equipo": 36360,
+    "extension": "webp"
+  },
+  {
+    "id": 319853,
+    "nombre": "Lukas Klostermann",
+    "posicion": "D",
+    "club": "RB Leipzig",
+    "equipo": 36360,
+    "extension": "webp"
+  },
+  {
+    "id": 1146250,
+    "nombre": "Max Finkgräfe",
+    "posicion": "D",
+    "club": "RB Leipzig",
+    "equipo": 36360,
+    "extension": "webp"
+  },
+  {
+    "id": 22209,
+    "nombre": "Ørjan Nyland",
+    "posicion": "G",
+    "club": "RB Leipzig",
+    "equipo": 36360,
+    "extension": "webp"
+  },
+  {
+    "id": 934385,
+    "nombre": "Maarten Vandevoordt",
+    "posicion": "G",
+    "club": "RB Leipzig",
+    "equipo": 36360,
+    "extension": "webp"
+  },
+  {
+    "id": 795228,
+    "nombre": "Odsonne Édouard",
+    "posicion": "F",
+    "club": "RC Lens",
+    "equipo": 1648,
+    "extension": "webp"
+  },
+  {
+    "id": 148824,
+    "nombre": "Florian Thauvin",
+    "posicion": "F",
+    "club": "RC Lens",
+    "equipo": 1648,
+    "extension": "webp"
+  },
+  {
+    "id": 1103333,
+    "nombre": "Franjo Ivanović",
+    "posicion": "F",
+    "club": "RC Lens",
+    "equipo": 1648,
+    "extension": "webp"
+  },
+  {
+    "id": 1029018,
+    "nombre": "Abdallah Sima",
+    "posicion": "F",
+    "club": "RC Lens",
+    "equipo": 1648,
+    "extension": "webp"
+  },
+  {
+    "id": 788921,
+    "nombre": "Florian Sotoca",
+    "posicion": "F",
+    "club": "RC Lens",
+    "equipo": 1648,
+    "extension": "webp"
+  },
+  {
+    "id": 966849,
+    "nombre": "Saud Abdulhamid",
+    "posicion": "M",
+    "club": "RC Lens",
+    "equipo": 1648,
+    "extension": "webp"
+  },
+  {
+    "id": 822708,
+    "nombre": "Amadou Haidara",
+    "posicion": "M",
+    "club": "RC Lens",
+    "equipo": 1648,
+    "extension": "webp"
+  },
+  {
+    "id": 1094538,
+    "nombre": "Yassine Titraoui",
+    "posicion": "M",
+    "club": "RC Lens",
+    "equipo": 1648,
+    "extension": "webp"
+  },
+  {
+    "id": 94286,
+    "nombre": "Thorgan Hazard",
+    "posicion": "M",
+    "club": "RC Lens",
+    "equipo": 1648,
+    "extension": "webp"
+  },
+  {
+    "id": 942479,
+    "nombre": "Michał Skóraś",
+    "posicion": "M",
+    "club": "RC Lens",
+    "equipo": 1648,
+    "extension": "webp"
+  },
+  {
+    "id": 826208,
+    "nombre": "Michaël Cuisance",
+    "posicion": "M",
+    "club": "RC Lens",
+    "equipo": 1648,
+    "extension": "webp"
+  },
+  {
+    "id": 1423504,
+    "nombre": "Andrija Bulatović",
+    "posicion": "M",
+    "club": "RC Lens",
+    "equipo": 1648,
+    "extension": "webp"
+  },
+  {
+    "id": 787827,
+    "nombre": "Matthieu Udol",
+    "posicion": "M",
+    "club": "RC Lens",
+    "equipo": 1648,
+    "extension": "webp"
+  },
+  {
+    "id": 999033,
+    "nombre": "Junior Kadile",
+    "posicion": "M",
+    "club": "RC Lens",
+    "equipo": 1648,
+    "extension": "webp"
+  },
+  {
+    "id": 579576,
+    "nombre": "Ruben Aguilar",
+    "posicion": "M",
+    "club": "RC Lens",
+    "equipo": 1648,
+    "extension": "webp"
+  },
+  {
+    "id": 1408080,
+    "nombre": "Ismaelo Ganiou",
+    "posicion": "D",
+    "club": "RC Lens",
+    "equipo": 1648,
+    "extension": "webp"
+  },
+  {
+    "id": 945217,
+    "nombre": "Jean-Clair Todibo",
+    "posicion": "D",
+    "club": "RC Lens",
+    "equipo": 1648,
+    "extension": "webp"
+  },
+  {
+    "id": 1099117,
+    "nombre": "Samson Baidoo",
+    "posicion": "D",
+    "club": "RC Lens",
+    "equipo": 1648,
+    "extension": "webp"
+  },
+  {
+    "id": 1399503,
+    "nombre": "Nidal Čelik",
+    "posicion": "D",
+    "club": "RC Lens",
+    "equipo": 1648,
+    "extension": "webp"
+  },
+  {
+    "id": 1546405,
+    "nombre": "Kyllian Antonio",
+    "posicion": "D",
+    "club": "RC Lens",
+    "equipo": 1648,
+    "extension": "webp"
+  },
+  {
+    "id": 1545381,
+    "nombre": "Souleymane Sagnan",
+    "posicion": "D",
+    "club": "RC Lens B",
+    "equipo": 1648,
+    "extension": "webp"
+  },
+  {
+    "id": 369650,
+    "nombre": "Jonathan Gradit",
+    "posicion": "D",
+    "club": "RC Lens",
+    "equipo": 1648,
+    "extension": "webp"
+  },
+  {
+    "id": 1387161,
+    "nombre": "Robin Risser",
+    "posicion": "G",
+    "club": "RC Lens",
+    "equipo": 1648,
+    "extension": "webp"
+  },
+  {
+    "id": 123226,
+    "nombre": "Mathieu Gorgelin",
+    "posicion": "G",
+    "club": "RC Lens",
+    "equipo": 1648,
+    "extension": "webp"
+  },
+  {
+    "id": 14841,
+    "nombre": "Régis Gurtner",
+    "posicion": "G",
+    "club": "RC Lens",
+    "equipo": 1648,
+    "extension": "webp"
+  },
+  {
+    "id": 966555,
+    "nombre": "Troy Parrott",
+    "posicion": "F",
+    "club": "Real Betis",
+    "equipo": 2816,
+    "extension": "webp"
+  },
+  {
+    "id": 887055,
+    "nombre": "Cucho Hernández",
+    "posicion": "F",
+    "club": "Real Betis",
+    "equipo": 2816,
+    "extension": "webp"
+  },
+  {
+    "id": 958380,
+    "nombre": "Antony",
+    "posicion": "M",
+    "club": "Real Betis",
+    "equipo": 2816,
+    "extension": "webp"
+  },
+  {
+    "id": 547838,
+    "nombre": "Dani Ceballos",
+    "posicion": "M",
+    "club": "Real Betis",
+    "equipo": 2816,
+    "extension": "webp"
+  },
+  {
+    "id": 1011375,
+    "nombre": "Abdessamad Ezzalzouli",
+    "posicion": "M",
+    "club": "Real Betis",
+    "equipo": 2816,
+    "extension": "webp"
+  },
+  {
+    "id": 103417,
+    "nombre": "Isco",
+    "posicion": "M",
+    "club": "Real Betis",
+    "equipo": 2816,
+    "extension": "webp"
+  },
+  {
+    "id": 798835,
+    "nombre": "Giovani Lo Celso",
+    "posicion": "M",
+    "club": "Real Betis",
+    "equipo": 2816,
+    "extension": "webp"
+  },
+  {
+    "id": 838629,
+    "nombre": "Álvaro Fidalgo",
+    "posicion": "M",
+    "club": "Real Betis",
+    "equipo": 2816,
+    "extension": "webp"
+  },
+  {
+    "id": 1129401,
+    "nombre": "Nelson Deossa",
+    "posicion": "M",
+    "club": "Real Betis",
+    "equipo": 2816,
+    "extension": "webp"
+  },
+  {
+    "id": 989113,
+    "nombre": "Rodrigo Riquelme",
+    "posicion": "M",
+    "club": "Real Betis",
+    "equipo": 2816,
+    "extension": "webp"
+  },
+  {
+    "id": 816763,
+    "nombre": "Pablo Fornals",
+    "posicion": "M",
+    "club": "Real Betis",
+    "equipo": 2816,
+    "extension": "webp"
+  },
+  {
+    "id": 1177404,
+    "nombre": "Facundo Bernal",
+    "posicion": "M",
+    "club": "Real Betis",
+    "equipo": 2816,
+    "extension": "webp"
+  },
+  {
+    "id": 847128,
+    "nombre": "Marc Roca",
+    "posicion": "M",
+    "club": "Real Betis",
+    "equipo": 2816,
+    "extension": "webp"
+  },
+  {
+    "id": 992331,
+    "nombre": "Iker Losada",
+    "posicion": "M",
+    "club": "Real Betis",
+    "equipo": 2816,
+    "extension": "webp"
+  },
+  {
+    "id": 851271,
+    "nombre": "Fran García",
+    "posicion": "D",
+    "club": "Real Betis",
+    "equipo": 2816,
+    "extension": "webp"
+  },
+  {
+    "id": 188365,
+    "nombre": "Héctor Bellerín",
+    "posicion": "D",
+    "club": "Real Betis",
+    "equipo": 2816,
+    "extension": "webp"
+  },
+  {
+    "id": 1015287,
+    "nombre": "Natan",
+    "posicion": "D",
+    "club": "Real Betis",
+    "equipo": 2816,
+    "extension": "webp"
+  },
+  {
+    "id": 1186010,
+    "nombre": "Valentín Gómez",
+    "posicion": "D",
+    "club": "Real Betis",
+    "equipo": 2816,
+    "extension": "webp"
+  },
+  {
+    "id": 914835,
+    "nombre": "Junior Firpo",
+    "posicion": "D",
+    "club": "Real Betis",
+    "equipo": 2816,
+    "extension": "webp"
+  },
+  {
+    "id": 99519,
+    "nombre": "Marc Bartra",
+    "posicion": "D",
+    "club": "Real Betis",
+    "equipo": 2816,
+    "extension": "webp"
+  },
+  {
+    "id": 305278,
+    "nombre": "Diego Llorente",
+    "posicion": "D",
+    "club": "Real Betis",
+    "equipo": 2816,
+    "extension": "webp"
+  },
+  {
+    "id": 893062,
+    "nombre": "Aitor Ruibal",
+    "posicion": "D",
+    "club": "Real Betis",
+    "equipo": 2816,
+    "extension": "webp"
+  },
+  {
+    "id": 1152139,
+    "nombre": "Angel Ortiz",
+    "posicion": "D",
+    "club": "Real Betis",
+    "equipo": 2816,
+    "extension": "webp"
+  },
+  {
+    "id": 964983,
+    "nombre": "Álvaro Valles",
+    "posicion": "G",
+    "club": "Real Betis",
+    "equipo": 2816,
+    "extension": "webp"
+  },
+  {
+    "id": 951008,
+    "nombre": "Diego Conde",
+    "posicion": "G",
+    "club": "Real Betis",
+    "equipo": 2816,
+    "extension": "webp"
+  },
+  {
+    "id": 826643,
+    "nombre": "Kylian Mbappé",
+    "posicion": "F",
+    "club": "Real Madrid",
+    "equipo": 2829,
+    "extension": "webp"
+  },
+  {
+    "id": 868812,
+    "nombre": "Vinícius Júnior",
+    "posicion": "F",
+    "club": "Real Madrid",
+    "equipo": 2829,
+    "extension": "webp"
+  },
+  {
+    "id": 910536,
+    "nombre": "Rodrygo",
+    "posicion": "F",
+    "club": "Real Madrid",
+    "equipo": 2829,
+    "extension": "webp"
+  },
+  {
+    "id": 1174937,
+    "nombre": "Endrick",
+    "posicion": "F",
+    "club": "Real Madrid",
+    "equipo": 2829,
+    "extension": "webp"
+  },
+  {
+    "id": 2087085,
+    "nombre": "Yan Diomande",
+    "posicion": "F",
+    "club": "Real Madrid",
+    "equipo": 2829,
+    "extension": "webp"
+  },
+  {
+    "id": 1649918,
+    "nombre": "Carlos Espí",
+    "posicion": "F",
+    "club": "Real Madrid",
+    "equipo": 2829,
+    "extension": "webp"
+  },
+  {
+    "id": 991011,
+    "nombre": "Jude Bellingham",
+    "posicion": "M",
+    "club": "Real Madrid",
+    "equipo": 2829,
+    "extension": "webp"
+  },
+  {
+    "id": 831808,
+    "nombre": "Federico Valverde",
+    "posicion": "M",
+    "club": "Real Madrid",
+    "equipo": 2829,
+    "extension": "webp"
+  },
+  {
+    "id": 1091116,
+    "nombre": "Arda Güler",
+    "posicion": "M",
+    "club": "Real Madrid",
+    "equipo": 2829,
+    "extension": "webp"
+  },
+  {
+    "id": 835485,
+    "nombre": "Brahim Díaz",
+    "posicion": "M",
+    "club": "Real Madrid",
+    "equipo": 2829,
+    "extension": "webp"
+  },
+  {
+    "id": 973887,
+    "nombre": "Eduardo Camavinga",
+    "posicion": "M",
+    "club": "Real Madrid",
+    "equipo": 2829,
+    "extension": "webp"
+  },
+  {
+    "id": 859025,
+    "nombre": "Aurélien Tchouaméni",
+    "posicion": "M",
+    "club": "Real Madrid",
+    "equipo": 2829,
+    "extension": "webp"
+  },
+  {
+    "id": 331209,
+    "nombre": "Bernardo Silva",
+    "posicion": "M",
+    "club": "Real Madrid",
+    "equipo": 2829,
+    "extension": "webp"
+  },
+  {
+    "id": 759520,
+    "nombre": "Denzel Dumfries",
+    "posicion": "M",
+    "club": "Real Madrid",
+    "equipo": 2829,
+    "extension": "webp"
+  },
+  {
+    "id": 2197894,
+    "nombre": "Sergio Martinez",
+    "posicion": "M",
+    "club": "Real Madrid",
+    "equipo": 2829,
+    "extension": "webp"
+  },
+  {
+    "id": 795064,
+    "nombre": "Trent Alexander-Arnold",
+    "posicion": "D",
+    "club": "Real Madrid",
+    "equipo": 2829,
+    "extension": "webp"
+  },
+  {
+    "id": 142622,
+    "nombre": "Antonio Rüdiger",
+    "posicion": "D",
+    "club": "Real Madrid",
+    "equipo": 2829,
+    "extension": "webp"
+  },
+  {
+    "id": 1176744,
+    "nombre": "Dean Huijsen",
+    "posicion": "D",
+    "club": "Real Madrid",
+    "equipo": 2829,
+    "extension": "webp"
+  },
+  {
+    "id": 822519,
+    "nombre": "Éder Militão",
+    "posicion": "D",
+    "club": "Real Madrid",
+    "equipo": 2829,
+    "extension": "webp"
+  },
+  {
+    "id": 1156645,
+    "nombre": "Raúl Asencio",
+    "posicion": "D",
+    "club": "Real Madrid",
+    "equipo": 2829,
+    "extension": "webp"
+  },
+  {
+    "id": 794939,
+    "nombre": "Marc Cucurella",
+    "posicion": "D",
+    "club": "Real Madrid",
+    "equipo": 2829,
+    "extension": "webp"
+  },
+  {
+    "id": 1085081,
+    "nombre": "Álvaro Carreras",
+    "posicion": "D",
+    "club": "Real Madrid",
+    "equipo": 2829,
+    "extension": "webp"
+  },
+  {
+    "id": 826215,
+    "nombre": "Ibrahima Konaté",
+    "posicion": "D",
+    "club": "Real Madrid",
+    "equipo": 2829,
+    "extension": "webp"
+  },
+  {
+    "id": 70988,
+    "nombre": "Thibaut Courtois",
+    "posicion": "G",
+    "club": "Real Madrid",
+    "equipo": 2829,
+    "extension": "webp"
+  },
+  {
+    "id": 857574,
+    "nombre": "Andriy Lunin",
+    "posicion": "G",
+    "club": "Real Madrid",
+    "equipo": 2829,
+    "extension": "webp"
+  },
+  {
+    "id": 188307,
+    "nombre": "Tomáš Chorý",
+    "posicion": "F",
+    "club": "SK Slavia Praha",
+    "equipo": 2216,
+    "extension": "webp"
+  },
+  {
+    "id": 846122,
+    "nombre": "Lukáš Provod",
+    "posicion": "F",
+    "club": "SK Slavia Praha",
+    "equipo": 2216,
+    "extension": "webp"
+  },
+  {
+    "id": 826049,
+    "nombre": "Mojmír Chytil",
+    "posicion": "F",
+    "club": "SK Slavia Praha",
+    "equipo": 2216,
+    "extension": "webp"
+  },
+  {
+    "id": 123179,
+    "nombre": "Ivan Schranz",
+    "posicion": "F",
+    "club": "SK Slavia Praha",
+    "equipo": 2216,
+    "extension": "webp"
+  },
+  {
+    "id": 1517290,
+    "nombre": "Adonija Ouanda",
+    "posicion": "F",
+    "club": "SK Slavia Praha",
+    "equipo": 2216,
+    "extension": "webp"
+  },
+  {
+    "id": 1030711,
+    "nombre": "David Jurásek",
+    "posicion": "M",
+    "club": "SK Slavia Praha",
+    "equipo": 2216,
+    "extension": "webp"
+  },
+  {
+    "id": 1513057,
+    "nombre": "Wiktor Nowak",
+    "posicion": "M",
+    "club": "SK Slavia Praha",
+    "equipo": 2216,
+    "extension": "webp"
+  },
+  {
+    "id": 825731,
+    "nombre": "Michal Sadílek",
+    "posicion": "M",
+    "club": "SK Slavia Praha",
+    "equipo": 2216,
+    "extension": "webp"
+  },
+  {
+    "id": 1435367,
+    "nombre": "David Moses",
+    "posicion": "M",
+    "club": "SK Slavia Praha",
+    "equipo": 2216,
+    "extension": "webp"
+  },
+  {
+    "id": 2185579,
+    "nombre": "Oskar Kubiak",
+    "posicion": "M",
+    "club": "SK Slavia Praha",
+    "equipo": 2216,
+    "extension": "webp"
+  },
+  {
+    "id": 825070,
+    "nombre": "Danijel Šturm",
+    "posicion": "M",
+    "club": "SK Slavia Praha",
+    "equipo": 2216,
+    "extension": "webp"
+  },
+  {
+    "id": 2266016,
+    "nombre": "Mubarak Suleiman",
+    "posicion": "M",
+    "club": "SK Slavia Praha",
+    "equipo": 2216,
+    "extension": "webp"
+  },
+  {
+    "id": 1604217,
+    "nombre": "Emmanuel Ayaosi",
+    "posicion": "M",
+    "club": "SK Slavia Praha",
+    "equipo": 2216,
+    "extension": "webp"
+  },
+  {
+    "id": 2063059,
+    "nombre": "Toumani Diakite",
+    "posicion": "M",
+    "club": "SK Slavia Praha",
+    "equipo": 2216,
+    "extension": "webp"
+  },
+  {
+    "id": 1405461,
+    "nombre": "Elias Pitak",
+    "posicion": "M",
+    "club": "SK Slavia Praha",
+    "equipo": 2216,
+    "extension": "webp"
+  },
+  {
+    "id": 1608379,
+    "nombre": "Pavel Kačor",
+    "posicion": "M",
+    "club": "SK Slavia Praha",
+    "equipo": 2216,
+    "extension": "webp"
+  },
+  {
+    "id": 1144329,
+    "nombre": "Štěpán Chaloupek",
+    "posicion": "D",
+    "club": "SK Slavia Praha",
+    "equipo": 2216,
+    "extension": "webp"
+  },
+  {
+    "id": 963084,
+    "nombre": "David Zima",
+    "posicion": "D",
+    "club": "SK Slavia Praha",
+    "equipo": 2216,
+    "extension": "webp"
+  },
+  {
+    "id": 151440,
+    "nombre": "Tomáš Holeš",
+    "posicion": "D",
+    "club": "SK Slavia Praha",
+    "equipo": 2216,
+    "extension": "webp"
+  },
+  {
+    "id": 2063748,
+    "nombre": "Samuel Isife",
+    "posicion": "D",
+    "club": "SK Slavia Praha",
+    "equipo": 2216,
+    "extension": "webp"
+  },
+  {
+    "id": 1177441,
+    "nombre": "Ange N'Guessan",
+    "posicion": "D",
+    "club": "SK Slavia Praha",
+    "equipo": 2216,
+    "extension": "webp"
+  },
+  {
+    "id": 907174,
+    "nombre": "Tomáš Vlček",
+    "posicion": "D",
+    "club": "SK Slavia Praha",
+    "equipo": 2216,
+    "extension": "webp"
+  },
+  {
+    "id": 1405472,
+    "nombre": "Mikuláš Konečný",
+    "posicion": "D",
+    "club": "SK Slavia Praha",
+    "equipo": 2216,
+    "extension": "webp"
+  },
+  {
+    "id": 1648295,
+    "nombre": "Nazar Domchak",
+    "posicion": "G",
+    "club": "SK Slavia Praha",
+    "equipo": 2216,
+    "extension": "webp"
+  },
+  {
+    "id": 907172,
+    "nombre": "Jakub Markovič",
+    "posicion": "G",
+    "club": "SK Slavia Praha",
+    "equipo": 2216,
+    "extension": "webp"
+  },
+  {
+    "id": 1086417,
+    "nombre": "Rasmus Højlund",
+    "posicion": "F",
+    "club": "SSC Napoli",
+    "equipo": 2714,
+    "extension": "webp"
+  },
+  {
+    "id": 875136,
+    "nombre": "Noa Lang",
+    "posicion": "F",
+    "club": "SSC Napoli",
+    "equipo": 2714,
+    "extension": "webp"
+  },
+  {
+    "id": 850993,
+    "nombre": "David Neres",
+    "posicion": "F",
+    "club": "SSC Napoli",
+    "equipo": 2714,
+    "extension": "webp"
+  },
+  {
+    "id": 1122835,
+    "nombre": "Alisson Santos",
+    "posicion": "F",
+    "club": "SSC Napoli",
+    "equipo": 2714,
+    "extension": "webp"
+  },
+  {
+    "id": 962364,
+    "nombre": "Lorenzo Lucca",
+    "posicion": "F",
+    "club": "SSC Napoli",
+    "equipo": 2714,
+    "extension": "webp"
+  },
+  {
+    "id": 1069560,
+    "nombre": "Antonio Vergara",
+    "posicion": "F",
+    "club": "SSC Napoli",
+    "equipo": 2714,
+    "extension": "webp"
+  },
+  {
+    "id": 70996,
+    "nombre": "Kevin De Bruyne",
+    "posicion": "M",
+    "club": "SSC Napoli",
+    "equipo": 2714,
+    "extension": "webp"
+  },
+  {
+    "id": 879346,
+    "nombre": "Scott McTominay",
+    "posicion": "M",
+    "club": "SSC Napoli",
+    "equipo": 2714,
+    "extension": "webp"
+  },
+  {
+    "id": 787941,
+    "nombre": "Frank Anguissa",
+    "posicion": "M",
+    "club": "SSC Napoli",
+    "equipo": 2714,
+    "extension": "webp"
+  },
+  {
+    "id": 235672,
+    "nombre": "Matteo Politano",
+    "posicion": "M",
+    "club": "SSC Napoli",
+    "equipo": 2714,
+    "extension": "webp"
+  },
+  {
+    "id": 150383,
+    "nombre": "Stanislav Lobotka",
+    "posicion": "M",
+    "club": "SSC Napoli",
+    "equipo": 2714,
+    "extension": "webp"
+  },
+  {
+    "id": 907668,
+    "nombre": "Billy Gilmour",
+    "posicion": "M",
+    "club": "SSC Napoli",
+    "equipo": 2714,
+    "extension": "webp"
+  },
+  {
+    "id": 1100544,
+    "nombre": "Costantino Favasuli",
+    "posicion": "M",
+    "club": "SSC Napoli",
+    "equipo": 2714,
+    "extension": "webp"
+  },
+  {
+    "id": 904827,
+    "nombre": "Benoît Badiashile",
+    "posicion": "D",
+    "club": "SSC Napoli",
+    "equipo": 2714,
+    "extension": "webp"
+  },
+  {
+    "id": 153257,
+    "nombre": "Giovanni Di Lorenzo",
+    "posicion": "D",
+    "club": "SSC Napoli",
+    "equipo": 2714,
+    "extension": "webp"
+  },
+  {
+    "id": 805078,
+    "nombre": "Mathías Olivera",
+    "posicion": "D",
+    "club": "SSC Napoli",
+    "equipo": 2714,
+    "extension": "webp"
+  },
+  {
+    "id": 148899,
+    "nombre": "Leonardo Spinazzola",
+    "posicion": "D",
+    "club": "SSC Napoli",
+    "equipo": 2714,
+    "extension": "webp"
+  },
+  {
+    "id": 332155,
+    "nombre": "Amir Rrahmani",
+    "posicion": "D",
+    "club": "SSC Napoli",
+    "equipo": 2714,
+    "extension": "webp"
+  },
+  {
+    "id": 984623,
+    "nombre": "Rafa Marín",
+    "posicion": "D",
+    "club": "SSC Napoli",
+    "equipo": 2714,
+    "extension": "webp"
+  },
+  {
+    "id": 898815,
+    "nombre": "Sam Beukema",
+    "posicion": "D",
+    "club": "SSC Napoli",
+    "equipo": 2714,
+    "extension": "webp"
+  },
+  {
+    "id": 356160,
+    "nombre": "Vanja Milinković-Savić",
+    "posicion": "G",
+    "club": "SSC Napoli",
+    "equipo": 2714,
+    "extension": "webp"
+  },
+  {
+    "id": 592794,
+    "nombre": "Alex Meret",
+    "posicion": "G",
+    "club": "SSC Napoli",
+    "equipo": 2714,
+    "extension": "webp"
+  },
+  {
+    "id": 352728,
+    "nombre": "Nikita Contini",
+    "posicion": "G",
+    "club": "SSC Napoli",
+    "equipo": 2714,
+    "extension": "webp"
+  },
+  {
+    "id": 169231,
+    "nombre": "Joy Lance Mickels",
+    "posicion": "F",
+    "club": "Sabah FK",
+    "equipo": 267828,
+    "extension": "webp"
+  },
+  {
+    "id": 1124027,
+    "nombre": "Khayal Aliyev",
+    "posicion": "F",
+    "club": "Sabah FK",
+    "equipo": 267828,
+    "extension": "webp"
+  },
+  {
+    "id": 1085179,
+    "nombre": "Patrick Orphe M'Bina",
+    "posicion": "F",
+    "club": "Sabah FK",
+    "equipo": 267828,
+    "extension": "webp"
+  },
+  {
+    "id": 1134291,
+    "nombre": "Umarali Rakhmonaliev",
+    "posicion": "M",
+    "club": "Sabah FK",
+    "equipo": 267828,
+    "extension": "webp"
+  },
+  {
+    "id": 1145242,
+    "nombre": "Aleksey Isayev",
+    "posicion": "M",
+    "club": "Sabah FK",
+    "equipo": 267828,
+    "extension": "webp"
+  },
+  {
+    "id": 188117,
+    "nombre": "Veljko Simić",
+    "posicion": "M",
+    "club": "Sabah FK",
+    "equipo": 267828,
+    "extension": "webp"
+  },
+  {
+    "id": 1128129,
+    "nombre": "Du Queiroz",
+    "posicion": "M",
+    "club": "Sabah FK",
+    "equipo": 267828,
+    "extension": "webp"
+  },
+  {
+    "id": 1653823,
+    "nombre": "Christian Nwachukwu",
+    "posicion": "M",
+    "club": "Sabah FK",
+    "equipo": 267828,
+    "extension": "webp"
+  },
+  {
+    "id": 1156621,
+    "nombre": "Abdulakh Khaybulaev",
+    "posicion": "M",
+    "club": "Sabah FK",
+    "equipo": 267828,
+    "extension": "webp"
+  },
+  {
+    "id": 887799,
+    "nombre": "Ivan Lepinjica",
+    "posicion": "M",
+    "club": "Sabah FK",
+    "equipo": 267828,
+    "extension": "webp"
+  },
+  {
+    "id": 1110159,
+    "nombre": "Xander Severina",
+    "posicion": "M",
+    "club": "Sabah FK",
+    "equipo": 267828,
+    "extension": "webp"
+  },
+  {
+    "id": 1007881,
+    "nombre": "Kaheem Parris",
+    "posicion": "M",
+    "club": "Sabah FK",
+    "equipo": 267828,
+    "extension": "webp"
+  },
+  {
+    "id": 1005988,
+    "nombre": "Rauf Rustamli",
+    "posicion": "M",
+    "club": "Sabah II",
+    "equipo": 267828,
+    "extension": "webp"
+  },
+  {
+    "id": 988347,
+    "nombre": "Rodrigo Fernandes",
+    "posicion": "M",
+    "club": "Sabah FK",
+    "equipo": 267828,
+    "extension": "webp"
+  },
+  {
+    "id": 2002554,
+    "nombre": "Cafar Mukhtarov",
+    "posicion": "M",
+    "club": "Sabah FK",
+    "equipo": 267828,
+    "extension": "webp"
+  },
+  {
+    "id": 867493,
+    "nombre": "Tymoteusz Puchacz",
+    "posicion": "D",
+    "club": "Sabah FK",
+    "equipo": 267828,
+    "extension": "webp"
+  },
+  {
+    "id": 1167835,
+    "nombre": "Aden McCarthy",
+    "posicion": "D",
+    "club": "Sabah FK",
+    "equipo": 267828,
+    "extension": "webp"
+  },
+  {
+    "id": 558524,
+    "nombre": "Akim Zedadka",
+    "posicion": "D",
+    "club": "Sabah FK",
+    "equipo": 267828,
+    "extension": "webp"
+  },
+  {
+    "id": 812019,
+    "nombre": "Tellur Mutallimov",
+    "posicion": "D",
+    "club": "Sabah FK",
+    "equipo": 267828,
+    "extension": "webp"
+  },
+  {
+    "id": 945401,
+    "nombre": "Rahman Dashdamirov",
+    "posicion": "D",
+    "club": "Sabah FK",
+    "equipo": 267828,
+    "extension": "webp"
+  },
+  {
+    "id": 860168,
+    "nombre": "Steve Solvet",
+    "posicion": "D",
+    "club": "Sabah FK",
+    "equipo": 267828,
+    "extension": "webp"
+  },
+  {
+    "id": 2353224,
+    "nombre": "Erivaldo Almeida da Silva",
+    "posicion": "D",
+    "club": "Sabah FK",
+    "equipo": 267828,
+    "extension": "webp"
+  },
+  {
+    "id": 1184866,
+    "nombre": "Amin Ramazanov",
+    "posicion": "G",
+    "club": "Sabah FK",
+    "equipo": 267828,
+    "extension": "webp"
+  },
+  {
+    "id": 118624,
+    "nombre": "Stas Pokatilov",
+    "posicion": "G",
+    "club": "Sabah FK",
+    "equipo": 267828,
+    "extension": "webp"
+  },
+  {
+    "id": 911719,
+    "nombre": "Lassina Traoré",
+    "posicion": "F",
+    "club": "Shakhtar Donetsk",
+    "equipo": 3313,
+    "extension": "webp"
+  },
+  {
+    "id": 1482841,
+    "nombre": "Kauã Elias",
+    "posicion": "F",
+    "club": "Shakhtar Donetsk",
+    "equipo": 3313,
+    "extension": "webp"
+  },
+  {
+    "id": 1633781,
+    "nombre": "Luca Meirelles",
+    "posicion": "F",
+    "club": "Shakhtar Donetsk",
+    "equipo": 3313,
+    "extension": "webp"
+  },
+  {
+    "id": 1485218,
+    "nombre": "Gabriel Carvalho",
+    "posicion": "F",
+    "club": "Shakhtar Donetsk",
+    "equipo": 3313,
+    "extension": "webp"
+  },
+  {
+    "id": 1631907,
+    "nombre": "Lucas Ferreira",
+    "posicion": "M",
+    "club": "Shakhtar Donetsk",
+    "equipo": 3313,
+    "extension": "webp"
+  },
+  {
+    "id": 1471221,
+    "nombre": "Alisson Santana",
+    "posicion": "M",
+    "club": "Shakhtar Donetsk",
+    "equipo": 3313,
+    "extension": "webp"
+  },
+  {
+    "id": 1105833,
+    "nombre": "Marlon Gomes",
+    "posicion": "M",
+    "club": "Shakhtar Donetsk",
+    "equipo": 3313,
+    "extension": "webp"
+  },
+  {
+    "id": 1883363,
+    "nombre": "Ryan Roberto",
+    "posicion": "M",
+    "club": "Shakhtar Donetsk",
+    "equipo": 3313,
+    "extension": "webp"
+  },
+  {
+    "id": 1477498,
+    "nombre": "Gleiker Mendoza",
+    "posicion": "M",
+    "club": "Shakhtar Donetsk",
+    "equipo": 3313,
+    "extension": "webp"
+  },
+  {
+    "id": 874030,
+    "nombre": "Pedrinho",
+    "posicion": "M",
+    "club": "Shakhtar Donetsk",
+    "equipo": 3313,
+    "extension": "webp"
+  },
+  {
+    "id": 1835892,
+    "nombre": "Isaque",
+    "posicion": "M",
+    "club": "Shakhtar Donetsk",
+    "equipo": 3313,
+    "extension": "webp"
+  },
+  {
+    "id": 997082,
+    "nombre": "Oleg Ocheretko",
+    "posicion": "M",
+    "club": "Shakhtar Donetsk",
+    "equipo": 3313,
+    "extension": "webp"
+  },
+  {
+    "id": 904859,
+    "nombre": "Dmytro Kryskiv",
+    "posicion": "M",
+    "club": "Shakhtar Donetsk",
+    "equipo": 3313,
+    "extension": "webp"
+  },
+  {
+    "id": 833562,
+    "nombre": "Yehor Nazaryna",
+    "posicion": "M",
+    "club": "Shakhtar Donetsk",
+    "equipo": 3313,
+    "extension": "webp"
+  },
+  {
+    "id": 2436878,
+    "nombre": "Bruno Braga Ramos",
+    "posicion": "M",
+    "club": "Shakhtar Donetsk",
+    "equipo": 3313,
+    "extension": "webp"
+  },
+  {
+    "id": 1067639,
+    "nombre": "Vinícius Tobias",
+    "posicion": "D",
+    "club": "Shakhtar Donetsk",
+    "equipo": 3313,
+    "extension": "webp"
+  },
+  {
+    "id": 1011994,
+    "nombre": "Alaa Ghram",
+    "posicion": "D",
+    "club": "Shakhtar Donetsk",
+    "equipo": 3313,
+    "extension": "webp"
+  },
+  {
+    "id": 979665,
+    "nombre": "Irakli Azarovi",
+    "posicion": "D",
+    "club": "Shakhtar Donetsk",
+    "equipo": 3313,
+    "extension": "webp"
+  },
+  {
+    "id": 353272,
+    "nombre": "Mykola Matvienko",
+    "posicion": "D",
+    "club": "Shakhtar Donetsk",
+    "equipo": 3313,
+    "extension": "webp"
+  },
+  {
+    "id": 1100817,
+    "nombre": "Pedro Henrique",
+    "posicion": "D",
+    "club": "Shakhtar Donetsk",
+    "equipo": 3313,
+    "extension": "webp"
+  },
+  {
+    "id": 331853,
+    "nombre": "Marlon",
+    "posicion": "D",
+    "club": "Shakhtar Donetsk",
+    "equipo": 3313,
+    "extension": "webp"
+  },
+  {
+    "id": 904850,
+    "nombre": "Valerii Bondar",
+    "posicion": "D",
+    "club": "Shakhtar Donetsk",
+    "equipo": 3313,
+    "extension": "webp"
+  },
+  {
+    "id": 137682,
+    "nombre": "Oleksandr Karavaiev",
+    "posicion": "D",
+    "club": "Shakhtar Donetsk",
+    "equipo": 3313,
+    "extension": "webp"
+  },
+  {
+    "id": 941669,
+    "nombre": "Dmytro Riznyk",
+    "posicion": "G",
+    "club": "Shakhtar Donetsk",
+    "equipo": 3313,
+    "extension": "webp"
+  },
+  {
+    "id": 1002780,
+    "nombre": "Kiril Fesyun",
+    "posicion": "G",
+    "club": "Shakhtar Donetsk",
+    "equipo": 3313,
+    "extension": "webp"
+  },
+  {
+    "id": 914213,
+    "nombre": "Luis Javier Suárez",
+    "posicion": "F",
+    "club": "Sporting CP",
+    "equipo": 3001,
+    "extension": "webp"
+  },
+  {
+    "id": 1144687,
+    "nombre": "Nestory Irankunda",
+    "posicion": "F",
+    "club": "Sporting CP",
+    "equipo": 3001,
+    "extension": "webp"
+  },
+  {
+    "id": 903679,
+    "nombre": "Fotis Ioannidis",
+    "posicion": "F",
+    "club": "Sporting CP",
+    "equipo": 3001,
+    "extension": "webp"
+  },
+  {
+    "id": 966575,
+    "nombre": "Rodrigo Zalazar",
+    "posicion": "F",
+    "club": "Sporting CP",
+    "equipo": 3001,
+    "extension": "webp"
+  },
+  {
+    "id": 1001140,
+    "nombre": "Geny Catamo",
+    "posicion": "M",
+    "club": "Sporting CP",
+    "equipo": 3001,
+    "extension": "webp"
+  },
+  {
+    "id": 1550775,
+    "nombre": "Jesse Derry",
+    "posicion": "M",
+    "club": "Sporting CP",
+    "equipo": 3001,
+    "extension": "webp"
+  },
+  {
+    "id": 1016893,
+    "nombre": "Luís Guilherme",
+    "posicion": "M",
+    "club": "Sporting CP",
+    "equipo": 3001,
+    "extension": "webp"
+  },
+  {
+    "id": 1141754,
+    "nombre": "Issa Doumbia",
+    "posicion": "M",
+    "club": "Sporting CP",
+    "equipo": 3001,
+    "extension": "webp"
+  },
+  {
+    "id": 1931586,
+    "nombre": "Moncef Zekri",
+    "posicion": "M",
+    "club": "Sporting CP",
+    "equipo": 3001,
+    "extension": "webp"
+  },
+  {
+    "id": 1137814,
+    "nombre": "Sergi Altimira",
+    "posicion": "M",
+    "club": "Sporting CP",
+    "equipo": 3001,
+    "extension": "webp"
+  },
+  {
+    "id": 352882,
+    "nombre": "Nuno Santos",
+    "posicion": "M",
+    "club": "Sporting CP",
+    "equipo": 3001,
+    "extension": "webp"
+  },
+  {
+    "id": 1083407,
+    "nombre": "Silas Andersen",
+    "posicion": "M",
+    "club": "Sporting CP",
+    "equipo": 3001,
+    "extension": "webp"
+  },
+  {
+    "id": 1067648,
+    "nombre": "Pedro Lima",
+    "posicion": "M",
+    "club": "Sporting CP",
+    "equipo": 3001,
+    "extension": "webp"
+  },
+  {
+    "id": 1153077,
+    "nombre": "Samuel Justo",
+    "posicion": "M",
+    "club": "Sporting CP",
+    "equipo": 3001,
+    "extension": "webp"
+  },
+  {
+    "id": 2154588,
+    "nombre": "Rodrigo Rodrigues",
+    "posicion": "M",
+    "club": "Sporting CP",
+    "equipo": 3001,
+    "extension": "webp"
+  },
+  {
+    "id": 1001196,
+    "nombre": "Gonçalo Inácio",
+    "posicion": "D",
+    "club": "Sporting CP",
+    "equipo": 3001,
+    "extension": "webp"
+  },
+  {
+    "id": 929193,
+    "nombre": "Maximiliano Araújo",
+    "posicion": "D",
+    "club": "Sporting CP",
+    "equipo": 3001,
+    "extension": "webp"
+  },
+  {
+    "id": 1126512,
+    "nombre": "Zeno Debast",
+    "posicion": "D",
+    "club": "Sporting CP",
+    "equipo": 3001,
+    "extension": "webp"
+  },
+  {
+    "id": 1166952,
+    "nombre": "Georgios Vagiannidis",
+    "posicion": "D",
+    "club": "Sporting CP",
+    "equipo": 3001,
+    "extension": "webp"
+  },
+  {
+    "id": 989841,
+    "nombre": "Eduardo Quaresma",
+    "posicion": "D",
+    "club": "Sporting CP",
+    "equipo": 3001,
+    "extension": "webp"
+  },
+  {
+    "id": 1167818,
+    "nombre": "Iván Fresneda",
+    "posicion": "D",
+    "club": "Sporting CP",
+    "equipo": 3001,
+    "extension": "webp"
+  },
+  {
+    "id": 1595506,
+    "nombre": "Ibrahima Ba",
+    "posicion": "D",
+    "club": "Sporting CP",
+    "equipo": 3001,
+    "extension": "webp"
+  },
+  {
+    "id": 253809,
+    "nombre": "Rui Silva",
+    "posicion": "G",
+    "club": "Sporting CP",
+    "equipo": 3001,
+    "extension": "webp"
+  },
+  {
+    "id": 1167067,
+    "nombre": "Kaique",
+    "posicion": "G",
+    "club": "Sporting CP",
+    "equipo": 3001,
+    "extension": "webp"
+  },
+  {
+    "id": 1130378,
+    "nombre": "Diego Callai",
+    "posicion": "G",
+    "club": "Sporting CP",
+    "equipo": 3001,
+    "extension": "webp"
+  },
+  {
+    "id": 794298,
+    "nombre": "Deniz Undav",
+    "posicion": "F",
+    "club": "VfB Stuttgart",
+    "equipo": 2677,
+    "extension": "webp"
+  },
+  {
+    "id": 878081,
+    "nombre": "Ermedin Demirović",
+    "posicion": "F",
+    "club": "VfB Stuttgart",
+    "equipo": 2677,
+    "extension": "webp"
+  },
+  {
+    "id": 1150938,
+    "nombre": "Leo Sauer",
+    "posicion": "F",
+    "club": "VfB Stuttgart",
+    "equipo": 2677,
+    "extension": "webp"
+  },
+  {
+    "id": 1127790,
+    "nombre": "Dženan Pejčinović",
+    "posicion": "F",
+    "club": "VfB Stuttgart",
+    "equipo": 2677,
+    "extension": "webp"
+  },
+  {
+    "id": 983540,
+    "nombre": "Tiago Tomás",
+    "posicion": "F",
+    "club": "VfB Stuttgart",
+    "equipo": 2677,
+    "extension": "webp"
+  },
+  {
+    "id": 1126569,
+    "nombre": "Bilal El Khannouss",
+    "posicion": "M",
+    "club": "VfB Stuttgart",
+    "equipo": 2677,
+    "extension": "webp"
+  },
+  {
+    "id": 901882,
+    "nombre": "Angelo Stiller",
+    "posicion": "M",
+    "club": "VfB Stuttgart",
+    "equipo": 2677,
+    "extension": "webp"
+  },
+  {
+    "id": 990201,
+    "nombre": "Jamie Leweling",
+    "posicion": "M",
+    "club": "VfB Stuttgart",
+    "equipo": 2677,
+    "extension": "webp"
+  },
+  {
+    "id": 891510,
+    "nombre": "Chris Führich",
+    "posicion": "M",
+    "club": "VfB Stuttgart",
+    "equipo": 2677,
+    "extension": "webp"
+  },
+  {
+    "id": 801030,
+    "nombre": "Atakan Karazor",
+    "posicion": "M",
+    "club": "VfB Stuttgart",
+    "equipo": 2677,
+    "extension": "webp"
+  },
+  {
+    "id": 861981,
+    "nombre": "Nikolas Nartey",
+    "posicion": "M",
+    "club": "VfB Stuttgart",
+    "equipo": 2677,
+    "extension": "webp"
+  },
+  {
+    "id": 253993,
+    "nombre": "Grischa Prömel",
+    "posicion": "M",
+    "club": "VfB Stuttgart",
+    "equipo": 2677,
+    "extension": "webp"
+  },
+  {
+    "id": 788949,
+    "nombre": "Maximilian Mittelstädt",
+    "posicion": "D",
+    "club": "VfB Stuttgart",
+    "equipo": 2677,
+    "extension": "webp"
+  },
+  {
+    "id": 1418649,
+    "nombre": "Finn Jeltsch",
+    "posicion": "D",
+    "club": "VfB Stuttgart",
+    "equipo": 2677,
+    "extension": "webp"
+  },
+  {
+    "id": 863271,
+    "nombre": "Jeff Chabot",
+    "posicion": "D",
+    "club": "VfB Stuttgart",
+    "equipo": 2677,
+    "extension": "webp"
+  },
+  {
+    "id": 906278,
+    "nombre": "Josha Vagnoman",
+    "posicion": "D",
+    "club": "VfB Stuttgart",
+    "equipo": 2677,
+    "extension": "webp"
+  },
+  {
+    "id": 1127823,
+    "nombre": "Luca Jaquez",
+    "posicion": "D",
+    "club": "VfB Stuttgart",
+    "equipo": 2677,
+    "extension": "webp"
+  },
+  {
+    "id": 1979970,
+    "nombre": "Ameen Al-Dakhil",
+    "posicion": "D",
+    "club": "VfB Stuttgart",
+    "equipo": 2677,
+    "extension": "webp"
+  },
+  {
+    "id": 1009334,
+    "nombre": "Lorenz Assignon",
+    "posicion": "D",
+    "club": "VfB Stuttgart",
+    "equipo": 2677,
+    "extension": "webp"
+  },
+  {
+    "id": 916943,
+    "nombre": "Ramon Hendriks",
+    "posicion": "D",
+    "club": "VfB Stuttgart",
+    "equipo": 2677,
+    "extension": "webp"
+  },
+  {
+    "id": 839842,
+    "nombre": "Alexander Groiss",
+    "posicion": "D",
+    "club": "VfB Stuttgart",
+    "equipo": 2677,
+    "extension": "webp"
+  },
+  {
+    "id": 179265,
+    "nombre": "Dominik Nothnagel",
+    "posicion": "D",
+    "club": "VfB Stuttgart",
+    "equipo": 2677,
+    "extension": "webp"
+  },
+  {
+    "id": 152463,
+    "nombre": "Fabian Bredlow",
+    "posicion": "G",
+    "club": "VfB Stuttgart",
+    "equipo": 2677,
+    "extension": "webp"
+  },
+  {
+    "id": 222770,
+    "nombre": "Marius Funk",
+    "posicion": "G",
+    "club": "VfB Stuttgart",
+    "equipo": 2677,
+    "extension": "webp"
+  },
+  {
+    "id": 946393,
+    "nombre": "Peter Christiansen",
+    "posicion": "F",
+    "club": "Viking FK",
+    "equipo": 1164,
+    "extension": "webp"
+  },
+  {
+    "id": 136171,
+    "nombre": "Veton Berisha",
+    "posicion": "F",
+    "club": "Viking FK",
+    "equipo": 1164,
+    "extension": "webp"
+  },
+  {
+    "id": 992569,
+    "nombre": "Romano Postema",
+    "posicion": "F",
+    "club": "Viking FK",
+    "equipo": 1164,
+    "extension": "webp"
+  },
+  {
+    "id": 791963,
+    "nombre": "Nick D'Agostino",
+    "posicion": "F",
+    "club": "Viking FK",
+    "equipo": 1164,
+    "extension": "webp"
+  },
+  {
+    "id": 844292,
+    "nombre": "Erik Botheim",
+    "posicion": "F",
+    "club": "Viking FK",
+    "equipo": 1164,
+    "extension": "webp"
+  },
+  {
+    "id": 163569,
+    "nombre": "Zlatko Tripić",
+    "posicion": "M",
+    "club": "Viking FK",
+    "equipo": 1164,
+    "extension": "webp"
+  },
+  {
+    "id": 822749,
+    "nombre": "Joe Bell",
+    "posicion": "M",
+    "club": "Viking FK",
+    "equipo": 1164,
+    "extension": "webp"
+  },
+  {
+    "id": 954855,
+    "nombre": "Kristoffer Askildsen",
+    "posicion": "M",
+    "club": "Viking FK",
+    "equipo": 1164,
+    "extension": "webp"
+  },
+  {
+    "id": 1126541,
+    "nombre": "Simen Kvia-Egeskog",
+    "posicion": "M",
+    "club": "Viking FK",
+    "equipo": 1164,
+    "extension": "webp"
+  },
+  {
+    "id": 1858049,
+    "nombre": "Amin Cosic",
+    "posicion": "M",
+    "club": "Viking FK",
+    "equipo": 1164,
+    "extension": "webp"
+  },
+  {
+    "id": 326393,
+    "nombre": "Henrik Bjørdal",
+    "posicion": "M",
+    "club": "Viking FK",
+    "equipo": 1164,
+    "extension": "webp"
+  },
+  {
+    "id": 1022374,
+    "nombre": "Henrik Sælebakke Falchener",
+    "posicion": "D",
+    "club": "Viking FK",
+    "equipo": 1164,
+    "extension": "webp"
+  },
+  {
+    "id": 958915,
+    "nombre": "Jesper Daland",
+    "posicion": "D",
+    "club": "Viking FK",
+    "equipo": 1164,
+    "extension": "webp"
+  },
+  {
+    "id": 1031399,
+    "nombre": "Henrik Heggheim",
+    "posicion": "D",
+    "club": "Viking FK",
+    "equipo": 1164,
+    "extension": "webp"
+  },
+  {
+    "id": 978815,
+    "nombre": "Gianni Stensness",
+    "posicion": "D",
+    "club": "Viking FK",
+    "equipo": 1164,
+    "extension": "webp"
+  },
+  {
+    "id": 856642,
+    "nombre": "Anders Baertelsen",
+    "posicion": "D",
+    "club": "Viking FK",
+    "equipo": 1164,
+    "extension": "webp"
+  },
+  {
+    "id": 149740,
+    "nombre": "Kristoffer Haugen",
+    "posicion": "D",
+    "club": "Viking FK",
+    "equipo": 1164,
+    "extension": "webp"
+  },
+  {
+    "id": 845378,
+    "nombre": "Sondre Flem Bjørshol",
+    "posicion": "D",
+    "club": "Viking FK",
+    "equipo": 1164,
+    "extension": "webp"
+  },
+  {
+    "id": 795113,
+    "nombre": "Martin Ove Roseth",
+    "posicion": "D",
+    "club": "Viking FK",
+    "equipo": 1164,
+    "extension": "webp"
+  },
+  {
+    "id": 1034970,
+    "nombre": "Herman Johan Haugen",
+    "posicion": "D",
+    "club": "Viking FK",
+    "equipo": 1164,
+    "extension": "webp"
+  },
+  {
+    "id": 325659,
+    "nombre": "Viljar Vevatne",
+    "posicion": "D",
+    "club": "Viking FK",
+    "equipo": 1164,
+    "extension": "webp"
+  },
+  {
+    "id": 1511727,
+    "nombre": "Essien Bassey",
+    "posicion": "D",
+    "club": "Viking FK",
+    "equipo": 1164,
+    "extension": "webp"
+  },
+  {
+    "id": 964146,
+    "nombre": "Ľubomír Belko",
+    "posicion": "G",
+    "club": "Viking FK",
+    "equipo": 1164,
+    "extension": "webp"
+  },
+  {
+    "id": 35769,
+    "nombre": "Arild Østbø",
+    "posicion": "G",
+    "club": "Viking FK",
+    "equipo": 1164,
+    "extension": "webp"
+  },
+  {
+    "id": 878569,
+    "nombre": "Erlend Jacobsen",
+    "posicion": "G",
+    "club": "Viking FK",
+    "equipo": 1164,
+    "extension": "webp"
+  },
+  {
+    "id": 593526,
+    "nombre": "Nicolas Pépé",
+    "posicion": "F",
+    "club": "Villarreal",
+    "equipo": 2819,
+    "extension": "webp"
+  },
+  {
+    "id": 1009372,
+    "nombre": "Georges Mikautadze",
+    "posicion": "F",
+    "club": "Villarreal",
+    "equipo": 2819,
+    "extension": "webp"
+  },
+  {
+    "id": 146866,
+    "nombre": "Gerard Moreno",
+    "posicion": "F",
+    "club": "Villarreal",
+    "equipo": 2819,
+    "extension": "webp"
+  },
+  {
+    "id": 345195,
+    "nombre": "Ayoze Pérez",
+    "posicion": "F",
+    "club": "Villarreal",
+    "equipo": 2819,
+    "extension": "webp"
+  },
+  {
+    "id": 1172477,
+    "nombre": "Tani Oluwaseyi",
+    "posicion": "F",
+    "club": "Villarreal",
+    "equipo": 2819,
+    "extension": "webp"
+  },
+  {
+    "id": 879694,
+    "nombre": "Pape Gueye",
+    "posicion": "M",
+    "club": "Villarreal",
+    "equipo": 2819,
+    "extension": "webp"
+  },
+  {
+    "id": 1089108,
+    "nombre": "Ilias Akhomach",
+    "posicion": "M",
+    "club": "Villarreal",
+    "equipo": 2819,
+    "extension": "webp"
+  },
+  {
+    "id": 973290,
+    "nombre": "Tajon Buchanan",
+    "posicion": "M",
+    "club": "Villarreal",
+    "equipo": 2819,
+    "extension": "webp"
+  },
+  {
+    "id": 1012444,
+    "nombre": "Alberto Moleiro",
+    "posicion": "M",
+    "club": "Villarreal",
+    "equipo": 2819,
+    "extension": "webp"
+  },
+  {
+    "id": 1093229,
+    "nombre": "Nathan-Dylan Saliba",
+    "posicion": "M",
+    "club": "Villarreal",
+    "equipo": 2819,
+    "extension": "webp"
+  },
+  {
+    "id": 843678,
+    "nombre": "Santi Comesaña",
+    "posicion": "M",
+    "club": "Villarreal",
+    "equipo": 2819,
+    "extension": "webp"
+  },
+  {
+    "id": 2238900,
+    "nombre": "Carlos Maciá",
+    "posicion": "M",
+    "club": "Villarreal",
+    "equipo": 2819,
+    "extension": "webp"
+  },
+  {
+    "id": 1087359,
+    "nombre": "Renato Veiga",
+    "posicion": "D",
+    "club": "Villarreal",
+    "equipo": 2819,
+    "extension": "webp"
+  },
+  {
+    "id": 873189,
+    "nombre": "Juan Foyth",
+    "posicion": "D",
+    "club": "Villarreal",
+    "equipo": 2819,
+    "extension": "webp"
+  },
+  {
+    "id": 1468046,
+    "nombre": "Santiago Mouriño",
+    "posicion": "D",
+    "club": "Villarreal",
+    "equipo": 2819,
+    "extension": "webp"
+  },
+  {
+    "id": 1184541,
+    "nombre": "Alexander Freeman",
+    "posicion": "D",
+    "club": "Villarreal",
+    "equipo": 2819,
+    "extension": "webp"
+  },
+  {
+    "id": 1396048,
+    "nombre": "Carlos Romero",
+    "posicion": "D",
+    "club": "Villarreal",
+    "equipo": 2819,
+    "extension": "webp"
+  },
+  {
+    "id": 911853,
+    "nombre": "Logan Costa",
+    "posicion": "D",
+    "club": "Villarreal",
+    "equipo": 2819,
+    "extension": "webp"
+  },
+  {
+    "id": 986245,
+    "nombre": "Sergi Cardona",
+    "posicion": "D",
+    "club": "Villarreal",
+    "equipo": 2819,
+    "extension": "webp"
+  },
+  {
+    "id": 1525863,
+    "nombre": "Pau Navarro",
+    "posicion": "D",
+    "club": "Villarreal",
+    "equipo": 2819,
+    "extension": "webp"
+  },
+  {
+    "id": 1066603,
+    "nombre": "Luiz Júnior",
+    "posicion": "G",
+    "club": "Villarreal",
+    "equipo": 2819,
+    "extension": "webp"
+  },
+  {
+    "id": 37096,
+    "nombre": "Péter Gulácsi",
+    "posicion": "G",
+    "club": "Villarreal",
+    "equipo": 2819,
+    "extension": "webp"
+  },
+  {
+    "id": 1407702,
+    "nombre": "Rubén Gómez",
+    "posicion": "G",
+    "club": "Villarreal",
+    "equipo": 2819,
+    "extension": "webp"
+  },
+  {
+    "id": 1400079,
+    "nombre": "Yakiv Kinareikin",
+    "posicion": "G",
+    "club": "Villarreal",
+    "equipo": 2819,
+    "extension": "webp"
+  },
+  {
+    "id": 2725909,
+    "nombre": "Nizar El Jmili Ben Hamou",
+    "club": "Villarreal",
+    "equipo": 2819,
+    "extension": "webp"
+  },
+  {
+    "id": 166987,
+    "nombre": "Andraž Šporar",
+    "posicion": "F",
+    "club": "ŠK Slovan Bratislava",
+    "equipo": 2404,
+    "extension": "webp"
+  },
+  {
+    "id": 1090128,
+    "nombre": "Suleiman Camara",
+    "posicion": "F",
+    "club": "ŠK Slovan Bratislava",
+    "equipo": 2404,
+    "extension": "webp"
+  },
+  {
+    "id": 964166,
+    "nombre": "Roman Čerepkai",
+    "posicion": "F",
+    "club": "ŠK Slovan Bratislava",
+    "equipo": 2404,
+    "extension": "webp"
+  },
+  {
+    "id": 95494,
+    "nombre": "Tigran Barseghyan",
+    "posicion": "M",
+    "club": "ŠK Slovan Bratislava",
+    "equipo": 2404,
+    "extension": "webp"
+  },
+  {
+    "id": 841006,
+    "nombre": "Cristian Martínez",
+    "posicion": "M",
+    "club": "ŠK Slovan Bratislava",
+    "equipo": 2404,
+    "extension": "webp"
+  },
+  {
+    "id": 793995,
+    "nombre": "Danylo Ignatenko",
+    "posicion": "M",
+    "club": "ŠK Slovan Bratislava",
+    "equipo": 2404,
+    "extension": "webp"
+  },
+  {
+    "id": 1804850,
+    "nombre": "Alasana Yirajang",
+    "posicion": "M",
+    "club": "ŠK Slovan Bratislava",
+    "equipo": 2404,
+    "extension": "webp"
+  },
+  {
+    "id": 1109961,
+    "nombre": "Rahim Ibrahim",
+    "posicion": "M",
+    "club": "ŠK Slovan Bratislava",
+    "equipo": 2404,
+    "extension": "webp"
+  },
+  {
+    "id": 942382,
+    "nombre": "Peter Pokorný",
+    "posicion": "M",
+    "club": "ŠK Slovan Bratislava",
+    "equipo": 2404,
+    "extension": "webp"
+  },
+  {
+    "id": 932395,
+    "nombre": "Daiki Matsuoka",
+    "posicion": "M",
+    "club": "ŠK Slovan Bratislava",
+    "equipo": 2404,
+    "extension": "webp"
+  },
+  {
+    "id": 1087830,
+    "nombre": "Artur Gajdoš",
+    "posicion": "M",
+    "club": "ŠK Slovan Bratislava",
+    "equipo": 2404,
+    "extension": "webp"
+  },
+  {
+    "id": 927799,
+    "nombre": "Alen Mustafić",
+    "posicion": "M",
+    "club": "ŠK Slovan Bratislava",
+    "equipo": 2404,
+    "extension": "webp"
+  },
+  {
+    "id": 841793,
+    "nombre": "César Blackman",
+    "posicion": "D",
+    "club": "ŠK Slovan Bratislava",
+    "equipo": 2404,
+    "extension": "webp"
+  },
+  {
+    "id": 982146,
+    "nombre": "Sandro Cruz",
+    "posicion": "D",
+    "club": "ŠK Slovan Bratislava",
+    "equipo": 2404,
+    "extension": "webp"
+  },
+  {
+    "id": 890913,
+    "nombre": "Svetozar Marković",
+    "posicion": "D",
+    "club": "ŠK Slovan Bratislava",
+    "equipo": 2404,
+    "extension": "webp"
+  },
+  {
+    "id": 230932,
+    "nombre": "Kenan Bajrić",
+    "posicion": "D",
+    "club": "ŠK Slovan Bratislava",
+    "equipo": 2404,
+    "extension": "webp"
+  },
+  {
+    "id": 141203,
+    "nombre": "Kevin Wimmer",
+    "posicion": "D",
+    "club": "ŠK Slovan Bratislava",
+    "equipo": 2404,
+    "extension": "webp"
+  },
+  {
+    "id": 836687,
+    "nombre": "Samuel Kozlovský",
+    "posicion": "D",
+    "club": "ŠK Slovan Bratislava",
+    "equipo": 2404,
+    "extension": "webp"
+  },
+  {
+    "id": 1445153,
+    "nombre": "Sahmkou Camara",
+    "posicion": "D",
+    "club": "ŠK Slovan Bratislava",
+    "equipo": 2404,
+    "extension": "webp"
+  },
+  {
+    "id": 886365,
+    "nombre": "Dominik Takáč",
+    "posicion": "G",
+    "club": "ŠK Slovan Bratislava",
+    "equipo": 2404,
+    "extension": "webp"
+  },
+  {
+    "id": 50313,
+    "nombre": "Aleksandar Popović",
+    "posicion": "G",
+    "club": "No team",
+    "equipo": 2404,
+    "extension": "webp"
+  },
+  {
+    "id": 799087,
+    "nombre": "Matúš Macík",
+    "posicion": "G",
+    "club": "ŠK Slovan Bratislava",
+    "equipo": 2404,
+    "extension": "webp"
+  }
+]
