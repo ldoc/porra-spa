@@ -4983,7 +4983,7 @@ function renderPlantillaTab() {
         <!-- Resumen -->
         <div class="squad-summary">
           <span class="squad-summary-text">Tu Plantilla (<span id="squad-count">${totalSelected}</span>/${SQUAD_SIZE})</span>
-          <button class="squad-save-btn" id="btn-save-squad" ${totalSelected !== SQUAD_SIZE || frozen || !playersAvailable ? 'disabled' : ''} ${frozen || !playersAvailable ? 'style="opacity:0.5"' : ''}>💾 Guardar</button>
+          <button class="squad-save-btn" id="btn-save-squad" ${totalSelected === 0 || frozen || !playersAvailable ? 'disabled' : ''} ${frozen || !playersAvailable ? 'style="opacity:0.5"' : ''}>💾 Guardar</button>
         </div>
       </div>
 
@@ -5070,8 +5070,8 @@ async function saveSquadToBackend() {
     return false;
   }
 
-  if (!AppState.squadPicks || AppState.squadPicks.length !== SQUAD_SIZE) {
-    showToast(`Completa los ${SQUAD_SIZE} jugadores de tu plantilla para guardarla`);
+  if (!AppState.squadPicks || AppState.squadPicks.length === 0) {
+    showToast('Selecciona al menos un jugador para guardar');
     return false;
   }
 
