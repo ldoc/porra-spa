@@ -1,19 +1,19 @@
 {
   "headers": [
     {
-      "source": "data/imgJugadores/(.*)",
+      "source": "/data/imgJugadores/(.*)",
       "headers": [
         { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
       ]
     },
     {
-      "source": "data/imgEquipos/(.*)",
+      "source": "/data/imgEquipos/(.*)",
       "headers": [
         { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
       ]
     },
     {
-      "source": "data/(.*)\\.json",
+      "source": "/data/(.*)\\.json",
       "headers": [
         { "key": "Cache-Control", "value": "public, max-age=3600, stale-while-revalidate=86400" }
       ]
