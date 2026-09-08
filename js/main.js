@@ -36,6 +36,7 @@ const AppState = {
   matchStats: [],       // Array de todos los matchstats del backend
   _matchStatsServerTime: null, // serverTime del backend para delta since en match-stats
   resultadosRound: null, // Ronda seleccionada en pestaña resultados
+  resultadosRoundKey: null, // Clave 'fase:ronda' seleccionada en pestaña resultados
   allPredictions: {},   // { username: { matchId: { home, away } } }
   _allPredictionsSeeded: false, // flag SWR: ya se ha hidratado desde localStorage esta sesión (pred-all)
   messages: [],         // mensajes del gestor (cacheados desde el backend)
@@ -1740,6 +1741,7 @@ function showPlayerPointsBreakdown(detail) {
 /** Renderiza la pestaña de resultados por jornada */
 async function renderResultadosTab() {
   const container = document.getElementById('resultados-container');
+  let shouldAutoScroll = false;
   if (!container) return;
 
   if (isFasePretemporada()) {
@@ -1815,15 +1817,17 @@ async function renderResultadosTab() {
       return;
     }
 
-    // Determinar ronda por defecto
-    const currentKey = AppState.resultadosRoundKey || availableRoundList[availableRoundList.length - 1].key;
+    // Determinar ronda por defecto: jornada en curso por fecha o última con resultados
+    shouldAutoScroll = !AppState.resultadosRoundKey;
+    const defaultKey = resultadosRoundApi.getCurrentRoundKey(availableRoundList, AppState.matches, AppState.matchStats, Date.now()) || availableRoundList[availableRoundList.length - 1].key;
+    const currentKey = AppState.resultadosRoundKey || defaultKey;
     const currentEntry = availableRoundList.find(r => r.key === currentKey) || availableRoundList[availableRoundList.length - 1];
     AppState.resultadosRoundKey = currentEntry.key;
 
     const roundMatches = AppState.matches.filter(m => m.fase === currentEntry.fase && m.ronda === currentEntry.ronda);
 
     // Todos los partidos de la jornada
-    const allRoundMatches = [];
+    let allRoundMatches = [];
     for (const match of roundMatches) {
       const matchStats = AppState.matchStats.find(ms => ms.eventId === match.id);
       const hasResult = matchStats && matchStats.stats;
@@ -1835,12 +1839,8 @@ async function renderResultadosTab() {
       });
     }
 
-    // Ordenar: disputados primero (más reciente), luego sin disputar (por fecha)
-    allRoundMatches.sort((a, b) => {
-      if (a.hasResult && !b.hasResult) return -1;
-      if (!a.hasResult && b.hasResult) return 1;
-      return b.match.fechaTs - a.match.fechaTs;
-    });
+    // Ordenar: disputados de más antiguo a más reciente, luego pendientes por fecha
+    allRoundMatches = resultadosRoundApi.sortRoundMatches(allRoundMatches);
 
     const roundIndex = availableRoundList.findIndex(r => r.key === currentEntry.key);
     const hasPrev = roundIndex > 0;
@@ -1885,6 +1885,18 @@ async function renderResultadosTab() {
     <div class="resultados-header">${headerHtml}</div>
     <div class="resultados-scroll">${scrollHtml}</div>
   `;
+
+  // Auto-scroll al último partido disputado cuando la jornada se auto-seleccionó
+  if (shouldAutoScroll) {
+    const scrollEl = container.querySelector('.resultados-scroll');
+    const playedMatches = [...container.querySelectorAll('.resultados-match:not(.no-result)')];
+    const lastPlayed = playedMatches[playedMatches.length - 1];
+    if (scrollEl && lastPlayed) {
+      const sRect = scrollEl.getBoundingClientRect();
+      const lRect = lastPlayed.getBoundingClientRect();
+      scrollEl.scrollTop += (lRect.top - sRect.top) - (sRect.height / 2) + (lRect.height / 2);
+    }
+  }
 
   // Eventos de expand/collapse para partidos (directamente en cada botón)
   container.querySelectorAll('.resultados-expand-btn').forEach(btn => {
@@ -3165,6 +3177,7 @@ function navigateToTab(tabName) {
   // Resetear ronda de resultados al salir de la pestaña
   if (tabName !== 'resultados') {
     AppState.resultadosRound = null;
+    AppState.resultadosRoundKey = null;
   }
 
   // Limpiar el intervalo del countdown del Inicio al salir de esa pestaña
