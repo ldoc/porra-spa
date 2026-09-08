@@ -73,6 +73,12 @@ function getFaseJuego() {
   return AppState.appConfig?.faseJuego || 'FASE_PRETEMPORADA';
 }
 
+const KNOCKOUT_COUNTING_FASES = ['FASE_PRE16', 'FASE_16', 'FASE_PRE8', 'FASE_8', 'FASE_PRE4', 'FASE_4', 'FASE_PRESEMIS', 'FASE_SEMIS', 'FASE_PREFINAL', 'FASE_FINAL', 'FASE_POSTFINAL'];
+
+function isClassificationCounting() {
+  return KNOCKOUT_COUNTING_FASES.includes(getFaseJuego());
+}
+
 function getFaseDesc(codigo) {
   const f = (AppState.fases || []).find(f => f.nombre === codigo);
   return f?.desc || codigo;
@@ -3488,7 +3494,7 @@ function computeUserRealPoints(username) {
     squadPoints = calculateSquadPoints(userSquad, AppState.matchStats).totalPoints;
   }
   let classificationPoints = 0;
-  if (AppState.matchStats.length > 0) {
+  if (AppState.matchStats.length > 0 && isClassificationCounting()) {
     classificationPoints = calculateClassificationPoints(username).totalPoints;
   }
   let eliminatoriasPoints = 0;

@@ -902,7 +902,7 @@
     return {
       matchDetails: AppState.userPoints[username]?.matchDetails || [],
       squadPoints,
-      classificationTotal: calculateClassificationPoints(username).totalPoints,
+      classificationTotal: isClassificationCounting() ? calculateClassificationPoints(username).totalPoints : 0,
       leagueComplete: isLeagueComplete(AppState.matches, AppState.matchStats),
       eliminatoriasTeamDetails: elim.teamDetails,
       matchesById,
