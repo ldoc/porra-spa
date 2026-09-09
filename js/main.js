@@ -1197,7 +1197,7 @@ async function renderClasificacionTab() {
   // Ordenar por puntos descendente
   playersWithPoints.sort((a, b) => b.realPoints - a.realPoints);
 
-  const allIds = new Set(AppState.matchStats.map(ms => ms.eventId));
+  const allIds = new Set((AppState.matchStats || []).map(ms => ms.eventId));
   const currentRows = playersWithPoints.map(p => ({
     name: p.name,
     realPoints: p.realPoints,

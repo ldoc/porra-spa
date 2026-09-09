@@ -5127,6 +5127,20 @@ html, body {
 .rank-2 { background: #94A3B8; color: #000; }
 .rank-3 { background: #B45309; color: #fff; }
 .rank-n { background: rgba(148, 163, 184, 0.15); color: var(--text-secondary); }
+.clasificacion-header.with-trend, .clasificacion-row.with-trend {
+  grid-template-columns: 1fr minmax(18px,24px) repeat(5, minmax(22px,32px));
+}
+.trend { display: flex; flex-direction: column; align-items: center; line-height: 1.15; font-size: 9px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.trend-up { color: #10B981; }
+.trend-down { color: #EF4444; }
+.trend-same { color: #38BDF8; }
+.clasificacion-legend {
+  padding: 8px 12px;
+  font-size: 10.5px;
+  text-align: center;
+  color: var(--text-muted);
+  border-top: 1px solid var(--border-color);
+}
 /* ============================================================
    PESTAÑA DE ESTADÍSTICAS
    ============================================================ */
