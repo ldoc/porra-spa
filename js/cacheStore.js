@@ -1,6 +1,8 @@
 (function (global) {
   const KEYS = {
-    matchstats: 'porra_cache_matchstats_v1'
+    matchstats: 'porra_cache_matchstats_v1',
+    live: 'porra_cache_live_v1',
+    liveEtag: 'porra_cache_live_etag_v1',
   };
   const PREDALL_PREFIX = 'porra_cache_predall_v1_';
   const MESSAGES_PREFIX = 'porra_cache_messages_v1_';
@@ -64,6 +66,8 @@
       const toRemove = [];
       for (let i = 0; i < global.localStorage.length; i++) {
         const k = global.localStorage.key(i);
+        // Nota: live (KEYS.live / KEYS.liveEtag) es público con TTL propio y NO se purga aquí;
+        // solo matchstats/predall/messages se purgan en logout.
         if (k && (k === KEYS.matchstats || k.indexOf(PREDALL_PREFIX) === 0 || k.indexOf(MESSAGES_PREFIX) === 0)) toRemove.push(k);
       }
       toRemove.forEach(k => global.localStorage.removeItem(k));
@@ -85,7 +89,15 @@
     return Array.from(map.values());
   }
 
-  const porraCache = { KEYS, MESSAGES_PREFIX, predKey, messagesKey, cacheGet, cacheSet, cacheRemove, clearPorraCaches, mergeMatchStats };
+  function mergeLiveMatches(current, delta) {
+    const map = new Map((Array.isArray(current) ? current : []).map(m => [m.eventId, m]));
+    if (Array.isArray(delta)) {
+      for (const item of delta) map.set(item.eventId, item);
+    }
+    return Array.from(map.values()).sort((a, b) => a.eventId - b.eventId);
+  }
+
+  const porraCache = { KEYS, MESSAGES_PREFIX, predKey, messagesKey, cacheGet, cacheSet, cacheRemove, clearPorraCaches, mergeMatchStats, mergeLiveMatches };
 
   global.porraCache = porraCache;
   if (typeof module !== 'undefined' && module.exports) {
