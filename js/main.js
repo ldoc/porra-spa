@@ -1197,16 +1197,17 @@ async function renderClasificacionTab() {
   // Ordenar por puntos descendente
   playersWithPoints.sort((a, b) => b.realPoints - a.realPoints);
 
+  const trendOk = typeof trendApi !== 'undefined';
   const allIds = new Set((AppState.matchStats || []).map(ms => ms.eventId));
-  const currentRows = playersWithPoints.map(p => ({
+  const currentRows = trendOk ? playersWithPoints.map(p => ({
     name: p.name,
     realPoints: p.realPoints,
     predictedCount: trendApi.countUserPredictionsInSubset(
       AppState.allPredictions ? AppState.allPredictions[p.name] : undefined,
       allIds
     )
-  }));
-  const trendMap = getClasificacionTrendMap(currentRows);
+  })) : [];
+  const trendMap = trendOk ? getClasificacionTrendMap(currentRows) : null;
   const withTrend = trendMap !== null;
 
   container.innerHTML =
