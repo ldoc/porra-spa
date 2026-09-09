@@ -47,7 +47,7 @@ const AppState = {
   currentSquadDetails: [], // detalles de plantilla para modal de desglose
   realStandings: [],    // Clasificación real calculada desde matchStats
   classificationPoints: {}, // { username: { totalPoints, teamDetails } }
-  resultadosTab: 'jornadas', // Tab seleccionado en resultados: 'jornadas' o 'clasificacion'
+  resultadosTab: 'jornadas', // Tab seleccionado en resultados: 'jornadas', 'clasificacion', 'eliminatorias' o 'live'
   estadisticasSubTab: 'pronosticos', // Sub-tab activa en estadísticas
   estadisticasIndividualUser: null, // usuario mostrado en sub-tab Individual (null -> currentUser)
   finalPredictions: null, // { champion, runnerUp, semiFinalists, quarterFinalists, roundOf16, roundOf32 }
@@ -865,6 +865,7 @@ function startMatchStatsPolling() {
   if (document.visibilityState === 'visible') {
     _statsPollInterval = setInterval(poll, 60000);
   }
+  startLivePolling();
 }
 
 function stopMatchStatsPolling() {
@@ -876,6 +877,102 @@ function stopMatchStatsPolling() {
     document.removeEventListener('visibilitychange', _statsVisibilityHandler);
     _statsVisibilityHandler = null;
   }
+  stopLivePolling();
+}
+
+/** Sub-tab Live: pinta caché `porra_cache_live_v1` al instante y luego revalida (SWR). */
+async function renderLiveSubTab() {
+  const emptyHtml = `<div style="padding: 24px; text-align: center; color: var(--text-muted);">Sin partidos en directo</div>`;
+  try {
+    if (typeof liveTab === 'undefined' || !liveTab.isLiveAllowed(getFaseJuego())) return emptyHtml;
+    const cached = (typeof porraCache !== 'undefined') ? porraCache.cacheGet(porraCache.KEYS.live) : null;
+    const liveMatches = cached?.payload?.liveMatches || [];
+    const teamNames = {};
+    for (const [id, t] of Object.entries(AppState.teamsMap || {})) teamNames[id] = t?.name || id;
+    const paint = (list) => {
+      if (!list.length) return emptyHtml;
+      return list.map(live => {
+        const myPred = AppState.scorePredictions?.[live.eventId]
+          || AppState.allPredictions?.[AppState.currentUser?.name]?.[live.eventId] || null;
+        const livePoints = (myPred && typeof liveTab.livePointsForUser === 'function')
+          ? liveTab.livePointsForUser(live, myPred) : 0;
+        return liveTab.buildLiveCardHtml({ live, myPred, livePoints, teamNames });
+      }).join('');
+    };
+    let html = paint(liveMatches);
+    try {
+      const etag = localStorage.getItem('porra_cache_live_etag_v1');
+      const res = await fetchWithPhase(`${API_BASE}/api/live-matches`, etag ? { headers: { 'If-None-Match': etag } } : {});
+      if (res.status !== 304) {
+        const data = await res.json().catch(() => null);
+        if (data?.ok && Array.isArray(data.liveMatches)) {
+          const merged = porraCache.mergeLiveMatches(liveMatches, data.liveMatches);
+          const newEtag = res.headers?.get ? res.headers.get('ETag') : null;
+          if (newEtag) localStorage.setItem('porra_cache_live_etag_v1', newEtag);
+          porraCache.cacheSet(porraCache.KEYS.live, { liveMatches: merged }, data.serverTime);
+          html = paint(merged);
+          if (AppState.resultadosTab === 'live' && document.visibilityState === 'visible') {
+            const scroll = document.querySelector('#resultados-container .resultados-scroll');
+            if (scroll && merged.length !== liveMatches.length) scroll.innerHTML = html;
+          }
+        }
+      }
+    } catch (e) {}
+    return html;
+  } catch (e) {
+    return emptyHtml;
+  }
+}
+
+let _livePollShort = null, _livePollLong = null;
+async function pollLiveDot() {
+  if (document.visibilityState !== 'visible') return;
+  try {
+    const res = await fetchWithPhase(`${API_BASE}/api/live-matches/updated`);
+    if (res.status === 304) return;
+    const data = await res.json().catch(() => null);
+    const nav = document.querySelector('.nav-item[data-tab="resultados"]');
+    let dot = nav?.querySelector('.live-dot');
+    if (data?.ok && data.count > 0) {
+      if (!dot) { dot = document.createElement('span'); dot.className = 'live-dot'; nav.appendChild(dot); }
+    } else dot?.remove();
+  } catch (e) {}
+}
+
+async function pollLiveMatches() {
+  if (document.visibilityState !== 'visible') return;
+  if (AppState.resultadosTab !== 'live') return;
+  try {
+    const etag = localStorage.getItem('porra_cache_live_etag_v1');
+    const res = await fetchWithPhase(`${API_BASE}/api/live-matches`, etag ? { headers: { 'If-None-Match': etag } } : {});
+    if (res.status === 304) return;
+    const data = await res.json().catch(() => null);
+    if (data?.ok && Array.isArray(data.liveMatches)) {
+      const cached = porraCache.cacheGet(porraCache.KEYS.live);
+      const current = cached?.payload?.liveMatches || [];
+      const merged = porraCache.mergeLiveMatches(current, data.liveMatches);
+      const newEtag = res.headers?.get ? res.headers.get('ETag') : null;
+      if (newEtag) localStorage.setItem('porra_cache_live_etag_v1', newEtag);
+      porraCache.cacheSet(porraCache.KEYS.live, { liveMatches: merged }, data.serverTime);
+      if (AppState.resultadosTab === 'live' && document.visibilityState === 'visible') {
+        const activeTab = document.querySelector('.nav-item.active')?.dataset?.tab;
+        if (activeTab === 'resultados') renderResultadosTab();
+      }
+    }
+  } catch (e) {}
+}
+
+function startLivePolling() {
+  stopLivePolling();
+  if (typeof liveTab !== 'undefined' && !liveTab.isLiveAllowed(getFaseJuego())) return;
+  pollLiveDot();
+  _livePollShort = setInterval(pollLiveDot, 60000);
+  _livePollLong = setInterval(pollLiveMatches, 120000);
+}
+
+function stopLivePolling() {
+  if (_livePollShort) { clearInterval(_livePollShort); _livePollShort = null; }
+  if (_livePollLong) { clearInterval(_livePollLong); _livePollLong = null; }
 }
 
 /** Devuelve 'H', 'A' o 'D' según el resultado del partido */
@@ -1767,6 +1864,7 @@ async function renderResultadosTab() {
       <button class="resultados-tab ${currentTab === 'jornadas' ? 'active' : ''}" data-tab="jornadas">Jornadas</button>
       <button class="resultados-tab ${currentTab === 'clasificacion' ? 'active' : ''}" data-tab="clasificacion">Clasificación Real</button>
       <button class="resultados-tab ${currentTab === 'eliminatorias' ? 'active' : ''}" data-tab="eliminatorias">Eliminatorias</button>
+      <button class="resultados-tab ${currentTab === 'live' ? 'active' : ''}" data-tab="live">🔴 Live</button>
     </div>
   `;
   let scrollHtml = '';
@@ -1777,6 +1875,8 @@ async function renderResultadosTab() {
   } else if (currentTab === 'eliminatorias') {
     // Mostrar equipos eliminados por ronda
     scrollHtml = renderEliminatoriasView();
+  } else if (currentTab === 'live') {
+    scrollHtml = await renderLiveSubTab();
   } else {
     // Mostrar jornadas - incluir todas las fases con resultados
     const faseOrder = ['liga', '16', '8', '4', 'semis', 'final'];
