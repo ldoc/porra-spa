@@ -913,7 +913,7 @@ async function renderLiveSubTab() {
           html = paint(merged);
           if (AppState.resultadosTab === 'live' && document.visibilityState === 'visible') {
             const scroll = document.querySelector('#resultados-container .resultados-scroll');
-            if (scroll && merged.length !== liveMatches.length) scroll.innerHTML = html;
+            if (scroll && scroll.innerHTML !== html) scroll.innerHTML = html;
           }
         }
       }
@@ -956,7 +956,7 @@ async function pollLiveMatches() {
       porraCache.cacheSet(porraCache.KEYS.live, { liveMatches: merged }, data.serverTime);
       if (AppState.resultadosTab === 'live' && document.visibilityState === 'visible') {
         const activeTab = document.querySelector('.nav-item.active')?.dataset?.tab;
-        if (activeTab === 'resultados') renderResultadosTab();
+        if (activeTab === 'resultados') void renderResultadosTab().catch(() => {});
       }
     }
   } catch (e) {}

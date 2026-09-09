@@ -1,6 +1,6 @@
 // /home/ldoc/Proyectos/porra-spa/tests/liveTab.test.js
 const assert = require('assert');
-const { isLiveAllowed, stalenessLabel, livePointsForUser, squadPlayersInLive } = require('../js/liveTab.js');
+const { isLiveAllowed, stalenessLabel, livePointsForUser, squadPlayersInLive, buildLiveCardHtml } = require('../js/liveTab.js');
 
 function test_allowed_solo_fases_activas() {
   assert.strictEqual(isLiveAllowed('FASE_LIGA'), true);
@@ -21,8 +21,14 @@ function test_plantilla_implicada() {
   const squad = [{ id: 1 }, { id: 2 }];
   assert.deepStrictEqual(squadPlayersInLive(live, squad).map(p => p.id), ['1']);
 }
+function test_badge_live_sin_minuto() {
+  const base = { eventId: 1, estado: 'live', minuto: 0, homeGoles: 0, awayGoles: 0, homeTeamId: 42, awayTeamId: 7, scrapedAt: new Date().toISOString() };
+  assert.match(buildLiveCardHtml({ live: base, myPred: null, livePoints: 0, teamNames: {} }), /🔴 LIVE<\/span>/);
+  assert.match(buildLiveCardHtml({ live: { ...base, minuto: 23 }, myPred: null, livePoints: 0, teamNames: {} }), /🔴 LIVE 23/);
+}
 test_allowed_solo_fases_activas();
 test_staleness();
 test_puntos_live_15();
 test_plantilla_implicada();
+test_badge_live_sin_minuto();
 console.log('liveTab OK');
