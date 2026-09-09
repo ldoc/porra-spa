@@ -7,21 +7,25 @@ function getRankBadgeClass(rank) {
   return 'rank-n';
 }
 
-function buildClasificacionHeader() {
+/** Cabecera de la tabla de clasificación (6 columnas, 7 con tendencia) */
+function buildClasificacionHeader(showTrendCol = false) {
   return `
-    <div class="clasificacion-header">
-      <span>Jugador</span><span>Pron</span><span>Plant</span><span>Clas</span><span>Elim</span><span>Total</span>
+    <div class="clasificacion-header${showTrendCol ? ' with-trend' : ''}">
+      <span>Jugador</span>${showTrendCol ? '<span></span>' : ''}<span>Pron</span><span>Plant</span><span>Clas</span><span>Elim</span><span>Total</span>
     </div>`;
 }
 
-function buildClasificacionRow(p, rank, isMe) {
+/** Fila de usuario con desglose: identidad + 5 valores alineados (+ celda de tendencia opcional) */
+function buildClasificacionRow(p, rank, isMe, trendCellHtml = null) {
+  const withTrend = trendCellHtml !== null;
   return `
-    <div class="clasificacion-row ${isMe ? 'current-user' : ''}" onclick="showUserProfileModal('${p.name}')">
+    <div class="clasificacion-row${isMe ? ' current-user' : ''}${withTrend ? ' with-trend' : ''}" onclick="showUserProfileModal('${p.name}')">
       <div class="clasificacion-id">
         <div class="rank-pill ${getRankBadgeClass(rank)}">${rank}</div>
         <span class="player-avatar">${p.avatar}</span>
         <span class="clasificacion-name">${p.name}${isMe ? ' <span class="clasificacion-you">(Tu)</span>' : ''}</span>
       </div>
+      ${withTrend ? trendCellHtml : ''}
       <span class="clasificacion-val">${p.predictionPoints}</span>
       <span class="clasificacion-val">${p.squadPoints}</span>
       <span class="clasificacion-val">${p.classificationPoints}</span>
@@ -86,13 +90,44 @@ function test_fila_ceros_siempre_visibles() {
   assert.ok(html.includes('rank-pill rank-n'), 'badge gris para rank > 3');
 }
 
+function test_cabecera_con_trend_lleva_celda_vacia_y_clase() {
+  const html = buildClasificacionHeader(true);
+  assert.ok(html.includes('clasificacion-header with-trend'), 'clase with-trend');
+  assert.ok(html.includes('<span></span>'), 'celda vacia sin titulo');
+}
+
+function test_cabecera_sin_trend_igual_que_antes() {
+  const html = buildClasificacionHeader();
+  assert.ok(!html.includes('with-trend'), 'sin clase');
+  assert.ok(!html.includes('<span></span>'), 'sin celda vacia');
+}
+
+function test_fila_con_trend_inserta_segunda_celda_y_clase() {
+  const cell = '<span class="trend trend-up"><span>▲</span><span>2</span></span>';
+  const html = buildClasificacionRow(user(), 1, false, cell);
+  assert.ok(html.includes('clasificacion-row with-trend'), 'clase with-trend');
+  const idClose = html.indexOf('</div>', html.indexOf('clasificacion-id'));
+  assert.ok(html.indexOf(cell) > idClose, 'celda tras la identidad');
+  assert.ok(html.indexOf(cell) < html.indexOf('>145</span>'), 'celda antes de Pron');
+}
+
+function test_fila_sin_trend_byte_identica() {
+  const html = buildClasificacionRow(user(), 1, false);
+  assert.ok(!html.includes('with-trend'), 'sin clase');
+  assert.ok(!html.includes('class="trend'), 'sin celda trend');
+}
+
 const tests = [
   test_rank_badge_class_podio,
   test_rank_badge_class_resto,
   test_cabecera_etiquetas,
   test_fila_incluye_identidad_y_valores,
   test_fila_usuario_actual,
-  test_fila_ceros_siempre_visibles
+  test_fila_ceros_siempre_visibles,
+  test_cabecera_con_trend_lleva_celda_vacia_y_clase,
+  test_cabecera_sin_trend_igual_que_antes,
+  test_fila_con_trend_inserta_segunda_celda_y_clase,
+  test_fila_sin_trend_byte_identica
 ];
 let passed = 0, failed = 0;
 for (const t of tests) {

@@ -1106,23 +1106,25 @@ function getRankBadgeClass(rank) {
   return 'rank-n';
 }
 
-/** Cabecera de la tabla de clasificación (6 columnas) */
-function buildClasificacionHeader() {
+/** Cabecera de la tabla de clasificación (6 columnas, 7 con tendencia) */
+function buildClasificacionHeader(showTrendCol = false) {
   return `
-    <div class="clasificacion-header">
-      <span>Jugador</span><span>Pron</span><span>Plant</span><span>Clas</span><span>Elim</span><span>Total</span>
+    <div class="clasificacion-header${showTrendCol ? ' with-trend' : ''}">
+      <span>Jugador</span>${showTrendCol ? '<span></span>' : ''}<span>Pron</span><span>Plant</span><span>Clas</span><span>Elim</span><span>Total</span>
     </div>`;
 }
 
-/** Fila de usuario con desglose: identidad + 5 valores alineados */
-function buildClasificacionRow(p, rank, isMe) {
+/** Fila de usuario con desglose: identidad + 5 valores alineados (+ celda de tendencia opcional) */
+function buildClasificacionRow(p, rank, isMe, trendCellHtml = null) {
+  const withTrend = trendCellHtml !== null;
   return `
-    <div class="clasificacion-row ${isMe ? 'current-user' : ''}" onclick="showUserProfileModal('${p.name}')">
+    <div class="clasificacion-row${isMe ? ' current-user' : ''}${withTrend ? ' with-trend' : ''}" onclick="showUserProfileModal('${p.name}')">
       <div class="clasificacion-id">
         <div class="rank-pill ${getRankBadgeClass(rank)}">${rank}</div>
         <span class="player-avatar">${p.avatar}</span>
         <span class="clasificacion-name">${p.name}${isMe ? ' <span class="clasificacion-you">(Tu)</span>' : ''}</span>
       </div>
+      ${withTrend ? trendCellHtml : ''}
       <span class="clasificacion-val">${p.predictionPoints}</span>
       <span class="clasificacion-val">${p.squadPoints}</span>
       <span class="clasificacion-val">${p.classificationPoints}</span>
