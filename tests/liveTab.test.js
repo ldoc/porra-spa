@@ -1,6 +1,6 @@
 // /home/ldoc/Proyectos/porra-spa/tests/liveTab.test.js
 const assert = require('assert');
-const { isLiveAllowed, stalenessLabel, livePointsForUser, squadPlayersInLive, scorersInLive, ownersOfPlayer, buildScorersHtml, buildLiveCardHtml } = require('../js/liveTab.js');
+const { isLiveAllowed, stalenessLabel, livePointsForUser, squadPlayersInLive, scorersInLive, ownersOfPlayer, playerImgUrl, buildScorersHtml, buildLiveCardHtml } = require('../js/liveTab.js');
 
 function test_allowed_solo_fases_activas() {
   assert.strictEqual(isLiveAllowed('FASE_LIGA'), true);
@@ -49,13 +49,19 @@ function test_scorers_html_muestra_duenos() {
     { id: '2', nombre: 'Otro', equipo: 7, goles: 1, penaltiMarcado: 1 }
   ] } };
   const squads = { ana: [{ id: 1 }] };
-  const html = buildScorersHtml({ live, squadsCache: squads, teamNames: { 42: 'Barça', 7: 'Fey' }, currentUser: 'ana' });
+  const html = buildScorersHtml({ live, squadsCache: squads, teamNames: { 42: 'Barça', 7: 'Fey' }, currentUser: 'ana', avatars: { ana: '⚽' }, myAvatar: '⚽', playerExts: { 1: 'webp', 2: 'png' } });
   assert.match(html, /Lewy/);
   assert.match(html, /x2/);
   assert.match(html, /\(p\)/);
   assert.match(html, /tú/);
+  assert.match(html, /data\/imgJugadores\/1\.webp/);
+  assert.match(html, /data\/imgJugadores\/2\.png/);
   assert.match(html, /nadie lo tiene/);
   assert.match(buildScorersHtml({ live: {}, squadsCache: {}, teamNames: {}, currentUser: null }), /Sin goles aún/);
+}
+function test_playerImgUrl_defecto_webp() {
+  assert.strictEqual(playerImgUrl('9', {}), 'data/imgJugadores/9.webp');
+  assert.strictEqual(playerImgUrl('9', { 9: 'png' }), 'data/imgJugadores/9.png');
 }
 test_allowed_solo_fases_activas();
 test_staleness();
@@ -64,5 +70,6 @@ test_plantilla_implicada();
 test_scorers_filtra_y_ordena();
 test_owners_mapea_plantillas();
 test_scorers_html_muestra_duenos();
+test_playerImgUrl_defecto_webp();
 test_badge_live_sin_minuto();
 console.log('liveTab OK');

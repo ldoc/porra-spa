@@ -6357,8 +6357,9 @@ html, body {
 .live-scorer.mine { font-weight: 700; }
 .live-scorer-team { color: var(--text-muted); font-weight: 400; }
 .live-owners { display: flex; flex-wrap: wrap; gap: 4px; justify-content: flex-end; }
-.live-owner { font-size: var(--font-size-xs); background: rgba(255,255,255,0.08); border-radius: 999px; padding: 2px 8px; color: var(--text-muted); }
+.live-owner { font-size: var(--font-size-xs); background: rgba(255,255,255,0.08); border-radius: 999px; padding: 2px 8px; color: var(--text-muted); display: inline-flex; align-items: center; gap: 4px; }
 .live-owner.me { background: rgba(16,185,129,0.2); color: #6ee7b7; font-weight: 700; }
+.live-scorer-img { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; flex-shrink: 0; background: rgba(255,255,255,0.06); }
 .live-scorers-empty { font-size: var(--font-size-sm); color: var(--text-muted); }
 .resultados-tab[data-tab="live"].active { border-color: #ef4444; }
 @keyframes liveBlink { 50% { opacity: .35; } }

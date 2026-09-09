@@ -889,6 +889,11 @@ async function renderLiveSubTab() {
     const liveMatches = cached?.payload?.liveMatches || [];
     const teamNames = {};
     for (const [id, t] of Object.entries(AppState.teamsMap || {})) teamNames[id] = t?.name || id;
+    if (!AppState.players?.length) { try { await fetchPlayers(); } catch (e) {} }
+    const avatars = {};
+    for (const p of AppState.players || []) avatars[p.name] = p.avatar;
+    const playerExts = {};
+    for (const p of AppState.allPlayers || []) playerExts[String(p.id)] = p.extension || 'webp';
     const paint = (list) => {
       if (!list.length) return emptyHtml;
       return list.map(live => {
@@ -896,7 +901,7 @@ async function renderLiveSubTab() {
           || AppState.allPredictions?.[AppState.currentUser?.name]?.[live.eventId] || null;
         const livePoints = (myPred && typeof liveTab.livePointsForUser === 'function')
           ? liveTab.livePointsForUser(live, myPred) : 0;
-        return liveTab.buildLiveCardHtml({ live, myPred, livePoints, teamNames, squadsCache: AppState.squadsCache, currentUser: AppState.currentUser?.name });
+        return liveTab.buildLiveCardHtml({ live, myPred, livePoints, teamNames, squadsCache: AppState.squadsCache, currentUser: AppState.currentUser?.name, avatars, myAvatar: AppState.currentUser?.avatar, playerExts });
       }).join('');
     };
     let html = paint(liveMatches);

@@ -48,7 +48,18 @@
     return owners.sort();
   }
 
-  function buildScorersHtml({ live, squadsCache, teamNames, currentUser }) {
+  function playerImgUrl(id, playerExts) {
+    const ext = (playerExts && playerExts[String(id)]) || 'webp';
+    return `data/imgJugadores/${id}.${ext}`;
+  }
+
+  function ownerChip(u, currentUser, avatars, myAvatar) {
+    const isMe = u === currentUser;
+    const avatar = isMe ? (myAvatar || '') : ((avatars || {})[u] || '');
+    return `<span class="live-owner${isMe ? ' me' : ''}">${avatar ? `<span class="live-owner-avatar">${esc(avatar)}</span>` : ''}${isMe ? 'tú' : esc(u)}</span>`;
+  }
+
+  function buildScorersHtml({ live, squadsCache, teamNames, currentUser, avatars, myAvatar, playerExts }) {
     const scorers = scorersInLive(live);
     if (!scorers.length) return `<div class="live-scorers"><div class="live-scorers-empty">Sin goles aún</div></div>`;
     const rows = scorers.map(j => {
@@ -57,21 +68,21 @@
       const mark = `⚽${j.goles > 1 ? ` x${j.goles}` : ''}${(j.penaltiMarcado || 0) > 0 ? ' (p)' : ''}`;
       const mine = currentUser ? owners.includes(currentUser) : false;
       const chips = owners.length
-        ? owners.map(u => `<span class="live-owner${u === currentUser ? ' me' : ''}">${u === currentUser ? 'tú' : esc(u)}</span>`).join('')
+        ? owners.map(u => ownerChip(u, currentUser, avatars, myAvatar)).join('')
         : '<span class="live-owner none">nadie lo tiene</span>';
-      return `<div class="live-scorer${mine ? ' mine' : ''}"><span class="live-scorer-name">${mark} ${esc(j.nombre)} <span class="live-scorer-team">(${esc(team)})</span></span><span class="live-owners">${chips}</span></div>`;
+      return `<div class="live-scorer${mine ? ' mine' : ''}"><img class="live-scorer-img" src="${playerImgUrl(j.id, playerExts)}" alt="${esc(j.nombre)}" loading="lazy" onerror="this.style.display='none'"><span class="live-scorer-name">${mark} ${esc(j.nombre)} <span class="live-scorer-team">(${esc(team)})</span></span><span class="live-owners">${chips}</span></div>`;
     }).join('');
     return `<div class="live-scorers"><div class="live-scorers-title">Goleadores</div>${rows}</div>`;
   }
 
-  function buildLiveCardHtml({ live, myPred, livePoints, teamNames, squadsCache, currentUser }) {
+  function buildLiveCardHtml({ live, myPred, livePoints, teamNames, squadsCache, currentUser, avatars, myAvatar, playerExts }) {
     const dot = '<span class="live-dot" aria-hidden="true"></span>';
     const badge = live.estado === 'live' ? `${dot} LIVE${live.minuto ? ` ${live.minuto}’` : ''}` : live.estado === 'descanso' ? '⏸ Descanso' : '🏁 Final';
     return `<div class="live-card" data-event="${live.eventId}">`
       + `<div class="live-head"><span class="live-badge">${badge}</span><span class="live-stale">${esc(stalenessLabel(live.scrapedAt, Date.now()))}</span></div>`
       + `<div class="live-score">${esc(teamNames?.[live.homeTeamId] || live.homeTeamId)} ${live.homeGoles} - ${live.awayGoles} ${esc(teamNames?.[live.awayTeamId] || live.awayTeamId)}</div>`
       + `<div class="live-mine">Tu pronóstico: ${myPred ? `${myPred.home}-${myPred.away} · +${livePoints} pts live` : '—'}</div>`
-      + buildScorersHtml({ live, squadsCache, teamNames, currentUser })
+      + buildScorersHtml({ live, squadsCache, teamNames, currentUser, avatars, myAvatar, playerExts })
       + `</div>`;
   }
 
@@ -97,7 +108,7 @@
     return null;
   }
 
-  const api = { isLiveAllowed, stalenessLabel, livePointsForUser, squadPlayersInLive, esc, scorersInLive, ownersOfPlayer, buildScorersHtml, buildLiveCardHtml, fetchLiveUpdated, fetchLiveMatches };
+  const api = { isLiveAllowed, stalenessLabel, livePointsForUser, squadPlayersInLive, esc, scorersInLive, ownersOfPlayer, playerImgUrl, buildScorersHtml, buildLiveCardHtml, fetchLiveUpdated, fetchLiveMatches };
   global.liveTab = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })(typeof window !== 'undefined' ? window : globalThis);
