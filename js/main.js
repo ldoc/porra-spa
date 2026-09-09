@@ -1106,25 +1106,24 @@ function getRankBadgeClass(rank) {
   return 'rank-n';
 }
 
-/** Cabecera de la tabla de clasificación (6 columnas, 7 con tendencia) */
-function buildClasificacionHeader(showTrendCol = false) {
+/** Cabecera de la tabla de clasificación (6 columnas) */
+function buildClasificacionHeader() {
   return `
-    <div class="clasificacion-header${showTrendCol ? ' with-trend' : ''}">
-      <span>Jugador</span>${showTrendCol ? '<span></span>' : ''}<span>Pron</span><span>Plant</span><span>Clas</span><span>Elim</span><span>Total</span>
+    <div class="clasificacion-header">
+      <span>Jugador</span><span>Pron</span><span>Plant</span><span>Clas</span><span>Elim</span><span>Total</span>
     </div>`;
 }
 
-/** Fila de usuario con desglose: identidad + 5 valores alineados (+ celda de tendencia opcional) */
-function buildClasificacionRow(p, rank, isMe, trendCellHtml = null) {
-  const withTrend = trendCellHtml !== null;
+/** Fila de usuario con desglose: identidad (pill + trend inline opcional) + 5 valores alineados */
+function buildClasificacionRow(p, rank, isMe, trendInlineHtml = null) {
   return `
-    <div class="clasificacion-row${isMe ? ' current-user' : ''}${withTrend ? ' with-trend' : ''}" onclick="showUserProfileModal('${p.name}')">
+    <div class="clasificacion-row${isMe ? ' current-user' : ''}" onclick="showUserProfileModal('${p.name}')">
       <div class="clasificacion-id">
         <div class="rank-pill ${getRankBadgeClass(rank)}">${rank}</div>
+        ${trendInlineHtml ? trendInlineHtml : ''}
         <span class="player-avatar">${p.avatar}</span>
         <span class="clasificacion-name">${p.name}${isMe ? ' <span class="clasificacion-you">(Tu)</span>' : ''}</span>
       </div>
-      ${withTrend ? trendCellHtml : ''}
       <span class="clasificacion-val">${p.predictionPoints}</span>
       <span class="clasificacion-val">${p.squadPoints}</span>
       <span class="clasificacion-val">${p.classificationPoints}</span>
@@ -1211,11 +1210,11 @@ async function renderClasificacionTab() {
   const withTrend = trendMap !== null;
 
   container.innerHTML =
-    buildClasificacionHeader(withTrend) +
+    buildClasificacionHeader() +
     playersWithPoints.map((p, i) => {
       const rank = i + 1;
       const isMe = AppState.currentUser && p.name === AppState.currentUser.name;
-      return buildClasificacionRow(p, rank, isMe, withTrend ? trendApi.buildTrendCellHtml(trendMap[p.name]) : null);
+      return buildClasificacionRow(p, rank, isMe, withTrend ? trendApi.buildTrendCellHtml(trendMap[p.name], true) : null);
     }).join('') +
     (withTrend ? '<div class="clasificacion-legend"><span class="trend-up">▲</span> sube · <span class="trend-down">▼</span> baja · <span class="trend-same">＝</span> igual vs día anterior con partidos</div>' : '');
 }

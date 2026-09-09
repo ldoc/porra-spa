@@ -45,7 +45,7 @@ Coste: un re-cómputo completo adicional solo cuando hay ≥2 días con resultad
 
 ### Cambios en render
 
-`buildClasificacionHeader(showTrendCol = false)` y `buildClasificacionRow(p, rank, isMe, trendCellHtml = null)`: parámetros nuevos **opcionales** (no rompen llamadas ni tests actuales). Si `trendCellHtml` es `null` se pinta la fila clásica de 6 columnas; si es string se añade la 2ª celda y la clase `with-trend`. La celda se construye con `buildTrendCellHtml(trend)` (función pura nueva en `js/trend.js`):
+`buildClasificacionHeader()` (6 columnas, sin cambios) y `buildClasificacionRow(p, rank, isMe, trendInlineHtml = null)`: 4º parámetro **opcional** (no rompe llamadas ni tests actuales). Si es string se inserta tras el `rank-pill`, dentro de `.clasificacion-id` (sin columna extra). La celda se construye con `buildTrendCellHtml(trend, inline = true)` (función pura en `js/trend.js`; `inline` añade la clase `trend-inline` de 8.5px):
 
 ```html
 <span class="trend trend-up" title="Sube 2 puestos respecto al día anterior con partidos" aria-label="Sube 2 puestos respecto al día anterior con partidos"><span>▲</span><span>2</span></span>
@@ -55,17 +55,15 @@ Coste: un re-cómputo completo adicional solo cuando hay ≥2 días con resultad
 
 El número va siempre en el sentido del movimiento (sube: ▲ arriba / número abajo; baja: número arriba / ▼ abajo); el ＝ va solo, sin número.
 
-Sin `trend` en una fila (usuario nuevo o error) la celda queda vacía. Con <2 días con resultados la columna se oculta por completo (vuelve el grid original de 6 columnas). Leyenda bajo la tabla solo cuando hay trend disponible: `▲ sube · ▼ baja · ＝ igual vs día anterior`. La cabecera (`buildClasificacionHeader`) añade una 2ª celda vacía (columna sin título entre Jugador y Pron) y el grid de `.clasificacion-header` / `.clasificacion-row` pasa a `1fr minmax(18px,24px) repeat(5, minmax(22px,32px))` (columna estrecha que solo crece con movimientos de dos dígitos).
+Sin `trend` en una fila (usuario nuevo o error) no se inserta nada. Con <2 días con resultados no hay indicadores ni leyenda y la tabla es idéntica a la anterior. Leyenda bajo la tabla solo cuando hay trend disponible: `▲ sube · ▼ baja · ＝ igual vs día anterior`. El grid sigue siendo de 6 columnas (`1fr repeat(5, minmax(20px,30px))`, numéricas reducidas 2px para dar aire a los nombres).
 
 ### Estilos CSS
 
 En `css/styles.css`, junto a `.rank-pill`:
 
 ```css
-.clasificacion-header.with-trend, .clasificacion-row.with-trend {
-  grid-template-columns: 1fr minmax(18px,24px) repeat(5, minmax(22px,32px));
-}
-.trend { display: flex; flex-direction: column; align-items: center; line-height: 1.15; font-size: 9px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.trend { display: flex; flex-direction: column; align-items: center; line-height: 1.15; font-size: 9px; font-weight: 800; font-variant-numeric: tabular-nums; flex-shrink: 0; }
+.trend-inline { font-size: 8.5px; }
 .trend-up { color: #10B981; }
 .trend-down { color: #EF4444; }
 .trend-same { color: #38BDF8; }

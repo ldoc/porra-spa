@@ -7,25 +7,24 @@ function getRankBadgeClass(rank) {
   return 'rank-n';
 }
 
-/** Cabecera de la tabla de clasificación (6 columnas, 7 con tendencia) */
-function buildClasificacionHeader(showTrendCol = false) {
+/** Cabecera de la tabla de clasificación (6 columnas) */
+function buildClasificacionHeader() {
   return `
-    <div class="clasificacion-header${showTrendCol ? ' with-trend' : ''}">
-      <span>Jugador</span>${showTrendCol ? '<span></span>' : ''}<span>Pron</span><span>Plant</span><span>Clas</span><span>Elim</span><span>Total</span>
+    <div class="clasificacion-header">
+      <span>Jugador</span><span>Pron</span><span>Plant</span><span>Clas</span><span>Elim</span><span>Total</span>
     </div>`;
 }
 
-/** Fila de usuario con desglose: identidad + 5 valores alineados (+ celda de tendencia opcional) */
-function buildClasificacionRow(p, rank, isMe, trendCellHtml = null) {
-  const withTrend = trendCellHtml !== null;
+/** Fila de usuario con desglose: identidad (pill + trend inline opcional) + 5 valores alineados */
+function buildClasificacionRow(p, rank, isMe, trendInlineHtml = null) {
   return `
-    <div class="clasificacion-row${isMe ? ' current-user' : ''}${withTrend ? ' with-trend' : ''}" onclick="showUserProfileModal('${p.name}')">
+    <div class="clasificacion-row${isMe ? ' current-user' : ''}" onclick="showUserProfileModal('${p.name}')">
       <div class="clasificacion-id">
         <div class="rank-pill ${getRankBadgeClass(rank)}">${rank}</div>
+        ${trendInlineHtml ? trendInlineHtml : ''}
         <span class="player-avatar">${p.avatar}</span>
         <span class="clasificacion-name">${p.name}${isMe ? ' <span class="clasificacion-you">(Tu)</span>' : ''}</span>
       </div>
-      ${withTrend ? trendCellHtml : ''}
       <span class="clasificacion-val">${p.predictionPoints}</span>
       <span class="clasificacion-val">${p.squadPoints}</span>
       <span class="clasificacion-val">${p.classificationPoints}</span>
@@ -90,31 +89,33 @@ function test_fila_ceros_siempre_visibles() {
   assert.ok(html.includes('rank-pill rank-n'), 'badge gris para rank > 3');
 }
 
-function test_cabecera_con_trend_lleva_celda_vacia_y_clase() {
-  const html = buildClasificacionHeader(true);
-  assert.ok(html.includes('clasificacion-header with-trend'), 'clase with-trend');
-  assert.ok(html.includes('<span></span>'), 'celda vacia sin titulo');
-}
-
-function test_cabecera_sin_trend_igual_que_antes() {
+function test_cabecera_seis_columnas_sin_trend() {
   const html = buildClasificacionHeader();
-  assert.ok(!html.includes('with-trend'), 'sin clase');
+  assert.ok(html.includes('clasificacion-header'), 'clase contenedor');
+  assert.ok(!html.includes('with-trend'), 'sin columna trend');
   assert.ok(!html.includes('<span></span>'), 'sin celda vacia');
 }
 
-function test_fila_con_trend_inserta_segunda_celda_y_clase() {
-  const cell = '<span class="trend trend-up"><span>▲</span><span>2</span></span>';
+function test_fila_con_trend_inline_tras_pill() {
+  const cell = '<span class="trend trend-inline trend-up"><span>▲</span><span>2</span></span>';
   const html = buildClasificacionRow(user(), 1, false, cell);
-  assert.ok(html.includes('clasificacion-row with-trend'), 'clase with-trend');
-  const idClose = html.indexOf('</div>', html.indexOf('clasificacion-id'));
-  assert.ok(html.indexOf(cell) > idClose, 'celda tras la identidad');
-  assert.ok(html.indexOf(cell) < html.indexOf('>145</span>'), 'celda antes de Pron');
+  assert.ok(!html.includes('with-trend'), 'sin clase with-trend');
+  const pillClose = html.indexOf('</div>', html.indexOf('rank-pill'));
+  const avatarIdx = html.indexOf('player-avatar');
+  assert.ok(html.indexOf(cell) > pillClose, 'trend tras el pill');
+  assert.ok(html.indexOf(cell) < avatarIdx, 'trend antes del avatar');
 }
 
-function test_fila_sin_trend_byte_identica() {
+function test_fila_sin_trend_sin_marcas() {
   const html = buildClasificacionRow(user(), 1, false);
   assert.ok(!html.includes('with-trend'), 'sin clase');
-  assert.ok(!html.includes('class="trend'), 'sin celda trend');
+  assert.ok(!html.includes('class="trend'), 'sin trend');
+}
+
+function test_fila_trend_null_igual_que_sin_param() {
+  const a = buildClasificacionRow(user(), 1, false);
+  const b = buildClasificacionRow(user(), 1, false, null);
+  assert.strictEqual(a, b, 'null explicito igual que defecto');
 }
 
 const tests = [
@@ -124,10 +125,10 @@ const tests = [
   test_fila_incluye_identidad_y_valores,
   test_fila_usuario_actual,
   test_fila_ceros_siempre_visibles,
-  test_cabecera_con_trend_lleva_celda_vacia_y_clase,
-  test_cabecera_sin_trend_igual_que_antes,
-  test_fila_con_trend_inserta_segunda_celda_y_clase,
-  test_fila_sin_trend_byte_identica
+  test_cabecera_seis_columnas_sin_trend,
+  test_fila_con_trend_inline_tras_pill,
+  test_fila_sin_trend_sin_marcas,
+  test_fila_trend_null_igual_que_sin_param
 ];
 let passed = 0, failed = 0;
 for (const t of tests) {

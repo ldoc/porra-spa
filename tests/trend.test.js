@@ -98,6 +98,16 @@ function test_buildTrendCellHtml_apilado_direccional() {
   assert.ok(same.includes('trend-same') && same.includes('＝'), 'igual solo');
   assert.ok(!same.includes('<span>0</span>'), 'igual sin numero');
   assert.strictEqual(buildTrendCellHtml(null), '<span class="trend"></span>');
+  assert.strictEqual(buildTrendCellHtml(null, true), '<span class="trend trend-inline"></span>');
+}
+
+function test_buildTrendCellHtml_inline() {
+  const up = buildTrendCellHtml({ dir: 'up', n: 2 }, true);
+  assert.ok(up.includes('trend-inline'), 'clase inline');
+  assert.ok(up.includes('trend-up'), 'mantiene direccion');
+  assert.ok(up.indexOf('▲') < up.indexOf('>2<'), 'apilado igual que en columna');
+  const plain = buildTrendCellHtml({ dir: 'up', n: 2 });
+  assert.ok(!plain.includes('trend-inline'), 'sin inline por defecto');
 }
 
 const tests = [
@@ -108,7 +118,8 @@ const tests = [
   test_filterMatchStatsUpTo_corte_inclusivo,
   test_countUserPredictionsInSubset_solo_completos,
   test_computeTrendMap_sube_baja_igual_nuevo_ausente,
-  test_buildTrendCellHtml_apilado_direccional
+  test_buildTrendCellHtml_apilado_direccional,
+  test_buildTrendCellHtml_inline
 ];
 let passed = 0, failed = 0;
 for (const t of tests) {

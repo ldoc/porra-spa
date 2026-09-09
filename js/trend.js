@@ -55,10 +55,11 @@
     return map;
   }
 
-  function buildTrendCellHtml(trend) {
-    if (!trend) return '<span class="trend"></span>';
+  function buildTrendCellHtml(trend, inline = false) {
+    const inlineCls = inline ? ' trend-inline' : '';
+    if (!trend) return `<span class="trend${inlineCls}"></span>`;
     if (trend.dir === 'same') {
-      return '<span class="trend trend-same" title="Igual que el día anterior con partidos" aria-label="Igual que el día anterior con partidos"><span>＝</span></span>';
+      return `<span class="trend${inlineCls} trend-same" title="Igual que el día anterior con partidos" aria-label="Igual que el día anterior con partidos"><span>＝</span></span>`;
     }
     const isUp = trend.dir === 'up';
     const arrow = isUp ? '▲' : '▼';
@@ -68,7 +69,7 @@
     const inner = isUp
       ? `<span>${arrow}</span><span>${trend.n}</span>`
       : `<span>${trend.n}</span><span>${arrow}</span>`;
-    return `<span class="trend trend-${trend.dir}" title="${label}" aria-label="${label}">${inner}</span>`;
+    return `<span class="trend${inlineCls} trend-${trend.dir}" title="${label}" aria-label="${label}">${inner}</span>`;
   }
 
   const trendApi = {
