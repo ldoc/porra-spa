@@ -896,7 +896,7 @@ async function renderLiveSubTab() {
           || AppState.allPredictions?.[AppState.currentUser?.name]?.[live.eventId] || null;
         const livePoints = (myPred && typeof liveTab.livePointsForUser === 'function')
           ? liveTab.livePointsForUser(live, myPred) : 0;
-        return liveTab.buildLiveCardHtml({ live, myPred, livePoints, teamNames });
+        return liveTab.buildLiveCardHtml({ live, myPred, livePoints, teamNames, squadsCache: AppState.squadsCache, currentUser: AppState.currentUser?.name });
       }).join('');
     };
     let html = paint(liveMatches);

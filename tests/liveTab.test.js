@@ -1,6 +1,6 @@
 // /home/ldoc/Proyectos/porra-spa/tests/liveTab.test.js
 const assert = require('assert');
-const { isLiveAllowed, stalenessLabel, livePointsForUser, squadPlayersInLive, buildLiveCardHtml } = require('../js/liveTab.js');
+const { isLiveAllowed, stalenessLabel, livePointsForUser, squadPlayersInLive, scorersInLive, ownersOfPlayer, buildScorersHtml, buildLiveCardHtml } = require('../js/liveTab.js');
 
 function test_allowed_solo_fases_activas() {
   assert.strictEqual(isLiveAllowed('FASE_LIGA'), true);
@@ -29,9 +29,40 @@ function test_badge_live_sin_minuto() {
   assert.doesNotMatch(sinMinuto, /LIVE \d/);
   assert.match(buildLiveCardHtml({ live: { ...base, minuto: 23 }, myPred: null, livePoints: 0, teamNames: {} }), /LIVE 23/);
 }
+function test_scorers_filtra_y_ordena() {
+  const live = { stats: { jugadores: [
+    { id: '1', nombre: 'A', equipo: 42, goles: 1 },
+    { id: '2', nombre: 'B', equipo: 7, goles: 0 },
+    { id: '3', nombre: 'C', equipo: 42, goles: 2, penaltiMarcado: 1 }
+  ] } };
+  assert.deepStrictEqual(scorersInLive(live).map(j => j.id), ['3', '1']);
+  assert.deepStrictEqual(scorersInLive({}), []);
+}
+function test_owners_mapea_plantillas() {
+  const squads = { ana: [{ id: 1 }], pepe: [{ id: 2 }, { id: 1 }] };
+  assert.deepStrictEqual(ownersOfPlayer('1', squads), ['ana', 'pepe']);
+  assert.deepStrictEqual(ownersOfPlayer('9', squads), []);
+}
+function test_scorers_html_muestra_duenos() {
+  const live = { homeTeamId: 42, awayTeamId: 7, stats: { jugadores: [
+    { id: '1', nombre: 'Lewy', equipo: 42, goles: 2, penaltiMarcado: 0 },
+    { id: '2', nombre: 'Otro', equipo: 7, goles: 1, penaltiMarcado: 1 }
+  ] } };
+  const squads = { ana: [{ id: 1 }] };
+  const html = buildScorersHtml({ live, squadsCache: squads, teamNames: { 42: 'Barça', 7: 'Fey' }, currentUser: 'ana' });
+  assert.match(html, /Lewy/);
+  assert.match(html, /x2/);
+  assert.match(html, /\(p\)/);
+  assert.match(html, /tú/);
+  assert.match(html, /nadie lo tiene/);
+  assert.match(buildScorersHtml({ live: {}, squadsCache: {}, teamNames: {}, currentUser: null }), /Sin goles aún/);
+}
 test_allowed_solo_fases_activas();
 test_staleness();
 test_puntos_live_15();
 test_plantilla_implicada();
+test_scorers_filtra_y_ordena();
+test_owners_mapea_plantillas();
+test_scorers_html_muestra_duenos();
 test_badge_live_sin_minuto();
 console.log('liveTab OK');

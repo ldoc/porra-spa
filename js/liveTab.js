@@ -33,13 +33,45 @@
 
   function esc(s) { return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;'); }
 
-  function buildLiveCardHtml({ live, myPred, livePoints, teamNames }) {
+  function scorersInLive(live) {
+    return ((live?.stats?.jugadores) || [])
+      .filter(j => (j.goles || 0) > 0)
+      .sort((a, b) => (b.goles || 0) - (a.goles || 0));
+  }
+
+  function ownersOfPlayer(playerId, squadsCache) {
+    const id = String(playerId);
+    const owners = [];
+    for (const [username, squad] of Object.entries(squadsCache || {})) {
+      if ((squad || []).some(s => String(s.id) === id)) owners.push(username);
+    }
+    return owners.sort();
+  }
+
+  function buildScorersHtml({ live, squadsCache, teamNames, currentUser }) {
+    const scorers = scorersInLive(live);
+    if (!scorers.length) return `<div class="live-scorers"><div class="live-scorers-empty">Sin goles aún</div></div>`;
+    const rows = scorers.map(j => {
+      const owners = ownersOfPlayer(j.id, squadsCache);
+      const team = teamNames?.[j.equipo] || j.equipo;
+      const mark = `⚽${j.goles > 1 ? ` x${j.goles}` : ''}${(j.penaltiMarcado || 0) > 0 ? ' (p)' : ''}`;
+      const mine = currentUser ? owners.includes(currentUser) : false;
+      const chips = owners.length
+        ? owners.map(u => `<span class="live-owner${u === currentUser ? ' me' : ''}">${u === currentUser ? 'tú' : esc(u)}</span>`).join('')
+        : '<span class="live-owner none">nadie lo tiene</span>';
+      return `<div class="live-scorer${mine ? ' mine' : ''}"><span class="live-scorer-name">${mark} ${esc(j.nombre)} <span class="live-scorer-team">(${esc(team)})</span></span><span class="live-owners">${chips}</span></div>`;
+    }).join('');
+    return `<div class="live-scorers"><div class="live-scorers-title">Goleadores</div>${rows}</div>`;
+  }
+
+  function buildLiveCardHtml({ live, myPred, livePoints, teamNames, squadsCache, currentUser }) {
     const dot = '<span class="live-dot" aria-hidden="true"></span>';
     const badge = live.estado === 'live' ? `${dot} LIVE${live.minuto ? ` ${live.minuto}’` : ''}` : live.estado === 'descanso' ? '⏸ Descanso' : '🏁 Final';
     return `<div class="live-card" data-event="${live.eventId}">`
       + `<div class="live-head"><span class="live-badge">${badge}</span><span class="live-stale">${esc(stalenessLabel(live.scrapedAt, Date.now()))}</span></div>`
       + `<div class="live-score">${esc(teamNames?.[live.homeTeamId] || live.homeTeamId)} ${live.homeGoles} - ${live.awayGoles} ${esc(teamNames?.[live.awayTeamId] || live.awayTeamId)}</div>`
       + `<div class="live-mine">Tu pronóstico: ${myPred ? `${myPred.home}-${myPred.away} · +${livePoints} pts live` : '—'}</div>`
+      + buildScorersHtml({ live, squadsCache, teamNames, currentUser })
       + `</div>`;
   }
 
@@ -65,7 +97,7 @@
     return null;
   }
 
-  const api = { isLiveAllowed, stalenessLabel, livePointsForUser, squadPlayersInLive, esc, buildLiveCardHtml, fetchLiveUpdated, fetchLiveMatches };
+  const api = { isLiveAllowed, stalenessLabel, livePointsForUser, squadPlayersInLive, esc, scorersInLive, ownersOfPlayer, buildScorersHtml, buildLiveCardHtml, fetchLiveUpdated, fetchLiveMatches };
   global.liveTab = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })(typeof window !== 'undefined' ? window : globalThis);
