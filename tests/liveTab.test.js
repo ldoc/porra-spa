@@ -23,8 +23,11 @@ function test_plantilla_implicada() {
 }
 function test_badge_live_sin_minuto() {
   const base = { eventId: 1, estado: 'live', minuto: 0, homeGoles: 0, awayGoles: 0, homeTeamId: 42, awayTeamId: 7, scrapedAt: new Date().toISOString() };
-  assert.match(buildLiveCardHtml({ live: base, myPred: null, livePoints: 0, teamNames: {} }), /🔴 LIVE<\/span>/);
-  assert.match(buildLiveCardHtml({ live: { ...base, minuto: 23 }, myPred: null, livePoints: 0, teamNames: {} }), /🔴 LIVE 23/);
+  const sinMinuto = buildLiveCardHtml({ live: base, myPred: null, livePoints: 0, teamNames: {} });
+  assert.match(sinMinuto, /live-dot/);
+  assert.match(sinMinuto, /LIVE<\/span>/);
+  assert.doesNotMatch(sinMinuto, /LIVE \d/);
+  assert.match(buildLiveCardHtml({ live: { ...base, minuto: 23 }, myPred: null, livePoints: 0, teamNames: {} }), /LIVE 23/);
 }
 test_allowed_solo_fases_activas();
 test_staleness();

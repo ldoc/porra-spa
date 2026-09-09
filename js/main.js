@@ -1864,7 +1864,7 @@ async function renderResultadosTab() {
       <button class="resultados-tab ${currentTab === 'jornadas' ? 'active' : ''}" data-tab="jornadas">Jornadas</button>
       <button class="resultados-tab ${currentTab === 'clasificacion' ? 'active' : ''}" data-tab="clasificacion">Clasificación Real</button>
       <button class="resultados-tab ${currentTab === 'eliminatorias' ? 'active' : ''}" data-tab="eliminatorias">Eliminatorias</button>
-      <button class="resultados-tab ${currentTab === 'live' ? 'active' : ''}" data-tab="live">🔴 Live</button>
+      <button class="resultados-tab ${currentTab === 'live' ? 'active' : ''}" data-tab="live"><span class="live-dot" aria-hidden="true"></span>Live</button>
     </div>
   `;
   let scrollHtml = '';

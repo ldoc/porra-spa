@@ -34,7 +34,8 @@
   function esc(s) { return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;'); }
 
   function buildLiveCardHtml({ live, myPred, livePoints, teamNames }) {
-    const badge = live.estado === 'live' ? (live.minuto ? `🔴 LIVE ${live.minuto}’` : '🔴 LIVE') : live.estado === 'descanso' ? '⏸ Descanso' : '🏁 Final';
+    const dot = '<span class="live-dot" aria-hidden="true"></span>';
+    const badge = live.estado === 'live' ? `${dot} LIVE${live.minuto ? ` ${live.minuto}’` : ''}` : live.estado === 'descanso' ? '⏸ Descanso' : '🏁 Final';
     return `<div class="live-card" data-event="${live.eventId}">`
       + `<div class="live-head"><span class="live-badge">${badge}</span><span class="live-stale">${esc(stalenessLabel(live.scrapedAt, Date.now()))}</span></div>`
       + `<div class="live-score">${esc(teamNames?.[live.homeTeamId] || live.homeTeamId)} ${live.homeGoles} - ${live.awayGoles} ${esc(teamNames?.[live.awayTeamId] || live.awayTeamId)}</div>`
