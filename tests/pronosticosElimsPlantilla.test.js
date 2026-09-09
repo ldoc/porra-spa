@@ -9,7 +9,7 @@ function test_elims(){
 }
 function test_plantilla(){
   const squads={a:[{id:1,posicion:'G',equipo:10},{id:2,posicion:'D',equipo:20}], b:[{id:1,posicion:'G',equipo:10}]};
-  const pts={a:{playerDetails:[{jugador:{id:1},puntosTotal:10}]}, b:{playerDetails:[{jugador:{id:1},puntosTotal:5}]}};
+  const pts={a:{playerDetails:[{jugador:{id:1},puntosTotal:10}]}, b:{playerDetails:[{jugador:{id:1},puntosTotal:10}]}};
   const agg=aggregateSquads(pts,squads);
   const r=calcPlantillaPronosticosExtras(agg, squads);
   assert.strictEqual(r.top3ByPos.G[0].player.id,1);

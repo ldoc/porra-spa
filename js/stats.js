@@ -409,14 +409,17 @@
       for (const sp of squad) {
         const id = String(sp?.id);
         if (!id || id === 'undefined') continue;
-        if (!agg.has(id)) agg.set(id, { player: sp, owners: new Set(), pts: 0 });
+        if (!agg.has(id)) agg.set(id, { player: sp, owners: new Set(), pts: 0, hasPts: false });
         agg.get(id).owners.add(username);
       }
     }
     for (const sq of Object.values(squadPointsByUser || {})) {
       for (const pd of sq?.playerDetails || []) {
         const entry = agg.get(String(pd.jugador?.id));
-        if (entry) entry.pts += pd.puntosTotal || 0;
+        if (entry && !entry.hasPts) {
+          entry.pts = pd.puntosTotal || 0;
+          entry.hasPts = true;
+        }
       }
     }
     const rows = [...agg.values()].map(e => ({

@@ -187,14 +187,14 @@ function test_aggregateSquads_pts_posesion() {
       { jugador: { id: 1 }, puntosTotal: 50 },
       { jugador: { id: 2 }, puntosTotal: 20 },
     ] },
-    bea: { playerDetails: [{ jugador: { id: 1 }, puntosTotal: 36 }] },
+    bea: { playerDetails: [{ jugador: { id: 1 }, puntosTotal: 50 }] },
     cal: null,
   };
   const r = aggregateSquads(squadPointsByUser, squadsCache);
   assert.strictEqual(r.usersWithSquad, 2);
   assert.strictEqual(r.uniquePlayers, 2);
   assert.strictEqual(r.rows[0].player.nombre, 'Mbappé');
-  assert.strictEqual(r.rows[0].pts, 86);
+  assert.strictEqual(r.rows[0].pts, 50);
   assert.strictEqual(r.rows[0].ownerCount, 2);
   assert.strictEqual(r.rows[0].possessionPct, 100);
   assert.strictEqual(r.rows[1].player.nombre, 'Courtois');
