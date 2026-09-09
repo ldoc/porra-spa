@@ -1197,13 +1197,26 @@ async function renderClasificacionTab() {
   // Ordenar por puntos descendente
   playersWithPoints.sort((a, b) => b.realPoints - a.realPoints);
 
+  const allIds = new Set(AppState.matchStats.map(ms => ms.eventId));
+  const currentRows = playersWithPoints.map(p => ({
+    name: p.name,
+    realPoints: p.realPoints,
+    predictedCount: trendApi.countUserPredictionsInSubset(
+      AppState.allPredictions ? AppState.allPredictions[p.name] : undefined,
+      allIds
+    )
+  }));
+  const trendMap = getClasificacionTrendMap(currentRows);
+  const withTrend = trendMap !== null;
+
   container.innerHTML =
-    buildClasificacionHeader() +
+    buildClasificacionHeader(withTrend) +
     playersWithPoints.map((p, i) => {
       const rank = i + 1;
       const isMe = AppState.currentUser && p.name === AppState.currentUser.name;
-      return buildClasificacionRow(p, rank, isMe);
-    }).join('');
+      return buildClasificacionRow(p, rank, isMe, withTrend ? trendApi.buildTrendCellHtml(trendMap[p.name]) : null);
+    }).join('') +
+    (withTrend ? '<div class="clasificacion-legend"><span class="trend-up">▲</span> sube · <span class="trend-down">▼</span> baja · <span class="trend-same">＝</span> igual vs día anterior con partidos</div>' : '');
 }
 
 /** Renderiza la tab de pronósticos en el modal de perfil */
@@ -3534,6 +3547,55 @@ function computeUserRealPoints(username) {
 
 function getUserTotalRealPoints(username) {
   return computeUserRealPoints(username).realPoints;
+}
+
+/**
+ * Ranking con un subconjunto de matchStats (corte por día).
+ * Reutiliza computeUserRealPoints con swap temporal de AppState.matchStats
+ * y de las cachés que dependen de él; restaura todo en finally.
+ * No modifica ninguna función existente. Síncrono: sin riesgo de reentrada.
+ */
+function computeRankingForStats(matchStatsSubset) {
+  const savedMatchStats = AppState.matchStats;
+  const savedStandings = AppState.realStandings;
+  const savedClassPoints = AppState.classificationPoints;
+  AppState.matchStats = matchStatsSubset;
+  AppState.realStandings = [];
+  AppState.classificationPoints = {};
+  try {
+    const subsetIds = new Set(matchStatsSubset.map(ms => ms.eventId));
+    const rows = (AppState.players || []).map(p => {
+      const parts = computeUserRealPoints(p.name);
+      return {
+        name: p.name,
+        realPoints: parts.realPoints,
+        predictedCount: trendApi.countUserPredictionsInSubset(
+          AppState.allPredictions ? AppState.allPredictions[p.name] : undefined,
+          subsetIds
+        )
+      };
+    });
+    rows.sort((a, b) => b.realPoints - a.realPoints);
+    return rows;
+  } finally {
+    AppState.matchStats = savedMatchStats;
+    AppState.realStandings = savedStandings;
+    AppState.classificationPoints = savedClassPoints;
+  }
+}
+
+/** Mapa de tendencias vs penúltimo día con partidos, o null si no procede. Fail-safe. */
+function getClasificacionTrendMap(currentRows) {
+  try {
+    const days = trendApi.getLastTwoMatchDays(AppState.matches, AppState.matchStats);
+    if (!days) return null;
+    const prevSubset = trendApi.filterMatchStatsUpTo(days.prev, AppState.matches, AppState.matchStats);
+    const prevRows = computeRankingForStats(prevSubset);
+    return trendApi.computeTrendMap(prevRows, currentRows);
+  } catch (e) {
+    console.error('Error calculando tendencia:', e);
+    return null;
+  }
 }
 
 function updatePointsNumber() {
