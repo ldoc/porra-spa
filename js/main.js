@@ -973,14 +973,7 @@ function calculatePlayerMatchPoints(playerData, squadPlayer, matchStat) {
   if (rating === 0) {
     return { total: 0, desglose: [] };
   }
-  let ratingPoints = 0;
-  if (rating >= 6) {
-    ratingPoints = Math.min(13, Math.floor((rating - 6) / 0.3));
-  } else if (rating >= 5.7) {
-    ratingPoints = -1;
-  } else {
-    ratingPoints = Math.max(-13, -1 + Math.floor((rating - 5.7) / 0.3));
-  }
+  const ratingPoints = playerPointsApi.ratingToPoints(rating);
   if (ratingPoints !== 0) {
     total += ratingPoints;
     desglose.push({ concepto: `Rating Sofascore (${rating.toFixed(1)})`, puntos: ratingPoints });
