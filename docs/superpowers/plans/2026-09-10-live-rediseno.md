@@ -320,7 +320,7 @@ function computeLivePlayerRanking(liveMatches, squadsCache, scorePlayer) {
 function ownerChips(owners, currentUser) {
   const rest = owners.filter(u => u !== currentUser);
   const shown = (owners.includes(currentUser) ? [currentUser] : []).concat(rest.slice(0, 3));
-  let html = shown.map(u => `<span class="tag${u === currentUser ? ' me' : ''}">${u === currentUser ? 'Tú' : esc(u)}</span>`).join('');
+  let html = shown.map(u => `<span class="tag${u === currentUser ? ' me' : ''}">${u === currentUser ? 'tú' : esc(u)}</span>`).join('');
   const hidden = owners.length - shown.length;
   if (hidden > 0) html += `<span class="tag more">(+${hidden})</span>`;
   return html;
