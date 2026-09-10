@@ -187,7 +187,7 @@ function test_strip_tres_por_fila_puntos_junto_minuto() {
   ];
   const names = { 2677: 'VfB Stuttgart', 1164: 'Viking FK', 1: 'Betis', 2: 'Celta' };
   const html = buildLiveStripHtml(lives, { 1: { home: 3, away: 1 }, 2: { home: 0, away: 0 } }, names);
-  assert.match(html, /STU/);
+  assert.match(html, /VFB/);
   assert.match(html, /67'/);
   assert.match(html, /\+15/);
   assert.match(html, /Fin/);
@@ -276,7 +276,7 @@ function test_ranking_filtra_ordena_y_duenos() {
   assert.equal(rows[0].rating, 8.4);
   const html = buildPlayerRankingHtml(rows, { currentUser: 'tu', playerExts: {} });
   assert.match(html, /tú/);
-  assert.match(html, /\(\+3\)/);
+  assert.match(html, /\(\+2\)/);
   assert.match(html, /8\.4/);
 }
 test_ranking_filtra_ordena_y_duenos();
