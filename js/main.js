@@ -902,11 +902,12 @@ async function renderLiveSubTab() {
       const strip = liveTab.buildLiveStripHtml(list, myPreds, teamNames);
       const rows = liveTab.computeLiveTemporal(list, AppState.allPredictions || {}, AppState.squadsCache || {}, calculatePlayerMatchPoints);
       const table = `<div class="sect">⏱️ Clasificación temporal</div>` + liveTab.buildTemporalTableHtml(rows, myName);
-      const players = liveTab.computeLivePlayerRanking(list, AppState.squadsCache || {}, calculatePlayerMatchPoints);
+      const players = liveTab.computeLivePlayerRanking(list, AppState.squadsCache || {}, calculatePlayerMatchPoints, teamNames);
       const ranking = players.length ? `<div class="sect">⭐ Futbolistas</div>` + liveTab.buildPlayerRankingHtml(players, { currentUser: myName, playerExts }) : '';
       return strip + table + ranking;
     };
     let html = paint(liveMatches);
+    let latest = liveMatches;
     try {
       const etag = localStorage.getItem('porra_cache_live_etag_v1');
       const res = await fetchWithPhase(`${API_BASE}/api/live-matches`, etag ? { headers: { 'If-None-Match': etag } } : {});
@@ -918,6 +919,7 @@ async function renderLiveSubTab() {
           if (newEtag) localStorage.setItem('porra_cache_live_etag_v1', newEtag);
           porraCache.cacheSet(porraCache.KEYS.live, { liveMatches: merged }, data.serverTime);
           html = paint(merged);
+          latest = merged;
           if (AppState.resultadosTab === 'live' && document.visibilityState === 'visible') {
             const scroll = document.querySelector('#resultados-container .resultados-scroll');
             if (scroll && scroll.innerHTML !== html) scroll.innerHTML = html;
@@ -925,6 +927,7 @@ async function renderLiveSubTab() {
         }
       }
     } catch (e) {}
+    _prevLiveSnapshot = latest;
     return html;
   } catch (e) {
     return emptyHtml;
@@ -992,6 +995,9 @@ async function pollLiveMatches() {
             if (container) {
               for (const ev of evs) {
                 try {
+                  if (ev.teamId != null && !ev.teamName) ev.teamName = teamNames[ev.teamId] || ev.teamName;
+                  if (!ev.homeShort && ev.homeTeamId != null && teamNames[ev.homeTeamId]) ev.homeShort = liveTab.shortTeam(teamNames[ev.homeTeamId]);
+                  if (!ev.awayShort && ev.awayTeamId != null && teamNames[ev.awayTeamId]) ev.awayShort = liveTab.shortTeam(teamNames[ev.awayTeamId]);
                   const myPred = AppState.scorePredictions?.[ev.eventId] || AppState.allPredictions?.[myName]?.[ev.eventId] || null;
                   let myPtsBefore = 0, myPtsAfter = 0;
                   try {
@@ -1055,7 +1061,7 @@ function getMatchResult(homeGoals, awayGoals) {
   return 'D';
 }
 
-/** Calcula puntos y desglose para un partido individual */
+/** Calcula puntos y desglose para un partido individual (mismas reglas 8/3/3/1 que livePointsForUser en liveTab.js — mantener sincronizados) */
 function calculateMatchPoints(prediction, matchStats, match) {
   if (!matchStats || !matchStats.stats) {
     return { points: 0, breakdown: ['Partido sin resultado'] };

@@ -29,3 +29,15 @@ function test_sin_rating_muestra_guion() {
   assert.match(html, /–/);
 }
 test_sin_rating_muestra_guion();
+
+function test_matchLabel_usa_nombres_cortos() {
+  const rows = computeLivePlayerRanking(LIVES, SQUADS, scorePlayer, { 2677: 'VfB Stuttgart', 1164: 'Viking FK' });
+  assert.equal(rows[0].matchLabel, 'VFB-VIK');
+}
+test_matchLabel_usa_nombres_cortos();
+
+function test_matchLabel_fallback_a_ids_sin_nombres() {
+  const rows = computeLivePlayerRanking(LIVES, SQUADS, scorePlayer);
+  assert.equal(rows[0].matchLabel, '267-116');
+}
+test_matchLabel_fallback_a_ids_sin_nombres();

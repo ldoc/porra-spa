@@ -15,6 +15,7 @@
   }
 
   function resultOf(h, a) { return h > a ? 'H' : h < a ? 'A' : 'D'; }
+  // Mismas reglas 8/3/3/1 que calculateMatchPoints en main.js — mantener sincronizados.
   function livePointsForUser(live, pred) {
     if (!live || !pred || typeof pred.home !== 'number' || typeof pred.away !== 'number') return 0;
     let p = 0;
@@ -46,12 +47,6 @@ function buildLiveStripHtml(liveMatches, myPreds, teamNames) {
   return `<div class="strip">${minis}</div>`;
 }
 
-  function scorersInLive(live) {
-    return ((live?.stats?.jugadores) || [])
-      .filter(j => (j.goles || 0) > 0)
-      .sort((a, b) => (b.goles || 0) - (a.goles || 0));
-  }
-
   function ownersOfPlayer(playerId, squadsCache) {
     const id = String(playerId);
     const owners = [];
@@ -64,39 +59,6 @@ function buildLiveStripHtml(liveMatches, myPreds, teamNames) {
   function playerImgUrl(id, playerExts) {
     const ext = (playerExts && playerExts[String(id)]) || 'webp';
     return `data/imgJugadores/${id}.${ext}`;
-  }
-
-  function ownerChip(u, currentUser, avatars, myAvatar) {
-    const isMe = u === currentUser;
-    const avatar = isMe ? (myAvatar || '') : ((avatars || {})[u] || '');
-    return `<span class="live-owner${isMe ? ' me' : ''}">${avatar ? `<span class="live-owner-avatar">${esc(avatar)}</span>` : ''}${isMe ? 'tú' : esc(u)}</span>`;
-  }
-
-  function buildScorersHtml({ live, squadsCache, teamNames, currentUser, avatars, myAvatar, playerExts }) {
-    const scorers = scorersInLive(live);
-    if (!scorers.length) return `<div class="live-scorers"><div class="live-scorers-empty">Sin goles aún</div></div>`;
-    const rows = scorers.map(j => {
-      const owners = ownersOfPlayer(j.id, squadsCache);
-      const team = teamNames?.[j.equipo] || j.equipo;
-      const mark = `⚽${j.goles > 1 ? ` x${j.goles}` : ''}${(j.penaltiMarcado || 0) > 0 ? ' (p)' : ''}`;
-      const mine = currentUser ? owners.includes(currentUser) : false;
-      const chips = owners.length
-        ? owners.map(u => ownerChip(u, currentUser, avatars, myAvatar)).join('')
-        : '<span class="live-owner none">nadie lo tiene</span>';
-      return `<div class="live-scorer${mine ? ' mine' : ''}"><img class="live-scorer-img" src="${playerImgUrl(j.id, playerExts)}" alt="${esc(j.nombre)}" loading="lazy" onerror="this.style.display='none'"><span class="live-scorer-name">${mark} ${esc(j.nombre)} <span class="live-scorer-team">(${esc(team)})</span></span><span class="live-owners">${chips}</span></div>`;
-    }).join('');
-    return `<div class="live-scorers"><div class="live-scorers-title">Goleadores</div>${rows}</div>`;
-  }
-
-  function buildLiveCardHtml({ live, myPred, livePoints, teamNames, squadsCache, currentUser, avatars, myAvatar, playerExts }) {
-    const dot = '<span class="live-dot" aria-hidden="true"></span>';
-    const badge = live.estado === 'live' ? `${dot} LIVE${live.minuto ? ` ${live.minuto}’` : ''}` : live.estado === 'descanso' ? '⏸ Descanso' : '🏁 Final';
-    return `<div class="live-card" data-event="${live.eventId}">`
-      + `<div class="live-head"><span class="live-badge">${badge}</span><span class="live-stale">${esc(stalenessLabel(live.scrapedAt, Date.now()))}</span></div>`
-      + `<div class="live-score">${esc(teamNames?.[live.homeTeamId] || live.homeTeamId)} ${live.homeGoles} - ${live.awayGoles} ${esc(teamNames?.[live.awayTeamId] || live.awayTeamId)}</div>`
-      + `<div class="live-mine">Tu pronóstico: ${myPred ? `${myPred.home}-${myPred.away} · +${livePoints} pts live` : '—'}</div>`
-      + buildScorersHtml({ live, squadsCache, teamNames, currentUser, avatars, myAvatar, playerExts })
-      + `</div>`;
   }
 
   async function fetchLiveUpdated(deps) {
@@ -150,10 +112,10 @@ function buildTemporalTableHtml(rows, currentUser) {
   return `<table class="standings-table"><thead><tr><th>#</th><th>Jugador</th><th>Pron.</th><th>Plant.</th><th>Total</th></tr></thead><tbody>${body}</tbody></table>`;
 }
 
-function computeLivePlayerRanking(liveMatches, squadsCache, scorePlayer) {
+function computeLivePlayerRanking(liveMatches, squadsCache, scorePlayer, teamNames = {}) {
   const seen = new Map();
   for (const live of liveMatches || []) {
-    const label = `${shortTeam(String(live.homeTeamId))}-${shortTeam(String(live.awayTeamId))}`;
+    const label = `${shortTeam(teamNames?.[live.homeTeamId] ?? live.homeTeamId)}-${shortTeam(teamNames?.[live.awayTeamId] ?? live.awayTeamId)}`;
     for (const j of (live?.stats?.jugadores || [])) {
       if (!(j.minutos > 0)) continue;
       const owners = ownersOfPlayer(j.id, squadsCache);
@@ -202,9 +164,13 @@ function detectLiveEvents(prevList, nextList) {
     if (!pv) continue;
     const pm = playersById(pv), nm = playersById(nx);
     const scorer = Object.keys(nm).find(id => (nm[id].goles || 0) > (pm[id]?.goles || 0));
-    if ((nx.homeGoles + nx.awayGoles) > (pv.homeGoles + pv.awayGoles) && scorer) {
-      const penal = (nm[scorer].penaltiMarcado || 0) > (pm[scorer]?.penaltiMarcado || 0);
-      evs.push({ tipo: penal ? 'penalti' : 'gol', eventId: nx.eventId, playerId: scorer, playerName: nm[scorer].nombre, teamId: nm[scorer].equipo, minuto: nx.minuto, homeGoles: nx.homeGoles, awayGoles: nx.awayGoles, homeTeamId: nx.homeTeamId, awayTeamId: nx.awayTeamId });
+    if ((nx.homeGoles + nx.awayGoles) > (pv.homeGoles + pv.awayGoles)) {
+      if (scorer) {
+        const penal = (nm[scorer].penaltiMarcado || 0) > (pm[scorer]?.penaltiMarcado || 0);
+        evs.push({ tipo: penal ? 'penalti' : 'gol', eventId: nx.eventId, playerId: scorer, playerName: nm[scorer].nombre, teamId: nm[scorer].equipo, minuto: nx.minuto, homeGoles: nx.homeGoles, awayGoles: nx.awayGoles, homeTeamId: nx.homeTeamId, awayTeamId: nx.awayTeamId });
+      } else {
+        evs.push({ tipo: 'gol', eventId: nx.eventId, playerId: null, playerName: null, teamId: null, minuto: nx.minuto, homeGoles: nx.homeGoles, awayGoles: nx.awayGoles, homeTeamId: nx.homeTeamId, awayTeamId: nx.awayTeamId });
+      }
       continue;
     }
     const keeper = Object.keys(nm).find(id => (nm[id].penaltiParado || 0) > (pm[id]?.penaltiParado || 0));
@@ -217,7 +183,7 @@ function detectLiveEvents(prevList, nextList) {
     }
     const seen = new Set((pv.incidents || []).map(i => i.key));
     for (const inc of (nx.incidents || [])) {
-      if (!seen.has(inc.key)) { evs.push({ tipo: inc.tipo === 'sub' ? 'cambio' : 'tarjeta', eventId: nx.eventId, ...inc }); break; }
+      if (!seen.has(inc.key)) { evs.push({ ...inc, tipo: inc.tipo === 'sub' ? 'cambio' : 'tarjeta', eventId: nx.eventId }); break; }
     }
   }
   return evs;
@@ -228,19 +194,29 @@ function buildEventToastHtml(ev, ctx) {
   const pts = `📋 Tu pronóstico: +${c.myPtsBefore ?? 0} → <strong>+${c.myPtsAfter ?? 0}</strong> (pasas de ${c.tempBefore ?? 0} a ${c.tempAfter ?? 0} pts temporales)`;
   const mine = (n) => c.isMine ? `<div class="imp2">👕 ${esc(n || '')} es tuyo: +${c.plantDelta ?? 0} fantasy en este partido</div>` : '';
   const score = `${esc(ev.homeShort || c.teamNames?.[ev.homeTeamId] || '')} ${ev.homeGoles ?? ''}-${ev.awayGoles ?? ''} ${esc(ev.awayShort || c.teamNames?.[ev.awayTeamId] || '')}`;
+  const teamName = ev.teamName || c.teamNames?.[ev.teamId] || '';
+  const who = ev.playerName ? `⚽ ${esc(ev.playerName)}${teamName ? ` (${esc(teamName)})` : ''}` : '⚽ ¡Gol!';
   switch (ev.tipo) {
-    case 'gol': return `<div class="toast toast-gol play"><div class="goool">¡GOOOL!</div><div><span class="who">⚽ ${esc(ev.playerName || '')} (${esc(ev.teamName || '')})</span> · ${ev.minuto || ''}' · ${score}</div><div class="imp">${pts}</div>${mine(ev.playerName)}</div>`;
-    case 'penalti': return `<div class="toast toast-penalti play"><span class="stamp">PENALTI</span><div><span class="who">${esc(ev.playerName || '')}</span> · ${ev.minuto || ''}' · gol sí, pero sin extra por demarcación</div><div class="imp">${pts}</div>${mine(ev.playerName)}</div>`;
+    case 'gol': return `<div class="toast toast-gol play"><div class="goool">¡GOOOL!</div><div><span class="who">${who}</span> · ${ev.minuto || ''}' · ${score}</div><div class="imp">${pts}</div>${mine(ev.playerName)}</div>`;
+    case 'penalti': return `<div class="toast toast-penalti play"><span class="stamp">PENALTI</span><div><span class="who">${who}</span> · ${ev.minuto || ''}' · gol sí, pero sin extra por demarcación</div><div class="imp">${pts}</div>${mine(ev.playerName)}</div>`;
     case 'paradon': return `<div class="toast toast-paradon play"><span class="big dive">🧤</span><div class="msg cyan">¡PARADÓN! ${esc(ev.playerName || '')} · ${ev.minuto || ''}'</div>${mine(ev.playerName) || `<div class="imp2">🧤 Paradón de ${esc(ev.playerName || '')}</div>`}</div>`;
     case 'descanso': return `<div class="toast toast-descanso play"><span class="big breathe">⏸️</span><div class="msg">DESCANSO · ${ev.minuto || ''}'</div><div class="imp2">Vas con ${c.tempAfter ?? c.tempBefore ?? 0} pts temporales</div></div>`;
     case 'reanudacion': return `<div class="toast toast-reanudacion play"><div class="msg">▶️ Se reanuda el partido · ${ev.minuto || ''}'</div><div class="imp2">Vas con ${c.tempAfter ?? c.tempBefore ?? 0} pts temporales</div></div>`;
     case 'final': return `<div class="toast toast-final play"><span class="big wave">🏁</span><div class="msg gold finalmsg">FINAL · ${score}</div><div class="imp">Ese partido te dio +${c.myPtsAfter ?? 0} de pronóstico</div></div>`;
-    case 'cambio': return `<div class="toast toast-cambio play"><div class="swap"><div class="chip out">⬇️ sale ${esc(ev.out || '')}</div><div class="chip in">⬆️ entra ${esc(ev.in || ev.playerName || '')}</div></div><div class="msg">Cambio · ${ev.minuto || ''}'</div>${c.isMine ? `<div class="imp2">👕 ${esc(ev.out || '')} es tuyo: ya no suma más hoy</div>` : ''}</div>`;
-    default: return `<div class="toast toast-tarjeta play"><span class="cardflip ${ev.color === 'roja' ? 'r' : 'y'}"></span><div class="msg">${ev.color === 'roja' ? 'Roja' : 'Amarilla'} · ${esc(ev.playerName || '')} · ${ev.minuto || ''}'</div><div class="imp2">Sin puntos directos, pero puede bajarle la nota ⭐</div></div>`;
+    case 'cambio': {
+      const out = ev.playerOut || ev.out || '';
+      const inn = ev.playerName || ev.in || '';
+      return `<div class="toast toast-cambio play"><div class="swap"><div class="chip out">⬇️ sale ${esc(out)}</div><div class="chip in">⬆️ entra ${esc(inn)}</div></div><div class="msg">Cambio · ${ev.minuto || ''}'</div>${c.isMine ? `<div class="imp2">👕 ${esc(out)} es tuyo: ya no suma más hoy</div>` : ''}</div>`;
+    }
+    case 'tarjeta': {
+      const red = ev.color === 'roja' || ev.color === 'red';
+      return `<div class="toast toast-tarjeta play"><span class="cardflip ${red ? 'r' : 'y'}"></span><div class="msg">${red ? 'Roja' : 'Amarilla'} · ${esc(ev.playerName || '')} · ${ev.minuto || ''}'</div><div class="imp2">Sin puntos directos, pero puede bajarle la nota ⭐</div></div>`;
+    }
+    default: return `<div class="toast play"><div class="msg">Evento · ${ev.minuto || ''}'</div></div>`;
   }
 }
 
-  const api = { isLiveAllowed, stalenessLabel, livePointsForUser, squadPlayersInLive, esc, shortTeam, buildLiveStripHtml, scorersInLive, ownersOfPlayer, playerImgUrl, buildScorersHtml, buildLiveCardHtml, fetchLiveUpdated, fetchLiveMatches, computeLiveTemporal, buildTemporalTableHtml, computeLivePlayerRanking, buildPlayerRankingHtml, detectLiveEvents, buildEventToastHtml };
+  const api = { isLiveAllowed, stalenessLabel, livePointsForUser, squadPlayersInLive, esc, shortTeam, buildLiveStripHtml, ownersOfPlayer, playerImgUrl, fetchLiveUpdated, fetchLiveMatches, computeLiveTemporal, buildTemporalTableHtml, computeLivePlayerRanking, buildPlayerRankingHtml, detectLiveEvents, buildEventToastHtml };
   global.liveTab = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })(typeof window !== 'undefined' ? window : globalThis);
