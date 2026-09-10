@@ -33,6 +33,19 @@
 
   function esc(s) { return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;'); }
 
+function shortTeam(name) { return String(name ?? '').slice(0, 3).toUpperCase(); }
+
+function buildLiveStripHtml(liveMatches, myPreds, teamNames) {
+  const minis = (liveMatches || []).map(live => {
+    const pts = livePointsForUser(live, (myPreds || {})[live.eventId]);
+    const min = live.estado === 'live' ? `<span class="live-dot"></span> ${live.minuto}'` : live.estado === 'descanso' ? '⏸ Desc.' : 'Fin';
+    const topCls = live.estado === 'finalizado' || live.estado === 'descanso' ? ' fin' : '';
+    return `<div class="mini"><div class="top${topCls}"><span>${min}</span><span class="pts${pts >= 8 ? '' : ' low'}">+${pts}</span></div>`
+      + `<div class="teams">${esc(shortTeam(teamNames?.[live.homeTeamId] || live.homeTeamId))} <strong>${live.homeGoles}-${live.awayGoles}</strong> ${esc(shortTeam(teamNames?.[live.awayTeamId] || live.awayTeamId))}</div></div>`;
+  }).join('');
+  return `<div class="strip">${minis}</div>`;
+}
+
   function scorersInLive(live) {
     return ((live?.stats?.jugadores) || [])
       .filter(j => (j.goles || 0) > 0)
@@ -137,7 +150,7 @@ function buildTemporalTableHtml(rows, currentUser) {
   return `<table class="standings-table"><thead><tr><th>#</th><th>Jugador</th><th>Pron.</th><th>Plant.</th><th>Total</th></tr></thead><tbody>${body}</tbody></table>`;
 }
 
-  const api = { isLiveAllowed, stalenessLabel, livePointsForUser, squadPlayersInLive, esc, scorersInLive, ownersOfPlayer, playerImgUrl, buildScorersHtml, buildLiveCardHtml, fetchLiveUpdated, fetchLiveMatches, computeLiveTemporal, buildTemporalTableHtml };
+  const api = { isLiveAllowed, stalenessLabel, livePointsForUser, squadPlayersInLive, esc, shortTeam, buildLiveStripHtml, scorersInLive, ownersOfPlayer, playerImgUrl, buildScorersHtml, buildLiveCardHtml, fetchLiveUpdated, fetchLiveMatches, computeLiveTemporal, buildTemporalTableHtml };
   global.liveTab = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })(typeof window !== 'undefined' ? window : globalThis);

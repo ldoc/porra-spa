@@ -73,3 +73,17 @@ test_scorers_html_muestra_duenos();
 test_playerImgUrl_defecto_webp();
 test_badge_live_sin_minuto();
 console.log('liveTab OK');
+const { buildLiveStripHtml } = require('../js/liveTab.js');
+function test_strip_tres_por_fila_puntos_junto_minuto() {
+  const lives = [
+    { eventId: 1, estado: 'live', minuto: 67, homeTeamId: 2677, awayTeamId: 1164, homeGoles: 3, awayGoles: 1 },
+    { eventId: 2, estado: 'finalizado', minuto: 90, homeTeamId: 1, awayTeamId: 2, homeGoles: 1, awayGoles: 1 }
+  ];
+  const names = { 2677: 'VfB Stuttgart', 1164: 'Viking FK', 1: 'Betis', 2: 'Celta' };
+  const html = buildLiveStripHtml(lives, { 1: { home: 3, away: 1 }, 2: { home: 0, away: 0 } }, names);
+  assert.match(html, /VFB/);
+  assert.match(html, /67'/);
+  assert.match(html, /\+15/);
+  assert.match(html, /Fin/);
+}
+test_strip_tres_por_fila_puntos_junto_minuto();

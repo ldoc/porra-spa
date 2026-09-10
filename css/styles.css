@@ -6364,4 +6364,11 @@ html, body {
 .resultados-tab[data-tab="live"].active { border-color: #ef4444; }
 @keyframes liveBlink { 50% { opacity: .35; } }
 .live-card .live-badge { animation: liveBlink 1.2s infinite; }
+.strip { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 12px; }
+.mini { background: var(--ucl-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 8px 6px; text-align: center; min-width: 0; }
+.mini .top { display: flex; align-items: center; justify-content: space-between; font-size: var(--font-size-xs); font-weight: 800; color: #f87171; }
+.mini .top.fin { color: var(--text-muted); font-weight: 400; }
+.mini .pts { background: rgba(16,185,129,.2); color: #6ee7b7; border-radius: 999px; padding: 1px 7px; }
+.mini .pts.low { background: rgba(255,255,255,.08); color: var(--text-muted); }
+.mini .teams { font-size: .8rem; margin-top: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
