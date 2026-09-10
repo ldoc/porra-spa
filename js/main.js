@@ -1193,8 +1193,12 @@ async function renderClasificacionTab() {
     };
   });
 
-  // Ordenar por puntos descendente
-  playersWithPoints.sort((a, b) => b.realPoints - a.realPoints);
+  // Ordenar por puntos descendente + desempate de normas (reglas/UCL.html #clasificacion-final):
+  // eliminatorias > plantilla > clasificación > pronósticos
+  const cmpJugadores = (typeof clasificacionApi !== 'undefined')
+    ? clasificacionApi.compareClasificacionJugadores
+    : ((a, b) => b.realPoints - a.realPoints);
+  playersWithPoints.sort(cmpJugadores);
 
   const trendOk = typeof trendApi !== 'undefined';
   const allIds = new Set((AppState.matchStats || []).map(ms => ms.eventId));
@@ -3569,13 +3573,20 @@ function computeRankingForStats(matchStatsSubset) {
       return {
         name: p.name,
         realPoints: parts.realPoints,
+        eliminatoriasPoints: parts.eliminatoriasPoints,
+        squadPoints: parts.squadPoints,
+        classificationPoints: parts.classificationPoints,
+        predictionPoints: parts.predictionPoints,
         predictedCount: trendApi.countUserPredictionsInSubset(
           AppState.allPredictions ? AppState.allPredictions[p.name] : undefined,
           subsetIds
         )
       };
     });
-    rows.sort((a, b) => b.realPoints - a.realPoints);
+    const cmpPrev = (typeof clasificacionApi !== 'undefined')
+      ? clasificacionApi.compareClasificacionJugadores
+      : ((a, b) => b.realPoints - a.realPoints);
+    rows.sort(cmpPrev);
     return rows;
   } finally {
     AppState.matchStats = savedMatchStats;
