@@ -896,13 +896,15 @@ async function renderLiveSubTab() {
     for (const p of AppState.allPlayers || []) playerExts[String(p.id)] = p.extension || 'webp';
     const paint = (list) => {
       if (!list.length) return emptyHtml;
-      return list.map(live => {
-        const myPred = AppState.scorePredictions?.[live.eventId]
-          || AppState.allPredictions?.[AppState.currentUser?.name]?.[live.eventId] || null;
-        const livePoints = (myPred && typeof liveTab.livePointsForUser === 'function')
-          ? liveTab.livePointsForUser(live, myPred) : 0;
-        return liveTab.buildLiveCardHtml({ live, myPred, livePoints, teamNames, squadsCache: AppState.squadsCache, currentUser: AppState.currentUser?.name, avatars, myAvatar: AppState.currentUser?.avatar, playerExts });
-      }).join('');
+      const myName = AppState.currentUser?.name;
+      const myPreds = {};
+      for (const live of list) myPreds[live.eventId] = AppState.scorePredictions?.[live.eventId] || AppState.allPredictions?.[myName]?.[live.eventId] || null;
+      const strip = liveTab.buildLiveStripHtml(list, myPreds, teamNames);
+      const rows = liveTab.computeLiveTemporal(list, AppState.allPredictions || {}, AppState.squadsCache || {}, calculatePlayerMatchPoints);
+      const table = `<div class="sect">⏱️ Clasificación temporal</div>` + liveTab.buildTemporalTableHtml(rows, myName);
+      const players = liveTab.computeLivePlayerRanking(list, AppState.squadsCache || {}, calculatePlayerMatchPoints);
+      const ranking = players.length ? `<div class="sect">⭐ Futbolistas</div>` + liveTab.buildPlayerRankingHtml(players, { currentUser: myName, playerExts }) : '';
+      return strip + table + ranking;
     };
     let html = paint(liveMatches);
     try {
@@ -944,6 +946,7 @@ async function pollLiveDot() {
   } catch (e) {}
 }
 
+let _prevLiveSnapshot = null;
 async function pollLiveMatches() {
   if (document.visibilityState !== 'visible') return;
   if (AppState.resultadosTab !== 'live') return;
@@ -959,6 +962,71 @@ async function pollLiveMatches() {
       const newEtag = res.headers?.get ? res.headers.get('ETag') : null;
       if (newEtag) localStorage.setItem('porra_cache_live_etag_v1', newEtag);
       porraCache.cacheSet(porraCache.KEYS.live, { liveMatches: merged }, data.serverTime);
+      try {
+        if (AppState.resultadosTab === 'live' && document.visibilityState === 'visible' && typeof liveTab !== 'undefined' && typeof liveTab.detectLiveEvents === 'function') {
+          const prev = _prevLiveSnapshot || [];
+          const evs = liveTab.detectLiveEvents(prev, merged);
+          _prevLiveSnapshot = merged;
+          if (evs.length) {
+            const myName = AppState.currentUser?.name;
+            const teamNames = {};
+            for (const [id, t] of Object.entries(AppState.teamsMap || {})) teamNames[id] = t?.name || id;
+            const prevById = new Map((prev || []).map(l => [l.eventId, l]));
+            const nextById = new Map((merged || []).map(l => [l.eventId, l]));
+            let tempBeforeRows = [], tempAfterRows = [];
+            try {
+              tempBeforeRows = liveTab.computeLiveTemporal(prev, AppState.allPredictions || {}, AppState.squadsCache || {}, calculatePlayerMatchPoints);
+              tempAfterRows = liveTab.computeLiveTemporal(merged, AppState.allPredictions || {}, AppState.squadsCache || {}, calculatePlayerMatchPoints);
+            } catch (e) {}
+            const tempBefore = (tempBeforeRows.find(r => r.user === myName)?.total) ?? 0;
+            const tempAfter = (tempAfterRows.find(r => r.user === myName)?.total) ?? 0;
+            let container = document.querySelector('#live-toasts');
+            if (!container) {
+              const scroll = document.querySelector('#resultados-container .resultados-scroll');
+              if (scroll) {
+                container = document.createElement('div');
+                container.id = 'live-toasts';
+                scroll.prepend(container);
+              }
+            }
+            if (container) {
+              for (const ev of evs) {
+                try {
+                  const myPred = AppState.scorePredictions?.[ev.eventId] || AppState.allPredictions?.[myName]?.[ev.eventId] || null;
+                  let myPtsBefore = 0, myPtsAfter = 0;
+                  try {
+                    myPtsBefore = liveTab.livePointsForUser(prevById.get(ev.eventId), myPred) || 0;
+                    myPtsAfter = liveTab.livePointsForUser(nextById.get(ev.eventId), myPred) || 0;
+                  } catch (e) {}
+                  let isMine = false, plantDelta = 0;
+                  try {
+                    if (ev.playerId && myName && Array.isArray(AppState.squadsCache?.[myName])) {
+                      const sp = AppState.squadsCache[myName].find(s => String(s.id) === String(ev.playerId));
+                      if (sp) {
+                        isMine = true;
+                        const nx = nextById.get(ev.eventId);
+                        const pv = prevById.get(ev.eventId);
+                        const nj = (nx?.stats?.jugadores || []).find(j => String(j.id) === String(ev.playerId));
+                        const pj = (pv?.stats?.jugadores || []).find(j => String(j.id) === String(ev.playerId));
+                        const nPts = (nj && calculatePlayerMatchPoints(nj, sp, nx)?.total) || 0;
+                        const pPts = (pj && calculatePlayerMatchPoints(pj, sp, pv)?.total) || 0;
+                        plantDelta = nPts - pPts;
+                      }
+                    }
+                  } catch (e) {}
+                  const ctx = { myPtsBefore, myPtsAfter, tempBefore, tempAfter, isMine, plantDelta, teamNames };
+                  const wrap = document.createElement('div');
+                  wrap.innerHTML = liveTab.buildEventToastHtml(ev, ctx);
+                  const node = wrap.firstElementChild || wrap;
+                  node.addEventListener('click', () => node.remove());
+                  container.prepend(node);
+                  setTimeout(() => node.remove(), 6000);
+                } catch (e) {}
+              }
+            }
+          }
+        }
+      } catch (e) {}
       if (AppState.resultadosTab === 'live' && document.visibilityState === 'visible') {
         const activeTab = document.querySelector('.nav-item.active')?.dataset?.tab;
         if (activeTab === 'resultados') void renderResultadosTab().catch(() => {});
