@@ -106,7 +106,7 @@ const scorePlayer = (pd) => ({ total: pd.goles * 5 });
 function test_tabla_unica_ordenada_por_total() {
   const rows = computeLiveTemporal(LIVES, PREDS, SQUADS, scorePlayer);
   assert.deepEqual(rows.map(r => r.user), ['javi', 'tu']);
-  assert.equal(rows[0].pron, 15);
+  assert.equal(rows[0].pron, 18);
   assert.equal(rows[1].plant, 10);
   assert.equal(rows[1].total, rows[1].pron + rows[1].plant);
 }
