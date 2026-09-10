@@ -108,7 +108,36 @@
     return null;
   }
 
-  const api = { isLiveAllowed, stalenessLabel, livePointsForUser, squadPlayersInLive, esc, scorersInLive, ownersOfPlayer, playerImgUrl, buildScorersHtml, buildLiveCardHtml, fetchLiveUpdated, fetchLiveMatches };
+function computeLiveTemporal(liveMatches, allPredictions, squadsCache, scorePlayer) {
+  const rows = [];
+  for (const user of Object.keys(allPredictions || {})) {
+    let pron = 0, plant = 0;
+    const preds = allPredictions[user] || {};
+    for (const live of liveMatches || []) {
+      pron += livePointsForUser(live, preds[live.eventId]);
+      const squad = squadsCache?.[user] || [];
+      const ids = new Set(squad.map(s => String(s.id)));
+      for (const j of (live?.stats?.jugadores || [])) {
+        if (!ids.has(String(j.id))) continue;
+        const sp = squad.find(s => String(s.id) === String(j.id));
+        plant += (scorePlayer(j, sp, live)?.total) || 0;
+      }
+    }
+    rows.push({ user, pron, plant, total: pron + plant });
+  }
+  rows.sort((a, b) => b.total - a.total || b.pron - a.pron || b.plant - a.plant);
+  return rows;
+}
+
+function buildTemporalTableHtml(rows, currentUser) {
+  const body = rows.map((r, i) => {
+    const cls = i === 0 ? 'rank-1' : i === 1 ? 'rank-2' : i === 2 ? 'rank-3' : '';
+    return `<tr${r.user === currentUser ? ' class="me"' : ''}><td><span class="rank ${cls}">${i + 1}</span></td><td>${esc(r.user)}</td><td>${r.pron}</td><td>${r.plant}</td><td class="total">${r.total}</td></tr>`;
+  }).join('');
+  return `<table class="standings-table"><thead><tr><th>#</th><th>Jugador</th><th>Pron.</th><th>Plant.</th><th>Total</th></tr></thead><tbody>${body}</tbody></table>`;
+}
+
+  const api = { isLiveAllowed, stalenessLabel, livePointsForUser, squadPlayersInLive, esc, scorersInLive, ownersOfPlayer, playerImgUrl, buildScorersHtml, buildLiveCardHtml, fetchLiveUpdated, fetchLiveMatches, computeLiveTemporal, buildTemporalTableHtml };
   global.liveTab = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })(typeof window !== 'undefined' ? window : globalThis);
