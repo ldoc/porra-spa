@@ -188,7 +188,59 @@ function buildPlayerRankingHtml(rows, { currentUser, playerExts }) {
   return `<table class="standings-table"><thead><tr><th>#</th><th>Futbolista</th><th>⭐</th><th>G</th><th>A</th><th>Pts</th></tr></thead><tbody>${body}</tbody></table>`;
 }
 
-  const api = { isLiveAllowed, stalenessLabel, livePointsForUser, squadPlayersInLive, esc, shortTeam, buildLiveStripHtml, scorersInLive, ownersOfPlayer, playerImgUrl, buildScorersHtml, buildLiveCardHtml, fetchLiveUpdated, fetchLiveMatches, computeLiveTemporal, buildTemporalTableHtml, computeLivePlayerRanking, buildPlayerRankingHtml };
+function playersById(live) {
+  const m = {};
+  for (const j of (live?.stats?.jugadores || [])) m[String(j.id)] = j;
+  return m;
+}
+
+function detectLiveEvents(prevList, nextList) {
+  const prev = new Map((prevList || []).map(l => [l.eventId, l]));
+  const evs = [];
+  for (const nx of nextList || []) {
+    const pv = prev.get(nx.eventId);
+    if (!pv) continue;
+    const pm = playersById(pv), nm = playersById(nx);
+    const scorer = Object.keys(nm).find(id => (nm[id].goles || 0) > (pm[id]?.goles || 0));
+    if ((nx.homeGoles + nx.awayGoles) > (pv.homeGoles + pv.awayGoles) && scorer) {
+      const penal = (nm[scorer].penaltiMarcado || 0) > (pm[scorer]?.penaltiMarcado || 0);
+      evs.push({ tipo: penal ? 'penalti' : 'gol', eventId: nx.eventId, playerId: scorer, playerName: nm[scorer].nombre, teamId: nm[scorer].equipo, minuto: nx.minuto, homeGoles: nx.homeGoles, awayGoles: nx.awayGoles, homeTeamId: nx.homeTeamId, awayTeamId: nx.awayTeamId });
+      continue;
+    }
+    const keeper = Object.keys(nm).find(id => (nm[id].penaltiParado || 0) > (pm[id]?.penaltiParado || 0));
+    if (keeper) { evs.push({ tipo: 'paradon', eventId: nx.eventId, playerId: keeper, playerName: nm[keeper].nombre, teamId: nm[keeper].equipo, minuto: nx.minuto }); continue; }
+    if (pv.estado !== nx.estado) {
+      if (nx.estado === 'descanso') evs.push({ tipo: 'descanso', eventId: nx.eventId, minuto: nx.minuto });
+      else if (nx.estado === 'finalizado') evs.push({ tipo: 'final', eventId: nx.eventId, homeGoles: nx.homeGoles, awayGoles: nx.awayGoles, homeTeamId: nx.homeTeamId, awayTeamId: nx.awayTeamId });
+      else if (pv.estado === 'descanso' && nx.estado === 'live') evs.push({ tipo: 'reanudacion', eventId: nx.eventId, minuto: nx.minuto });
+      continue;
+    }
+    const seen = new Set((pv.incidents || []).map(i => i.key));
+    for (const inc of (nx.incidents || [])) {
+      if (!seen.has(inc.key)) { evs.push({ tipo: inc.tipo === 'sub' ? 'cambio' : 'tarjeta', eventId: nx.eventId, ...inc }); break; }
+    }
+  }
+  return evs;
+}
+
+function buildEventToastHtml(ev, ctx) {
+  const c = ctx || {};
+  const pts = `📋 Tu pronóstico: +${c.myPtsBefore ?? 0} → <strong>+${c.myPtsAfter ?? 0}</strong> (pasas de ${c.tempBefore ?? 0} a ${c.tempAfter ?? 0} pts temporales)`;
+  const mine = (n) => c.isMine ? `<div class="imp2">👕 ${esc(n || '')} es tuyo: +${c.plantDelta ?? 0} fantasy en este partido</div>` : '';
+  const score = `${esc(ev.homeShort || c.teamNames?.[ev.homeTeamId] || '')} ${ev.homeGoles ?? ''}-${ev.awayGoles ?? ''} ${esc(ev.awayShort || c.teamNames?.[ev.awayTeamId] || '')}`;
+  switch (ev.tipo) {
+    case 'gol': return `<div class="toast toast-gol play"><div class="goool">¡GOOOL!</div><div><span class="who">⚽ ${esc(ev.playerName || '')} (${esc(ev.teamName || '')})</span> · ${ev.minuto || ''}' · ${score}</div><div class="imp">${pts}</div>${mine(ev.playerName)}</div>`;
+    case 'penalti': return `<div class="toast toast-penalti play"><span class="stamp">PENALTI</span><div><span class="who">${esc(ev.playerName || '')}</span> · ${ev.minuto || ''}' · gol sí, pero sin extra por demarcación</div><div class="imp">${pts}</div>${mine(ev.playerName)}</div>`;
+    case 'paradon': return `<div class="toast toast-paradon play"><span class="big dive">🧤</span><div class="msg cyan">¡PARADÓN! ${esc(ev.playerName || '')} · ${ev.minuto || ''}'</div>${mine(ev.playerName) || `<div class="imp2">🧤 Paradón de ${esc(ev.playerName || '')}</div>`}</div>`;
+    case 'descanso': return `<div class="toast toast-descanso play"><span class="big breathe">⏸️</span><div class="msg">DESCANSO · ${ev.minuto || ''}'</div><div class="imp2">Vas con ${c.tempAfter ?? c.tempBefore ?? 0} pts temporales</div></div>`;
+    case 'reanudacion': return `<div class="toast toast-reanudacion play"><div class="msg">▶️ Se reanuda el partido · ${ev.minuto || ''}'</div><div class="imp2">Vas con ${c.tempAfter ?? c.tempBefore ?? 0} pts temporales</div></div>`;
+    case 'final': return `<div class="toast toast-final play"><span class="big wave">🏁</span><div class="msg gold finalmsg">FINAL · ${score}</div><div class="imp">Ese partido te dio +${c.myPtsAfter ?? 0} de pronóstico</div></div>`;
+    case 'cambio': return `<div class="toast toast-cambio play"><div class="swap"><div class="chip out">⬇️ sale ${esc(ev.out || '')}</div><div class="chip in">⬆️ entra ${esc(ev.in || ev.playerName || '')}</div></div><div class="msg">Cambio · ${ev.minuto || ''}'</div>${c.isMine ? `<div class="imp2">👕 ${esc(ev.out || '')} es tuyo: ya no suma más hoy</div>` : ''}</div>`;
+    default: return `<div class="toast toast-tarjeta play"><span class="cardflip ${ev.color === 'roja' ? 'r' : 'y'}"></span><div class="msg">${ev.color === 'roja' ? 'Roja' : 'Amarilla'} · ${esc(ev.playerName || '')} · ${ev.minuto || ''}'</div><div class="imp2">Sin puntos directos, pero puede bajarle la nota ⭐</div></div>`;
+  }
+}
+
+  const api = { isLiveAllowed, stalenessLabel, livePointsForUser, squadPlayersInLive, esc, shortTeam, buildLiveStripHtml, scorersInLive, ownersOfPlayer, playerImgUrl, buildScorersHtml, buildLiveCardHtml, fetchLiveUpdated, fetchLiveMatches, computeLiveTemporal, buildTemporalTableHtml, computeLivePlayerRanking, buildPlayerRankingHtml, detectLiveEvents, buildEventToastHtml };
   global.liveTab = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })(typeof window !== 'undefined' ? window : globalThis);
