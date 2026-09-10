@@ -150,7 +150,45 @@ function buildTemporalTableHtml(rows, currentUser) {
   return `<table class="standings-table"><thead><tr><th>#</th><th>Jugador</th><th>Pron.</th><th>Plant.</th><th>Total</th></tr></thead><tbody>${body}</tbody></table>`;
 }
 
-  const api = { isLiveAllowed, stalenessLabel, livePointsForUser, squadPlayersInLive, esc, shortTeam, buildLiveStripHtml, scorersInLive, ownersOfPlayer, playerImgUrl, buildScorersHtml, buildLiveCardHtml, fetchLiveUpdated, fetchLiveMatches, computeLiveTemporal, buildTemporalTableHtml };
+function computeLivePlayerRanking(liveMatches, squadsCache, scorePlayer) {
+  const seen = new Map();
+  for (const live of liveMatches || []) {
+    const label = `${shortTeam(String(live.homeTeamId))}-${shortTeam(String(live.awayTeamId))}`;
+    for (const j of (live?.stats?.jugadores || [])) {
+      if (!(j.minutos > 0)) continue;
+      const owners = ownersOfPlayer(j.id, squadsCache);
+      if (!owners.length) continue;
+      const squad = (squadsCache[owners[0]] || []).find(s => String(s.id) === String(j.id)) || {};
+      const pts = (scorePlayer(j, squad, live)?.total) || 0;
+      const key = String(j.id);
+      if (!seen.has(key) || seen.get(key).pts < pts) {
+        seen.set(key, { id: key, nombre: j.nombre, equipo: j.equipo, matchLabel: label, rating: j.puntos || 0, goles: j.goles || 0, asistencias: j.asistencias || 0, pts, owners });
+      }
+    }
+  }
+  return [...seen.values()].sort((a, b) => b.pts - a.pts || b.goles - a.goles || b.asistencias - a.asistencias || b.rating - a.rating);
+}
+
+function ownerChips(owners, currentUser) {
+  const rest = owners.filter(u => u !== currentUser);
+  const shown = (owners.includes(currentUser) ? [currentUser] : []).concat(rest.slice(0, 3));
+  let html = shown.map(u => `<span class="tag${u === currentUser ? ' me' : ''}">${u === currentUser ? 'tú' : esc(u)}</span>`).join('');
+  const hidden = owners.length - shown.length;
+  if (hidden > 0) html += `<span class="tag more">(+${hidden})</span>`;
+  return html;
+}
+
+function buildPlayerRankingHtml(rows, { currentUser, playerExts }) {
+  const body = rows.map((r, i) => {
+    const cls = i === 0 ? 'rank-1' : i === 1 ? 'rank-2' : i === 2 ? 'rank-3' : '';
+    return `<tr><td><span class="rank ${cls}">${i + 1}</span></td>`
+      + `<td><img class="live-scorer-img" src="${playerImgUrl(r.id, playerExts)}" alt="" loading="lazy" onerror="this.style.display='none'">${esc(r.nombre)} <span class="tag">${esc(r.matchLabel)}</span><div class="owners">${ownerChips(r.owners, currentUser)}</div></td>`
+      + `<td class="rate">${r.rating ? Number(r.rating).toFixed(1) : '–'}</td><td><strong>${r.goles}</strong></td><td><strong>${r.asistencias}</strong></td><td class="total">${r.pts}</td></tr>`;
+  }).join('');
+  return `<table class="standings-table"><thead><tr><th>#</th><th>Futbolista</th><th>⭐</th><th>G</th><th>A</th><th>Pts</th></tr></thead><tbody>${body}</tbody></table>`;
+}
+
+  const api = { isLiveAllowed, stalenessLabel, livePointsForUser, squadPlayersInLive, esc, shortTeam, buildLiveStripHtml, scorersInLive, ownersOfPlayer, playerImgUrl, buildScorersHtml, buildLiveCardHtml, fetchLiveUpdated, fetchLiveMatches, computeLiveTemporal, buildTemporalTableHtml, computeLivePlayerRanking, buildPlayerRankingHtml };
   global.liveTab = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })(typeof window !== 'undefined' ? window : globalThis);
