@@ -65,3 +65,23 @@ Sin cambios de backend. Se reutiliza, solo sobre los partidos live actuales:
 - `tests/livePlayers.test.js`: orden del ranking, chips de dueños (Tú primero + (+N)),
   `⭐` ausente → `–`, filtro minutos > 0.
 - Suites existentes en verde (38/38).
+
+## Sección 4 — Avisos de eventos live
+
+Solo con la sub-tab Live abierta. Toasts apilados arriba, auto-cierre 6 s, tap para
+cerrar, sin sonido (v1). Detección en cliente por diff entre polls (2 min) del snapshot
+previo vs nuevo por `eventId`:
+
+| Evento | Detección | Animación | Contenido |
+|---|---|---|---|
+| Gol | suben goles; goleador por diff de `jugadores[].goles` (penalti si sube `penaltiMarcado`) | Espectacular: estadio nocturno, zapatazo, flash + vibración, confeti, ¡GOOOL! dorado, pancarta del goleador | Equipo, jugador, minuto, `de penalti` si aplica; tu pronóstico antes→después; línea fantasy solo si es tuyo |
+| Descanso / reanudación | transición de `estado` | ⏸️ que respira; discreta | Marcador + tus pts temporales |
+| Final | `estado` → `finalizado` | 🏁 ondeando + resultado dorado | Puntos de pronóstico que te dio ese partido |
+| Penalti marcado | diff `penaltiMarcado` | Sello "PENALTI" | Matiz: gol sí, sin extra por demarcación |
+| Penalti parado | diff `penaltiParado` | 🧤 que se lanza + ¡PARADÓN! | +3 fantasy solo si el portero es tuyo |
+| Cambio | nuevo incident `substitution` | Fichas sale/entra que se cruzan | Entra/sale + minuto; aviso si el implicado es tuyo (el que sale ya no suma) |
+| Tarjeta | nuevo incident `card` | Carta que gira (amarilla/roja) | Solo informativa: sin puntos directos, puede bajar la ⭐ |
+
+Backend (api-porra, rama `live-matchs`): `LiveMatch.incidents: [{key, tipo, minuto,
+teamId, playerId, playerName}]`; el scraper mapea `substitution`/`card` de Sofascore y
+guarda los últimos ~20 por partido. Tests del mapeo en api-porra.
