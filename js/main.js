@@ -216,6 +216,10 @@ function isCurrentUserAdmin() {
   return AppState.currentUser?.isAdmin === true;
 }
 
+function isCurrentUserGuest() {
+  return porraGuest.isGuestUser(AppState.currentUser);
+}
+
 function showMaintenanceOverlay(message) {
   if (document.querySelector('.maintenance-overlay')) return;
   // Admin bypass: mostrar banner en lugar de overlay bloqueante
@@ -2340,6 +2344,7 @@ function setupAuthFlow() {
       invitationGroup.style.display = 'flex';
       toggleBtn.textContent = '¿Ya tienes cuenta? Inicia sesión';
     }
+    if (toggleBtn) toggleBtn.style.display = '';
   }
 }
 
@@ -2383,7 +2388,7 @@ async function handleAuthSubmit(e) {
 
       localStorage.setItem('session_token', data.token);
       AppState.sessionToken = data.token;
-      AppState.currentUser = data.user;
+      AppState.currentUser = { ...data.user, isGuest: data.user?.isGuest === true };
 
       goToAuthStep(2);
     } catch (err) {
@@ -2415,6 +2420,7 @@ async function handleAuthSubmit(e) {
           points: 0,
           hits: 0,
           predictionsConfirmed: AppState.predictionsConfirmed,
+          isGuest: data.user?.isGuest === true,
         };
         localStorage.setItem('porra_ucl_user', JSON.stringify(user));
         AppState.currentUser = user;
@@ -2497,6 +2503,7 @@ async function refreshUserProfile() {
         ...AppState.currentUser,
         avatar: data.avatar ?? AppState.currentUser.avatar,
         isAdmin: data.isAdmin === true,
+        isGuest: data.isGuest === true,
         predictionsConfirmed: data.predictionsConfirmed === true,
       };
       AppState.currentUser = updatedUser;
