@@ -346,6 +346,7 @@ function isLigaFrozen() {
 }
 
 function isSquadFrozen() {
+  if (isCurrentUserGuest()) return false;
   return !isFasePretemporada();
 }
 
@@ -3196,7 +3197,7 @@ function navigateToTab(tabName) {
     return;
   }
 
-  if (tabName === 'final-predictions' && !AppState.predictionsConfirmed) {
+  if (tabName === 'final-predictions' && !AppState.predictionsConfirmed && !isCurrentUserGuest()) {
     showToast('Debes confirmar tus pronósticos de liga primero');
     return;
   }
@@ -4333,6 +4334,7 @@ function countPredictedInPhase(matches) {
  * etc.
  */
 function isPhaseFrozen(fase) {
+  if (isCurrentUserGuest()) return false;
   const phase = getFaseJuego();
   const faseOrder = ['liga', '16', '8', '4', 'semis', 'final'];
   const faseIndex = faseOrder.indexOf(fase);
@@ -4408,7 +4410,7 @@ function renderPronosticosTab() {
         <button class="save-predictions-btn" id="btn-save-predictions" ${frozen || confirmedForFase ? 'disabled' : ''}>💾 Guardar</button>
         ${shouldShowConfirmButton() ? `<button class="confirm-predictions-btn" id="btn-confirm-predictions" ${shouldConfirmButtonBeDisabled() ? 'disabled' : ''}>✅ Confirmar</button>` : ''}
         <button class="standings-btn" id="btn-show-standings" onclick="showPredictedStandings()">📊 Clasificación</button>
-        ${AppState.predictionsConfirmed ? '<button class="standings-btn" id="btn-show-final" onclick="navigateToTab(\'final-predictions\')" style="background: linear-gradient(135deg, #8B5CF6, #EC4899);">🏆 Eliminatorias</button>' : ''}
+        ${(AppState.predictionsConfirmed || isCurrentUserGuest()) ? '<button class="standings-btn" id="btn-show-final" onclick="navigateToTab(\'final-predictions\')" style="background: linear-gradient(135deg, #8B5CF6, #EC4899);">🏆 Eliminatorias</button>' : ''}
       </div>
       <div class="wizard-progress-bar">
         <div class="wizard-progress-fill" style="width: ${pct}%"></div>
@@ -4666,6 +4668,7 @@ function updateSaveButton() {
 
 /** El botón Confirmar solo se muestra en FASE_PRETEMPORADA mientras no se haya confirmado */
 function shouldShowConfirmButton() {
+  if (isCurrentUserGuest()) return false;
   const { fase } = getMatchesForCurrentPhase();
   const confirmedForFase = AppState.predictionsConfirmed && fase === 'liga';
   return isFasePretemporada() && !confirmedForFase;
@@ -6218,7 +6221,7 @@ async function renderFinalPredictionsTab() {
   const container = document.getElementById('final-predictions-container');
   if (!container) return;
 
-  const frozen = !(AppState.predictionsConfirmed && getFaseJuego() === 'FASE_PRETEMPORADA');
+  const frozen = isCurrentUserGuest() ? false : !(AppState.predictionsConfirmed && getFaseJuego() === 'FASE_PRETEMPORADA');
   
   const standings = calculatePredictedStandings();
   
@@ -6651,7 +6654,7 @@ async function saveFinalPredictionsToBackend() {
  * Obtiene las predicciones de fase final del backend
  */
 async function fetchFinalPredictionsFromBackend() {
-  if (!AppState.predictionsConfirmed) return;
+  if (!AppState.predictionsConfirmed && !isCurrentUserGuest()) return;
   const token = AppState.sessionToken || localStorage.getItem('session_token');
   if (!token) return;
 
