@@ -2882,6 +2882,10 @@ function showInvitationCodesModal() {
         <button id="tab-used" class="btn-tab" style="flex: 1;">Usados</button>
       </div>
 
+      <label style="display:flex; align-items:center; gap:8px; margin-bottom:8px; font-size:12px; color: var(--text-secondary); width:100%;">
+        <input type="checkbox" id="chk-invitation-guest">
+        Código de invitado (acceso libre, sin cierre de pronósticos)
+      </label>
       <button id="btn-create-code" class="btn-primary" style="background: var(--accent-green, #10B981); color: #fff; width: 100%; margin-bottom: 12px;">
         + Nuevo Código
       </button>
@@ -2964,7 +2968,7 @@ function showInvitationCodesModal() {
     list.innerHTML = filtered.map(inv => `
       <div style="background: var(--ucl-surface); padding: 12px; border-radius: var(--radius-md); margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
         <div>
-          <div style="font-family: monospace; font-size: 1.1rem; font-weight: 700; color: var(--text-primary);">${inv.code}</div>
+          <div style="font-family: monospace; font-size: 1.1rem; font-weight: 700; color: var(--text-primary);">${inv.code}${inv.isGuest ? ' <span style="font-size:10px; color:#F59E0B; font-family: inherit;">🎟️ Invitado</span>' : ''}</div>
           <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">
             ${currentTab === 'available'
               ? `Creado: ${new Date(inv.createdAt).toLocaleDateString('es-ES')}`
@@ -2980,15 +2984,19 @@ function showInvitationCodesModal() {
   }
 
   async function createInvitationCode() {
+    const guestCheck = modal.querySelector('#chk-invitation-guest');
+    const isGuest = guestCheck?.checked === true;
     try {
       const res = await fetchWithPhase(`${API_BASE}/api/admin/invitations`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...authHeaders() }
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        body: JSON.stringify({ isGuest })
       });
       if (res.status === 401) { logout(); return; }
       const data = await res.json();
       if (data.ok) {
-        showToast(`Código creado: ${data.invitation.code}`);
+        showToast(`${isGuest ? 'Código invitado' : 'Código'} creado: ${data.invitation.code}`);
+        if (guestCheck) guestCheck.checked = false;
       } else {
         showToast('Error al crear código');
       }
