@@ -56,12 +56,13 @@ function test_computeProgressForUser_liga_y_lock() {
 
 function test_computeProgressForUser_confirmado_elimina_lock() {
   const user = {
-    username: 'marta7', avatar: '🏆', isAdmin: false, predictionsConfirmed: true,
+    username: 'marta7', avatar: '🏆', isAdmin: false, isGuest: true, predictionsConfirmed: true,
     predictions: {}, finalPredictions: null, squadCount: 25
   };
   const p = computeProgressForUser(user, { liga: LIGA_144 });
   assert.strictEqual(p.finalLocked, false);
   assert.strictEqual(p.predictionsConfirmed, true);
+  assert.strictEqual(p.isGuest, true);
 }
 
 function test_computeSummaries() {
@@ -110,7 +111,7 @@ function test_sortUsers_confirmados_primero() {
 function test_buildProgressTableHtml_celdas_estado() {
   const list = [
     { username: 'luciab', avatar: '⚽', isAdmin: false, predictionsConfirmed: false, byFase: { liga: { done: 89, total: 144 } }, finalFilled: 0, finalTotal: 24, finalLocked: true, squadCount: 18, squadTotal: 25 },
-    { username: 'marta7', avatar: '🏆', isAdmin: false, predictionsConfirmed: true, byFase: { liga: { done: 144, total: 144 } }, finalFilled: 24, finalTotal: 24, finalLocked: false, squadCount: 25, squadTotal: 25 }
+    { username: 'marta7', avatar: '🏆', isAdmin: false, isGuest: true, predictionsConfirmed: true, byFase: { liga: { done: 144, total: 144 } }, finalFilled: 24, finalTotal: 24, finalLocked: false, squadCount: 25, squadTotal: 25 }
   ];
   const html = buildProgressTableHtml(list, ['liga']);
   assert.match(html, /89\/144/);
@@ -121,6 +122,7 @@ function test_buildProgressTableHtml_celdas_estado() {
   assert.match(html, /⏳/);
   assert.match(html, /✅/);
   assert.match(html, /Liguilla/);
+  assert.match(html, /Invitado/);
 }
 
 function test_buildProgressTableHtml_fases_dinamicas() {

@@ -4105,6 +4105,7 @@ function showProfileModal() {
       <div style="font-size: 3.5rem;">${user.avatar}</div>
       <h2 style="font-size: 1.4rem; font-weight: 800;">${user.name}</h2>
       <span class="ucl-tag">Usuario: ${user.username}</span>
+      ${isCurrentUserGuest() ? '<span class="ucl-tag" style="background: rgba(245,158,11,0.2); color:#F59E0B;">🎟️ Invitado</span>' : ''}
 
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 16px; width: 100%;">
         <div style="background: var(--ucl-surface); padding: 12px 8px; border-radius: var(--radius-md); text-align: center;">
@@ -4290,7 +4291,7 @@ function updateUserHeader() {
 
   if (AppState.currentUser) {
     if (avatar) avatar.textContent = AppState.currentUser.avatar;
-    if (name) name.textContent = AppState.currentUser.name;
+    if (name) name.textContent = isCurrentUserGuest() ? `${AppState.currentUser.name} · Invitado` : AppState.currentUser.name;
     if (pill) pill.style.display = 'flex';
     if (helpPill) helpPill.style.display = 'flex';
   } else {

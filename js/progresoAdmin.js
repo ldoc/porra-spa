@@ -35,6 +35,7 @@
       username: user.username,
       avatar: user.avatar || '👤',
       isAdmin: user.isAdmin === true,
+      isGuest: user.isGuest === true,
       predictionsConfirmed: user.predictionsConfirmed === true,
       byFase,
       finalFilled: computeFinalSlotsFilled(user.finalPredictions),
@@ -100,8 +101,9 @@
         ? '<td class="count state-locked">🔒</td>'
         : countCellHtml(p.finalFilled, p.finalTotal);
       const squadCell = countCellHtml(p.squadCount, p.squadTotal);
+      const guestTag = p.isGuest ? ' <span style="font-size:9px; color:#F59E0B;">🎟️ Invitado</span>' : '';
       return `<tr>
-        <td class="col-user"><span class="avatar">${p.avatar}</span> ${p.username}</td>
+        <td class="col-user"><span class="avatar">${p.avatar}</span> ${p.username}${guestTag}</td>
         ${phaseCells.join('')}
         ${valCell}
         ${finalCell}
