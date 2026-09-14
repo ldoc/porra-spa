@@ -1471,7 +1471,7 @@ async function renderSquadTab(container, username) {
       squad = AppState.squadsCache[username];
     } else {
       // Fetch individual si no está en caché
-      const res = await fetchWithPhase(`${API_BASE}/api/squad?username=${encodeURIComponent(username)}`);
+      const res = await fetchWithPhase(`${API_BASE}/api/squad?username=${encodeURIComponent(username)}`, { headers: authHeaders() });
       const data = await res.json();
       if (data.ok && data.squad && data.squad.length) {
         squad = data.squad;
@@ -3999,7 +3999,7 @@ async function loadAvatars() {
 // ============================================================
 async function fetchPlayers() {
   try {
-    const res = await fetchWithPhase(`${API_BASE}/api/players`);
+    const res = await fetchWithPhase(`${API_BASE}/api/players`, { headers: authHeaders() });
     const data = await res.json();
     if (data.ok) {
       AppState.players = data.players || [];

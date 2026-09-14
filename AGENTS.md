@@ -365,6 +365,7 @@ PUT    /api/admin/maintenance       // Body: { enabled:boolean, message:string }
   },
   "predictionsConfirmed": "boolean (false por defecto, true tras confirmar los 144 pronósticos)",
   "isAdmin": "boolean (false por defecto)",
+  "isGuest": "boolean (false por defecto)",
   "createdAt": "Date"
 }
 ```
@@ -402,6 +403,7 @@ PUT    /api/admin/maintenance       // Body: { enabled:boolean, message:string }
 {
   "code": "string (unique, required, indexed - 6 char hex)",
   "usedBy": "string | null (username)",
+  "isGuest": "boolean (false por defecto, codigo de invitado)",
   "createdAt": "Date"
 }
 ```
