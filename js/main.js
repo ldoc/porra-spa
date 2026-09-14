@@ -2428,7 +2428,7 @@ async function handleAuthSubmit(e) {
         enterApp();
         showToast(`Bienvenido de nuevo, ${user.name}!`);
       } else {
-        AppState.currentUser = { username: data.user.username };
+        AppState.currentUser = { username: data.user.username, isGuest: data.user?.isGuest === true };
         goToAuthStep(2);
       }
     } catch (err) {
