@@ -225,6 +225,18 @@ function guestBadgeForName(name) {
   return porraGuest.guestBadgeHtml(player && player.isGuest);
 }
 
+function visiblePlayers() {
+  const list = AppState.players || [];
+  return porraGuest.hideGuestsForViewer(AppState.currentUser) ? list.filter(p => !p.isGuest) : list;
+}
+
+function rerenderActiveTab() {
+  const active = document.querySelector('.nav-item.active')?.dataset?.tab;
+  if (active === 'clasificacion') renderClasificacionTab();
+  else if (active === 'estadisticas' && typeof renderEstadisticasTab === 'function') renderEstadisticasTab();
+  else if (active === 'resultados') renderResultadosTab();
+}
+
 function showMaintenanceOverlay(message) {
   if (document.querySelector('.maintenance-overlay')) return;
   // Admin bypass: mostrar banner en lugar de overlay bloqueante
@@ -1143,7 +1155,7 @@ async function renderClasificacionTab() {
   container.innerHTML = skeletonRows(8);
   await Promise.all([fetchPlayers(), fetchMatchStats(), fetchAllPredictions()]);
 
-  const players = AppState.players || [];
+  const players = visiblePlayers();
 
   if (!players.length) {
     container.innerHTML = `<div style="padding: 24px; text-align: center; color: var(--text-muted);">Cargando clasificación...</div>`;
@@ -2112,7 +2124,7 @@ function renderMatchResult({ match, homeGoals, awayGoals, hasResult }) {
 
   const playersWithPoints = [];
 
-  for (const player of AppState.players) {
+  for (const player of visiblePlayers()) {
     const predictions = AppState.allPredictions[player.name] || {};
     const prediction = predictions[match.id];
 
@@ -3582,7 +3594,7 @@ function computeRankingForStats(matchStatsSubset) {
   AppState.classificationPoints = {};
   try {
     const subsetIds = new Set(matchStatsSubset.map(ms => ms.eventId));
-    const rows = (AppState.players || []).map(p => {
+    const rows = visiblePlayers().map(p => {
       const parts = computeUserRealPoints(p.name);
       return {
         name: p.name,
