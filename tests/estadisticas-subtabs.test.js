@@ -97,6 +97,36 @@ function test_buildCompletedLeagueData_solo_jornadas_completas() {
   assert.deepStrictEqual(r.pointsByUserByJornada.ana, [15, 15]);
 }
 
+function test_buildCompletedLeagueData_incluye_puntos_plantilla() {
+  const leagueMatches = [
+    { id: 1, ronda: 1, homeTeamId: 10, awayTeamId: 20, fase: 'liga' },
+    { id: 2, ronda: 1, homeTeamId: 30, awayTeamId: 40, fase: 'liga' },
+    { id: 3, ronda: 2, homeTeamId: 10, awayTeamId: 30, fase: 'liga' },
+    { id: 4, ronda: 2, homeTeamId: 20, awayTeamId: 40, fase: 'liga' },
+  ];
+  const msById = {
+    1: { eventId: 1, stats: { 10: { goles: 1 }, 20: { goles: 0 } } },
+    2: { eventId: 2, stats: { 30: { goles: 2 }, 40: { goles: 2 } } },
+    3: { eventId: 3, stats: { 10: { goles: 3 }, 30: { goles: 1 } } },
+    4: { eventId: 4, stats: { 20: { goles: 1 }, 40: { goles: 1 } } },
+  };
+  const detailsByUser = {
+    ana: [
+      { match: { id: 1, ronda: 1, fase: 'liga' }, points: 8 },
+      { match: { id: 3, ronda: 2, fase: 'liga' }, points: 15 },
+    ],
+  };
+  const squadPointsByUser = {
+    ana: { playerDetails: [
+      { jugador: { id: 1 }, partidos: [{ eventId: 1, puntos: 12 }, { eventId: 3, puntos: 3 }] },
+      { jugador: { id: 2 }, partidos: [{ eventId: 3, puntos: 5 }, { eventId: 999, puntos: 40 }] },
+    ] },
+  };
+  const r = buildCompletedLeagueData(leagueMatches, msById, detailsByUser, squadPointsByUser);
+  assert.deepStrictEqual(r.completedRondas, [1, 2]);
+  assert.deepStrictEqual(r.pointsByUserByJornada.ana, [20, 23]);
+}
+
 function test_calcStreaks_up_down_y_empate() {
   const st = calcStreaks({
     a: [10, 20, 30],
@@ -129,6 +159,7 @@ function test_calcBestJornadas_top_n() {
 }
 
 test_buildCompletedLeagueData_solo_jornadas_completas();
+test_buildCompletedLeagueData_incluye_puntos_plantilla();
 test_calcStreaks_up_down_y_empate();
 test_calcStreaks_corte_al_cambiar_direccion();
 test_calcBestJornadas_top_n();

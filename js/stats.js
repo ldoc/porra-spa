@@ -150,12 +150,14 @@
     };
   }
 
-  function buildCompletedLeagueData(leagueMatches, matchStatsById, matchDetailsByUser) {
+  function buildCompletedLeagueData(leagueMatches, matchStatsById, matchDetailsByUser, squadPointsByUser) {
     const totalByRonda = new Map();
     const doneByRonda = new Map();
+    const rondaByMatchId = new Map();
     for (const m of leagueMatches || []) {
       const r = Number(m.ronda);
       if (!(r >= 1 && r <= 8)) continue;
+      rondaByMatchId.set(String(m.id), r);
       totalByRonda.set(r, (totalByRonda.get(r) || 0) + 1);
       const home = matchStatsById?.[m.id]?.stats?.[m.homeTeamId]?.goles;
       const away = matchStatsById?.[m.id]?.stats?.[m.awayTeamId]?.goles;
@@ -169,14 +171,27 @@
     const idxByRonda = new Map(completedRondas.map((r, i) => [r, i]));
 
     const pointsByUserByJornada = {};
-    for (const [username, details] of Object.entries(matchDetailsByUser || {})) {
+    const usernames = new Set([
+      ...Object.keys(matchDetailsByUser || {}),
+      ...Object.keys(squadPointsByUser || {}),
+    ]);
+    for (const username of usernames) {
       const arr = completedRondas.map(() => 0);
-      for (const d of details || []) {
+      for (const d of matchDetailsByUser?.[username] || []) {
         const m = d.match;
         if (!m || m.fase !== 'liga') continue;
         const idx = idxByRonda.get(Number(m.ronda));
         if (idx === undefined) continue;
         arr[idx] += d.points || 0;
+      }
+      for (const pd of squadPointsByUser?.[username]?.playerDetails || []) {
+        for (const partido of pd.partidos || []) {
+          const ronda = rondaByMatchId.get(String(partido.eventId));
+          if (ronda === undefined) continue;
+          const idx = idxByRonda.get(ronda);
+          if (idx === undefined) continue;
+          arr[idx] += partido.puntos || 0;
+        }
       }
       pointsByUserByJornada[username] = arr;
     }
@@ -1034,12 +1049,12 @@
     for (const p of statsPlayers()) {
       detailsByUser[p.name] = AppState.userPoints[p.name]?.matchDetails || [];
     }
-    const league = buildCompletedLeagueData(AppState.leagueMatches, matchStatsById, detailsByUser);
     const squadPointsByUser = {};
     for (const p of statsPlayers()) {
       const ud = getCachedUserData(p.name);
       squadPointsByUser[p.name] = ud.squadPoints?.playerDetails?.length ? ud.squadPoints : null;
     }
+    const league = buildCompletedLeagueData(AppState.leagueMatches, matchStatsById, detailsByUser, squadPointsByUser);
     const realPointsByUser = {};
     const splitByUser = {};
     for (const p of statsPlayers()) {
@@ -1053,6 +1068,7 @@
       matchStatsById,
       playedMatches,
       completedRondas: league.completedRondas,
+      leaguePoints: league.pointsByUserByJornada,
       streaks: calcStreaks(league.pointsByUserByJornada),
       positionHistory: calcPositionHistory(league.pointsByUserByJornada),
       timesTopJornada: calcTimesTopJornada(league.pointsByUserByJornada),
@@ -1304,11 +1320,7 @@
   }
 
   function jornadaPtsDeUsuario(aggregates, username) {
-    const rondas = aggregates.completedRondas || [];
-    const details = AppState.userPoints[username]?.matchDetails || [];
-    return rondas.map(r => (details || [])
-      .filter(d => d.match && d.match.fase === 'liga' && Number(d.match.ronda) === Number(r))
-      .reduce((a, d) => a + (d.points || 0), 0));
+    return (aggregates.leaguePoints?.[username] || []).slice();
   }
 
   function resolveIndividualUsername(players) {
@@ -1476,7 +1488,7 @@
     const tops = aggregates.timesTopJornada?.[username] || 0;
     const userJornadaPts = jornadaPtsDeUsuario(aggregates, username);
     const bestJ = calcUserBestJornada(userJornadaPts);
-    const mediaJ = rondas.length ? Math.round(((split.prediction || 0) / rondas.length) * 10) / 10 : null;
+    const mediaJ = userJornadaPts.length ? Math.round((userJornadaPts.reduce((a, b) => a + b, 0) / userJornadaPts.length) * 10) / 10 : null;
     const jornadasInner = rondas.length ? `
       <div class="stats-kpi-grid" style="grid-template-columns:repeat(2,1fr)">
         <div class="stats-kpi"><div class="stats-kv">${bestJ ? `J${rondas[bestJ.idx] ?? bestJ.idx + 1} · ${bestJ.pts}` : '—'}</div><div class="stats-kl">mejor jornada</div></div>
