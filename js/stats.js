@@ -1197,6 +1197,12 @@
     const seriesMap = buildSeriesMap(source, aggregates.reachedPhases, aggregates.matchesById);
     currentSeriesMap = seriesMap;
     initStatsState(seriesMap);
+    if (statsHideGuests() && AppState.estadisticasVisibleUsers) {
+      const allowed = new Set(statsPlayers().map(p => p.name));
+      for (const n of [...AppState.estadisticasVisibleUsers]) {
+        if (!allowed.has(n)) AppState.estadisticasVisibleUsers.delete(n);
+      }
+    }
     const visibleSet = AppState.estadisticasVisibleUsers;
     const players = orderPlayers(seriesMap);
     const me = AppState.currentUser?.name;

@@ -235,6 +235,7 @@ function rerenderActiveTab() {
   if (active === 'clasificacion') renderClasificacionTab();
   else if (active === 'estadisticas' && typeof renderEstadisticasTab === 'function') renderEstadisticasTab();
   else if (active === 'resultados') renderResultadosTab();
+  else if (active === 'inicio') renderInicioTab();
 }
 
 function showMaintenanceOverlay(message) {

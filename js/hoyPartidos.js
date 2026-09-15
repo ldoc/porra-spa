@@ -181,7 +181,7 @@
   }
 
   function visibleAllPredictions(allPredictions) {
-    if (typeof porraGuest === 'undefined' || !porraGuest.hideGuestsForViewer(AppState.currentUser)) {
+    if (typeof porraGuest === 'undefined' || typeof AppState === 'undefined' || !porraGuest.hideGuestsForViewer(AppState.currentUser)) {
       return allPredictions || {};
     }
     const set = new Set((AppState.players || []).filter(p => !p.isGuest).map(p => p.name));
