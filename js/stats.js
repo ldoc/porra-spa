@@ -762,20 +762,20 @@
 
   function renderPronosticosBody(aggregates){
     let partidos, clasif, elims, squadAgg, plantilla;
-    try{ partidos=calcPronosticosPartidosStats((typeof AppState!=='undefined'&&AppState.allPredictions)||{}, (typeof AppState!=='undefined'&&AppState.leagueMatches)||[]); }catch(e){ partidos={globalCounts:{H:0,D:0,A:0},globalPct:{H:0,D:0,A:0},mostRepeated:null,raro:null,mostConsensus:null,mostDivided:null,localAvg:0,visitanteAvg:0,delta:0,conservador:null,arriesgado:null}; }
-    try{ clasif=calcClasificacionPronosticosStats((typeof AppState!=='undefined'&&AppState.allPredictions)||{}, (typeof AppState!=='undefined'&&AppState.leagueMatches)||[], (typeof AppState!=='undefined'&&AppState.teamsMap)||{}); }catch(e){ clasif={freqPrimero:new Map(),freqTop8:new Map(),freqFuera24:new Map(),mediaPos:new Map(),topMedia5:[],users:0}; }
-    try{ elims=calcEliminatoriasPronosticosStats((typeof AppState!=='undefined'&&AppState.finalPredictionsCache)||{}); }catch(e){ elims={championTally:{total:0,teams:[]},finalTally:[],semisFreq:new Map(),quadro:{users:0,avgCommon:0,avgPct:0,veryDiffCount:0}}; }
+    try{ partidos=calcPronosticosPartidosStats(statsFilterMap(AppState.allPredictions), (typeof AppState!=='undefined'&&AppState.leagueMatches)||[]); }catch(e){ partidos={globalCounts:{H:0,D:0,A:0},globalPct:{H:0,D:0,A:0},mostRepeated:null,raro:null,mostConsensus:null,mostDivided:null,localAvg:0,visitanteAvg:0,delta:0,conservador:null,arriesgado:null}; }
+    try{ clasif=calcClasificacionPronosticosStats(statsFilterMap(AppState.allPredictions), (typeof AppState!=='undefined'&&AppState.leagueMatches)||[], (typeof AppState!=='undefined'&&AppState.teamsMap)||{}); }catch(e){ clasif={freqPrimero:new Map(),freqTop8:new Map(),freqFuera24:new Map(),mediaPos:new Map(),topMedia5:[],users:0}; }
+    try{ elims=calcEliminatoriasPronosticosStats(statsFilterMap(AppState.finalPredictionsCache)); }catch(e){ elims={championTally:{total:0,teams:[]},finalTally:[],semisFreq:new Map(),quadro:{users:0,avgCommon:0,avgPct:0,veryDiffCount:0}}; }
     squadAgg = aggregates?.squadOwnership;
     if(!squadAgg){
       try{
         const squadPointsByUser={};
-        for(const p of (typeof AppState!=='undefined'&&AppState.players||[])){
+        for(const p of statsPlayers()){
           try{ const ud=getCachedUserData(p.name); squadPointsByUser[p.name]= ud.squadPoints?.playerDetails?.length? ud.squadPoints:null; }catch(_e){ squadPointsByUser[p.name]=null; }
         }
-        squadAgg=aggregateSquads(squadPointsByUser, (typeof AppState!=='undefined'&&AppState.squadsCache)||{});
+        squadAgg=aggregateSquads(squadPointsByUser, statsFilterMap(AppState.squadsCache));
       }catch(e){ squadAgg={usersWithSquad:0,uniquePlayers:0,rows:[]}; }
     }
-    try{ plantilla=calcPlantillaPronosticosExtras(squadAgg, (typeof AppState!=='undefined'&&AppState.squadsCache)||{}); }catch(e){ plantilla={top3ByPos:{G:[],D:[],M:[],F:[]},equipoMas:null,equipoMenos:null,imprescindible:[],diferencial:[],hipster:null,mainstream:null}; }
+    try{ plantilla=calcPlantillaPronosticosExtras(squadAgg, statsFilterMap(AppState.squadsCache)); }catch(e){ plantilla={top3ByPos:{G:[],D:[],M:[],F:[]},equipoMas:null,equipoMenos:null,imprescindible:[],diferencial:[],hipster:null,mainstream:null}; }
     function stripCardTitle(html){
       return html.replace(/<div class="stats-card-title">.*?<\/div>/, '');
     }
@@ -874,6 +874,23 @@
     return porraGuest.guestBadgeHtml(p && p.isGuest);
   }
 
+  function statsHideGuests() {
+    return typeof porraGuest !== 'undefined' && porraGuest.hideGuestsForViewer(AppState.currentUser);
+  }
+
+  function statsPlayers() {
+    const list = AppState.players || [];
+    return statsHideGuests() ? list.filter(p => !p.isGuest) : list;
+  }
+
+  function statsFilterMap(obj) {
+    if (!statsHideGuests()) return obj || {};
+    const set = new Set(statsPlayers().map(p => p.name));
+    const out = {};
+    for (const [k, v] of Object.entries(obj || {})) if (set.has(k)) out[k] = v;
+    return out;
+  }
+
   const SOURCES = [
     { key: 'total', label: 'Total' },
     { key: 'pronosticos', label: 'Pronóst.' },
@@ -938,7 +955,7 @@
     if (_porraAvgBySource) return _porraAvgBySource;
     const keys = ['prediction', 'squad', 'classification', 'eliminatorias'];
     const totals = { prediction: 0, squad: 0, classification: 0, eliminatorias: 0 };
-    const list = AppState.players || [];
+    const list = statsPlayers();
     for (const p of list) {
       const s = sourceSplitFromUserData(AppState.userPoints[p.name]?.totalPoints, getCachedUserData(p.name));
       for (const k of keys) totals[k] += s[k] || 0;
@@ -968,7 +985,7 @@
         container.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text-muted)">No hay resultados disponibles aún</div>';
         return;
       }
-      for (const p of AppState.players || []) {
+      for (const p of statsPlayers()) {
         AppState.userPoints[p.name] = calculateUserTotalPoints(p.name);
       }
       container.innerHTML = renderStatsContent();
@@ -980,7 +997,7 @@
 
   function buildSeriesMap(source, reachedPhases, matchesById) {
     const map = new Map();
-    for (const p of AppState.players || []) {
+    for (const p of statsPlayers()) {
       const r = getSeriesBySource(source, getCachedUserData(p.name));
       map.set(p.name, r);
     }
@@ -988,7 +1005,7 @@
   }
 
   function orderPlayers(seriesMap) {
-    const players = [...(AppState.players || [])];
+    const players = [...statsPlayers()];
     const me = AppState.currentUser?.name;
     players.sort((a, b) => {
       if (a.name === me) return -1;
@@ -1014,18 +1031,18 @@
     for (const ms of AppState.matchStats || []) matchStatsById[ms.eventId] = ms;
     const playedMatches = extractPlayedMatches(AppState.matches, matchStatsById);
     const detailsByUser = {};
-    for (const p of AppState.players || []) {
+    for (const p of statsPlayers()) {
       detailsByUser[p.name] = AppState.userPoints[p.name]?.matchDetails || [];
     }
     const league = buildCompletedLeagueData(AppState.leagueMatches, matchStatsById, detailsByUser);
     const squadPointsByUser = {};
-    for (const p of AppState.players || []) {
+    for (const p of statsPlayers()) {
       const ud = getCachedUserData(p.name);
       squadPointsByUser[p.name] = ud.squadPoints?.playerDetails?.length ? ud.squadPoints : null;
     }
     const realPointsByUser = {};
     const splitByUser = {};
-    for (const p of AppState.players || []) {
+    for (const p of statsPlayers()) {
       const s = sourceSplitFromUserData(AppState.userPoints[p.name]?.totalPoints, getCachedUserData(p.name));
       splitByUser[p.name] = s;
       realPointsByUser[p.name] = s.prediction + s.squad + s.classification + s.eliminatorias;
@@ -1042,9 +1059,9 @@
       realPointsByUser,
       splitByUser,
       bestJornadas: calcBestJornadas(league.pointsByUserByJornada, 5),
-      championsTally: tallyChampions(AppState.finalPredictionsCache),
-      quadro: compareQuadroWithCommunity(AppState.currentUser?.name, AppState.finalPredictionsCache),
-      squadOwnership: aggregateSquads(squadPointsByUser, AppState.squadsCache),
+      championsTally: tallyChampions(statsFilterMap(AppState.finalPredictionsCache)),
+      quadro: compareQuadroWithCommunity(AppState.currentUser?.name, statsFilterMap(AppState.finalPredictionsCache)),
+      squadOwnership: aggregateSquads(squadPointsByUser, statsFilterMap(AppState.squadsCache)),
     };
   }
 
@@ -1413,7 +1430,7 @@
   }
 
   function renderIndividualBody(aggregates) {
-    const players = AppState.players || [];
+    const players = statsPlayers();
     const splitByUser = aggregates.splitByUser || {};
     const ordered = orderIndividualPlayers(players, splitByUser);
     const username = resolveIndividualUsername(ordered);
@@ -1592,7 +1609,7 @@
       btn.addEventListener('click', () => {
         const set = AppState.estadisticasVisibleUsers;
         if (btn.dataset.action === 'todos') {
-          (AppState.players || []).forEach(p => set.add(p.name));
+          statsPlayers().forEach(p => set.add(p.name));
         } else {
           set.clear();
         }
