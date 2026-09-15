@@ -11,7 +11,11 @@
     return !isGuestUser(user);
   }
 
-  const api = { isGuestUser, isFrozenForUser, shouldShowConfirmForUser };
+  function guestBadgeHtml(isGuest) {
+    return isGuest === true ? ' <span class="guest-tag" title="Invitado">INV</span>' : '';
+  }
+
+  const api = { isGuestUser, isFrozenForUser, shouldShowConfirmForUser, guestBadgeHtml };
 
   if (typeof module !== 'undefined' && module.exports) {
     module.exports = api;

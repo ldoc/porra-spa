@@ -1,5 +1,5 @@
 const assert = require('assert');
-const { isGuestUser, isFrozenForUser, shouldShowConfirmForUser } = require('../js/guestProfile.js');
+const { isGuestUser, isFrozenForUser, shouldShowConfirmForUser, guestBadgeHtml } = require('../js/guestProfile.js');
 
 function test_isGuestUser() {
   assert.strictEqual(isGuestUser({ isGuest: true }), true);
@@ -19,7 +19,13 @@ function test_shouldShowConfirmForUser() {
   assert.strictEqual(shouldShowConfirmForUser({ isGuest: false }), true);
 }
 
-const tests = [test_isGuestUser, test_isFrozenForUser, test_shouldShowConfirmForUser];
+function test_guestBadgeHtml() {
+  assert.strictEqual(guestBadgeHtml(true), ' <span class="guest-tag" title="Invitado">INV</span>');
+  assert.strictEqual(guestBadgeHtml(false), '');
+  assert.strictEqual(guestBadgeHtml(undefined), '');
+}
+
+const tests = [test_isGuestUser, test_isFrozenForUser, test_shouldShowConfirmForUser, test_guestBadgeHtml];
 let passed = 0, failed = 0;
 for (const t of tests) {
   try { t(); passed++; console.log(`  ✓ ${t.name}`); }

@@ -298,6 +298,20 @@ html, body {
   margin-bottom: 10px;
 }
 
+.guest-tag {
+  display: inline-block;
+  margin-left: 4px;
+  padding: 0 4px;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+  line-height: 14px;
+  border-radius: 4px;
+  background: rgba(245, 158, 11, 0.2);
+  color: #F59E0B;
+  vertical-align: middle;
+}
+
 .ucl-title { font-size: 1.3rem; font-weight: 800; line-height: 1.2; margin-bottom: 6px; }
 .ucl-subtitle { font-size: var(--font-size-xs); color: var(--text-secondary); line-height: 1.4; }
 

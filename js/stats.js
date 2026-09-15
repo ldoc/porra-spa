@@ -659,8 +659,8 @@
         <div style="font-size:11px; margin-top:3px;">${div ? `<b>${matchLabel(div.matchId)}</b> · entropía ${div.entropy}` : '—'}</div>
       </div>
       <div style="display:flex; gap:6px; margin-top:10px; font-size:10px; color:var(--text-muted); justify-content:space-between;">
-        <span>${partidos.conservador ? `🛡️ ${esc(partidos.conservador.username)} prudente · ${partidos.conservador.avg} gol/part` : ''}</span>
-        <span>${partidos.arriesgado ? `🔥 ${esc(partidos.arriesgado.username)} loco · ${partidos.arriesgado.avg} gol/part` : ''}</span>
+        <span>${partidos.conservador ? `🛡️ ${esc(partidos.conservador.username)}${guestTag(partidos.conservador.username)} prudente · ${partidos.conservador.avg} gol/part` : ''}</span>
+        <span>${partidos.arriesgado ? `🔥 ${esc(partidos.arriesgado.username)}${guestTag(partidos.arriesgado.username)} loco · ${partidos.arriesgado.avg} gol/part` : ''}</span>
       </div>
       <div style="font-size:10px; color:var(--text-muted); margin-top:6px; text-align:center;">Media: <b>${partidos.localAvg} local</b> / ${partidos.visitanteAvg} visitante · Δ ${partidos.delta>0?'+':''}${partidos.delta}</div>
     </div>`;
@@ -753,8 +753,8 @@
         <div style="background:rgba(255,255,255,0.04); border-radius:8px; padding:8px; text-align:center;"><div style="font-weight:800;">${equipoMenos ? esc((typeof AppState!=='undefined'&&AppState.teamsMap?.[equipoMenos.equipo]?.name)||equipoMenos.equipo) : '—'}</div><div style="font-size:9px; color:var(--text-muted);">MENOS ELEGIDO</div></div>
       </div>
       <div style="margin-top:8px; font-size:10px; color:var(--text-muted); display:flex; justify-content:space-between;">
-        <span>🪞 Hipster: ${plantilla?.hipster ? esc(plantilla.hipster.username) : '—'}</span>
-        <span>👥 Mainstream: ${plantilla?.mainstream ? esc(plantilla.mainstream.username) : '—'}</span>
+        <span>🪞 Hipster: ${plantilla?.hipster ? `${esc(plantilla.hipster.username)}${guestTag(plantilla.hipster.username)}` : '—'}</span>
+        <span>👥 Mainstream: ${plantilla?.mainstream ? `${esc(plantilla.mainstream.username)}${guestTag(plantilla.mainstream.username)}` : '—'}</span>
       </div>
       <div style="margin-top:8px; font-size:10px; color:var(--text-muted); text-align:center;">Top por posición disponible en Plantillas →</div>
     </div>`;
@@ -866,6 +866,12 @@
 
   function getPlayerMeta(name) {
     return (AppState.players || []).find(p => p.name === name) || {};
+  }
+
+  function guestTag(name) {
+    if (typeof porraGuest === 'undefined') return '';
+    const p = (AppState.players || []).find(x => x.name === name);
+    return porraGuest.guestBadgeHtml(p && p.isGuest);
   }
 
   const SOURCES = [
@@ -1077,7 +1083,7 @@
       return `
       <div class="stats-rank-row ${u === me ? 'me' : ''}">
         <span class="stats-rank-pos rank-n">${esc(getPlayerMeta(u).avatar || '⚽')}</span>
-        <span class="stats-rank-name">${esc(u)}</span>
+        <span class="stats-rank-name">${esc(u)}${guestTag(u)}</span>
         <div class="stats-streak-bar" aria-hidden="true"><div class="stats-streak-fill ${s.dir}" style="width:${pct}%"></div></div>
         ${s.dir === 'up'
           ? `<span class="stats-badge-up">▲ ${s.len}</span>`
@@ -1092,7 +1098,7 @@
       return `
       <div class="stats-rank-row ${b.username === me ? 'me' : ''}">
         ${pos}
-        <span class="stats-rank-name">${esc(getPlayerMeta(b.username).avatar || '⚽')} ${esc(b.username)} · J${ronda ?? b.jornadaIdx + 1}</span>
+        <span class="stats-rank-name">${esc(getPlayerMeta(b.username).avatar || '⚽')} ${esc(b.username)}${guestTag(b.username)} · J${ronda ?? b.jornadaIdx + 1}</span>
         <span class="stats-rank-main">+${b.pts} pts</span>
       </div>`;
     }).join('') : '';
@@ -1187,7 +1193,7 @@
     const chips = filtered.map(p => {
       const on = visibleSet.has(p.name);
       const isMe = p.name === me;
-      return `<button class="stats-chip ${on ? 'active' : 'off'} ${isMe ? 'me' : ''}" data-user="${esc(p.name)}" aria-pressed="${on ? 'true' : 'false'}" title="${esc(p.name)}">${esc(p.avatar || '⚽')} ${esc(p.name)}${isMe ? ' · tú' : ''}</button>`;
+      return `<button class="stats-chip ${on ? 'active' : 'off'} ${isMe ? 'me' : ''}" data-user="${esc(p.name)}" aria-pressed="${on ? 'true' : 'false'}" title="${esc(p.name)}">${esc(p.avatar || '⚽')} ${esc(p.name)}${porraGuest.guestBadgeHtml(p.isGuest)}${isMe ? ' · tú' : ''}</button>`;
     }).join('');
     const hasNoMatch = search && !filtered.length;
 
@@ -1269,7 +1275,7 @@
       const r = seriesMap.get(p.name);
       const total = r.series[12] || 0;
       const rank = sorted.indexOf(p) + 1;
-      return `<button class="stats-legend-item" data-user="${esc(p.name)}" style="--legend-color:${color}" title="Ocultar/mostrar ${esc(p.name)}"><i style="background:${color}"></i>${esc(p.avatar||'⚽')} ${esc(p.name)} · ${total} pts · #${rank}</button>`;
+      return `<button class="stats-legend-item" data-user="${esc(p.name)}" style="--legend-color:${color}" title="Ocultar/mostrar ${esc(p.name)}"><i style="background:${color}"></i>${esc(p.avatar||'⚽')} ${esc(p.name)}${porraGuest.guestBadgeHtml(p.isGuest)} · ${total} pts · #${rank}</button>`;
     }).join('');
     return `<div class="stats-legend">${items}</div>`;
   }
@@ -1414,7 +1420,7 @@
     if (!username) return statsEmpty('Sin usuarios disponibles');
 
     const options = ordered.map(p =>
-      `<option value="${esc(p.name)}" ${p.name === username ? 'selected' : ''}>${esc(p.avatar || '⚽')} ${esc(p.name)}</option>`
+      `<option value="${esc(p.name)}" ${p.name === username ? 'selected' : ''}>${esc(p.avatar || '⚽')} ${esc(p.name)}${porraGuest.guestBadgeHtml(p.isGuest)}</option>`
     ).join('');
 
     const rank = individualOverallRank(aggregates.realPointsByUser, username, splitByUser);

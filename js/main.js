@@ -220,6 +220,11 @@ function isCurrentUserGuest() {
   return porraGuest.isGuestUser(AppState.currentUser);
 }
 
+function guestBadgeForName(name) {
+  const player = (AppState.players || []).find(p => p.name === name);
+  return porraGuest.guestBadgeHtml(player && player.isGuest);
+}
+
 function showMaintenanceOverlay(message) {
   if (document.querySelector('.maintenance-overlay')) return;
   // Admin bypass: mostrar banner en lugar de overlay bloqueante
@@ -1120,7 +1125,7 @@ function buildClasificacionRow(p, rank, isMe, trendInlineHtml = null) {
         <div class="rank-pill ${getRankBadgeClass(rank)}">${rank}</div>
         ${trendInlineHtml ? trendInlineHtml : ''}
         <span class="player-avatar">${p.avatar}</span>
-        <span class="clasificacion-name">${p.name}${isMe ? ' <span class="clasificacion-you">(Tu)</span>' : ''}</span>
+        <span class="clasificacion-name">${p.name}${isMe ? ' <span class="clasificacion-you">(Tu)</span>' : ''}${porraGuest.guestBadgeHtml(p.isGuest)}</span>
       </div>
       <span class="clasificacion-val">${p.predictionPoints}</span>
       <span class="clasificacion-val">${p.squadPoints}</span>
@@ -1160,7 +1165,7 @@ async function renderClasificacionTab() {
           <div class="rank-badge">${i + 1}</div>
           <div class="player-avatar">${p.avatar}</div>
           <div class="player-info">
-            <div class="player-name">${p.name}${isMe ? ' <span style="color:var(--accent-primary)">(Tu)</span>' : ''}</div>
+            <div class="player-name">${p.name}${isMe ? ' <span style="color:var(--accent-primary)">(Tu)</span>' : ''}${porraGuest.guestBadgeHtml(p.isGuest)}</div>
           </div>
         </div>
       `;
@@ -1248,7 +1253,7 @@ function showUserProfileModal(username, initialTab = 'predictions') {
     <div class="breakdown-modal">
       <div class="breakdown-modal-header">
         <button class="breakdown-modal-back" id="breakdown-close">←</button>
-        <h3 class="breakdown-modal-title">${username}</h3>
+        <h3 class="breakdown-modal-title">${username}${guestBadgeForName(username)}</h3>
         <button class="breakdown-modal-close" id="breakdown-close-x">✕</button>
       </div>
       <div class="profile-tabs">
@@ -2165,7 +2170,7 @@ function renderMatchResult({ match, homeGoals, awayGoals, hasResult }) {
 
     playersHtml += `
       <div class="resultados-player ${hasResult ? (p.totalUserPoints > 0 ? 'has-points' : 'no-points') : 'no-result'} ${isCurrentUser ? 'is-current-user' : ''}">
-        <span class="resultados-player-name">${p.player.avatar} ${p.player.name}${isCurrentUser ? ' <span class="current-user-tag">(Tú)</span>' : ''}</span>
+        <span class="resultados-player-name">${p.player.avatar} ${p.player.name}${isCurrentUser ? ' <span class="current-user-tag">(Tú)</span>' : ''}${porraGuest.guestBadgeHtml(p.player.isGuest)}</span>
         <span class="resultados-player-pred">${p.predStr}</span>
         ${hasResult ? `<span class="resultados-player-points">${p.totalUserPoints} pts</span>` : ''}
         ${hasResult ? `<button class="resultados-player-expand-btn" data-player-target="${playerTargetId}">▸</button>` : ''}
