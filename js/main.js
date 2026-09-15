@@ -2724,6 +2724,11 @@ function showAdminModal() {
         💬 Gestión de Mensajes
       </button>
 
+      <div style="width:100%; display:flex; align-items:center; justify-content:space-between; gap:10px; background: var(--ucl-surface); padding: 12px; border-radius: var(--radius-md); margin-top: 8px;">
+        <span style="font-size:12px; color: var(--text-secondary); font-weight:700; text-align:left;">Mostrar invitados en las vistas<br><span style="font-size:10px; color:var(--text-muted); font-weight:400;">Estadísticas, clasificación y resultados</span></span>
+        <input type="checkbox" id="admin-show-guests-toggle" ${porraGuest.adminShowsGuests() ? 'checked' : ''} style="width:20px; height:20px; flex:none; cursor:pointer;">
+      </div>
+
       <button id="btn-admin-maintenance" class="btn-primary" style="background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%); color: #fff; margin-top: 8px; width: 100%;">
         🔧 Modo mantenimiento ${isMaintenanceEnabled() ? '<span style="background:#fff;color:#D97706;padding:2px 6px;border-radius:8px;font-size:10px;margin-left:6px;">ACTIVO</span>' : ''}
       </button>
@@ -2789,6 +2794,15 @@ function showAdminModal() {
     maintenanceBtn.addEventListener('click', () => {
       modal.remove();
       showAdminMaintenanceModal();
+    });
+  }
+
+  const showGuestsToggle = modal.querySelector('#admin-show-guests-toggle');
+  if (showGuestsToggle) {
+    showGuestsToggle.addEventListener('change', () => {
+      porraGuest.setAdminShowsGuests(showGuestsToggle.checked);
+      showToast(showGuestsToggle.checked ? 'Invitados incluidos en las vistas' : 'Invitados excluidos de las vistas');
+      rerenderActiveTab();
     });
   }
 
