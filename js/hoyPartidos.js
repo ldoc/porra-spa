@@ -91,8 +91,8 @@
   function buildMatchCardHtml(opts) {
     const { match, predDisplay, hasPred, real, pts, counts, best, myResult } = opts;
     const isReal = !!real;
-    const scoreLine = isReal ? `${real.home} - ${real.away}` : predDisplay;
-    const scoreLabel = isReal ? 'Resultado real' : (hasPred ? 'Tu pronóstico' : 'Sin pronóstico');
+    const scoreLine = isReal ? `${real.home} - ${real.away}` : '_ - _';
+    const scoreLabel = isReal ? 'Resultado real' : 'Resultado';
     const footMine = `Tu pronóstico: ${predDisplay}`;
     const footReal = isReal
       ? (hasPred

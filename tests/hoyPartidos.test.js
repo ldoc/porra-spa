@@ -125,6 +125,16 @@ function test_buildMatchCardHtml_contiene_datos_clave() {
   assert.match(html, /data\/imgEquipos\/10\.webp/);
 }
 
+function test_buildMatchCardHtml_sin_resultado_real_no_duplica_pronostico() {
+  const match = { id: 5, fase: 'liga', fechaTs: Math.floor(new Date(2026, 8, 8, 21, 0).getTime() / 1000), homeTeam: 'PSG', homeTeamId: 10, homeBadgeExt: 'webp', awayTeam: 'Real Madrid', awayTeamId: 20, awayBadgeExt: 'webp' };
+  const counts = { counts: { H: 4, D: 5, A: 3 }, total: 12, pct: { H: 4 / 12, D: 5 / 12, A: 3 / 12 } };
+  const html = buildMatchCardHtml({ match, predDisplay: '2 - 1', hasPred: true, real: null, pts: 0, counts, best: { result: 'D', advantage: 4.7 } });
+  assert.match(html, /<div class="hoy-score-line">_ - _<\/div>/);
+  assert.match(html, /<div class="hoy-score-label">Resultado<\/div>/);
+  assert.match(html, /Tu pronóstico: 2 - 1/);
+  assert.doesNotMatch(html, /<div class="hoy-score-line">2 - 1<\/div>/);
+}
+
 function test_buildMatchCardHtml_con_resultado_real() {
   const match = { id: 5, fase: 'liga', fechaTs: Math.floor(new Date(2026, 8, 8, 21, 0).getTime() / 1000), homeTeam: 'PSG', homeTeamId: 10, homeBadgeExt: 'webp', awayTeam: 'Real Madrid', awayTeamId: 20, awayBadgeExt: 'webp' };
   const counts = { counts: { H: 4, D: 5, A: 3 }, total: 12, pct: { H: 4 / 12, D: 5 / 12, A: 3 / 12 } };
@@ -172,6 +182,7 @@ test_formatMatchTime_formato_esperado();
 test_calcMatchPoints_resultado_solo_8pts();
 test_esc_escapa_html();
 test_buildMatchCardHtml_contiene_datos_clave();
+test_buildMatchCardHtml_sin_resultado_real_no_duplica_pronostico();
 test_buildMatchCardHtml_con_resultado_real();
 test_buildStatsHtml_barras_porcentajes_mejor();
 test_buildStatsHtml_sin_pronosticos();
