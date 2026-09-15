@@ -180,6 +180,18 @@
     return 'Empate';
   }
 
+  function visibleAllPredictions(allPredictions) {
+    if (typeof porraGuest === 'undefined' || !porraGuest.hideGuestsForViewer(AppState.currentUser)) {
+      return allPredictions || {};
+    }
+    const set = new Set((AppState.players || []).filter(p => !p.isGuest).map(p => p.name));
+    const out = {};
+    for (const [username, preds] of Object.entries(allPredictions || {})) {
+      if (set.has(username)) out[username] = preds;
+    }
+    return out;
+  }
+
   function renderHoyPartidos(container) {
     if (!container) container = document.getElementById('hoy-partidos-section');
     if (!container) return;
@@ -191,7 +203,7 @@
     if (!todayMatches.length) { container.innerHTML = ''; return; }
 
     const scorePreds = AppState.scorePredictions || {};
-    const allPreds = AppState.allPredictions || {};
+    const allPreds = visibleAllPredictions(AppState.allPredictions);
     const matchStats = AppState.matchStats || [];
 
     const cardsHtml = todayMatches.map(match => {
@@ -216,7 +228,8 @@
     isHoyPartidosAllowed, getMatchResult, getTodayMatches,
     computeResultCounts, computeBestResult, getRealResult,
     calcMatchPoints, formatMatchTime, esc,
-    buildMatchCardHtml, buildStatsHtml, renderHoyPartidos
+    buildMatchCardHtml, buildStatsHtml, renderHoyPartidos,
+    visibleAllPredictions
   };
   global.hoyPartidosApi = hoyPartidosApi;
   if (typeof module !== 'undefined' && module.exports) {
