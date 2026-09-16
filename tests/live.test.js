@@ -63,13 +63,18 @@ test('anillo con segundos dentro', () => {
 });
 
 test('zona con anterior/tu/siguiente y avatares', () => {
-  const html = buildZoneHtml({
+  const gaps = {
     above: { name: 'maria', avatar: '🏆', livePoints: 136 },
     me: { name: 'luisete', avatar: '⚽', livePoints: 132 },
     below: { name: 'pedro', avatar: '🦁', livePoints: 126 },
     pointsToAbove: 4, pointsOverBelow: 6
-  });
+  };
+  const html = buildZoneHtml(gaps);
   assert.ok(html.includes('maria') && html.includes('🏆'));
   assert.ok(html.includes('TÚ') && html.includes('a 4 pts'));
   assert.ok(html.includes('+6'));
+  assert.ok(html.includes('display:none'));
+  const htmlOpen = buildZoneHtml(gaps, {}, true);
+  assert.ok(htmlOpen.includes('display:block'));
+  assert.ok(htmlOpen.includes('>▾<'));
 });

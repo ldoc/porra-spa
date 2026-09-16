@@ -1800,10 +1800,13 @@ let _liveAudioCtx = null;
 let _liveAudioUnlocked = false;
 function unlockLiveAudio() {
   if (_liveAudioUnlocked) return _liveAudioCtx;
-  _liveAudioUnlocked = true;
   try {
     if (typeof soundApi !== 'undefined' && soundApi.realAudioContext) {
-      _liveAudioCtx = soundApi.realAudioContext();
+      const ctx = soundApi.realAudioContext();
+      if (ctx) {
+        _liveAudioCtx = ctx;
+        _liveAudioUnlocked = true;
+      }
     }
   } catch (e) { /* sin audio */ }
   return _liveAudioCtx;
@@ -1937,7 +1940,7 @@ async function renderLiveTab() {
     payload = await res.json();
   } catch (e) { payload = null; }
   const liveMatches = (payload && payload.ok && Array.isArray(payload.liveMatches)) ? payload.liveMatches : [];
-  st.prev = liveMatches;
+  if (payload && payload.ok) st.prev = liveMatches;
   if (!liveMatches.length) {
     // Estado vacío: seguir con polling para descubrir nuevos partidos al arrancar
     st.secsLeft = AppState.liveRefreshSecs || 60;
@@ -1955,11 +1958,7 @@ async function renderLiveTab() {
   let zoneHtml = '';
   if (gaps && gaps.me) {
     const i = rows.findIndex(r => r.name === meName);
-    zoneHtml = liveApi.buildZoneHtml(gaps, { above: i > 0 ? i : '', me: i + 1, below: i < rows.length - 1 ? i + 2 : '' });
-    if (st.zoneOpen) {
-      zoneHtml = zoneHtml.replace('class="live-zone-chev" style="font-size:14px;color:#94A3B8">▸', 'class="live-zone-chev" style="font-size:14px;color:#94A3B8">▾')
-        .replace('class="live-zone-body" style="padding:0 6px 6px;display:none', 'class="live-zone-body" style="padding:0 6px 6px;display:block');
-    }
+    zoneHtml = liveApi.buildZoneHtml(gaps, { above: i > 0 ? i : '', me: i + 1, below: i < rows.length - 1 ? i + 2 : '' }, st.zoneOpen);
   }
   const soundLabel = st.soundOn ? '🔊 Sonido activado' : '🔇 Sonido desactivado';
   const html = `<div style="display:flex;align-items:center;gap:10px;padding:10px 4px">`
@@ -1991,7 +1990,10 @@ function startLivePolling() {
   if (typeof document !== 'undefined') {
     const onVis = () => {
       if (document.visibilityState === 'visible') {
-        if (AppState.resultadosTab === 'live') pollLiveOnce();
+        if (AppState.resultadosTab === 'live') {
+          startLivePolling();
+          pollLiveOnce();
+        }
       } else {
         if (st.pollTimer) { clearInterval(st.pollTimer); st.pollTimer = null; }
         if (st.ringTimer) { clearInterval(st.ringTimer); st.ringTimer = null; }
@@ -2111,6 +2113,7 @@ async function renderResultadosTab() {
 
   const currentTab = AppState.resultadosTab || 'jornadas';
   const isLiveTab = currentTab === 'live';
+  const prevLiveScrollTop = isLiveTab ? (container.querySelector('.resultados-scroll')?.scrollTop ?? null) : null;
   if (!isLiveTab) stopLivePolling();
 
   container.innerHTML = skeletonRows(6);
@@ -2296,6 +2299,10 @@ async function renderResultadosTab() {
   bindResultadosTabClicks(container);
 
   if (currentTab === 'live') bindLiveTabInteractions();
+  if (currentTab === 'live' && prevLiveScrollTop !== null) {
+    const sc = container.querySelector('.resultados-scroll');
+    if (sc) sc.scrollTop = prevLiveScrollTop;
+  }
 }
 
 /** Clicks de las sub-tabs de Resultados (Jornadas | Live | Clasif. | Elim.) */

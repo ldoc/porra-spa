@@ -88,7 +88,8 @@
       + `<div style="font-size:10px;font-weight:800">${right}</div></div>`;
   }
 
-  function buildZoneHtml(gaps, ranks) {
+  function buildZoneHtml(gaps, ranks, open) {
+    const isOpen = !!open;
     const r = ranks || {};
     const rows = [];
     rows.push(gaps.above
@@ -101,8 +102,8 @@
     return `<div style="margin-top:10px;background:rgba(0,0,0,0.28);border-radius:10px;overflow:hidden">`
       + `<div class="live-zone-toggle" style="display:flex;align-items:center;gap:8px;padding:10px 12px;min-height:44px">`
       + `<div style="font-size:11px;color:#F8FAFC;font-weight:800;flex:1">🏆 TU ZONA EN DIRECTO</div>`
-      + `<div class="live-zone-chev" style="font-size:14px;color:#94A3B8">▸</div></div>`
-      + `<div class="live-zone-body" style="padding:0 6px 6px;display:none">${rows.join('')}</div></div>`;
+      + `<div class="live-zone-chev" style="font-size:14px;color:#94A3B8">${isOpen ? '▾' : '▸'}</div></div>`
+      + `<div class="live-zone-body" style="padding:0 6px 6px;display:${isOpen ? 'block' : 'none'}">${rows.join('')}</div></div>`;
   }
 
   const liveApi = { resolveLiveRefreshSecs, LIVE_DEFAULT_SECS, liveGoalsOf, diffLiveMatches, computeLiveGaps, ringOffset, buildLiveTabsHtml, buildRingHtml, buildZoneHtml };
