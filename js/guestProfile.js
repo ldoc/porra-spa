@@ -3,12 +3,16 @@
     return user?.isGuest === true;
   }
 
-  function isFrozenForUser(frozen, user) {
-    return frozen === true && !isGuestUser(user);
+  function guestCanBypassLocks(user, guestEditingEnabled) {
+    return isGuestUser(user) && guestEditingEnabled === true;
   }
 
-  function shouldShowConfirmForUser(user) {
-    return !isGuestUser(user);
+  function isFrozenForUser(frozen, user, guestEditingEnabled) {
+    return frozen === true && !guestCanBypassLocks(user, guestEditingEnabled);
+  }
+
+  function shouldShowConfirmForUser(user, guestEditingEnabled) {
+    return !isGuestUser(user) || guestEditingEnabled === true;
   }
 
   function guestBadgeHtml(isGuest) {
@@ -29,7 +33,7 @@
     return user?.isAdmin === true && !adminShowsGuests();
   }
 
-  const api = { isGuestUser, isFrozenForUser, shouldShowConfirmForUser, guestBadgeHtml, adminShowsGuests, setAdminShowsGuests, hideGuestsForViewer };
+  const api = { isGuestUser, guestCanBypassLocks, isFrozenForUser, shouldShowConfirmForUser, guestBadgeHtml, adminShowsGuests, setAdminShowsGuests, hideGuestsForViewer };
 
   if (typeof module !== 'undefined' && module.exports) {
     module.exports = api;
