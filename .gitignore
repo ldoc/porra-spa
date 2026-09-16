@@ -156,3 +156,5 @@ server.mjs
 data/img/
 reglas/*.pdf
 reglas/*.pdf:Zone.Identifier
+
+.worktrees/
