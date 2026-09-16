@@ -321,7 +321,8 @@ GET    /api/admin/invitations       // Listar códigos de invitación
 POST   /api/admin/invitations       // Crear nuevo código
 DELETE /api/admin/invitations/:code // Eliminar código no usado
 PUT    /api/admin/fase-juego        // Cambiar la fase del juego
-PUT    /api/admin/config            // Actualizar configuración completa
+PUT    /api/admin/config            // Actualizar configuración completa ({faseJuego, tournament})
+PUT    /api/admin/guest-editing     // Body: { enabled:boolean } — edición de invitados (admin)
 PUT    /api/admin/fases-fechas      // Body: { fasesFechas } — actualizar fechas de fases (admin)
 PUT    /api/admin/maintenance       // Body: { enabled:boolean, message:string } — activar/desactivar mantenimiento (admin)
 ```
@@ -425,7 +426,7 @@ La configuración se obtiene del backend (`GET /api/config`), se almacena en Mon
 | `fasesFechas.FASE_X.fin` | `null` | Fecha de fin de la fase (string ISO o `null` si no se conoce) |
 | `maintenance.enabled` | `false` | Si `true`, la web está en mantenimiento (solo admins pueden navegar) |
 | `maintenance.message` | `"Web en mantenimiento..."` | Mensaje mostrado en el overlay de mantenimiento (máx 500 chars) |
-| `guestEditingEnabled` | `true` | Si `true`, los invitados no tienen cierres de fase/confirmación; si `false`, siguen las reglas normales. Ajustable por el admin (checkbox "Permitir edición a invitados", `PUT /api/admin/config`) |
+| `guestEditingEnabled` | `true` | Si `true`, los invitados no tienen cierres de fase/confirmación; si `false`, siguen las reglas normales. Ajustable por el admin (checkbox "Permitir edición a invitados", `PUT /api/admin/guest-editing` con body `{enabled:boolean}`) |
 
 #### Cierre de Sesión
 
@@ -1262,8 +1263,8 @@ Bloquea la web para usuarios normales mostrando un overlay; los admins siguen op
 - **Refresco de resultados en la app**: el frontend hace polling de `GET /api/match-stats/updated` (contador + última actualización) y recarga matchstats y predicciones cuando detecta cambios, de modo que los partidos subidos quedan disponibles en Resultados/Clasificación/Estadísticas.
 - **Caché SWR (localStorage)**: `fetchMatchStats()` y `fetchAllPredictions()` pintan al instante desde localStorage (`js/cacheStore.js`, claves `porra_cache_matchstats_v1` y `porra_cache_predall_v1_<username>`) y revalidan contra el backend. match-stats se descarga en delta con `?since=<serverTime del backend>` y se fusiona con `porraCache.mergeMatchStats` (idempotente). Tras cualquier PUT propio (predictions/confirm/squad/final-predictions) hay que llamar a `invalidatePredAllCache()` para forzar refetch; el logout normal purga todas las claves `porra_cache_*`. NO añadir cache-busters `?t=Date.now()` a endpoints de la API: la frescura la dan el ETag/304 del backend y la revalidación automática. Limitación aceptada: un DELETE puro de matchstat no se propaga por delta (solo delete+re-scrape, que sí entra en el siguiente delta); si hiciera falta, bump de versión de clave en `cacheStore.js`.
 - **Perfil invitado (guest)**: usuario con `isGuest:true` (creado desde un código de invitación marcado como invitado). Se registra en cualquier fase y **es invisible para los usuarios normales** (la API ya filtra en origen; el front no debe mostrar invitados a normales). Ve su puesto respecto a los demás con él integrado en los cálculos. Se apoya en `js/guestProfile.js` (`porraGuest`).
-  - **Cierres**: mientras el admin mantiene habilitada la edición de invitados (`guestEditingEnabled` de `GET /api/config`, `AppState.appConfig.guestEditingEnabled`, **default `true`**), el invitado **no tiene cierres** de pronósticos/plantilla/cuadro (`isPhaseFrozen`/`isSquadFrozen` devuelven `false` vía `isCurrentUserGuest()` + `isGuestEditingAllowed()`), no usa el botón Confirmar y puede acceder a Eliminatorias sin confirmar. Con el ajuste **desactivado** (`guestEditingEnabled:false`) el invitado sigue las reglas normales de fase y confirmación: 403 al guardar plantilla/eliminatorias y 409 al confirmar fuera de `FASE_PRETEMPORADA`, y no ve el botón Eliminatorias sin confirmar.
-  - **Ajuste admin**: checkbox **"Permitir edición a invitados"** en el panel de administración (`js/main.js`, `admin-guest-editing-toggle`), marcado por defecto según `AppState.appConfig.guestEditingEnabled`; al cambiarlo hace `PUT /api/admin/config` y actualiza el estado global. No afecta a los usuarios normales.
+  - **Cierres**: mientras el admin mantiene habilitada la edición de invitados (`guestEditingEnabled` de `GET /api/config`, `AppState.appConfig.guestEditingEnabled`, **default `true`**), el invitado **no tiene cierres** de pronósticos/plantilla/cuadro (`isPhaseFrozen`/`isSquadFrozen` devuelven `false` vía `isCurrentUserGuest()` + `isGuestEditingAllowed()`), **no necesita confirmar** para editar ni para acceder a Eliminatorias (puede acceder sin confirmar) y, mientras no haya confirmado, sí ve el botón Confirmar (`shouldShowConfirmButton()`) y puede confirmar como un usuario normal. Con el ajuste **desactivado** (`guestEditingEnabled:false`) el invitado sigue las reglas normales de fase y confirmación (confirmar solo en `FASE_PRETEMPORADA`): 403 al guardar plantilla/eliminatorias y 409 al confirmar fuera de `FASE_PRETEMPORADA`, y no ve el botón Eliminatorias sin confirmar.
+  - **Ajuste admin**: checkbox **"Permitir edición a invitados"** en el panel de administración (`js/main.js`, `admin-guest-editing-toggle`), marcado por defecto según `AppState.appConfig.guestEditingEnabled`; al cambiarlo hace `PUT /api/admin/guest-editing` con `{enabled:boolean}` y actualiza `AppState.appConfig.guestEditingEnabled`. No afecta a los usuarios normales.
   - **Toda feature nueva que liste usuarios o calcule puntos debe preguntarse: ¿afecta al perfil invitado?**
 
 
