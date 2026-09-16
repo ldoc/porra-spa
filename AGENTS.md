@@ -425,6 +425,7 @@ La configuración se obtiene del backend (`GET /api/config`), se almacena en Mon
 | `fasesFechas.FASE_X.fin` | `null` | Fecha de fin de la fase (string ISO o `null` si no se conoce) |
 | `maintenance.enabled` | `false` | Si `true`, la web está en mantenimiento (solo admins pueden navegar) |
 | `maintenance.message` | `"Web en mantenimiento..."` | Mensaje mostrado en el overlay de mantenimiento (máx 500 chars) |
+| `guestEditingEnabled` | `true` | Si `true`, los invitados no tienen cierres de fase/confirmación; si `false`, siguen las reglas normales. Ajustable por el admin (checkbox "Permitir edición a invitados", `PUT /api/admin/config`) |
 
 #### Cierre de Sesión
 
@@ -998,7 +999,7 @@ const SQUAD_FORMATION = {
 | `removePlayerFromSquad(position, index)` | Elimina jugador y desbloquea equipo |
 | `saveSquadToBackend()` | Envía plantilla al servidor via PUT /api/squad (la validación de composición la hace el backend) |
 | `refreshSquadUI()` | Refresca todas las casillas y contadores |
-| `isSquadFrozen()` | Devuelve true si la plantilla está bloqueada (fuera de `FASE_PRETEMPORADA`) |
+| `isSquadFrozen()` | Devuelve true si la plantilla está bloqueada (fuera de `FASE_PRETEMPORADA`); `false` para invitados con `guestEditingEnabled` activo |
 
 #### Persistencia
 
@@ -1028,10 +1029,10 @@ Pestaña que permite al usuario predecir el cuadro completo de eliminatorias de 
 
 #### Restricciones
 
-1. **Requiere confirmación**: La pestaña solo es accesible tras confirmar los 144 pronósticos de liga (`predictionsConfirmed = true`)
+1. **Requiere confirmación**: La pestaña solo es accesible tras confirmar los 144 pronósticos de liga (`predictionsConfirmed = true`), salvo invitados con `guestEditingEnabled` activo, que pueden acceder sin confirmar
 2. **24 equipos**: Se asignan los 24 equipos de la clasificación pronosticada por el usuario (puestos 1-24)
 3. **Sin repetir equipos**: Cada equipo solo puede asignarse a una ronda
-4. **Edición solo en pretemporada**: La edición y guardado (`PUT /api/final-predictions`) solo están permitidos en `FASE_PRETEMPORADA`. Fuera de esa fase el backend responde 403. Una vez confirmado (`predictionsConfirmed`), los pronósticos de liga no se pueden editar.
+4. **Edición solo en pretemporada**: La edición y guardado (`PUT /api/final-predictions`) solo están permitidos en `FASE_PRETEMPORADA`. Fuera de esa fase el backend responde 403. Una vez confirmado (`predictionsConfirmed`), los pronósticos de liga no se pueden editar. Los invitados con `guestEditingEnabled` activo quedan exentos (§ Reglas básicas de la porra).
 5. **Top-8 restriction**: Los 8 equipos clasificados en los puestos 1-8 de la clasificación pronosticada NO pueden colocarse en dieciseisavos (roundOf32). Deben ir a octavos o superior
 6. **Restricciones por grupos de posiciones**: Para limitar la concentración de equipos de ciertos rangos en una misma ronda, se aplican los siguientes límites máximos (2 equipos por grupo):
 
@@ -1260,7 +1261,10 @@ Bloquea la web para usuarios normales mostrando un overlay; los admins siguen op
 - **Los resultados** se van subiendo mediante el script de matchstats de api-porra (`scrapeJornadas*.js` / `scrapeRounds*.js`) o el endpoint `GET /api/match-stats/:eventId`.
 - **Refresco de resultados en la app**: el frontend hace polling de `GET /api/match-stats/updated` (contador + última actualización) y recarga matchstats y predicciones cuando detecta cambios, de modo que los partidos subidos quedan disponibles en Resultados/Clasificación/Estadísticas.
 - **Caché SWR (localStorage)**: `fetchMatchStats()` y `fetchAllPredictions()` pintan al instante desde localStorage (`js/cacheStore.js`, claves `porra_cache_matchstats_v1` y `porra_cache_predall_v1_<username>`) y revalidan contra el backend. match-stats se descarga en delta con `?since=<serverTime del backend>` y se fusiona con `porraCache.mergeMatchStats` (idempotente). Tras cualquier PUT propio (predictions/confirm/squad/final-predictions) hay que llamar a `invalidatePredAllCache()` para forzar refetch; el logout normal purga todas las claves `porra_cache_*`. NO añadir cache-busters `?t=Date.now()` a endpoints de la API: la frescura la dan el ETag/304 del backend y la revalidación automática. Limitación aceptada: un DELETE puro de matchstat no se propaga por delta (solo delete+re-scrape, que sí entra en el siguiente delta); si hiciera falta, bump de versión de clave en `cacheStore.js`.
-- **Perfil invitado (guest)**: usuario con `isGuest:true` (creado desde un código de invitación marcado como invitado). Se registra en cualquier fase, **nunca tiene cierres** de pronósticos/plantilla/cuadro (`isPhaseFrozen`/`isSquadFrozen` devuelven `false` vía `isCurrentUserGuest()`), no usa el botón Confirmar, y **es invisible para los usuarios normales** (la API ya filtra en origen; el front no debe mostrar invitados a normales). Ve su puesto respecto a los demás con él integrado en los cálculos. Se apoya en `js/guestProfile.js` (`porraGuest`). **Toda feature nueva que liste usuarios o calcule puntos debe preguntarse: ¿afecta al perfil invitado?**
+- **Perfil invitado (guest)**: usuario con `isGuest:true` (creado desde un código de invitación marcado como invitado). Se registra en cualquier fase y **es invisible para los usuarios normales** (la API ya filtra en origen; el front no debe mostrar invitados a normales). Ve su puesto respecto a los demás con él integrado en los cálculos. Se apoya en `js/guestProfile.js` (`porraGuest`).
+  - **Cierres**: mientras el admin mantiene habilitada la edición de invitados (`guestEditingEnabled` de `GET /api/config`, `AppState.appConfig.guestEditingEnabled`, **default `true`**), el invitado **no tiene cierres** de pronósticos/plantilla/cuadro (`isPhaseFrozen`/`isSquadFrozen` devuelven `false` vía `isCurrentUserGuest()` + `isGuestEditingAllowed()`), no usa el botón Confirmar y puede acceder a Eliminatorias sin confirmar. Con el ajuste **desactivado** (`guestEditingEnabled:false`) el invitado sigue las reglas normales de fase y confirmación: 403 al guardar plantilla/eliminatorias y 409 al confirmar fuera de `FASE_PRETEMPORADA`, y no ve el botón Eliminatorias sin confirmar.
+  - **Ajuste admin**: checkbox **"Permitir edición a invitados"** en el panel de administración (`js/main.js`, `admin-guest-editing-toggle`), marcado por defecto según `AppState.appConfig.guestEditingEnabled`; al cambiarlo hace `PUT /api/admin/config` y actualiza el estado global. No afecta a los usuarios normales.
+  - **Toda feature nueva que liste usuarios o calcule puntos debe preguntarse: ¿afecta al perfil invitado?**
 
 
 
