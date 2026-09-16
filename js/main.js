@@ -516,6 +516,13 @@ async function loadInitialData() {
       };
     }
 
+    let fileSecs = null;
+    try {
+      const liveCfgRes = await fetch('config.json').catch(() => null);
+      if (liveCfgRes?.ok) fileSecs = (await liveCfgRes.json()).liveRefreshSeconds ?? null;
+    } catch (e) { /* default */ }
+    AppState.liveRefreshSecs = liveApi.resolveLiveRefreshSecs(fileSecs, AppState.appConfig?.liveRefreshSecs ?? null);
+
   } catch (err) {
     console.error('Error cargando datos:', err);
   }
