@@ -1,5 +1,5 @@
 const assert = require('assert');
-const { isGuestUser, isFrozenForUser, shouldShowConfirmForUser, guestBadgeHtml, adminShowsGuests, setAdminShowsGuests, hideGuestsForViewer, guestCanBypassLocks } = require('../js/guestProfile.js');
+const { isGuestUser, guestCanBypassLocks, guestBadgeHtml, adminShowsGuests, setAdminShowsGuests, hideGuestsForViewer } = require('../js/guestProfile.js');
 
 function test_isGuestUser() {
   assert.strictEqual(isGuestUser({ isGuest: true }), true);
@@ -14,22 +14,6 @@ function test_guestCanBypassLocks() {
   assert.strictEqual(guestCanBypassLocks({ isGuest: true }), false);
   assert.strictEqual(guestCanBypassLocks({ isGuest: false }, true), false);
   assert.strictEqual(guestCanBypassLocks(null, true), false);
-}
-
-function test_isFrozenForUser() {
-  assert.strictEqual(isFrozenForUser(true, { isGuest: true }, true), false);
-  assert.strictEqual(isFrozenForUser(true, { isGuest: true }, false), true);
-  assert.strictEqual(isFrozenForUser(false, { isGuest: true }, false), false);
-  assert.strictEqual(isFrozenForUser(true, { isGuest: false }, true), true);
-  assert.strictEqual(isFrozenForUser(false, { isGuest: false }, false), false);
-  assert.strictEqual(isFrozenForUser(true, { isGuest: false }, false), true);
-}
-
-function test_shouldShowConfirmForUser() {
-  assert.strictEqual(shouldShowConfirmForUser({ isGuest: true }, true), true);
-  assert.strictEqual(shouldShowConfirmForUser({ isGuest: true }, false), false);
-  assert.strictEqual(shouldShowConfirmForUser({ isGuest: false }, true), true);
-  assert.strictEqual(shouldShowConfirmForUser({ isGuest: false }, false), true);
 }
 
 function test_guestBadgeHtml() {
@@ -75,7 +59,7 @@ function test_hideGuestsForViewer() {
   assert.strictEqual(hideGuestsForViewer({ isAdmin: true }), false, 'admin con pref on no oculta');
 }
 
-const tests = [test_isGuestUser, test_guestCanBypassLocks, test_isFrozenForUser, test_shouldShowConfirmForUser, test_guestBadgeHtml, test_adminShowsGuests_default_and_set, test_hideGuestsForViewer];
+const tests = [test_isGuestUser, test_guestCanBypassLocks, test_guestBadgeHtml, test_adminShowsGuests_default_and_set, test_hideGuestsForViewer];
 let passed = 0, failed = 0;
 for (const t of tests) {
   try { t(); passed++; console.log(`  ✓ ${t.name}`); }

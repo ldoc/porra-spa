@@ -7,14 +7,6 @@
     return isGuestUser(user) && guestEditingEnabled === true;
   }
 
-  function isFrozenForUser(frozen, user, guestEditingEnabled) {
-    return frozen === true && !guestCanBypassLocks(user, guestEditingEnabled);
-  }
-
-  function shouldShowConfirmForUser(user, guestEditingEnabled) {
-    return !isGuestUser(user) || guestEditingEnabled === true;
-  }
-
   function guestBadgeHtml(isGuest) {
     return isGuest === true ? ' <span class="guest-tag" title="Invitado">INV</span>' : '';
   }
@@ -33,7 +25,7 @@
     return user?.isAdmin === true && !adminShowsGuests();
   }
 
-  const api = { isGuestUser, guestCanBypassLocks, isFrozenForUser, shouldShowConfirmForUser, guestBadgeHtml, adminShowsGuests, setAdminShowsGuests, hideGuestsForViewer };
+  const api = { isGuestUser, guestCanBypassLocks, guestBadgeHtml, adminShowsGuests, setAdminShowsGuests, hideGuestsForViewer };
 
   if (typeof module !== 'undefined' && module.exports) {
     module.exports = api;
