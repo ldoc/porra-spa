@@ -1939,6 +1939,9 @@ async function renderLiveTab() {
   const liveMatches = (payload && payload.ok && Array.isArray(payload.liveMatches)) ? payload.liveMatches : [];
   st.prev = liveMatches;
   if (!liveMatches.length) {
+    // Estado vacío: seguir con polling para descubrir nuevos partidos al arrancar
+    st.secsLeft = AppState.liveRefreshSecs || 60;
+    startLivePolling();
     return `<div style="padding:24px;text-align:center;color:var(--text-muted)">`
       + `<div style="font-size:32px">⚽</div>`
       + `<div style="margin-top:8px;font-weight:700">Sin partidos en directo ahora mismo</div>`
