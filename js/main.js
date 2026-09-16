@@ -4501,6 +4501,11 @@ function getMatchesForCurrentPhase() {
   return { matches: phaseMatches, rounds, fase };
 }
 
+function getConfirmMatches() {
+  if (isCurrentUserGuest() && isGuestEditingAllowed()) return AppState.leagueMatches;
+  return getMatchesForCurrentPhase().matches;
+}
+
 function renderRoundMatches() {
   const container = document.getElementById('round-matches-container');
   if (!container) return;
@@ -4705,7 +4710,9 @@ function updateSaveButton() {
 
 /** El botón Confirmar solo se muestra en FASE_PRETEMPORADA mientras no se haya confirmado */
 function shouldShowConfirmButton() {
-  if (isCurrentUserGuest()) return false;
+  if (isCurrentUserGuest() && isGuestEditingAllowed()) {
+    return !AppState.predictionsConfirmed;
+  }
   const { fase } = getMatchesForCurrentPhase();
   const confirmedForFase = AppState.predictionsConfirmed && fase === 'liga';
   return isFasePretemporada() && !confirmedForFase;
@@ -4713,9 +4720,10 @@ function shouldShowConfirmButton() {
 
 /** Confirmar queda deshabilitado si la fase está congelada, falta algún pronóstico o hay cambios sin guardar */
 function shouldConfirmButtonBeDisabled() {
-  const { matches: phaseMatches, fase } = getMatchesForCurrentPhase();
-  const total = phaseMatches.length;
-  const predicted = countPredictedInPhase(phaseMatches);
+  const { fase } = getMatchesForCurrentPhase();
+  const confirmMatches = getConfirmMatches();
+  const total = confirmMatches.length;
+  const predicted = countPredictedInPhase(confirmMatches);
   return isPhaseFrozen(fase) || predicted < total || AppState.hasUnsavedChanges;
 }
 
@@ -4775,9 +4783,9 @@ async function confirmPredictions() {
     return;
   }
 
-  const { matches: phaseMatches } = getMatchesForCurrentPhase();
-  const total = phaseMatches.length;
-  const predicted = countPredictedInPhase(phaseMatches);
+  const confirmMatches = getConfirmMatches();
+  const total = confirmMatches.length;
+  const predicted = countPredictedInPhase(confirmMatches);
   if (predicted < total) {
     showToast(`Faltan pronósticos. Has completado ${predicted} de ${total} partidos`);
     return;
