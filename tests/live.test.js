@@ -1,6 +1,6 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { resolveLiveRefreshSecs, diffLiveMatches, computeLiveGaps, ringOffset, liveGoalsOf } = require('../js/live.js');
+const { resolveLiveRefreshSecs, diffLiveMatches, computeLiveGaps, ringOffset, liveGoalsOf, buildLiveTabsHtml, buildRingHtml, buildZoneHtml } = require('../js/live.js');
 
 test('liveGoalsOf extrae goles de stats Sofascore', () => {
   assert.deepEqual(liveGoalsOf({ 17: { goles: 2 }, 42: { goles: 1 }, jugadores: [] }), { 17: 2, 42: 1 });
@@ -46,4 +46,30 @@ test('el servidor manda, fichero de respaldo, default 60', () => {
   assert.equal(resolveLiveRefreshSecs(45, null), 45);
   assert.equal(resolveLiveRefreshSecs(null, null), 60);
   assert.equal(resolveLiveRefreshSecs(-3, 0), 60);
+});
+
+test('tabs con Live activa', () => {
+  const html = buildLiveTabsHtml('live');
+  assert.ok(html.includes('data-tab="live"'));
+  assert.ok(html.includes('🔴 Live'));
+  assert.ok(html.includes('resultados-tab active'));
+});
+
+test('anillo con segundos dentro', () => {
+  const html = buildRingHtml(42, 60);
+  assert.ok(html.includes('>42<'));
+  assert.ok(html.includes('<svg'));
+  assert.ok(html.includes('stroke-dashoffset'));
+});
+
+test('zona con anterior/tu/siguiente y avatares', () => {
+  const html = buildZoneHtml({
+    above: { name: 'maria', avatar: '🏆', livePoints: 136 },
+    me: { name: 'luisete', avatar: '⚽', livePoints: 132 },
+    below: { name: 'pedro', avatar: '🦁', livePoints: 126 },
+    pointsToAbove: 4, pointsOverBelow: 6
+  });
+  assert.ok(html.includes('maria') && html.includes('🏆'));
+  assert.ok(html.includes('TÚ') && html.includes('a 4 pts'));
+  assert.ok(html.includes('+6'));
 });

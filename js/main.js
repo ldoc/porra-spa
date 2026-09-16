@@ -47,7 +47,9 @@ const AppState = {
   currentSquadDetails: [], // detalles de plantilla para modal de desglose
   realStandings: [],    // Clasificación real calculada desde matchStats
   classificationPoints: {}, // { username: { totalPoints, teamDetails } }
-  resultadosTab: 'jornadas', // Tab seleccionado en resultados: 'jornadas' o 'clasificacion'
+  resultadosTab: 'jornadas', // Tab seleccionado en resultados: 'jornadas', 'live', 'clasificacion' o 'eliminatorias'
+  liveRefreshSecs: 60, // segundos entre polls del tab Live (config.json + /api/config)
+  live: null, // estado del tab Live: { prev, pollTimer, ringTimer, secsLeft, soundOn, openBoxes, zoneOpen }
   estadisticasSubTab: 'pronosticos', // Sub-tab activa en estadísticas
   estadisticasIndividualUser: null, // usuario mostrado en sub-tab Individual (null -> currentUser)
   finalPredictions: null, // { champion, runnerUp, semiFinalists, quarterFinalists, roundOf16, roundOf32 }
@@ -1784,6 +1786,315 @@ function showPlayerPointsBreakdown(detail) {
   overlay.addEventListener('click', (e) => { if (e.target === overlay) closeModal(); });
 }
 
+// ============================================================
+// TAB LIVE (directo): polling + anillo + desplegables + sonido
+// ============================================================
+
+// Generación de renders Live: evita que un render antiguo pise a uno reciente
+let _liveRenderGen = 0;
+
+// Singleton AudioContext memoizado en el cableado (no en js/sound.js):
+// se crea perezosamente una sola vez y solo tras el primer gesto del
+// usuario (autoplay policy). Antes de eso los beeps son no-op seguros.
+let _liveAudioCtx = null;
+let _liveAudioUnlocked = false;
+function unlockLiveAudio() {
+  if (_liveAudioUnlocked) return _liveAudioCtx;
+  _liveAudioUnlocked = true;
+  try {
+    if (typeof soundApi !== 'undefined' && soundApi.realAudioContext) {
+      _liveAudioCtx = soundApi.realAudioContext();
+    }
+  } catch (e) { /* sin audio */ }
+  return _liveAudioCtx;
+}
+
+function liveState() {
+  if (!AppState.live) {
+    AppState.live = { prev: [], pollTimer: null, ringTimer: null, visHandler: null, secsLeft: 0, polling: false, soundOn: true, openBoxes: new Set(), zoneOpen: false };
+  }
+  if (!(AppState.live.openBoxes instanceof Set)) AppState.live.openBoxes = new Set();
+  return AppState.live;
+}
+
+function liveStorage() {
+  try { return typeof localStorage !== 'undefined' ? localStorage : null; } catch (e) { return null; }
+}
+
+function isLiveSoundOn() {
+  try {
+    if (typeof soundApi !== 'undefined') return soundApi.loadSoundEnabled(liveStorage() || { getItem: () => null });
+  } catch (e) { /* default */ }
+  return liveState().soundOn !== false;
+}
+
+function setLiveSoundOn(v) {
+  liveState().soundOn = !!v;
+  try {
+    if (typeof soundApi !== 'undefined') soundApi.saveSoundEnabled(liveStorage() || { setItem: () => {} }, !!v);
+  } catch (e) { /* sin storage */ }
+}
+
+/** Metadatos de un liveMatch: equipos desde AppState.matches o fallback a stats */
+function liveMatchMeta(lm) {
+  const m = (AppState.matches || []).find(x => x.id === lm.eventId);
+  if (m) {
+    return { homeTeamId: m.homeTeamId, awayTeamId: m.awayTeamId, homeTeam: m.homeTeam, awayTeam: m.awayTeam, homeBadgeExt: m.homeBadgeExt, awayBadgeExt: m.awayBadgeExt };
+  }
+  const goals = (typeof liveApi !== 'undefined') ? liveApi.liveGoalsOf(lm.stats) : {};
+  const ids = Object.keys(goals);
+  const h = ids[0], a = ids[1];
+  const name = id => (AppState.teamsMap && AppState.teamsMap[id] && AppState.teamsMap[id].name) || `Equipo ${id}`;
+  return { homeTeamId: h, awayTeamId: a, homeTeam: h !== undefined ? name(h) : '?', awayTeam: a !== undefined ? name(a) : '?' };
+}
+
+/** Puntos live de un usuario en un partido: pronóstico + plantilla (provisional si no FT) */
+function liveUserMatchPoints(username, lm, meta) {
+  const preds = (AppState.allPredictions || {})[username] || {};
+  const pseudoMs = { eventId: lm.eventId, stats: lm.stats };
+  const mp = calculateMatchPoints(preds[lm.eventId], pseudoMs, { homeTeamId: meta.homeTeamId, awayTeamId: meta.awayTeamId });
+  let squadPts = 0;
+  const squadDetail = [];
+  const squad = (AppState.squadsCache || {})[username];
+  const jugadores = (lm.stats && lm.stats.jugadores) || [];
+  if (squad && jugadores.length) {
+    for (const sp of squad) {
+      const jd = jugadores.find(j => String(j.id) === String(sp.id));
+      if (!jd) continue;
+      const r = calculatePlayerMatchPoints(jd, sp, pseudoMs);
+      if (r.total !== 0 || r.desglose.length) {
+        squadPts += r.total;
+        const desglose = (r.desglose || []).map(d => (d.concepto === 'Portería a cero' && lm.status !== 'FT')
+          ? { ...d, concepto: d.concepto + ' (provisional)' } : d);
+        squadDetail.push({ nombre: sp.nombre, puntos: r.total, desglose });
+      }
+    }
+  }
+  return { matchPts: mp.points, breakdown: mp.breakdown, squadPts, squadDetail, total: mp.points + squadPts };
+}
+
+/** Filas live ordenadas desc con desempate de normas (brief: via clasificacionApi) */
+function computeLiveRows(liveMatches) {
+  const players = visiblePlayers();
+  const rows = players.map(p => {
+    let livePoints = 0, predictionPoints = 0, squadPoints = 0;
+    for (const lm of (liveMatches || [])) {
+      const r = liveUserMatchPoints(p.name, lm, liveMatchMeta(lm));
+      livePoints += r.total;
+      predictionPoints += r.matchPts;
+      squadPoints += r.squadPts;
+    }
+    return { name: p.name, avatar: p.avatar, livePoints, realPoints: livePoints, predictionPoints, squadPoints, eliminatoriasPoints: 0, classificationPoints: 0 };
+  });
+  const cmp = (typeof clasificacionApi !== 'undefined' && clasificacionApi.compareClasificacionJugadores)
+    ? clasificacionApi.compareClasificacionJugadores
+    : ((a, b) => b.livePoints - a.livePoints);
+  rows.sort(cmp);
+  return rows;
+}
+
+function liveStatusLabel(lm) {
+  if (lm.status === 'FT') return 'FIN';
+  if (lm.minute !== null && lm.minute !== undefined) return `${lm.minute}’`;
+  return lm.status || 'LIVE';
+}
+
+/** Caja de partido live: acordeón plegado por defecto (toggle ≥44px) */
+function buildLiveMatchBoxHtml(lm, rows) {
+  const meta = liveMatchMeta(lm);
+  const goals = liveApi.liveGoalsOf(lm.stats);
+  const gh = meta.homeTeamId !== undefined ? (goals[meta.homeTeamId] ?? '–') : '–';
+  const ga = meta.awayTeamId !== undefined ? (goals[meta.awayTeamId] ?? '–') : '–';
+  const st = liveState();
+  const me = AppState.currentUser && rows.find(r => r.name === AppState.currentUser.name);
+  const myPts = me ? liveUserMatchPoints(me.name, lm, meta).total : 0;
+  const open = st.openBoxes.has(lm.eventId);
+  const usersHtml = rows.map(r => {
+    const d = liveUserMatchPoints(r.name, lm, meta);
+    const isMe = me && r.name === me.name;
+    return `<div class="resultados-player ${isMe ? 'is-current-user' : ''}">`
+      + `<span class="resultados-player-name">${r.avatar} ${r.name}${isMe ? ' <span class="current-user-tag">(Tú)</span>' : ''}</span>`
+      + `<span class="resultados-player-pred">${d.matchPts >= 0 ? '+' : ''}${d.matchPts}${d.squadPts ? ` (+${d.squadPts} pl.)` : ''}</span>`
+      + `<span class="resultados-player-points">${d.total} pts</span></div>`;
+  }).join('');
+  return `<div class="resultados-match" id="live-match-${lm.eventId}">`
+    + `<button class="live-match-toggle" data-live-match="${lm.eventId}" style="display:flex;align-items:center;gap:8px;width:100%;min-height:44px;background:none;border:none;color:inherit;cursor:pointer;text-align:left;padding:6px 4px">`
+    + `<span style="color:#F87171;font-weight:800;font-size:11px">🔴 ${liveStatusLabel(lm)}</span>`
+    + `<span style="flex:1;font-size:13px;font-weight:700">${meta.homeTeam} ${gh} - ${ga} ${meta.awayTeam}</span>`
+    + `<span style="font-size:11px;color:#10B981;font-weight:800">Tú +${myPts}</span>`
+    + `<span class="live-match-chev" style="font-size:14px;color:#94A3B8">${open ? '▾' : '▸'}</span></button>`
+    + `<div class="live-match-body" id="live-match-body-${lm.eventId}" style="${open ? '' : 'display:none'}">${usersHtml}</div></div>`;
+}
+
+/** Tab Live: esqueleto ya pintado por renderResultadosTab; aquí fetch + puntos + polling */
+async function renderLiveTab() {
+  stopLivePolling();
+  const st = liveState();
+  st.soundOn = isLiveSoundOn();
+  let payload = null;
+  try {
+    const res = await fetchWithPhase(API_BASE + '/api/live');
+    payload = await res.json();
+  } catch (e) { payload = null; }
+  const liveMatches = (payload && payload.ok && Array.isArray(payload.liveMatches)) ? payload.liveMatches : [];
+  st.prev = liveMatches;
+  if (!liveMatches.length) {
+    return `<div style="padding:24px;text-align:center;color:var(--text-muted)">`
+      + `<div style="font-size:32px">⚽</div>`
+      + `<div style="margin-top:8px;font-weight:700">Sin partidos en directo ahora mismo</div>`
+      + `<div style="font-size:12px;margin-top:4px">Vuelve en horario de Champions para seguir el live.</div></div>`;
+  }
+  const rows = computeLiveRows(liveMatches);
+  const total = AppState.liveRefreshSecs || 60;
+  st.secsLeft = total;
+  const meName = AppState.currentUser && AppState.currentUser.name;
+  const gaps = meName ? liveApi.computeLiveGaps(rows, meName) : null;
+  let zoneHtml = '';
+  if (gaps && gaps.me) {
+    const i = rows.findIndex(r => r.name === meName);
+    zoneHtml = liveApi.buildZoneHtml(gaps, { above: i > 0 ? i : '', me: i + 1, below: i < rows.length - 1 ? i + 2 : '' });
+    if (st.zoneOpen) {
+      zoneHtml = zoneHtml.replace('class="live-zone-chev" style="font-size:14px;color:#94A3B8">▸', 'class="live-zone-chev" style="font-size:14px;color:#94A3B8">▾')
+        .replace('class="live-zone-body" style="padding:0 6px 6px;display:none', 'class="live-zone-body" style="padding:0 6px 6px;display:block');
+    }
+  }
+  const soundLabel = st.soundOn ? '🔊 Sonido activado' : '🔇 Sonido desactivado';
+  const html = `<div style="display:flex;align-items:center;gap:10px;padding:10px 4px">`
+    + `<div style="flex:1"><div style="font-size:14px;font-weight:900;color:#F8FAFC">🔴 EN DIRECTO</div>`
+    + `<div style="font-size:11px;color:#94A3B8">${liveMatches.length} partido${liveMatches.length === 1 ? '' : 's'} · ${rows.length} jugadores</div></div>`
+    + `<button id="live-sound-toggle" style="min-height:44px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);color:#F8FAFC;border-radius:8px;font-size:11px;font-weight:700;padding:6px 10px;cursor:pointer">${soundLabel}</button>`
+    + `<div id="live-ring">${liveApi.buildRingHtml(st.secsLeft, total)}</div></div>`
+    + `<div class="resultados-journey">${liveMatches.map(lm => buildLiveMatchBoxHtml(lm, rows)).join('')}</div>`
+    + zoneHtml;
+  startLivePolling();
+  return html;
+}
+
+function stopLivePolling() {
+  const st = AppState.live;
+  if (!st) return;
+  if (st.pollTimer) { clearInterval(st.pollTimer); st.pollTimer = null; }
+  if (st.ringTimer) { clearInterval(st.ringTimer); st.ringTimer = null; }
+  if (st.visHandler && typeof document !== 'undefined') {
+    document.removeEventListener('visibilitychange', st.visHandler);
+    st.visHandler = null;
+  }
+}
+
+function startLivePolling() {
+  const st = liveState();
+  stopLivePolling();
+  const total = AppState.liveRefreshSecs || 60;
+  if (typeof document !== 'undefined') {
+    const onVis = () => {
+      if (document.visibilityState === 'visible') {
+        if (AppState.resultadosTab === 'live') pollLiveOnce();
+      } else {
+        if (st.pollTimer) { clearInterval(st.pollTimer); st.pollTimer = null; }
+        if (st.ringTimer) { clearInterval(st.ringTimer); st.ringTimer = null; }
+      }
+    };
+    st.visHandler = onVis;
+    document.addEventListener('visibilitychange', onVis);
+  }
+  st.pollTimer = setInterval(() => {
+    if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return;
+    if (AppState.resultadosTab !== 'live') { stopLivePolling(); return; }
+    pollLiveOnce();
+  }, total * 1000);
+  st.ringTimer = setInterval(() => tickLiveRing(total), 1000);
+}
+
+function tickLiveRing(total) {
+  const st = liveState();
+  if (AppState.resultadosTab !== 'live') return;
+  st.secsLeft = Math.max(0, (st.secsLeft || total) - 1);
+  const ring = typeof document !== 'undefined' ? document.getElementById('live-ring') : null;
+  if (ring) ring.innerHTML = liveApi.buildRingHtml(st.secsLeft, total);
+  if (st.secsLeft <= 0) pollLiveOnce();
+}
+
+/** Un poll: fetch, diff → sonido, re-render si seguimos en Live */
+async function pollLiveOnce() {
+  const st = liveState();
+  if (st.polling || AppState.resultadosTab !== 'live') return;
+  st.polling = true;
+  try {
+    const res = await fetchWithPhase(API_BASE + '/api/live');
+    const payload = await res.json();
+    const next = (payload && payload.ok && Array.isArray(payload.liveMatches)) ? payload.liveMatches : [];
+    const prev = st.prev || [];
+    const meName = AppState.currentUser && AppState.currentUser.name;
+    if (meName && (prev.length || next.length)) {
+      const beforeById = {}, afterById = {};
+      for (const lm of prev) beforeById[lm.eventId] = liveUserMatchPoints(meName, lm, liveMatchMeta(lm)).total;
+      for (const lm of next) afterById[lm.eventId] = liveUserMatchPoints(meName, lm, liveMatchMeta(lm)).total;
+      const rowsBefore = computeLiveRows(prev), rowsAfter = computeLiveRows(next);
+      const rankOf = rows => { const i = rows.findIndex(r => r.name === meName); return i < 0 ? null : i + 1; };
+      const rb = rankOf(rowsBefore), ra = rankOf(rowsAfter);
+      const events = liveApi.diffLiveMatches(prev, next);
+      if (rb !== null && ra !== null && ra < rb) events.push({ type: 'rankUp' });
+      else if (rb !== null && ra !== null && ra > rb) events.push({ type: 'rankDown' });
+      const soundOn = isLiveSoundOn();
+      if (soundOn && typeof soundApi !== 'undefined') {
+        const navRef = (typeof navigator !== 'undefined') ? navigator : null;
+        for (const ev of events) {
+          const isMine = ev.type === 'goal' ? ((afterById[ev.eventId] || 0) > (beforeById[ev.eventId] || 0)) : (ev.type === 'rankUp');
+          soundApi.playLiveEvent(ev, isMine, { enabled: true, ctx: _liveAudioCtx, navigatorRef: navRef });
+        }
+      }
+    }
+    st.prev = next;
+    st.secsLeft = AppState.liveRefreshSecs || 60;
+    if (AppState.resultadosTab === 'live') await renderResultadosTab();
+  } catch (e) { /* reintento en el siguiente tick */ }
+  st.polling = false;
+}
+
+/** Listeners de la tab Live (tras pintar): acordeones plegados por defecto + toggle sonido */
+function bindLiveTabInteractions() {
+  const container = document.getElementById('resultados-container');
+  if (!container) return;
+  const st = liveState();
+  container.querySelectorAll('.live-match-toggle').forEach(btn => {
+    btn.addEventListener('click', () => {
+      unlockLiveAudio();
+      const id = btn.dataset.liveMatch;
+      const body = document.getElementById(`live-match-body-${id}`);
+      const chev = btn.querySelector('.live-match-chev');
+      if (!body) return;
+      const isHidden = body.style.display === 'none';
+      body.style.display = isHidden ? '' : 'none';
+      if (chev) chev.textContent = isHidden ? '▾' : '▸';
+      if (isHidden) st.openBoxes.add(Number(id) || id); else st.openBoxes.delete(Number(id) || id);
+    });
+  });
+  const zoneToggle = container.querySelector('.live-zone-toggle');
+  if (zoneToggle) {
+    zoneToggle.style.minHeight = '44px';
+    zoneToggle.style.cursor = 'pointer';
+    zoneToggle.addEventListener('click', () => {
+      unlockLiveAudio();
+      const body = container.querySelector('.live-zone-body');
+      const chev = container.querySelector('.live-zone-chev');
+      if (!body) return;
+      const isHidden = body.style.display === 'none';
+      body.style.display = isHidden ? '' : 'none';
+      if (chev) chev.textContent = isHidden ? '▾' : '▸';
+      st.zoneOpen = isHidden;
+    });
+  }
+  const soundBtn = document.getElementById('live-sound-toggle');
+  if (soundBtn) {
+    soundBtn.addEventListener('click', () => {
+      unlockLiveAudio();
+      const v = !isLiveSoundOn();
+      setLiveSoundOn(v);
+      soundBtn.textContent = v ? '🔊 Sonido activado' : '🔇 Sonido desactivado';
+    });
+  }
+}
+
 /** Renderiza la pestaña de resultados por jornada */
 async function renderResultadosTab() {
   const container = document.getElementById('resultados-container');
@@ -1795,31 +2106,41 @@ async function renderResultadosTab() {
     return;
   }
 
+  const currentTab = AppState.resultadosTab || 'jornadas';
+  const isLiveTab = currentTab === 'live';
+  if (!isLiveTab) stopLivePolling();
+
   container.innerHTML = skeletonRows(6);
   await Promise.all([fetchMatchStats(), fetchAllPredictions()]);
+  // El Live ordena por jugadores: asegurar players antes de pintar (navegación temprana tras boot)
+  if (isLiveTab && !(AppState.players || []).length) {
+    try { await fetchPlayers(); } catch (e) { /* sin jugadores no hay ranking */ }
+  }
 
-  if (!AppState.matchStats.length) {
-    container.innerHTML = `<div style="padding: 24px; text-align: center; color: var(--text-muted);">No hay resultados disponibles aún.</div>`;
+  if (!isLiveTab && !AppState.matchStats.length) {
+    // Sin resultados finalizados: mensaje en Jornadas pero tabs visibles (Live puede tener directo)
+    const emptyHeader = liveApi.buildLiveTabsHtml(currentTab);
+    container.innerHTML = `<div class="resultados-header">${emptyHeader}</div>`
+      + `<div class="resultados-scroll"><div style="padding: 24px; text-align: center; color: var(--text-muted);">No hay resultados disponibles aún.</div></div>`;
+    bindResultadosTabClicks(container);
+    if (currentTab === 'live') bindLiveTabInteractions();
     return;
   }
 
-  // Pre-calcular clasificación real
-  calculateRealStandings();
+  // Pre-calcular clasificación real (no aplica al Live, que usa /api/live)
+  if (!isLiveTab && AppState.matchStats.length) calculateRealStandings();
 
-  // Selector de tabs
-  const currentTab = AppState.resultadosTab || 'jornadas';
-  let headerHtml = `
-    <div class="resultados-tabs">
-      <button class="resultados-tab ${currentTab === 'jornadas' ? 'active' : ''}" data-tab="jornadas">Jornadas</button>
-      <button class="resultados-tab ${currentTab === 'clasificacion' ? 'active' : ''}" data-tab="clasificacion">Clasificación Real</button>
-      <button class="resultados-tab ${currentTab === 'eliminatorias' ? 'active' : ''}" data-tab="eliminatorias">Eliminatorias</button>
-    </div>
-  `;
+  // Selector de tabs (con 🔴 Live)
+  let headerHtml = liveApi.buildLiveTabsHtml(currentTab);
   let scrollHtml = '';
 
   if (currentTab === 'clasificacion') {
     // Mostrar clasificación real
     scrollHtml = renderRealStandingsTable();
+  } else if (currentTab === 'live') {
+    const gen = ++_liveRenderGen;
+    scrollHtml = await renderLiveTab();
+    if (gen !== _liveRenderGen) return; // un render más reciente tomó el relevo (evita last-writer-stale)
   } else if (currentTab === 'eliminatorias') {
     // Mostrar equipos eliminados por ronda
     scrollHtml = renderEliminatoriasView();
@@ -1969,8 +2290,17 @@ async function renderResultadosTab() {
   });
 
   // Eventos de tabs (comunes a ambos modos)
+  bindResultadosTabClicks(container);
+
+  if (currentTab === 'live') bindLiveTabInteractions();
+}
+
+/** Clicks de las sub-tabs de Resultados (Jornadas | Live | Clasif. | Elim.) */
+function bindResultadosTabClicks(container) {
   container.querySelectorAll('.resultados-tab').forEach(btn => {
     btn.addEventListener('click', () => {
+      unlockLiveAudio();
+      if (btn.dataset.tab !== 'live') stopLivePolling();
       AppState.resultadosTab = btn.dataset.tab;
       renderResultadosTab();
     });
@@ -3283,6 +3613,7 @@ function navigateToTab(tabName) {
   if (tabName !== 'resultados') {
     AppState.resultadosRound = null;
     AppState.resultadosRoundKey = null;
+    stopLivePolling();
   }
 
   // Limpiar el intervalo del countdown del Inicio al salir de esa pestaña
