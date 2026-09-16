@@ -2734,6 +2734,11 @@ function showAdminModal() {
         <input type="checkbox" id="admin-show-guests-toggle" ${porraGuest.adminShowsGuests() ? 'checked' : ''} style="width:20px; height:20px; flex:none; cursor:pointer;">
       </div>
 
+      <div style="width:100%; display:flex; align-items:center; justify-content:space-between; gap:10px; background: var(--ucl-surface); padding: 12px; border-radius: var(--radius-md); margin-top: 8px;">
+        <span style="font-size:12px; color: var(--text-secondary); font-weight:700; text-align:left;">Permitir edición a invitados<br><span style="font-size:10px; color:var(--text-muted); font-weight:400;">Pronósticos, plantilla y eliminatorias</span></span>
+        <input type="checkbox" id="admin-guest-editing-toggle" ${AppState.appConfig?.guestEditingEnabled !== false ? 'checked' : ''} style="width:20px; height:20px; flex:none; cursor:pointer;">
+      </div>
+
       <button id="btn-admin-maintenance" class="btn-primary" style="background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%); color: #fff; margin-top: 8px; width: 100%;">
         🔧 Modo mantenimiento ${isMaintenanceEnabled() ? '<span style="background:#fff;color:#D97706;padding:2px 6px;border-radius:8px;font-size:10px;margin-left:6px;">ACTIVO</span>' : ''}
       </button>
@@ -2808,6 +2813,35 @@ function showAdminModal() {
       porraGuest.setAdminShowsGuests(showGuestsToggle.checked);
       showToast(showGuestsToggle.checked ? 'Invitados incluidos en las vistas' : 'Invitados excluidos de las vistas');
       rerenderActiveTab();
+    });
+  }
+
+  const guestEditingToggle = modal.querySelector('#admin-guest-editing-toggle');
+  if (guestEditingToggle) {
+    guestEditingToggle.addEventListener('change', async () => {
+      const enabled = guestEditingToggle.checked;
+      guestEditingToggle.disabled = true;
+      try {
+        const res = await fetchWithPhase(`${API_BASE}/api/admin/guest-editing`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', ...authHeaders() },
+          body: JSON.stringify({ enabled })
+        });
+        const data = await res.json();
+        if (data.ok) {
+          AppState.appConfig.guestEditingEnabled = data.guestEditingEnabled;
+          showToast(data.guestEditingEnabled ? 'Edición de invitados habilitada' : 'Edición de invitados deshabilitada');
+          rerenderActiveTab();
+        } else {
+          guestEditingToggle.checked = !enabled;
+          showToast(data.error || 'Error actualizando la edición de invitados');
+        }
+      } catch (e) {
+        guestEditingToggle.checked = !enabled;
+        showToast('Error de conexión');
+      } finally {
+        guestEditingToggle.disabled = false;
+      }
     });
   }
 
