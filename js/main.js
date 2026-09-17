@@ -1842,7 +1842,7 @@ function setLiveSoundOn(v) {
 function liveMatchMeta(lm) {
   const m = (AppState.matches || []).find(x => x.id === lm.eventId);
   if (m) {
-    return { homeTeamId: m.homeTeamId, awayTeamId: m.awayTeamId, homeTeam: m.homeTeam, awayTeam: m.awayTeam, homeBadgeExt: m.homeBadgeExt, awayBadgeExt: m.awayBadgeExt };
+    return { homeTeamId: m.homeTeamId, awayTeamId: m.awayTeamId, homeTeam: m.homeTeam, awayTeam: m.awayTeam, homeBadgeExt: m.homeBadgeExt, awayBadgeExt: m.awayBadgeExt, fase: m.fase, ronda: m.ronda };
   }
   const goals = (typeof liveApi !== 'undefined') ? liveApi.liveGoalsOf(lm.stats) : {};
   const ids = Object.keys(goals);
@@ -1876,57 +1876,112 @@ function liveUserMatchPoints(username, lm, meta) {
   return { matchPts: mp.points, breakdown: mp.breakdown, squadPts, squadDetail, total: mp.points + squadPts };
 }
 
-/** Filas live ordenadas desc con desempate de normas (brief: via clasificacionApi) */
+/** Jugadores de MI plantilla que han jugado este partido (minutos>0), con puntos y desglose */
+function liveMySquadPlayers(lm, username) {
+  const squad = (AppState.squadsCache || {})[username];
+  const jugadores = (lm.stats && lm.stats.jugadores) || [];
+  if (!squad || !squad.length || !jugadores.length) return [];
+  const pseudoMs = { eventId: lm.eventId, stats: lm.stats };
+  const out = [];
+  for (const sp of squad) {
+    const jd = jugadores.find(j => String(j.id) === String(sp.id));
+    if (!jd || !(jd.minutos > 0)) continue;
+    const r = calculatePlayerMatchPoints(jd, sp, pseudoMs);
+    out.push({
+      id: sp.id, nombre: sp.nombre, posicion: sp.posicion, extension: sp.extension,
+      minutos: jd.minutos, goles: jd.goles, asistencias: jd.asistencias,
+      puntos: r.total, desglose: r.desglose || []
+    });
+  }
+  out.sort((a, b) => b.puntos - a.puntos);
+  return out;
+}
+
+/** Abre el modal de desglose de un jugador mío en un partido live */
+function showLivePlayerBreakdown(eventId, playerId) {
+  const lm = (liveState().prev || []).find(m => String(m.eventId) === String(eventId));
+  const username = AppState.currentUser && AppState.currentUser.name;
+  if (!lm || !username) return;
+  const sp = (AppState.squadsCache?.[username] || []).find(p => String(p.id) === String(playerId));
+  const jd = (lm.stats?.jugadores || []).find(j => String(j.id) === String(playerId));
+  if (!sp || !jd) return;
+  const r = calculatePlayerMatchPoints(jd, sp, { eventId: lm.eventId, stats: lm.stats });
+  const desglose = (r.desglose || []).map(d => (d.concepto === 'Portería a cero' && lm.status !== 'FT')
+    ? { ...d, concepto: d.concepto + ' (provisional)' } : d);
+  showPlayerPointsBreakdown({ jugador: sp, partidos: [{ eventId: lm.eventId, puntos: r.total, desglose }], puntosTotal: r.total });
+}
+
+/** Etiqueta de fase para la línea meta de la caja live */
+function liveFaseLabel(fase) {
+  const map = { liga: 'Liga', '16': 'Dieciseisavos', '8': 'Octavos', '4': 'Cuartos', semis: 'Semifinal', final: 'Final' };
+  return map[fase] || (fase || '');
+}
+
+/** Clasificación oficial (puntos reales) con caché mientras no cambien los matchStats */
+function liveOfficialRows() {
+  const st = liveState();
+  if (st.officialRows && st.officialStatsRef === AppState.matchStats) return st.officialRows;
+  const rows = visiblePlayers().map(p => ({ name: p.name, officialPoints: getUserTotalRealPoints(p.name) }));
+  rows.sort((a, b) => b.officialPoints - a.officialPoints || a.name.localeCompare(b.name));
+  rows.forEach((r, i) => { r.officialRank = i + 1; });
+  st.officialRows = rows;
+  st.officialStatsRef = AppState.matchStats;
+  return rows;
+}
+
+/** Filas live = puntos oficiales + delta de los partidos en juego, ordenadas por total */
 function computeLiveRows(liveMatches) {
-  const players = visiblePlayers();
-  const rows = players.map(p => {
-    let livePoints = 0, predictionPoints = 0, squadPoints = 0;
+  const official = liveOfficialRows();
+  const officialById = new Map(official.map(r => [r.name, r]));
+  const rows = visiblePlayers().map(p => {
+    let liveDelta = 0, predictionPoints = 0, squadPoints = 0;
     for (const lm of (liveMatches || [])) {
       const r = liveUserMatchPoints(p.name, lm, liveMatchMeta(lm));
-      livePoints += r.total;
+      liveDelta += r.total;
       predictionPoints += r.matchPts;
       squadPoints += r.squadPts;
     }
-    return { name: p.name, avatar: p.avatar, livePoints, realPoints: livePoints, predictionPoints, squadPoints, eliminatoriasPoints: 0, classificationPoints: 0 };
+    const off = officialById.get(p.name);
+    const officialPoints = off ? off.officialPoints : 0;
+    return { name: p.name, avatar: p.avatar, officialPoints, officialRank: off ? off.officialRank : null, liveDelta, livePoints: officialPoints + liveDelta, realPoints: officialPoints + liveDelta, predictionPoints, squadPoints, eliminatoriasPoints: 0, classificationPoints: 0 };
   });
   const cmp = (typeof clasificacionApi !== 'undefined' && clasificacionApi.compareClasificacionJugadores)
     ? clasificacionApi.compareClasificacionJugadores
-    : ((a, b) => b.livePoints - a.livePoints);
+    : ((a, b) => b.livePoints - a.livePoints || a.name.localeCompare(b.name));
   rows.sort(cmp);
   return rows;
 }
 
-function liveStatusLabel(lm) {
-  if (lm.status === 'FT') return 'FIN';
-  if (lm.minute !== null && lm.minute !== undefined) return `${lm.minute}’`;
-  return lm.status || 'LIVE';
-}
-
-/** Caja de partido live: acordeón plegado por defecto (toggle ≥44px) */
-function buildLiveMatchBoxHtml(lm, rows) {
+/** Caja de partido live (v9): escudos, estado por color, pill de pronóstico y acordeón de jugadores */
+function buildLiveMatchBoxHtml(lm) {
   const meta = liveMatchMeta(lm);
   const goals = liveApi.liveGoalsOf(lm.stats);
   const gh = meta.homeTeamId !== undefined ? (goals[meta.homeTeamId] ?? '–') : '–';
   const ga = meta.awayTeamId !== undefined ? (goals[meta.awayTeamId] ?? '–') : '–';
   const st = liveState();
-  const me = AppState.currentUser && rows.find(r => r.name === AppState.currentUser.name);
-  const myPts = me ? liveUserMatchPoints(me.name, lm, meta).total : 0;
+  const myName = AppState.currentUser && AppState.currentUser.name;
+  const my = myName ? liveUserMatchPoints(myName, lm, meta) : { total: 0, matchPts: 0 };
+  const pred = myName ? ((AppState.allPredictions || {})[myName] || {})[lm.eventId] : null;
+  const style = liveApi.liveStatusStyle(lm.status, lm.minute);
   const open = st.openBoxes.has(lm.eventId);
-  const usersHtml = rows.map(r => {
-    const d = liveUserMatchPoints(r.name, lm, meta);
-    const isMe = me && r.name === me.name;
-    return `<div class="resultados-player ${isMe ? 'is-current-user' : ''}">`
-      + `<span class="resultados-player-name">${r.avatar} ${r.name}${isMe ? ' <span class="current-user-tag">(Tú)</span>' : ''}</span>`
-      + `<span class="resultados-player-pred">${d.matchPts >= 0 ? '+' : ''}${d.matchPts}${d.squadPts ? ` (+${d.squadPts} pl.)` : ''}</span>`
-      + `<span class="resultados-player-points">${d.total} pts</span></div>`;
-  }).join('');
-  return `<div class="resultados-match" id="live-match-${lm.eventId}">`
-    + `<button class="live-match-toggle" data-live-match="${lm.eventId}" style="display:flex;align-items:center;gap:8px;width:100%;min-height:44px;background:none;border:none;color:inherit;cursor:pointer;text-align:left;padding:6px 4px">`
-    + `<span style="color:#F87171;font-weight:800;font-size:11px">🔴 ${liveStatusLabel(lm)}</span>`
-    + `<span style="flex:1;font-size:13px;font-weight:700">${meta.homeTeam} ${gh} - ${ga} ${meta.awayTeam}</span>`
-    + `<span style="font-size:11px;color:#10B981;font-weight:800">Tú +${myPts}</span>`
-    + `<span class="live-match-chev" style="font-size:14px;color:#94A3B8">${open ? '▾' : '▸'}</span></button>`
-    + `<div class="live-match-body" id="live-match-body-${lm.eventId}" style="${open ? '' : 'display:none'}">${usersHtml}</div></div>`;
+  const players = myName ? liveMySquadPlayers(lm, myName) : [];
+  const badge = lm.status === 'FT' ? 34 : 38;
+  const metaLine = `${liveFaseLabel(meta.fase)}${meta.ronda ? ` · J${meta.ronda}` : ''} · tap para ver jugadores`;
+  return `<div class="resultados-match" id="live-match-${lm.eventId}" style="background:#121E3D;border:1px solid rgba(255,255,255,0.1);border-left:3px solid ${style.border};border-radius:14px;padding:12px">`
+    + `<button class="live-match-toggle" data-live-match="${lm.eventId}" style="display:block;width:100%;min-height:44px;background:none;border:none;color:inherit;cursor:pointer;text-align:left;padding:0">`
+    + `<div style="display:flex;justify-content:space-between;align-items:center">`
+    + `<span style="font-size:10px;color:${style.color};font-weight:800">${style.label}</span>`
+    + `<span class="live-match-chev" style="font-size:12px;color:#94A3B8">${open ? '▾' : '▸'}</span></div>`
+    + `<div style="font-size:10px;color:#64748B">${metaLine}</div>`
+    + `<div style="display:flex;align-items:center;gap:6px;margin-top:10px">`
+    + liveApi.buildLiveTeamCell(meta.homeTeamId, meta.homeBadgeExt, meta.homeTeam, badge)
+    + `<div style="text-align:center"><div style="font-size:${lm.status === 'FT' ? 20 : 24}px;font-weight:900">${gh} - ${ga}</div>${liveApi.buildLivePredictionPill(pred, my.matchPts, lm.status)}</div>`
+    + liveApi.buildLiveTeamCell(meta.awayTeamId, meta.awayBadgeExt, meta.awayTeam, badge)
+    + `</div></button>`
+    + `<div class="live-match-body" id="live-match-body-${lm.eventId}" style="margin-top:10px;background:rgba(0,0,0,0.28);border-radius:10px;padding:8px 10px;${open ? '' : 'display:none'}">`
+    + `<div style="font-size:10px;color:#94A3B8;font-weight:700;margin-bottom:6px">⭐ TUS JUGADORES EN JUEGO (${players.length})</div>`
+    + liveApi.buildLiveSquadPlayersHtml(lm.eventId, players, lm.status)
+    + `</div></div>`;
 }
 
 /** Tab Live: esqueleto ya pintado por renderResultadosTab; aquí fetch + puntos + polling */
@@ -1954,20 +2009,33 @@ async function renderLiveTab() {
   const total = AppState.liveRefreshSecs || 60;
   st.secsLeft = total;
   const meName = AppState.currentUser && AppState.currentUser.name;
+  const meRow = meName ? rows.find(r => r.name === meName) : null;
+  const myRank = meName ? rows.findIndex(r => r.name === meName) + 1 : null;
   const gaps = meName ? liveApi.computeLiveGaps(rows, meName) : null;
+  const rankDelta = (meRow && meRow.officialRank && myRank) ? meRow.officialRank - myRank : 0;
+  const delta = meRow ? meRow.liveDelta : 0;
+  const deltaTxt = `${delta >= 0 ? '+' : ''}${delta}${rankDelta ? ` ${rankDelta > 0 ? '▲' : '▼'}${Math.abs(rankDelta)}` : ''}`;
+  const zoneSub = myRank ? `${myRank}º · ${deltaTxt}` : '';
   let zoneHtml = '';
   if (gaps && gaps.me) {
-    const i = rows.findIndex(r => r.name === meName);
-    zoneHtml = liveApi.buildZoneHtml(gaps, { above: i > 0 ? i : '', me: i + 1, below: i < rows.length - 1 ? i + 2 : '' }, st.zoneOpen);
+    const i = myRank - 1;
+    zoneHtml = liveApi.buildZoneHtml(gaps, { above: i > 0 ? i : '', me: i + 1, below: i < rows.length - 1 ? i + 2 : '' }, st.zoneOpen, zoneSub);
   }
-  const soundLabel = st.soundOn ? '🔊 Sonido activado' : '🔇 Sonido desactivado';
-  const html = `<div style="display:flex;align-items:center;gap:10px;padding:10px 4px">`
-    + `<div style="flex:1"><div style="font-size:14px;font-weight:900;color:#F8FAFC">🔴 EN DIRECTO</div>`
-    + `<div style="font-size:11px;color:#94A3B8">${liveMatches.length} partido${liveMatches.length === 1 ? '' : 's'} · ${rows.length} jugadores</div></div>`
-    + `<button id="live-sound-toggle" style="min-height:44px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);color:#F8FAFC;border-radius:8px;font-size:11px;font-weight:700;padding:6px 10px;cursor:pointer">${soundLabel}</button>`
+  const soundRow = `<div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px;background:rgba(0,0,0,0.28);border-radius:10px;padding:8px 10px">`
+    + `<div style="font-size:11px">🔔 Sonido <span id="live-sound-state" style="color:${st.soundOn ? '#10B981' : '#94A3B8'};font-weight:800">${st.soundOn ? 'ON' : 'OFF'}</span> <span style="color:#64748B">· goles · pitidos · puestos</span></div>`
+    + `<button id="live-sound-toggle" aria-label="Alternar sonido" style="width:40px;height:22px;min-height:22px;background:${st.soundOn ? '#10B981' : '#334155'};border:none;border-radius:99px;position:relative;cursor:pointer;padding:0"><span style="position:absolute;${st.soundOn ? 'right:2px' : 'left:2px'};top:2px;width:18px;height:18px;background:#fff;border-radius:50%;transition:all .15s"></span></button></div>`;
+  const headerCard = `<div style="background:#121E3D;border:1px solid rgba(245,158,11,0.35);border-radius:14px;padding:12px">`
+    + `<div style="display:flex;justify-content:space-between;align-items:flex-start">`
+    + `<div><div style="font-size:11px;color:#94A3B8;font-weight:700;letter-spacing:0.5px">⚡ TUS PUNTOS LIVE</div>`
+    + `<div style="font-size:22px;font-weight:900;margin-top:2px">${meRow ? meRow.livePoints : 0} <span style="font-size:14px;color:${delta >= 0 ? '#10B981' : '#F87171'}">${deltaTxt}</span></div>`
+    + `<div style="font-size:10px;color:#64748B;margin-top:2px">${liveMatches.length} partido${liveMatches.length === 1 ? '' : 's'} en juego</div></div>`
     + `<div id="live-ring">${liveApi.buildRingHtml(st.secsLeft, total)}</div></div>`
-    + `<div class="resultados-journey">${liveMatches.map(lm => buildLiveMatchBoxHtml(lm, rows)).join('')}</div>`
-    + zoneHtml;
+    + zoneHtml
+    + soundRow
+    + (st.lastEvent && st.lastEvent.text ? `<div style="font-size:10px;color:#94A3B8;margin-top:8px;text-align:center">${st.lastEvent.text}</div>` : '')
+    + `</div>`;
+  const html = headerCard
+    + `<div class="resultados-journey" style="margin-top:10px;display:flex;flex-direction:column;gap:10px">${liveMatches.map(lm => buildLiveMatchBoxHtml(lm)).join('')}</div>`;
   startLivePolling();
   return html;
 }
@@ -2019,6 +2087,16 @@ function tickLiveRing(total) {
   if (st.secsLeft <= 0) pollLiveOnce();
 }
 
+/** Nombre del goleador comparando los jugadores de un partido entre dos polls */
+function findLiveScorer(prev, next, eventId, teamId) {
+  const n = (next || []).find(m => m.eventId === eventId);
+  if (!n) return null;
+  const p = (prev || []).find(m => m.eventId === eventId);
+  const prevGoals = new Map((((p && p.stats) || {}).jugadores || []).map(j => [String(j.id), j.goles || 0]));
+  const cand = ((((n.stats || {}).jugadores) || []).filter(j => String(j.equipo) === String(teamId) && (j.goles || 0) > (prevGoals.get(String(j.id)) || 0)));
+  return cand.length ? cand[cand.length - 1].nombre : null;
+}
+
 /** Un poll: fetch, diff → sonido, re-render si seguimos en Live */
 async function pollLiveOnce() {
   const st = liveState();
@@ -2040,6 +2118,20 @@ async function pollLiveOnce() {
       const events = liveApi.diffLiveMatches(prev, next);
       if (rb !== null && ra !== null && ra < rb) events.push({ type: 'rankUp' });
       else if (rb !== null && ra !== null && ra > rb) events.push({ type: 'rankDown' });
+      let lastMsg = '';
+      for (const ev of events) {
+        const ctx = {};
+        if (ev.type === 'goal') {
+          ctx.scorer = findLiveScorer(prev, next, ev.eventId, ev.teamId);
+          const nm = next.find(m => m.eventId === ev.eventId);
+          ctx.minute = nm ? nm.minute : null;
+        } else if (ev.type === 'rankUp' || ev.type === 'rankDown') {
+          ctx.rank = ra;
+        }
+        const text = liveApi.describeLiveEvent(ev, ctx);
+        if (text) lastMsg = text;
+      }
+      if (lastMsg) st.lastEvent = { text: lastMsg, at: Date.now() };
       const soundOn = isLiveSoundOn();
       if (soundOn && typeof soundApi !== 'undefined') {
         const navRef = (typeof navigator !== 'undefined') ? navigator : null;
@@ -2074,6 +2166,12 @@ function bindLiveTabInteractions() {
       if (isHidden) st.openBoxes.add(Number(id) || id); else st.openBoxes.delete(Number(id) || id);
     });
   });
+  container.querySelectorAll('.live-squad-player').forEach(btn => {
+    btn.addEventListener('click', () => {
+      unlockLiveAudio();
+      showLivePlayerBreakdown(btn.dataset.liveEvent, btn.dataset.livePlayer);
+    });
+  });
   const zoneToggle = container.querySelector('.live-zone-toggle');
   if (zoneToggle) {
     zoneToggle.style.minHeight = '44px';
@@ -2095,7 +2193,11 @@ function bindLiveTabInteractions() {
       unlockLiveAudio();
       const v = !isLiveSoundOn();
       setLiveSoundOn(v);
-      soundBtn.textContent = v ? '🔊 Sonido activado' : '🔇 Sonido desactivado';
+      soundBtn.style.background = v ? '#10B981' : '#334155';
+      const knob = soundBtn.firstElementChild;
+      if (knob) { knob.style.right = v ? '2px' : ''; knob.style.left = v ? '' : '2px'; }
+      const stateEl = document.getElementById('live-sound-state');
+      if (stateEl) { stateEl.textContent = v ? 'ON' : 'OFF'; stateEl.style.color = v ? '#10B981' : '#94A3B8'; }
     });
   }
 }

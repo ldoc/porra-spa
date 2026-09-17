@@ -88,7 +88,7 @@
       + `<div style="font-size:10px;font-weight:800">${right}</div></div>`;
   }
 
-  function buildZoneHtml(gaps, ranks, open) {
+  function buildZoneHtml(gaps, ranks, open, sub) {
     const isOpen = !!open;
     const r = ranks || {};
     const rows = [];
@@ -101,12 +101,85 @@
       : `<div style="padding:8px;font-size:11px;color:#64748B">Sin perseguidor</div>`);
     return `<div style="margin-top:10px;background:rgba(0,0,0,0.28);border-radius:10px;overflow:hidden">`
       + `<div class="live-zone-toggle" style="display:flex;align-items:center;gap:8px;padding:10px 12px;min-height:44px">`
-      + `<div style="font-size:11px;color:#F8FAFC;font-weight:800;flex:1">🏆 TU ZONA EN DIRECTO</div>`
+      + `<div style="font-size:11px;color:#F8FAFC;font-weight:800;flex:1">🏆 TU ZONA EN DIRECTO${sub ? ` <span style="font-weight:400;color:#94A3B8">· ${sub}</span>` : ''}</div>`
       + `<div class="live-zone-chev" style="font-size:14px;color:#94A3B8">${isOpen ? '▾' : '▸'}</div></div>`
       + `<div class="live-zone-body" style="padding:0 6px 6px;display:${isOpen ? 'block' : 'none'}">${rows.join('')}</div></div>`;
   }
 
-  const liveApi = { resolveLiveRefreshSecs, LIVE_DEFAULT_SECS, liveGoalsOf, diffLiveMatches, computeLiveGaps, ringOffset, buildLiveTabsHtml, buildRingHtml, buildZoneHtml };
+  const LIVE_POS_LABEL = { G: 'Portero', D: 'Defensa', M: 'Centrocampista', F: 'Delantero' };
+
+  function buildLiveSquadPlayerRow(eventId, p, status) {
+    const desglose = (p.desglose || []).map(d => (d.concepto === 'Portería a cero' && status !== 'FT')
+      ? { ...d, concepto: d.concepto + ' (provisional)' } : d);
+    const desgloseTxt = desglose.map(d => `${d.concepto} ${d.puntos > 0 ? '+' : ''}${d.puntos}`).join(' · ');
+    const events = [p.goles ? `⚽ ${p.goles}` : '', p.asistencias ? `🅰️ ${p.asistencias}` : ''].filter(Boolean).join(' · ');
+    const pos = LIVE_POS_LABEL[p.posicion] || p.posicion || '';
+    const ext = p.extension || 'webp';
+    const pts = Number(p.puntos) || 0;
+    return `<button class="live-squad-player" data-live-event="${eventId}" data-live-player="${p.id}" style="display:flex;align-items:center;gap:8px;width:100%;min-height:44px;background:none;border:none;border-bottom:1px solid rgba(255,255,255,0.06);color:inherit;cursor:pointer;text-align:left;padding:5px 0">`
+      + `<img src="data/imgJugadores/${p.id}.${ext}" alt="${p.nombre}" loading="lazy" style="width:32px;height:32px;border-radius:50%;object-fit:cover;background:#1B2B54" onerror="this.style.visibility='hidden'">`
+      + `<span style="flex:1;min-width:0">`
+      + `<span style="display:block;font-size:12px;font-weight:700;color:#F8FAFC;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.nombre} <span style="font-weight:400;color:#94A3B8">· ${pos} · ${p.minutos}'${events ? ' ' + events : ''}</span></span>`
+      + (desgloseTxt ? `<span style="display:block;font-size:10px;color:#64748B;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${desgloseTxt}</span>` : '')
+      + `</span>`
+      + `<span style="font-size:13px;font-weight:800;color:${pts >= 0 ? '#10B981' : '#F87171'}">${pts > 0 ? '+' : ''}${pts}</span>`
+      + `</button>`;
+  }
+
+  function buildLiveSquadPlayersHtml(eventId, players, status) {
+    if (!Array.isArray(players) || players.length === 0) {
+      return `<div style="padding:8px 0;font-size:12px;color:#94A3B8">Ningún jugador de tu plantilla juega este partido.</div>`;
+    }
+    return players.map(p => buildLiveSquadPlayerRow(eventId, p, status)).join('');
+  }
+
+  function liveStatusStyle(status, minute) {
+    if (status === 'FT') return { label: 'FINAL', color: '#94A3B8', border: 'rgba(255,255,255,0.1)' };
+    if (status === 'HT') return { label: '⏸ DESCANSO', color: '#F59E0B', border: '#F59E0B' };
+    const m = (minute !== null && minute !== undefined) ? `${minute}' ` : '';
+    return { label: `● ${m}EN JUEGO`, color: '#EF4444', border: '#EF4444' };
+  }
+
+  function buildLivePredictionPill(pred, matchPts, status) {
+    if (!pred || pred.home === null || pred.home === undefined || pred.away === null || pred.away === undefined) {
+      return `<div style="font-size:10px;color:#64748B;margin-top:4px">Sin pronóstico</div>`;
+    }
+    const pts = Number(matchPts) || 0;
+    const color = pts > 0 ? '#10B981' : '#94A3B8';
+    const bg = pts > 0 ? 'rgba(16,185,129,0.12)' : 'rgba(255,255,255,0.06)';
+    const live = status !== 'FT';
+    return `<div style="font-size:10px;color:${color};font-weight:700;background:${bg};border-radius:99px;padding:2px 8px;margin-top:4px;display:inline-block">Tu ${pred.home}-${pred.away} → ${pts > 0 ? '+' : ''}${pts}${live ? ' <i style="color:#64748B;font-weight:400">de momento</i>' : ''}</div>`;
+  }
+
+  function buildLiveTeamCell(teamId, ext, name, size) {
+    if (teamId === undefined || teamId === null) {
+      return `<div style="flex:1;text-align:center"><div style="font-size:11px;font-weight:700">${name || '?'}</div></div>`;
+    }
+    const e = ext || 'webp';
+    const s = size || 38;
+    return `<div style="flex:1;text-align:center"><img src="data/imgEquipos/${teamId}.${e}" alt="${name}" loading="lazy" style="width:${s}px;height:${s}px;object-fit:contain" onerror="this.onerror=null;this.src='data/imgEquipos/default.webp'"><div style="font-size:11px;font-weight:700;margin-top:4px">${name}</div></div>`;
+  }
+
+  function describeLiveEvent(ev, ctx) {
+    ctx = ctx || {};
+    if (ev.type === 'goal') {
+      const who = ctx.scorer ? ` ${ctx.scorer}` : '';
+      const min = (ctx.minute !== null && ctx.minute !== undefined) ? ` (${ctx.minute}')` : '';
+      return `⚽ ¡GOL!${who}${min}`;
+    }
+    if (ev.type === 'rankUp') return `▲ Subes al ${ctx.rank}º`;
+    if (ev.type === 'rankDown') return `▼ Bajas al ${ctx.rank}º`;
+    if (ev.type === 'start') return '🟢 ¡Empieza el partido!';
+    if (ev.type === 'end') return '🏁 FINAL';
+    if (ev.type === 'status') {
+      if (ev.to === 'HT') return '⏸ DESCANSO';
+      if (ev.to === 'FT') return '🏁 FINAL';
+      return `▶️ ${ev.to}`;
+    }
+    return '';
+  }
+
+  const liveApi = { resolveLiveRefreshSecs, LIVE_DEFAULT_SECS, liveGoalsOf, diffLiveMatches, computeLiveGaps, ringOffset, buildLiveTabsHtml, buildRingHtml, buildZoneHtml, buildLiveSquadPlayersHtml, liveStatusStyle, buildLivePredictionPill, buildLiveTeamCell, describeLiveEvent };
   global.liveApi = liveApi;
   if (typeof module !== 'undefined' && module.exports) {
     module.exports = liveApi;

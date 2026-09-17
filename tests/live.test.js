@@ -1,6 +1,6 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { resolveLiveRefreshSecs, diffLiveMatches, computeLiveGaps, ringOffset, liveGoalsOf, buildLiveTabsHtml, buildRingHtml, buildZoneHtml } = require('../js/live.js');
+const { resolveLiveRefreshSecs, diffLiveMatches, computeLiveGaps, ringOffset, liveGoalsOf, buildLiveTabsHtml, buildRingHtml, buildZoneHtml, buildLiveSquadPlayersHtml, liveStatusStyle, buildLivePredictionPill, buildLiveTeamCell, describeLiveEvent } = require('../js/live.js');
 
 test('liveGoalsOf extrae goles de stats Sofascore', () => {
   assert.deepEqual(liveGoalsOf({ 17: { goles: 2 }, 42: { goles: 1 }, jugadores: [] }), { 17: 2, 42: 1 });
@@ -77,4 +77,74 @@ test('zona con anterior/tu/siguiente y avatares', () => {
   const htmlOpen = buildZoneHtml(gaps, {}, true);
   assert.ok(htmlOpen.includes('display:block'));
   assert.ok(htmlOpen.includes('>▾<'));
+});
+
+test('buildLiveSquadPlayersHtml pinta nombre, demarcación, minutos y puntos', () => {
+  const html = buildLiveSquadPlayersHtml(16938768, [
+    { id: 70988, nombre: 'Thibaut Courtois', posicion: 'G', extension: 'webp', minutos: 90, goles: 0, asistencias: 0, puntos: -1, desglose: [{ concepto: 'Rating Sofascore (5.4)', puntos: -1 }] }
+  ], 'FT');
+  assert.ok(html.includes('Thibaut Courtois'));
+  assert.ok(html.includes('Portero'));
+  assert.ok(html.includes('90\''));
+  assert.ok(html.includes('data-live-player="70988"'));
+  assert.ok(html.includes('data-live-event="16938768"'));
+  assert.ok(html.includes('-1'));
+});
+
+test('buildLiveSquadPlayersHtml marca portería a cero provisional si no es FT', () => {
+  const html = buildLiveSquadPlayersHtml(1, [
+    { id: 2, nombre: 'Portero X', posicion: 'G', minutos: 80, goles: 0, asistencias: 0, puntos: 5, desglose: [{ concepto: 'Portería a cero', puntos: 5 }] }
+  ], 'LIVE');
+  assert.ok(html.includes('Portería a cero (provisional)'));
+});
+
+test('buildLiveSquadPlayersHtml muestra goles y asistencias', () => {
+  const html = buildLiveSquadPlayersHtml(1, [
+    { id: 3, nombre: 'Delantero Y', posicion: 'F', minutos: 60, goles: 2, asistencias: 1, puntos: 4, desglose: [] }
+  ], 'HT');
+  assert.ok(html.includes('⚽ 2'));
+  assert.ok(html.includes('🅰️ 1'));
+});
+
+test('buildLiveSquadPlayersHtml con lista vacía muestra mensaje', () => {
+  const html = buildLiveSquadPlayersHtml(1, [], 'LIVE');
+  assert.ok(html.toLowerCase().includes('ningún jugador'));
+});
+
+test('liveStatusStyle por estado y minuto', () => {
+  assert.equal(liveStatusStyle('LIVE', 67).label, "● 67' EN JUEGO");
+  assert.equal(liveStatusStyle('LIVE', 67).color, '#EF4444');
+  assert.equal(liveStatusStyle('LIVE', null).label, '● EN JUEGO');
+  assert.equal(liveStatusStyle('HT', null).label, '⏸ DESCANSO');
+  assert.equal(liveStatusStyle('HT', null).color, '#F59E0B');
+  assert.equal(liveStatusStyle('FT', null).label, 'FINAL');
+});
+
+test('buildLivePredictionPill muestra pronóstico y puntos', () => {
+  const live = buildLivePredictionPill({ home: 2, away: 1 }, 3, 'LIVE');
+  assert.ok(live.includes('Tu 2-1'));
+  assert.ok(live.includes('+3'));
+  assert.ok(live.includes('de momento'));
+  const fin = buildLivePredictionPill({ home: 2, away: 1 }, 15, 'FT');
+  assert.ok(!fin.includes('de momento'));
+  const none = buildLivePredictionPill(null, 0, 'LIVE');
+  assert.ok(none.toLowerCase().includes('sin pronóstico'));
+});
+
+test('buildLiveTeamCell pinta escudo con fallback', () => {
+  const html = buildLiveTeamCell(42, undefined, 'Arsenal', 38);
+  assert.ok(html.includes('data/imgEquipos/42.webp'));
+  assert.ok(html.includes('width:38px'));
+  assert.ok(html.includes('Arsenal'));
+  assert.ok(html.includes('default.webp'));
+});
+
+test('describeLiveEvent genera el texto del aviso del directo', () => {
+  assert.equal(describeLiveEvent({ type: 'goal' }, { scorer: 'Haaland', minute: 67 }), "⚽ ¡GOL! Haaland (67')");
+  assert.equal(describeLiveEvent({ type: 'goal' }, {}), '⚽ ¡GOL!');
+  assert.equal(describeLiveEvent({ type: 'rankUp' }, { rank: 3 }), '▲ Subes al 3º');
+  assert.equal(describeLiveEvent({ type: 'rankDown' }, { rank: 5 }), '▼ Bajas al 5º');
+  assert.equal(describeLiveEvent({ type: 'status', to: 'HT' }), '⏸ DESCANSO');
+  assert.equal(describeLiveEvent({ type: 'status', to: 'FT' }), '🏁 FINAL');
+  assert.equal(describeLiveEvent({ type: 'start' }), '🟢 ¡Empieza el partido!');
 });
