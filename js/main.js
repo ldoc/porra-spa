@@ -1822,12 +1822,19 @@ function initLiveEvents() {
   st.baselineFromStore = store.baseline || null;
   st.baselineAt = (raw && raw.updatedAt) ? raw.updatedAt : 0;
   st.eventsOpen = false;
+  st.eventsDay = liveApi.liveDayKey(nowMs);
 }
 
 function persistLiveEvents(snapshot) {
   const st = liveState();
   const nowMs = Date.now();
-  const store = liveApi.pruneLiveEvents({ day: liveApi.liveDayKey(nowMs), updatedAt: nowMs, events: st.events || [], baseline: snapshot || null }, nowMs, liveApi.LIVE_EVENTS_MAX);
+  const day = liveApi.liveDayKey(nowMs);
+  if (st.eventsDay && st.eventsDay !== day) {
+    st.events = [];
+    snapshot = null;
+  }
+  st.eventsDay = day;
+  const store = liveApi.pruneLiveEvents({ day, updatedAt: nowMs, events: st.events || [], baseline: snapshot || null }, nowMs, liveApi.LIVE_EVENTS_MAX);
   writeLiveEventsStore(store);
 }
 
@@ -2176,6 +2183,7 @@ async function pollLiveOnce() {
       const meSquadIds = new Set((AppState.squadsCache?.[meName] || []).map(p => String(p.id)));
       let lastMsg = '';
       for (const ev of events) {
+        if (ev.type === 'end') continue;
         const ctx = {};
         let mine = false;
         if (ev.type === 'goal') {
