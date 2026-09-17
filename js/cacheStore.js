@@ -64,7 +64,7 @@
       const toRemove = [];
       for (let i = 0; i < global.localStorage.length; i++) {
         const k = global.localStorage.key(i);
-        if (k && (k === KEYS.matchstats || k.indexOf(PREDALL_PREFIX) === 0 || k.indexOf(MESSAGES_PREFIX) === 0)) toRemove.push(k);
+        if (k && (k === KEYS.matchstats || k.indexOf(PREDALL_PREFIX) === 0 || k.indexOf(MESSAGES_PREFIX) === 0 || k.indexOf('porra_live_events_') === 0)) toRemove.push(k);
       }
       toRemove.forEach(k => global.localStorage.removeItem(k));
     } catch (e) {
