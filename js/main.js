@@ -1815,11 +1815,12 @@ function writeLiveEventsStore(store) {
 
 function initLiveEvents() {
   const st = liveState();
+  const raw = readLiveEventsStore();
   const nowMs = Date.now();
-  const store = liveApi.pruneLiveEvents(readLiveEventsStore(), nowMs, liveApi.LIVE_EVENTS_MAX);
+  const store = liveApi.pruneLiveEvents(raw, nowMs, liveApi.LIVE_EVENTS_MAX);
   st.events = store.events;
   st.baselineFromStore = store.baseline || null;
-  st.baselineAt = store.updatedAt || 0;
+  st.baselineAt = (raw && raw.updatedAt) ? raw.updatedAt : 0;
   st.eventsOpen = false;
 }
 
@@ -2806,6 +2807,8 @@ function logout() {
   AppState.hasUnsavedFinalChanges = false;
   clearInicioCountdown();
   stopMatchStatsPolling();
+  stopLivePolling();
+  AppState.live = null;
   checkAuthStatus();
 }
 
