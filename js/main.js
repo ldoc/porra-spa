@@ -1793,6 +1793,48 @@ function showPlayerPointsBreakdown(detail) {
 // Generación de renders Live: evita que un render antiguo pise a uno reciente
 let _liveRenderGen = 0;
 
+const LIVE_EVENTS_PREFIX = 'porra_live_events_v1_';
+const LIVE_BASELINE_STALE_MS = 5 * 60 * 1000;
+
+function liveEventsKey() {
+  const u = AppState.currentUser && AppState.currentUser.name;
+  return u ? `${LIVE_EVENTS_PREFIX}${u}` : null;
+}
+
+function readLiveEventsStore() {
+  const key = liveEventsKey();
+  if (!key) return null;
+  try { const raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : null; } catch (e) { return null; }
+}
+
+function writeLiveEventsStore(store) {
+  const key = liveEventsKey();
+  if (!key) return;
+  try { localStorage.setItem(key, JSON.stringify(store)); } catch (e) { /* noop */ }
+}
+
+function initLiveEvents() {
+  const st = liveState();
+  const nowMs = Date.now();
+  const store = liveApi.pruneLiveEvents(readLiveEventsStore(), nowMs, liveApi.LIVE_EVENTS_MAX);
+  st.events = store.events;
+  st.baselineFromStore = store.baseline || null;
+  st.baselineAt = store.updatedAt || 0;
+  st.eventsOpen = false;
+}
+
+function persistLiveEvents(snapshot) {
+  const st = liveState();
+  const nowMs = Date.now();
+  const store = liveApi.pruneLiveEvents({ day: liveApi.liveDayKey(nowMs), updatedAt: nowMs, events: st.events || [], baseline: snapshot || null }, nowMs, liveApi.LIVE_EVENTS_MAX);
+  writeLiveEventsStore(store);
+}
+
+function liveMatchLabel(lm) {
+  const meta = liveMatchMeta(lm);
+  return `${meta.homeTeam} - ${meta.awayTeam}`;
+}
+
 // Singleton AudioContext memoizado en el cableado (no en js/sound.js):
 // se crea perezosamente una sola vez y solo tras el primer gesto del
 // usuario (autoplay policy). Antes de eso los beeps son no-op seguros.
@@ -1989,13 +2031,22 @@ async function renderLiveTab() {
   stopLivePolling();
   const st = liveState();
   st.soundOn = isLiveSoundOn();
+  if (!st.eventsInited) { initLiveEvents(); st.eventsInited = true; }
   let payload = null;
   try {
     const res = await fetchWithPhase(API_BASE + '/api/live');
     payload = await res.json();
   } catch (e) { payload = null; }
   const liveMatches = (payload && payload.ok && Array.isArray(payload.liveMatches)) ? payload.liveMatches : [];
-  if (payload && payload.ok) st.prev = liveMatches;
+  if (payload && payload.ok) {
+    if (!st.prevInited) {
+      const fresh = st.baselineFromStore && (Date.now() - (st.baselineAt || 0) < LIVE_BASELINE_STALE_MS);
+      st.prev = fresh ? st.baselineFromStore : liveMatches;
+      st.prevInited = true;
+    } else {
+      st.prev = liveMatches;
+    }
+  }
   if (!liveMatches.length) {
     // Estado vacío: seguir con polling para descubrir nuevos partidos al arrancar
     st.secsLeft = AppState.liveRefreshSecs || 60;
@@ -2030,6 +2081,7 @@ async function renderLiveTab() {
     + `<div style="font-size:22px;font-weight:900;margin-top:2px">${meRow ? meRow.livePoints : 0} <span style="font-size:14px;color:${delta >= 0 ? '#10B981' : '#F87171'}">${deltaTxt}</span></div>`
     + `<div style="font-size:10px;color:#64748B;margin-top:2px">${liveMatches.length} partido${liveMatches.length === 1 ? '' : 's'} en juego</div></div>`
     + `<div id="live-ring">${liveApi.buildRingHtml(st.secsLeft, total)}</div></div>`
+    + liveApi.buildLiveEventsFeed(st.events || [], st.eventsOpen)
     + zoneHtml
     + soundRow
     + (st.lastEvent && st.lastEvent.text ? `<div style="font-size:10px;color:#94A3B8;margin-top:8px;text-align:center">${st.lastEvent.text}</div>` : '')
@@ -2094,7 +2146,9 @@ function findLiveScorer(prev, next, eventId, teamId) {
   const p = (prev || []).find(m => m.eventId === eventId);
   const prevGoals = new Map((((p && p.stats) || {}).jugadores || []).map(j => [String(j.id), j.goles || 0]));
   const cand = ((((n.stats || {}).jugadores) || []).filter(j => String(j.equipo) === String(teamId) && (j.goles || 0) > (prevGoals.get(String(j.id)) || 0)));
-  return cand.length ? cand[cand.length - 1].nombre : null;
+  if (!cand.length) return null;
+  const s = cand[cand.length - 1];
+  return { id: s.id, nombre: s.nombre };
 }
 
 /** Un poll: fetch, diff → sonido, re-render si seguimos en Live */
@@ -2118,20 +2172,32 @@ async function pollLiveOnce() {
       const events = liveApi.diffLiveMatches(prev, next);
       if (rb !== null && ra !== null && ra < rb) events.push({ type: 'rankUp' });
       else if (rb !== null && ra !== null && ra > rb) events.push({ type: 'rankDown' });
+      const meSquadIds = new Set((AppState.squadsCache?.[meName] || []).map(p => String(p.id)));
       let lastMsg = '';
       for (const ev of events) {
         const ctx = {};
+        let mine = false;
         if (ev.type === 'goal') {
-          ctx.scorer = findLiveScorer(prev, next, ev.eventId, ev.teamId);
-          const nm = next.find(m => m.eventId === ev.eventId);
+          const scorer = findLiveScorer(prev, next, ev.eventId, ev.teamId);
+          ctx.scorer = scorer ? scorer.nombre : null;
+          mine = scorer ? meSquadIds.has(String(scorer.id)) : false;
+          const nm = next.find(x => x.eventId === ev.eventId);
           ctx.minute = nm ? nm.minute : null;
+          ctx.team = teamName(ev.teamId);
         } else if (ev.type === 'rankUp' || ev.type === 'rankDown') {
           ctx.rank = ra;
+        } else {
+          const nm = next.find(x => x.eventId === ev.eventId);
+          ctx.match = nm ? liveMatchLabel(nm) : '';
         }
         const text = liveApi.describeLiveEvent(ev, ctx);
-        if (text) lastMsg = text;
+        if (!text) continue;
+        lastMsg = text;
+        const at = Date.now();
+        st.events = liveApi.appendLiveEvent(st.events || [], { id: `${ev.eventId}:${ev.type}:${at}`, eventId: ev.eventId, type: ev.type, text, ts: at, mine }, liveApi.LIVE_EVENTS_MAX);
       }
       if (lastMsg) st.lastEvent = { text: lastMsg, at: Date.now() };
+      persistLiveEvents(next);
       const soundOn = isLiveSoundOn();
       if (soundOn && typeof soundApi !== 'undefined') {
         const navRef = (typeof navigator !== 'undefined') ? navigator : null;
@@ -2172,6 +2238,19 @@ function bindLiveTabInteractions() {
       showLivePlayerBreakdown(btn.dataset.liveEvent, btn.dataset.livePlayer);
     });
   });
+  const evToggle = container.querySelector('.live-events-toggle');
+  if (evToggle) {
+    evToggle.style.cursor = 'pointer';
+    evToggle.addEventListener('click', () => {
+      const body = container.querySelector('.live-events-body');
+      const chev = container.querySelector('.live-events-chev');
+      if (!body) return;
+      const isHidden = body.style.display === 'none';
+      body.style.display = isHidden ? '' : 'none';
+      if (chev) chev.textContent = isHidden ? '▾' : '▸';
+      st.eventsOpen = isHidden;
+    });
+  }
   const zoneToggle = container.querySelector('.live-zone-toggle');
   if (zoneToggle) {
     zoneToggle.style.minHeight = '44px';
