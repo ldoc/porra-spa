@@ -160,26 +160,80 @@
     return `<div style="flex:1;text-align:center"><img src="data/imgEquipos/${teamId}.${e}" alt="${name}" loading="lazy" style="width:${s}px;height:${s}px;object-fit:contain" onerror="this.onerror=null;this.src='data/imgEquipos/default.webp'"><div style="font-size:11px;font-weight:700;margin-top:4px">${name}</div></div>`;
   }
 
+  const LIVE_EVENTS_MAX = 50;
+
+  function liveDayKey(nowMs) {
+    const d = new Date(nowMs);
+    const p = n => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+  }
+
+  function pruneLiveEvents(store, nowMs, max) {
+    const day = liveDayKey(nowMs);
+    const cap = (Number.isInteger(max) && max > 0) ? max : LIVE_EVENTS_MAX;
+    if (!store || store.day !== day || !Array.isArray(store.events)) {
+      return { day, updatedAt: nowMs, events: [], baseline: null };
+    }
+    const events = store.events.length > cap ? store.events.slice(store.events.length - cap) : store.events;
+    return { day, updatedAt: nowMs, events, baseline: store.baseline || null };
+  }
+
+  function appendLiveEvent(events, ev, max) {
+    const cap = (Number.isInteger(max) && max > 0) ? max : LIVE_EVENTS_MAX;
+    const next = (Array.isArray(events) ? events : []).concat([ev]);
+    return next.length > cap ? next.slice(next.length - cap) : next;
+  }
+
+  function buildLiveEventRow(e) {
+    const time = new Date(e.ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const text = e.text || '';
+    if (e.mine) {
+      return `<div style="display:flex;align-items:center;gap:8px;padding:8px 4px;position:relative;background:#0E3B2E;border:1px solid rgba(16,185,129,0.55);border-radius:8px;margin:3px 0">`
+        + `<span style="position:absolute;left:-8px;top:5px;bottom:5px;width:4px;border-radius:3px;background:#10B981"></span>`
+        + `<span style="flex:1;font-size:12px;font-weight:800;color:#FFFFFF;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${text}</span>`
+        + `<span style="font-size:10px;color:#6EE7B7">${time}</span></div>`;
+    }
+    return `<div style="display:flex;align-items:center;gap:8px;padding:7px 4px;border-bottom:1px solid rgba(255,255,255,0.06)">`
+      + `<span style="flex:1;font-size:12px;font-weight:700;color:#F8FAFC;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${text}</span>`
+      + `<span style="font-size:10px;color:#64748B">${time}</span></div>`;
+  }
+
+  function buildLiveEventsFeed(events, open) {
+    const list = Array.isArray(events) ? events : [];
+    const isOpen = !!open;
+    const rows = [...list].reverse().map(buildLiveEventRow).join('');
+    const badge = list.length ? ` <span style="font-size:9px;color:#10B981;background:rgba(16,185,129,0.16);border-radius:99px;padding:1px 6px">${list.length}</span>` : '';
+    return `<div style="margin-top:10px;background:rgba(0,0,0,0.28);border-radius:10px;overflow:hidden">`
+      + `<div class="live-events-toggle" style="display:flex;align-items:center;gap:8px;padding:10px 12px;min-height:44px">`
+      + `<div style="font-size:11px;color:#F8FAFC;font-weight:800;flex:1">📣 ÚLTIMA HORA <span style="font-weight:400;color:#94A3B8">· hoy</span>${badge}</div>`
+      + `<div class="live-events-chev" style="font-size:14px;color:#94A3B8">${isOpen ? '▾' : '▸'}</div></div>`
+      + `<div class="live-events-body" style="padding:0 8px 6px;display:${isOpen ? 'block' : 'none'}">`
+      + (list.length ? rows : `<div style="padding:8px 4px;font-size:12px;color:#94A3B8">Aún no hay eventos.</div>`)
+      + `</div></div>`;
+  }
+
   function describeLiveEvent(ev, ctx) {
     ctx = ctx || {};
     if (ev.type === 'goal') {
       const who = ctx.scorer ? ` ${ctx.scorer}` : '';
       const min = (ctx.minute !== null && ctx.minute !== undefined) ? ` (${ctx.minute}')` : '';
-      return `⚽ ¡GOL!${who}${min}`;
+      const team = ctx.team ? ` · ${ctx.team}` : '';
+      return `⚽ ¡GOL!${who}${min}${team}`;
     }
     if (ev.type === 'rankUp') return `▲ Subes al ${ctx.rank}º`;
     if (ev.type === 'rankDown') return `▼ Bajas al ${ctx.rank}º`;
-    if (ev.type === 'start') return '🟢 ¡Empieza el partido!';
+    if (ev.type === 'start') return ctx.match ? `🟢 ¡Empieza el partido · ${ctx.match}` : '🟢 ¡Empieza el partido!';
     if (ev.type === 'end') return '🏁 FINAL';
     if (ev.type === 'status') {
-      if (ev.to === 'HT') return '⏸ DESCANSO';
-      if (ev.to === 'FT') return '🏁 FINAL';
-      return `▶️ ${ev.to}`;
+      const m = ctx.match ? ` · ${ctx.match}` : '';
+      if (ev.to === 'HT') return `⏸ DESCANSO${m}`;
+      if (ev.to === 'FT') return `🏁 FINAL${m}`;
+      return `▶️ ${ev.to}${m}`;
     }
     return '';
   }
 
-  const liveApi = { resolveLiveRefreshSecs, LIVE_DEFAULT_SECS, liveGoalsOf, diffLiveMatches, computeLiveGaps, ringOffset, buildLiveTabsHtml, buildRingHtml, buildZoneHtml, buildLiveSquadPlayersHtml, liveStatusStyle, buildLivePredictionPill, buildLiveTeamCell, describeLiveEvent };
+  const liveApi = { resolveLiveRefreshSecs, LIVE_DEFAULT_SECS, liveGoalsOf, diffLiveMatches, computeLiveGaps, ringOffset, buildLiveTabsHtml, buildRingHtml, buildZoneHtml, buildLiveSquadPlayersHtml, liveStatusStyle, buildLivePredictionPill, buildLiveTeamCell, describeLiveEvent, liveDayKey, pruneLiveEvents, appendLiveEvent, buildLiveEventsFeed, LIVE_EVENTS_MAX };
   global.liveApi = liveApi;
   if (typeof module !== 'undefined' && module.exports) {
     module.exports = liveApi;

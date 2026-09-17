@@ -1,6 +1,6 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { resolveLiveRefreshSecs, diffLiveMatches, computeLiveGaps, ringOffset, liveGoalsOf, buildLiveTabsHtml, buildRingHtml, buildZoneHtml, buildLiveSquadPlayersHtml, liveStatusStyle, buildLivePredictionPill, buildLiveTeamCell, describeLiveEvent } = require('../js/live.js');
+const { resolveLiveRefreshSecs, diffLiveMatches, computeLiveGaps, ringOffset, liveGoalsOf, buildLiveTabsHtml, buildRingHtml, buildZoneHtml, buildLiveSquadPlayersHtml, liveStatusStyle, buildLivePredictionPill, buildLiveTeamCell, describeLiveEvent, liveDayKey, pruneLiveEvents, appendLiveEvent, buildLiveEventsFeed } = require('../js/live.js');
 
 test('liveGoalsOf extrae goles de stats Sofascore', () => {
   assert.deepEqual(liveGoalsOf({ 17: { goles: 2 }, 42: { goles: 1 }, jugadores: [] }), { 17: 2, 42: 1 });
@@ -147,4 +147,50 @@ test('describeLiveEvent genera el texto del aviso del directo', () => {
   assert.equal(describeLiveEvent({ type: 'status', to: 'HT' }), '⏸ DESCANSO');
   assert.equal(describeLiveEvent({ type: 'status', to: 'FT' }), '🏁 FINAL');
   assert.equal(describeLiveEvent({ type: 'start' }), '🟢 ¡Empieza el partido!');
+});
+
+test('liveDayKey usa fecha local YYYY-MM-DD', () => {
+  const t = new Date(2026, 8, 17, 15, 30).getTime();
+  assert.equal(liveDayKey(t), '2026-09-17');
+});
+
+test('pruneLiveEvents invalida al cambiar de día y recorta', () => {
+  const day = liveDayKey(Date.now());
+  const store = { day, updatedAt: 1, events: [{ id: 1 }, { id: 2 }, { id: 3 }], baseline: { a: 1 } };
+  const p = pruneLiveEvents(store, Date.now(), 2);
+  assert.deepEqual(p.events.map(e => e.id), [2, 3]);
+  assert.equal(p.baseline.a, 1);
+  const other = pruneLiveEvents({ day: '2000-01-01', events: [{ id: 9 }], baseline: { x: 1 } }, Date.now(), 50);
+  assert.deepEqual(other.events, []);
+  assert.equal(other.baseline, null);
+  assert.equal(other.day, day);
+});
+
+test('appendLiveEvent recorta al máximo', () => {
+  let evs = [];
+  for (let i = 0; i < 5; i++) evs = appendLiveEvent(evs, { id: i }, 3);
+  assert.deepEqual(evs.map(e => e.id), [2, 3, 4]);
+});
+
+test('buildLiveEventsFeed vacío/punteado y reglas de despliegue', () => {
+  const empty = buildLiveEventsFeed([], false);
+  assert.ok(empty.includes('ÚLTIMA HORA'));
+  assert.ok(empty.includes('display:none'));
+  assert.ok(empty.toLowerCase().includes('aún no hay eventos'));
+  const open = buildLiveEventsFeed([{ id: '1', text: '⚽ ¡GOL! X', ts: Date.now(), mine: false }], true);
+  assert.ok(open.includes('display:block'));
+  assert.ok(open.includes('¡GOL! X'));
+});
+
+test('buildLiveEventsFeed marca tu jugador en C1c', () => {
+  const html = buildLiveEventsFeed([{ id: '1', text: '⚽ ¡GOL! Mbappé', ts: Date.now(), mine: true }], true);
+  assert.ok(html.includes('#0E3B2E'));
+  assert.ok(html.includes('rgba(16,185,129,0.55)'));
+  assert.ok(html.includes('4px'));
+});
+
+test('describeLiveEvent añade equipo y partido desde el contexto', () => {
+  assert.equal(describeLiveEvent({ type: 'goal' }, { scorer: 'Mbappé', minute: 23, team: 'R. Madrid' }), "⚽ ¡GOL! Mbappé (23') · R. Madrid");
+  assert.equal(describeLiveEvent({ type: 'status', to: 'HT' }, { match: 'R. Madrid - Inter' }), '⏸ DESCANSO · R. Madrid - Inter');
+  assert.equal(describeLiveEvent({ type: 'start' }, { match: 'A - B' }), '🟢 ¡Empieza el partido · A - B');
 });
