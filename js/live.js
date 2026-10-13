@@ -238,7 +238,15 @@
     return '';
   }
 
-  const liveApi = { resolveLiveRefreshSecs, LIVE_DEFAULT_SECS, liveGoalsOf, diffLiveMatches, computeLiveGaps, ringOffset, buildLiveTabsHtml, buildRingHtml, buildZoneHtml, buildLiveSquadPlayersHtml, liveStatusStyle, buildLivePredictionPill, buildLiveTeamCell, describeLiveEvent, liveDayKey, pruneLiveEvents, appendLiveEvent, buildLiveEventsFeed, LIVE_EVENTS_MAX };
+  function liveCountsLabel(liveMatches) {
+    const list = Array.isArray(liveMatches) ? liveMatches : [];
+    const enJuego = list.filter(m => m.status === 'LIVE' || m.status === 'HT').length;
+    const proximos = list.filter(m => m.status === 'NS').length;
+    if (proximos > 0) return `${enJuego} en juego · ${proximos} próximo${proximos === 1 ? '' : 's'}`;
+    return `${enJuego} partido${enJuego === 1 ? '' : 's'} en juego`;
+  }
+
+  const liveApi = { resolveLiveRefreshSecs, LIVE_DEFAULT_SECS, liveGoalsOf, diffLiveMatches, computeLiveGaps, ringOffset, buildLiveTabsHtml, buildRingHtml, buildZoneHtml, buildLiveSquadPlayersHtml, liveStatusStyle, buildLivePredictionPill, buildLiveTeamCell, describeLiveEvent, liveDayKey, pruneLiveEvents, appendLiveEvent, buildLiveEventsFeed, liveCountsLabel, LIVE_EVENTS_MAX };
   global.liveApi = liveApi;
   if (typeof module !== 'undefined' && module.exports) {
     module.exports = liveApi;

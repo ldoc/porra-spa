@@ -1,6 +1,6 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { resolveLiveRefreshSecs, diffLiveMatches, computeLiveGaps, ringOffset, liveGoalsOf, buildLiveTabsHtml, buildRingHtml, buildZoneHtml, buildLiveSquadPlayersHtml, liveStatusStyle, buildLivePredictionPill, buildLiveTeamCell, describeLiveEvent, liveDayKey, pruneLiveEvents, appendLiveEvent, buildLiveEventsFeed } = require('../js/live.js');
+const { resolveLiveRefreshSecs, diffLiveMatches, computeLiveGaps, ringOffset, liveGoalsOf, buildLiveTabsHtml, buildRingHtml, buildZoneHtml, buildLiveSquadPlayersHtml, liveStatusStyle, buildLivePredictionPill, buildLiveTeamCell, describeLiveEvent, liveDayKey, pruneLiveEvents, appendLiveEvent, buildLiveEventsFeed, liveCountsLabel } = require('../js/live.js');
 
 test('liveGoalsOf extrae goles de stats Sofascore', () => {
   assert.deepEqual(liveGoalsOf({ 17: { goles: 2 }, 42: { goles: 1 }, jugadores: [] }), { 17: 2, 42: 1 });
@@ -222,4 +222,10 @@ test('diffLiveMatches: NS no arranca, NS->LIVE sí, nuevo LIVE sí', () => {
   assert.ok(arranca.some(e => e.type === 'start' && e.eventId === 1));
   const nuevoLive = diffLiveMatches([], [{ eventId: 2, status: 'LIVE', stats: {} }]);
   assert.ok(nuevoLive.some(e => e.type === 'start' && e.eventId === 2));
+});
+
+test('liveCountsLabel separa en juego y próximos', () => {
+  assert.equal(liveCountsLabel([{ status: 'LIVE' }, { status: 'NS' }, { status: 'NS' }]), '1 en juego · 2 próximos');
+  assert.equal(liveCountsLabel([{ status: 'LIVE' }, { status: 'HT' }]), '2 partidos en juego');
+  assert.equal(liveCountsLabel([{ status: 'LIVE' }]), '1 partido en juego');
 });

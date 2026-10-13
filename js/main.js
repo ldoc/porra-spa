@@ -2087,7 +2087,7 @@ async function renderLiveTab() {
     + `<div style="display:flex;justify-content:space-between;align-items:flex-start">`
     + `<div><div style="font-size:11px;color:#94A3B8;font-weight:700;letter-spacing:0.5px">⚡ TUS PUNTOS LIVE</div>`
     + `<div style="font-size:22px;font-weight:900;margin-top:2px">${meRow ? meRow.livePoints : 0} <span style="font-size:14px;color:${delta >= 0 ? '#10B981' : '#F87171'}">${deltaTxt}</span></div>`
-    + `<div style="font-size:10px;color:#64748B;margin-top:2px">${liveMatches.length} partido${liveMatches.length === 1 ? '' : 's'} en juego</div></div>`
+    + `<div style="font-size:10px;color:#64748B;margin-top:2px">${liveApi.liveCountsLabel(liveMatches)}</div></div>`
     + `<div id="live-ring">${liveApi.buildRingHtml(st.secsLeft, total)}</div></div>`
     + liveApi.buildLiveEventsFeed(st.events || [], st.eventsOpen)
     + zoneHtml
