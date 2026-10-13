@@ -28,7 +28,7 @@
     for (const m of (next || [])) {
       const p = prevById.get(m.eventId);
       if (!p) {
-        events.push({ type: 'start', eventId: m.eventId });
+        if (m.status === 'LIVE') events.push({ type: 'start', eventId: m.eventId });
         continue;
       }
       const pg = goalsOf(p), ng = goalsOf(m);
@@ -38,6 +38,7 @@
         }
       }
       if (p.status !== m.status) {
+        if (p.status === 'NS' && m.status === 'LIVE') events.push({ type: 'start', eventId: m.eventId });
         events.push({ type: 'status', eventId: m.eventId, from: p.status, to: m.status });
         if (m.status === 'FT') events.push({ type: 'end', eventId: m.eventId });
       }
@@ -128,12 +129,16 @@
 
   function buildLiveSquadPlayersHtml(eventId, players, status) {
     if (!Array.isArray(players) || players.length === 0) {
-      return `<div style="padding:8px 0;font-size:12px;color:#94A3B8">Ningún jugador de tu plantilla juega este partido.</div>`;
+      const msg = status === 'NS'
+        ? 'Alineación no disponible todavía.'
+        : 'Ningún jugador de tu plantilla juega este partido.';
+      return `<div style="padding:8px 0;font-size:12px;color:#94A3B8">${msg}</div>`;
     }
     return players.map(p => buildLiveSquadPlayerRow(eventId, p, status)).join('');
   }
 
   function liveStatusStyle(status, minute) {
+    if (status === 'NS') return { label: '⏳ SIN EMPEZAR', color: '#94A3B8', border: 'rgba(255,255,255,0.15)' };
     if (status === 'FT') return { label: 'FINAL', color: '#94A3B8', border: 'rgba(255,255,255,0.1)' };
     if (status === 'HT') return { label: '⏸ DESCANSO', color: '#F59E0B', border: '#F59E0B' };
     const m = (minute !== null && minute !== undefined) ? `${minute}' ` : '';
@@ -147,7 +152,7 @@
     const pts = Number(matchPts) || 0;
     const color = pts > 0 ? '#10B981' : '#94A3B8';
     const bg = pts > 0 ? 'rgba(16,185,129,0.12)' : 'rgba(255,255,255,0.06)';
-    const live = status !== 'FT';
+    const live = status !== 'FT' && status !== 'NS';
     return `<div style="font-size:10px;color:${color};font-weight:700;background:${bg};border-radius:99px;padding:2px 8px;margin-top:4px;display:inline-block">Tu ${pred.home}-${pred.away} → ${pts > 0 ? '+' : ''}${pts}${live ? ' <i style="color:#64748B;font-weight:400">de momento</i>' : ''}</div>`;
   }
 

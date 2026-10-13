@@ -194,3 +194,32 @@ test('describeLiveEvent añade equipo y partido desde el contexto', () => {
   assert.equal(describeLiveEvent({ type: 'status', to: 'HT' }, { match: 'R. Madrid - Inter' }), '⏸ DESCANSO · R. Madrid - Inter');
   assert.equal(describeLiveEvent({ type: 'start' }, { match: 'A - B' }), '🟢 ¡Empieza el partido · A - B');
 });
+
+test('liveStatusStyle reconoce NS', () => {
+  const s = liveStatusStyle('NS', null);
+  assert.equal(s.label, '⏳ SIN EMPEZAR');
+  assert.equal(s.color, '#94A3B8');
+});
+
+test('buildLivePredictionPill en NS no dice "de momento"', () => {
+  const html = buildLivePredictionPill({ home: 2, away: 1 }, 0, 'NS');
+  assert.ok(html.includes('Tu 2-1'));
+  assert.ok(!html.includes('de momento'));
+});
+
+test('buildLiveSquadPlayersHtml en NS sin jugadores avisa de alineación', () => {
+  const html = buildLiveSquadPlayersHtml(1, [], 'NS');
+  assert.ok(html.includes('Alineación no disponible todavía.'));
+});
+
+test('diffLiveMatches: NS no arranca, NS->LIVE sí, nuevo LIVE sí', () => {
+  const iniciaNS = diffLiveMatches([], [{ eventId: 1, status: 'NS', stats: {} }]);
+  assert.ok(!iniciaNS.some(e => e.type === 'start'));
+  const arranca = diffLiveMatches(
+    [{ eventId: 1, status: 'NS', stats: {} }],
+    [{ eventId: 1, status: 'LIVE', stats: {} }]
+  );
+  assert.ok(arranca.some(e => e.type === 'start' && e.eventId === 1));
+  const nuevoLive = diffLiveMatches([], [{ eventId: 2, status: 'LIVE', stats: {} }]);
+  assert.ok(nuevoLive.some(e => e.type === 'start' && e.eventId === 2));
+});
