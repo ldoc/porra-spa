@@ -1903,6 +1903,7 @@ function liveMatchMeta(lm) {
 
 /** Puntos live de un usuario en un partido: pronóstico + plantilla (provisional si no FT) */
 function liveUserMatchPoints(username, lm, meta) {
+  if (lm.status === 'NS') return { matchPts: 0, breakdown: [], squadPts: 0, squadDetail: [], total: 0 };
   const preds = (AppState.allPredictions || {})[username] || {};
   const pseudoMs = { eventId: lm.eventId, stats: lm.stats };
   const mp = calculateMatchPoints(preds[lm.eventId], pseudoMs, { homeTeamId: meta.homeTeamId, awayTeamId: meta.awayTeamId });
@@ -2006,8 +2007,9 @@ function computeLiveRows(liveMatches) {
 function buildLiveMatchBoxHtml(lm) {
   const meta = liveMatchMeta(lm);
   const goals = liveApi.liveGoalsOf(lm.stats);
-  const gh = meta.homeTeamId !== undefined ? (goals[meta.homeTeamId] ?? '–') : '–';
-  const ga = meta.awayTeamId !== undefined ? (goals[meta.awayTeamId] ?? '–') : '–';
+  const isNS = lm.status === 'NS';
+  const gh = isNS ? '–' : (meta.homeTeamId !== undefined ? (goals[meta.homeTeamId] ?? '–') : '–');
+  const ga = isNS ? '–' : (meta.awayTeamId !== undefined ? (goals[meta.awayTeamId] ?? '–') : '–');
   const st = liveState();
   const myName = AppState.currentUser && AppState.currentUser.name;
   const my = myName ? liveUserMatchPoints(myName, lm, meta) : { total: 0, matchPts: 0 };
@@ -2017,6 +2019,7 @@ function buildLiveMatchBoxHtml(lm) {
   const players = myName ? liveMySquadPlayers(lm, myName) : [];
   const badge = lm.status === 'FT' ? 34 : 38;
   const metaLine = `${liveFaseLabel(meta.fase)}${meta.ronda ? ` · J${meta.ronda}` : ''} · tap para ver jugadores`;
+  const squadTitle = isNS ? '⭐ TUS JUGADORES' : '⭐ TUS JUGADORES EN JUEGO';
   return `<div class="resultados-match" id="live-match-${lm.eventId}" style="background:#121E3D;border:1px solid rgba(255,255,255,0.1);border-left:3px solid ${style.border};border-radius:14px;padding:12px">`
     + `<button class="live-match-toggle" data-live-match="${lm.eventId}" style="display:block;width:100%;min-height:44px;background:none;border:none;color:inherit;cursor:pointer;text-align:left;padding:0">`
     + `<div style="display:flex;justify-content:space-between;align-items:center">`
@@ -2029,7 +2032,7 @@ function buildLiveMatchBoxHtml(lm) {
     + liveApi.buildLiveTeamCell(meta.awayTeamId, meta.awayBadgeExt, meta.awayTeam, badge)
     + `</div></button>`
     + `<div class="live-match-body" id="live-match-body-${lm.eventId}" style="margin-top:10px;background:rgba(0,0,0,0.28);border-radius:10px;padding:8px 10px;${open ? '' : 'display:none'}">`
-    + `<div style="font-size:10px;color:#94A3B8;font-weight:700;margin-bottom:6px">⭐ TUS JUGADORES EN JUEGO (${players.length})</div>`
+    + `<div style="font-size:10px;color:#94A3B8;font-weight:700;margin-bottom:6px">${squadTitle} (${players.length})</div>`
     + liveApi.buildLiveSquadPlayersHtml(lm.eventId, players, lm.status)
     + `</div></div>`;
 }
