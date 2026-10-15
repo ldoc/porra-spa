@@ -153,7 +153,39 @@
     };
   }
 
-  const liveV2Api = { createMatchState, applyEvent, newPlayer, matchClockAt, minutesOf, foldMatch, foldAll, stateAt, matchStateToStats };
+  function rankRows(rows, prevRankByName) {
+    const sorted = [...rows].sort((a, b) => b.livePoints - a.livePoints || a.name.localeCompare(b.name));
+    return sorted.map((r, i) => {
+      const rank = i + 1;
+      const prev = prevRankByName ? prevRankByName[r.name] : null;
+      return { ...r, rank, delta: prev ? prev - rank : 0 };
+    });
+  }
+
+  function reasonLabel(event, ctx) {
+    const c = ctx || {};
+    const min = event.minute != null ? `${event.minute}' ` : '';
+    const d = c.delta != null ? c.delta : 0;
+    const scorer = c.scorer || event.playerName || 'un jugador';
+    switch (event.type) {
+      case 'goal': return { icon: '⚽', text: `${min}Gol de ${scorer}`, delta: d };
+      case 'goal_cancelled': return { icon: '↩️', text: `${min}Gol anulado · VAR`, delta: d };
+      case 'penalty_saved': return { icon: '🧤', text: `${min}Penalti parado`, delta: d };
+      case 'assist': return { icon: '🅰️', text: `${min}Asistencia`, delta: d };
+      case 'rating': return { icon: d >= 0 ? '📈' : '📉', text: `${min}Nota del jugador`, delta: d };
+      default: return null;
+    }
+  }
+
+  function flipDelta(firstRects, lastRects) {
+    const out = {};
+    for (const id of Object.keys(lastRects)) {
+      if (firstRects[id]) out[id] = firstRects[id].top - lastRects[id].top;
+    }
+    return out;
+  }
+
+  const liveV2Api = { createMatchState, applyEvent, newPlayer, matchClockAt, minutesOf, foldMatch, foldAll, stateAt, matchStateToStats, rankRows, reasonLabel, flipDelta };
   global.liveV2Api = liveV2Api;
   if (typeof module !== 'undefined' && module.exports) module.exports = liveV2Api;
 })(typeof window !== 'undefined' ? window : globalThis);

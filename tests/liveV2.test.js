@@ -155,3 +155,26 @@ test('matchStateToStats atribuye goles recibidos al portero', () => {
   const gk = stats.jugadores.find(j => String(j.id) === '12');
   assert.equal(gk.golesRecibidos, 1);
 });
+
+const { rankRows, reasonLabel, flipDelta } = liveV2;
+
+test('rankRows ordena por puntos y calcula delta de puesto', () => {
+  const rows = [{ name: 'ana', livePoints: 10 }, { name: 'luis', livePoints: 20 }];
+  const ranked = rankRows(rows, { ana: 1, luis: 2 });
+  assert.deepEqual(ranked.map(r => r.name), ['luis', 'ana']);
+  assert.equal(ranked[0].rank, 1);
+  assert.equal(ranked[0].delta, 1);
+  assert.equal(ranked[1].delta, -1);
+});
+
+test('reasonLabel para gol y anulado', () => {
+  assert.deepEqual(reasonLabel({ type: 'goal', payload: { isHome: true }, playerName: 'Mbappé', minute: 67 },
+    { delta: 5 }), { icon: '⚽', text: "67' Gol de Mbappé", delta: 5 });
+  assert.equal(reasonLabel({ type: 'goal_cancelled', payload: {}, minute: 67 }, { delta: -5 }).icon, '↩️');
+});
+
+test('flipDelta calcula desplazamientos', () => {
+  const first = { a: { top: 10 }, b: { top: 30 } };
+  const last = { a: { top: 30 }, b: { top: 10 } };
+  assert.deepEqual(flipDelta(first, last), { a: -20, b: 20 });
+});
