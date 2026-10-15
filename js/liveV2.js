@@ -1,0 +1,84 @@
+(function () {
+  'use strict';
+
+  function newPlayer(id) {
+    return { id, equipo: null, rating: 6, goals: 0, assists: 0, penaltyScored: 0,
+      penaltySaved: 0, cards: [], onPitch: false, entryMinute: 0, exitMinute: null, goalsReceived: 0 };
+  }
+
+  function createMatchState() {
+    return { status: 'NS', score: { home: 0, away: 0 }, period: null,
+      kickoffTs: null, htTs: null, ftTs: null, goals: [], players: {} };
+  }
+
+  function ensure(state, id) {
+    if (id == null) return null;
+    if (!state.players[id]) state.players[id] = newPlayer(id);
+    return state.players[id];
+  }
+
+  // lado al que acredita el gol (own goal invierte)
+  function creditedHome(payload) {
+    return payload.isOwnGoal ? !payload.isHome : !!payload.isHome;
+  }
+
+  function applyEvent(state, ev, ctx) {
+    const p = ev.payload || {};
+    switch (ev.type) {
+      case 'lineup':
+        for (const id of p.starters || []) { const pl = ensure(state, id); pl.onPitch = true; pl.entryMinute = 0; }
+        break;
+      case 'status':
+        state.status = p.status || state.status;
+        state.period = p.period || state.period;
+        if (p.status === 'LIVE' && !state.kickoffTs) state.kickoffTs = ev.ts || null;
+        if (p.status === 'HT') state.htTs = ev.ts || null;
+        if (p.status === 'FT') state.ftTs = ev.ts || null;
+        break;
+      case 'goal': {
+        const home = creditedHome(p);
+        const scorer = ensure(state, p.scorerId);
+        if (scorer && !p.isOwnGoal) scorer.goals += 1;
+        if (p.isPenalty && scorer && !p.isOwnGoal) scorer.penaltyScored += 1;
+        state.goals.push({ sourceId: ev.sourceId, home, scorerId: p.scorerId ?? null, cancelled: false });
+        if (home) state.score.home += 1; else state.score.away += 1;
+        break;
+      }
+      case 'goal_cancelled': {
+        const g = state.goals.find(x => x.sourceId === p.ofSourceId);
+        if (g && !g.cancelled) {
+          g.cancelled = true;
+          if (g.home) state.score.home = Math.max(0, state.score.home - 1);
+          else state.score.away = Math.max(0, state.score.away - 1);
+          const scorer = g.scorerId != null ? state.players[g.scorerId] : null;
+          if (scorer) scorer.goals = Math.max(0, scorer.goals - 1);
+        }
+        break;
+      }
+      case 'penalty_saved': { const gk = ensure(state, p.keeperId); if (gk) gk.penaltySaved += 1; break; }
+      case 'assist': { const a = ensure(state, ev.playerId); if (a) a.assists = p.asistencias ?? (a.assists + 1); break; }
+      case 'card': { const c = ensure(state, ev.playerId); if (c) c.cards.push(p.cardType || 'yellow'); break; }
+      case 'substitution': {
+        const out = ensure(state, p.outId); if (out) { out.onPitch = false; out.exitMinute = ev.minute ?? null; }
+        const inn = ensure(state, p.inId); if (inn) { inn.onPitch = true; inn.entryMinute = ev.minute ?? 0; }
+        break;
+      }
+      case 'rating': { const pl = ensure(state, ev.playerId); if (pl) pl.rating = p.rating; break; }
+      case 'score': state.score = { home: p.scoreHome ?? state.score.home, away: p.scoreAway ?? state.score.away }; break;
+      case 'match_final': {
+        state.status = 'FT';
+        if (p.scoreHome != null) state.score = { home: p.scoreHome, away: p.scoreAway };
+        for (const [id, r] of Object.entries(p.ratings || {})) { const pl = ensure(state, Number(id)); if (pl) pl.rating = r; }
+        for (const [id, m] of Object.entries(p.minutes || {})) { const pl = ensure(state, Number(id)); if (pl) { pl.authoritativeMinutes = m; } }
+        break;
+      }
+      default: break;
+    }
+    // asignar equipo a cada jugador tocado no es trivial sin ctx de plantilla; lo resuelve matchStateToStats con ctx.
+    return state;
+  }
+
+  const liveV2Api = { createMatchState, applyEvent, newPlayer };
+  if (typeof module !== 'undefined' && module.exports) module.exports = liveV2Api;
+  if (typeof global !== 'undefined') global.liveV2Api = liveV2Api;
+})();
