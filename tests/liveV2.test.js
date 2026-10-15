@@ -1,7 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const liveV2 = require('../js/liveV2.js');
-const { createMatchState, applyEvent } = liveV2;
+const { createMatchState, applyEvent, matchClockAt, minutesOf } = liveV2;
 const CTX = { homeTeamId: 1, awayTeamId: 2 };
 
 test('el módulo expone liveV2Api en globalThis', () => {
@@ -62,4 +62,25 @@ test('status y score autoritativo', () => {
   assert.equal(s.kickoffTs, '2026-09-16T20:00:00Z');
   applyEvent(s, { type: 'score', payload: { scoreHome: 3, scoreAway: 2 } }, CTX);
   assert.deepEqual(s.score, { home: 3, away: 2 });
+});
+
+test('matchClockAt cuenta minutos desde kickoff', () => {
+  const s = createMatchState();
+  applyEvent(s, { type: 'status', ts: '2026-09-16T20:00:00Z', payload: { status: 'LIVE', period: 'period1' } }, CTX);
+  assert.equal(matchClockAt(s, Date.parse('2026-09-16T20:23:00Z')), 23);
+});
+
+test('minutesOf titulares acumula y se congela al salir', () => {
+  const s = createMatchState();
+  applyEvent(s, { type: 'status', ts: '2026-09-16T20:00:00Z', payload: { status: 'LIVE' } }, CTX);
+  applyEvent(s, { type: 'lineup', payload: { starters: [11, 30] } }, CTX);
+  applyEvent(s, { type: 'substitution', minute: 60, payload: { inId: 30, outId: 11 } }, CTX);
+  assert.equal(minutesOf(s, 11, Date.parse('2026-09-16T21:20:00Z')), 60);
+  assert.equal(minutesOf(s, 30, Date.parse('2026-09-16T21:20:00Z')), 20);
+});
+
+test('penalti parado suma al portero', () => {
+  const s = createMatchState();
+  applyEvent(s, { type: 'penalty_saved', payload: { keeperId: 1, takerId: 9 } }, CTX);
+  assert.equal(s.players[1].penaltySaved, 1);
 });

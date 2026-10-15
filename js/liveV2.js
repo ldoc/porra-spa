@@ -78,7 +78,26 @@
     return state;
   }
 
-  const liveV2Api = { createMatchState, applyEvent, newPlayer };
+  function matchClockAt(state, playheadTs) {
+    if (!state.kickoffTs || state.status === 'NS') return null;
+    const start = new Date(state.kickoffTs).getTime();
+    const end = playheadTs;
+    let mins = Math.floor((end - start) / 60000);
+    // descanso: si pasó HT y hay periodo 2, restar 15' de descanso aproximado
+    if (state.htTs && new Date(state.htTs).getTime() <= end) mins -= 15;
+    return Math.max(0, mins);
+  }
+
+  function minutesOf(state, playerId, playheadTs) {
+    const p = state.players[playerId];
+    if (!p) return 0;
+    if (p.authoritativeMinutes != null) return p.authoritativeMinutes;
+    const clock = matchClockAt(state, playheadTs);
+    const end = p.onPitch ? (clock == null ? (p.entryMinute || 0) : clock) : (p.exitMinute || 0);
+    return Math.max(0, end - (p.entryMinute || 0));
+  }
+
+  const liveV2Api = { createMatchState, applyEvent, newPlayer, matchClockAt, minutesOf };
   global.liveV2Api = liveV2Api;
   if (typeof module !== 'undefined' && module.exports) module.exports = liveV2Api;
 })(typeof window !== 'undefined' ? window : globalThis);
