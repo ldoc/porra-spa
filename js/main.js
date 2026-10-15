@@ -49,7 +49,8 @@ const AppState = {
   classificationPoints: {}, // { username: { totalPoints, teamDetails } }
   resultadosTab: 'jornadas', // Tab seleccionado en resultados: 'jornadas', 'live', 'clasificacion' o 'eliminatorias'
   liveRefreshSecs: 60, // segundos entre polls del tab Live (config.json + /api/config)
-  live: null, // estado del tab Live: { prev, pollTimer, ringTimer, secsLeft, soundOn, openBoxes, zoneOpen }
+  live: null, // estado del tab Live v1 (legacy): { prev, pollTimer, ringTimer, secsLeft, soundOn, openBoxes, zoneOpen }
+  liveV2: null, // estado del tab Live v2 (event-sourcing): { events, serverTime, prevRanks, playheadM, mode, polling, _lastRows }
   estadisticasSubTab: 'pronosticos', // Sub-tab activa en estadísticas
   estadisticasIndividualUser: null, // usuario mostrado en sub-tab Individual (null -> currentUser)
   finalPredictions: null, // { champion, runnerUp, semiFinalists, quarterFinalists, roundOf16, roundOf32 }
@@ -2293,6 +2294,258 @@ function bindLiveTabInteractions() {
   }
 }
 
+// ============================================================
+// TAB LIVE v2 (event-sourcing): fetch de eventos + clasificación incremental
+// Layout A: estado + hero + chips de partidos + clasificación general.
+// ============================================================
+
+function liveV2State() {
+  if (!AppState.liveV2) {
+    AppState.liveV2 = { events: [], serverTime: null, prevRanks: null, playheadM: null, mode: 'live', polling: false, _lastRows: [] };
+  }
+  return AppState.liveV2;
+}
+
+/** playerId -> { nombre, posicion, equipo } desde AppState.allPlayers */
+function liveV2PlayersById() {
+  const out = {};
+  for (const p of AppState.allPlayers || []) out[String(p.id)] = { nombre: p.nombre, posicion: p.posicion, equipo: p.equipo };
+  return out;
+}
+
+/** matchId -> { homeTeamId, awayTeamId } desde AppState.matches */
+function liveV2CtxById() {
+  const out = {};
+  for (const m of AppState.matches || []) out[m.id] = { homeTeamId: m.homeTeamId, awayTeamId: m.awayTeamId };
+  return out;
+}
+
+/** Carga inicial (forceFull) o delta (?since=serverTime); dedup por _id */
+async function fetchLiveEvents(forceFull) {
+  const st = liveV2State();
+  const url = API_BASE + '/api/live/events' + (!forceFull && st.serverTime ? `?since=${encodeURIComponent(st.serverTime)}` : '');
+  const res = await fetchWithPhase(url);
+  const payload = await res.json();
+  if (!payload || !payload.ok) return;
+  const incoming = payload.events || [];
+  if (forceFull) {
+    st.events = incoming;
+  } else {
+    const seen = new Set(st.events.map(e => String(e._id)));
+    for (const e of incoming) { if (!seen.has(String(e._id))) { st.events.push(e); seen.add(String(e._id)); } }
+  }
+  st.serverTime = payload.serverTime || st.serverTime;
+}
+
+/** Pliega los eventos (todos o hasta playheadTs) → { states, statsById } */
+function liveV2Folded(playheadTs) {
+  if (typeof liveV2Api === 'undefined') return { states: {}, statsById: {} };
+  const st = liveV2State();
+  const ctxById = liveV2CtxById();
+  const playersById = liveV2PlayersById();
+  const states = playheadTs == null
+    ? liveV2Api.foldAll(st.events, ctxById)
+    : liveV2Api.stateAt(st.events, playheadTs, ctxById);
+  const statsById = {};
+  for (const [id, s] of Object.entries(states)) {
+    const ctx = { ...(ctxById[id] || {}), playersById };
+    statsById[id] = liveV2Api.matchStateToStats(s, ctx, playheadTs);
+  }
+  return { states, statsById };
+}
+
+/** eventIds ya finalizados (tienen matchstat) para no duplicar con los puntos oficiales */
+function liveV2FinalizedIds() {
+  const set = new Set();
+  for (const ms of AppState.matchStats || []) set.add(String(ms.eventId));
+  return set;
+}
+
+/** Filas = puntos oficiales + delta de los partidos en juego, ordenadas con rankRows */
+function liveV2Rows(folded) {
+  const st = liveV2State();
+  const official = liveOfficialRows();
+  const officialByName = {};
+  for (const r of official) officialByName[r.name] = r.officialPoints;
+  const finalized = liveV2FinalizedIds();
+  const players = visiblePlayers();
+  const me = AppState.currentUser && AppState.currentUser.name;
+  const rows = players.map(pl => {
+    let delta = 0;
+    for (const id of Object.keys(folded.statsById || {})) {
+      if (finalized.has(String(id))) continue; // ya cuenta en los puntos oficiales
+      const match = (AppState.matches || []).find(m => String(m.id) === String(id));
+      if (!match) continue;
+      const lm = { eventId: match.id, stats: folded.statsById[id], status: 'LIVE' };
+      delta += liveUserMatchPoints(pl.name, lm, liveMatchMeta(lm)).total;
+    }
+    const officialPoints = officialByName[pl.name] || 0;
+    return { name: pl.name, avatar: pl.avatar, livePoints: officialPoints + delta, officialPoints, pointsDelta: delta, isMe: pl.name === me };
+  });
+  return liveV2Api.rankRows(rows, st.prevRanks);
+}
+
+function liveV2Esc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+function liveV2ChipHtml(eventId, state) {
+  // foldAll usa claves string (ids de partido); normaliza a match.id (number) para liveMatchMeta
+  const match = (AppState.matches || []).find(m => String(m.id) === String(eventId));
+  const meta = liveMatchMeta({ eventId: match ? match.id : eventId });
+  const score = state && state.score ? `${state.score.home}-${state.score.away}` : '–';
+  const live = !!(state && (state.status === 'LIVE' || state.status === 'HT'));
+  return `<div class="livev2-chip${live ? ' live' : ''}">`
+    + `<span class="livev2-chip-team">${liveV2Esc(meta.homeTeam || '?')}</span>`
+    + `<span class="livev2-chip-score">${score}</span>`
+    + `<span class="livev2-chip-team">${liveV2Esc(meta.awayTeam || '?')}</span>`
+    + `</div>`;
+}
+
+function liveV2RowHtml(r) {
+  const d = r.delta || 0;
+  const arrow = d > 0 ? `▲${d}` : d < 0 ? `▼${Math.abs(d)}` : '';
+  return `<div class="livev2-row${r.isMe ? ' me' : ''}" data-livev2-row="${liveV2Esc(r.name)}">`
+    + `<div class="livev2-inner">`
+    + `<span class="livev2-rank">${r.rank}</span>`
+    + `<span class="livev2-avatar">${r.avatar || '⚽'}</span>`
+    + `<span class="livev2-name">${liveV2Esc(r.name)}</span>`
+    + `<span class="livev2-pts">${r.livePoints}</span>`
+    + `<span class="livev2-arrow ${d > 0 ? 'up' : d < 0 ? 'down' : ''}">${arrow}</span>`
+    + `</div></div>`;
+}
+
+/** HTML de layout A (sin el header de subtabs, que lo pone renderResultadosTab) */
+function renderLiveV2Html(rows, folded) {
+  const st = liveV2State();
+  const me = rows.find(r => r.isMe);
+  const chips = Object.entries(folded.states || {}).map(([id, s]) => liveV2ChipHtml(id, s)).join('');
+  const status = st.mode === 'replay'
+    ? { text: 'REPRODUCIENDO', cls: 'replay' }
+    : { text: 'EN DIRECTO', cls: 'live' };
+  let clock = '';
+  try { clock = new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }); } catch (e) { clock = ''; }
+  const ptsDelta = me ? (me.pointsDelta || 0) : 0;
+  return `<div class="livev2">`
+    + `<div class="livev2-status">`
+    + `<span class="livev2-badge ${status.cls}">● ${status.text}</span>`
+    + `<span class="livev2-clock">${clock}</span>`
+    + `</div>`
+    + `<div class="livev2-hero">`
+    + `<div class="livev2-hero-label">⚡ TUS PUNTOS LIVE</div>`
+    + `<div class="livev2-hero-points">${me ? me.livePoints : 0}`
+    + `<span class="livev2-hero-delta ${ptsDelta < 0 ? 'down' : 'up'}">${ptsDelta >= 0 ? '+' : ''}${ptsDelta}</span></div>`
+    + `</div>`
+    + (chips ? `<div class="livev2-chips">${chips}</div>`
+      : `<div class="livev2-empty">Sin partidos en directo ahora mismo</div>`)
+    + `<div class="livev2-section-title">Clasificación en vivo</div>`
+    + `<div class="livev2-rows" id="livev2-rows">${rows.map(liveV2RowHtml).join('')}</div>`
+    + `<div id="livev2-player" class="livev2-player"></div>`
+    + `<div id="livev2-feed" class="livev2-feed"></div>`
+    + `</div>`;
+}
+
+/** Actualización incremental del DOM keyed por usuario (sin re-render completo) */
+function updateLiveV2Dom(rows, folded) {
+  const container = document.getElementById('livev2-rows');
+  if (!container) return;
+  const existing = new Map();
+  container.querySelectorAll('[data-livev2-row]').forEach(el => existing.set(el.getAttribute('data-livev2-row'), el));
+  const present = new Set(rows.map(r => r.name));
+  let prev = null;
+  for (const r of rows) {
+    let el = existing.get(r.name);
+    if (!el) {
+      const tmp = document.createElement('div');
+      tmp.innerHTML = liveV2RowHtml(r).trim();
+      el = tmp.firstElementChild;
+    } else {
+      el.querySelector('.livev2-rank').textContent = r.rank;
+      el.querySelector('.livev2-pts').textContent = r.livePoints;
+      const d = r.delta || 0;
+      const arrow = el.querySelector('.livev2-arrow');
+      arrow.textContent = d > 0 ? `▲${d}` : d < 0 ? `▼${Math.abs(d)}` : '';
+      arrow.className = `livev2-arrow ${d > 0 ? 'up' : d < 0 ? 'down' : ''}`;
+      el.classList.toggle('me', !!r.isMe);
+    }
+    if (prev) {
+      if (prev.nextElementSibling !== el) container.insertBefore(el, prev.nextElementSibling);
+    } else if (container.firstElementChild !== el) {
+      container.insertBefore(el, container.firstElementChild);
+    }
+    prev = el;
+  }
+  for (const [name, el] of existing) { if (!present.has(name)) el.remove(); }
+  const me = rows.find(r => r.isMe);
+  const heroPoints = document.querySelector('.livev2-hero-points');
+  if (heroPoints && me) {
+    const pd = me.pointsDelta || 0;
+    heroPoints.innerHTML = `${me.livePoints}<span class="livev2-hero-delta ${pd < 0 ? 'down' : 'up'}">${pd >= 0 ? '+' : ''}${pd}</span>`;
+  }
+  const chipsEl = document.querySelector('.livev2-chips');
+  if (chipsEl) chipsEl.innerHTML = Object.entries(folded.states || {}).map(([id, s]) => liveV2ChipHtml(id, s)).join('');
+}
+
+let _liveV2PollTimer = null;
+let _liveV2VisHandler = null;
+
+function stopLiveV2Polling() {
+  if (_liveV2PollTimer) { clearInterval(_liveV2PollTimer); _liveV2PollTimer = null; }
+  if (_liveV2VisHandler && typeof document !== 'undefined') {
+    document.removeEventListener('visibilitychange', _liveV2VisHandler);
+    _liveV2VisHandler = null;
+  }
+}
+
+function startLiveV2Polling() {
+  stopLiveV2Polling();
+  const total = AppState.liveRefreshSecs || 30;
+  if (typeof document !== 'undefined') {
+    const onVis = () => {
+      if (document.visibilityState === 'visible' && AppState.resultadosTab === 'live') pollLiveV2();
+    };
+    _liveV2VisHandler = onVis;
+    document.addEventListener('visibilitychange', onVis);
+  }
+  _liveV2PollTimer = setInterval(() => {
+    if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return;
+    if (AppState.resultadosTab !== 'live') { stopLiveV2Polling(); return; }
+    pollLiveV2();
+  }, total * 1000);
+}
+
+/** Poll en segundo plano: delta de eventos + render incremental (no recarga la página) */
+async function pollLiveV2() {
+  const st = liveV2State();
+  if (st.polling || AppState.resultadosTab !== 'live') return;
+  st.polling = true;
+  try {
+    const prevRanks = {};
+    for (const r of (st._lastRows || [])) prevRanks[r.name] = r.rank;
+    st.prevRanks = prevRanks;
+    await fetchLiveEvents(false);
+    const folded = liveV2Folded(null);
+    const rows = liveV2Rows(folded);
+    st._lastRows = rows.map(r => ({ name: r.name, rank: r.rank }));
+    updateLiveV2Dom(rows, folded);
+  } catch (e) { /* reintenta al siguiente tick */ }
+  st.polling = false;
+}
+
+/** Render inicial del subtab Live v2 (fetch full + fold + poll). Devuelve el HTML de layout A */
+async function renderLiveV2Tab() {
+  stopLiveV2Polling();
+  const st = liveV2State();
+  st.mode = 'live';
+  st.playheadM = null;
+  try { await fetchLiveEvents(!st.serverTime); } catch (e) { /* sin eventos disponibles */ }
+  const folded = liveV2Folded(null);
+  const rows = liveV2Rows(folded);
+  st._lastRows = rows.map(r => ({ name: r.name, rank: r.rank }));
+  startLiveV2Polling();
+  return renderLiveV2Html(rows, folded);
+}
+
 /** Renderiza la pestaña de resultados por jornada */
 async function renderResultadosTab() {
   const container = document.getElementById('resultados-container');
@@ -2307,7 +2560,7 @@ async function renderResultadosTab() {
   const currentTab = AppState.resultadosTab || 'jornadas';
   const isLiveTab = currentTab === 'live';
   const prevLiveScrollTop = isLiveTab ? (container.querySelector('.resultados-scroll')?.scrollTop ?? null) : null;
-  if (!isLiveTab) stopLivePolling();
+  if (!isLiveTab) { stopLivePolling(); stopLiveV2Polling(); }
 
   container.innerHTML = skeletonRows(6);
   await Promise.all([fetchMatchStats(), fetchAllPredictions()]);
@@ -2338,7 +2591,7 @@ async function renderResultadosTab() {
     scrollHtml = renderRealStandingsTable();
   } else if (currentTab === 'live') {
     const gen = ++_liveRenderGen;
-    scrollHtml = await renderLiveTab();
+    scrollHtml = await renderLiveV2Tab();
     if (gen !== _liveRenderGen) return; // un render más reciente tomó el relevo (evita last-writer-stale)
   } else if (currentTab === 'eliminatorias') {
     // Mostrar equipos eliminados por ronda
@@ -2819,7 +3072,9 @@ function logout() {
   clearInicioCountdown();
   stopMatchStatsPolling();
   stopLivePolling();
+  stopLiveV2Polling();
   AppState.live = null;
+  AppState.liveV2 = null;
   checkAuthStatus();
 }
 
@@ -3819,6 +4074,7 @@ function navigateToTab(tabName) {
     AppState.resultadosRound = null;
     AppState.resultadosRoundKey = null;
     stopLivePolling();
+    stopLiveV2Polling();
   }
 
   // Limpiar el intervalo del countdown del Inicio al salir de esa pestaña
