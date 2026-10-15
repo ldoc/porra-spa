@@ -2463,6 +2463,7 @@ function renderLiveV2Html(rows, folded) {
 const LIVEV2_FLIGHT_MS = 700;
 const LIVEV2_REASON_MS = 2500;
 const LIVEV2_REASON_TYPES = { goal: 1, goal_cancelled: 1, penalty_saved: 1, assist: 1, rating: 1 };
+let _liveV2SettleTimer = null;
 
 /** Snapshot ligero de filas (rank + puntos) para comparar en el siguiente update */
 function liveV2Snapshot(rows) {
@@ -2544,7 +2545,12 @@ function liveV2MoverReason(rows, prevByName, newEvents) {
   };
   changed.sort((a, b) => score(b) - score(a));
   const pick = changed[0];
-  const ev = evByUser[pick.name] || (relevant.length ? relevant[relevant.length - 1] : null);
+  // El evento fallback se elige por ts máximo (no por orden del array: fetchLiveEvents
+  // añade los eventos en el orden crudo de la API, no necesariamente cronológico).
+  const newestRelevant = relevant.length
+    ? relevant.reduce((a, b) => (new Date(a.ts).getTime() >= new Date(b.ts).getTime() ? a : b))
+    : null;
+  const ev = evByUser[pick.name] || newestRelevant;
   if (!ev) return null;
   const label = liveV2Api.reasonLabel(ev, { scorer: ev.playerName, delta: pick.pointsDelta });
   if (!label) return null;
@@ -2593,6 +2599,10 @@ function liveV2AnimateReorder(container, firstRects, rows, prevByName, mover) {
 
   const spotlight = (mover && mover.name) || liftName;
 
+  // Cancela el settle de una animación anterior: evita que un closure viejo retire
+  // clases/transform de esta nueva animación.
+  if (_liveV2SettleTimer) { clearTimeout(_liveV2SettleTimer); _liveV2SettleTimer = null; }
+
   // FIRST→invert: colocar cada fila movida en su posición previa, sin transición
   const flying = [];
   for (const name of Object.keys(lastRects)) {
@@ -2614,7 +2624,8 @@ function liveV2AnimateReorder(container, firstRects, rows, prevByName, mover) {
     const el = elByName[c.name];
     const inner = el && el.querySelector('.livev2-inner');
     if (!inner) continue;
-    if (c.name === spotlight) el.classList.add('mv');
+    // `.mv` exime de `.dim`: tanto la protagonista como la fila que se eleva (.lift)
+    if (c.name === spotlight || c.name === liftName) el.classList.add('mv');
     if (c.name === liftName) inner.classList.add('lift');
     if (c.rankDelta > 0 || (c.rankDelta === 0 && c.pointsDelta > 0)) inner.classList.add('fu');
     else if (c.rankDelta < 0 || (c.rankDelta === 0 && c.pointsDelta < 0)) inner.classList.add('fd');
@@ -2628,7 +2639,8 @@ function liveV2AnimateReorder(container, firstRects, rows, prevByName, mover) {
   }
 
   // settle: retirar clases y estilos inline
-  setTimeout(() => {
+  _liveV2SettleTimer = setTimeout(() => {
+    _liveV2SettleTimer = null;
     container.classList.remove('dim');
     for (const c of changed) {
       const el = elByName[c.name];
