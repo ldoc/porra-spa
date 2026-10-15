@@ -50,7 +50,7 @@ const AppState = {
   resultadosTab: 'jornadas', // Tab seleccionado en resultados: 'jornadas', 'live', 'clasificacion' o 'eliminatorias'
   liveRefreshSecs: 60, // segundos entre polls del tab Live (config.json + /api/config)
   live: null, // estado del tab Live v1 (legacy): { prev, pollTimer, ringTimer, secsLeft, soundOn, openBoxes, zoneOpen }
-  liveV2: null, // estado del tab Live v2 (event-sourcing): { events, serverTime, prevRanks, playheadM, mode, polling, _playing, _playTimer, _replayT1, _lastRows }
+  liveV2: null, // estado del tab Live v2 (event-sourcing): { events, serverTime, prevRanks, playheadM, mode, polling, _playing, _playTimer, _dragRaf, _replayT1, _lastRows }
   estadisticasSubTab: 'pronosticos', // Sub-tab activa en estadísticas
   estadisticasIndividualUser: null, // usuario mostrado en sub-tab Individual (null -> currentUser)
   finalPredictions: null, // { champion, runnerUp, semiFinalists, quarterFinalists, roundOf16, roundOf32 }
@@ -868,7 +868,7 @@ async function fetchMatchStatsUpdated() {
         console.log('[POLL] ¡Nuevos datos! Refrescando...');
         await fetchMatchStats(true);
         const activeTab = document.querySelector('.nav-item.active')?.dataset?.tab;
-        if (activeTab === 'resultados') renderResultadosTab();
+        if (activeTab === 'resultados') renderResultadosTab(true); // no expulsar del replay
         if (activeTab === 'clasificacion') renderClasificacionTab();
         showNewMatchToast();
       }
@@ -2222,7 +2222,7 @@ async function pollLiveOnce() {
     }
     st.prev = next;
     st.secsLeft = AppState.liveRefreshSecs || 60;
-    if (AppState.resultadosTab === 'live') await renderResultadosTab();
+    if (AppState.resultadosTab === 'live') await renderResultadosTab(true);
   } catch (e) { /* reintento en el siguiente tick */ }
   st.polling = false;
 }
@@ -2294,6 +2294,7 @@ function bindLiveTabInteractions() {
   }
   // Reproductor temporal (Task 8) — enlaza play/scrub/volver al directo
   bindLiveV2Player(container);
+  liveV2UpdatePlayerDom(container);
 }
 
 // ============================================================
@@ -2303,7 +2304,7 @@ function bindLiveTabInteractions() {
 
 function liveV2State() {
   if (!AppState.liveV2) {
-    AppState.liveV2 = { events: [], serverTime: null, prevRanks: null, playheadM: null, mode: 'live', polling: false, _lastRows: [], _seenEventIds: null, _playing: false, _playTimer: null, _replayT1: null };
+    AppState.liveV2 = { events: [], serverTime: null, prevRanks: null, playheadM: null, mode: 'live', polling: false, _lastRows: [], _seenEventIds: null, _playing: false, _playTimer: null, _dragRaf: null, _replayT1: null };
   }
   return AppState.liveV2;
 }
@@ -2557,9 +2558,14 @@ function liveV2UpdatePlayerDom(rootArg) {
 }
 
 function liveV2StopPlay() {
-  const st = liveV2State();
+  const st = AppState.liveV2;
+  if (!st) return; // null-safe: logout puede llamarlo tras vaciar el estado
   st._playing = false;
   if (st._playTimer) { clearInterval(st._playTimer); st._playTimer = null; }
+  if (st._dragRaf && typeof cancelAnimationFrame === 'function') {
+    cancelAnimationFrame(st._dragRaf);
+  }
+  st._dragRaf = null;
 }
 
 function liveV2TogglePlay() {
@@ -2653,7 +2659,12 @@ function bindLiveV2Player(container) {
     const schedule = () => {
       if (pending) return;
       pending = true;
-      raf(() => { pending = false; liveV2RenderInstant({ animate: true }); });
+      const st = liveV2State();
+      st._dragRaf = raf(() => {
+        st._dragRaf = null;
+        pending = false;
+        liveV2RenderInstant({ animate: true });
+      });
     };
     const posToM = (clientX) => {
       const rect = track.getBoundingClientRect();
@@ -2666,6 +2677,9 @@ function bindLiveV2Player(container) {
       window.removeEventListener('pointermove', onMove);
       window.removeEventListener('pointerup', onUp);
       window.removeEventListener('pointercancel', onUp);
+      const st = liveV2State();
+      if (st._dragRaf && typeof cancelAnimationFrame === 'function') cancelAnimationFrame(st._dragRaf);
+      st._dragRaf = null;
       liveV2RenderInstant({ animate: true });
       liveV2UpdatePlayerDom();
     };
@@ -3086,25 +3100,34 @@ async function pollLiveV2() {
   st.polling = false;
 }
 
-/** Render inicial del subtab Live v2 (fetch full + fold + poll). Devuelve el HTML de layout A */
-async function renderLiveV2Tab() {
+/**
+ * Render del subtab Live v2 (fetch + fold + poll). Devuelve el HTML de layout A.
+ * `preserveReplay`: usado por el poll de datos oficiales (matchstats) para no
+ * expulsar al usuario del replay; mantiene playhead/modo y reconstruye el instante.
+ * Sin él (entrada fresca a la pestaña o "volver al directo") se resetea a `live`.
+ */
+async function renderLiveV2Tab(preserveReplay) {
   stopLiveV2Polling();
-  liveV2StopPlay();
   const st = liveV2State();
-  st.mode = 'live';
-  st.playheadM = null;
-  st._replayT1 = null;
+  const keepReplay = !!preserveReplay && st.mode === 'replay' && st.playheadM != null;
+  if (!keepReplay) {
+    liveV2StopPlay();
+    st.mode = 'live';
+    st.playheadM = null;
+    st._replayT1 = null;
+  }
   try { await fetchLiveEvents(!st.serverTime); } catch (e) { /* sin eventos disponibles */ }
-  const folded = liveV2Folded(null);
+  const playheadTs = keepReplay ? liveV2PlayheadTs() : null;
+  const folded = liveV2Folded(playheadTs);
   const rows = liveV2Rows(folded);
   st._lastRows = liveV2Snapshot(rows);
-  st._seenEventIds = new Set((st.events || []).map(e => String(e._id)));
+  if (!keepReplay) st._seenEventIds = new Set((st.events || []).map(e => String(e._id)));
   startLiveV2Polling();
   return renderLiveV2Html(rows, folded);
 }
 
 /** Renderiza la pestaña de resultados por jornada */
-async function renderResultadosTab() {
+async function renderResultadosTab(preserveLiveReplay) {
   const container = document.getElementById('resultados-container');
   let shouldAutoScroll = false;
   if (!container) return;
@@ -3117,7 +3140,7 @@ async function renderResultadosTab() {
   const currentTab = AppState.resultadosTab || 'jornadas';
   const isLiveTab = currentTab === 'live';
   const prevLiveScrollTop = isLiveTab ? (container.querySelector('.resultados-scroll')?.scrollTop ?? null) : null;
-  if (!isLiveTab) { stopLivePolling(); stopLiveV2Polling(); }
+  if (!isLiveTab) { stopLivePolling(); stopLiveV2Polling(); liveV2StopPlay(); }
 
   container.innerHTML = skeletonRows(6);
   await Promise.all([fetchMatchStats(), fetchAllPredictions()]);
@@ -3148,7 +3171,7 @@ async function renderResultadosTab() {
     scrollHtml = renderRealStandingsTable();
   } else if (currentTab === 'live') {
     const gen = ++_liveRenderGen;
-    scrollHtml = await renderLiveV2Tab();
+    scrollHtml = await renderLiveV2Tab(preserveLiveReplay);
     if (gen !== _liveRenderGen) return; // un render más reciente tomó el relevo (evita last-writer-stale)
   } else if (currentTab === 'eliminatorias') {
     // Mostrar equipos eliminados por ronda
@@ -3630,6 +3653,7 @@ function logout() {
   stopMatchStatsPolling();
   stopLivePolling();
   stopLiveV2Polling();
+  liveV2StopPlay(); // limpia _playTimer/_dragRaf ANTES de perder la referencia
   AppState.live = null;
   AppState.liveV2 = null;
   checkAuthStatus();
@@ -4632,6 +4656,7 @@ function navigateToTab(tabName) {
     AppState.resultadosRoundKey = null;
     stopLivePolling();
     stopLiveV2Polling();
+    liveV2StopPlay(); // sin intervalos zombie al salir del Live
   }
 
   // Limpiar el intervalo del countdown del Inicio al salir de esa pestaña
