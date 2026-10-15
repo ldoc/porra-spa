@@ -40,7 +40,7 @@
         const scorer = ensure(state, p.scorerId);
         if (scorer && !p.isOwnGoal) scorer.goals += 1;
         if (p.isPenalty && scorer && !p.isOwnGoal) scorer.penaltyScored += 1;
-        state.goals.push({ sourceId: ev.sourceId, home, scorerId: p.scorerId ?? null, cancelled: false });
+        state.goals.push({ sourceId: ev.sourceId, home, scorerId: p.scorerId ?? null, penalty: !!p.isPenalty, cancelled: false });
         if (home) state.score.home += 1; else state.score.away += 1;
         break;
       }
@@ -51,7 +51,10 @@
           if (g.home) state.score.home = Math.max(0, state.score.home - 1);
           else state.score.away = Math.max(0, state.score.away - 1);
           const scorer = g.scorerId != null ? state.players[g.scorerId] : null;
-          if (scorer) scorer.goals = Math.max(0, scorer.goals - 1);
+          if (scorer) {
+            scorer.goals = Math.max(0, scorer.goals - 1);
+            if (g.penalty && scorer.penaltyScored > 0) scorer.penaltyScored -= 1;
+          }
         }
         break;
       }
@@ -99,7 +102,20 @@
     return Math.max(0, end - (p.entryMinute || 0));
   }
 
-  function byTs(a, b) { return new Date(a.ts) - new Date(b.ts); }
+  function parseTs(v) {
+    if (v == null) return 0;
+    const t = v instanceof Date ? v.getTime() : new Date(v).getTime();
+    return isNaN(t) ? 0 : t;
+  }
+
+  // Orden estable de plegado: por `ts` (eje del timeline, minuto) y, a igualdad,
+  // por `ingestedAt` (instante de detección monótono). Sin el desempate, un `goal`
+  // y su `goal_cancelled` del mismo minuto podrían plegarse en orden arbitrario
+  // entre distintos lotes de delta.
+  function byTs(a, b) {
+    const d = parseTs(a.ts) - parseTs(b.ts);
+    return d !== 0 ? d : parseTs(a.ingestedAt) - parseTs(b.ingestedAt);
+  }
 
   function foldMatch(events, ctx) {
     const state = createMatchState();
@@ -121,14 +137,41 @@
 
   function matchStateToStats(state, ctx, playheadTs) {
     const playhead = playheadTs != null ? playheadTs : Date.now();
+    const concededByTeam = {
+      [ctx.homeTeamId]: state.score.away,
+      [ctx.awayTeamId]: state.score.home
+    };
+    // Un solo portero recibe los goles encajados por equipo: el que está en el campo
+    // en el playhead; si ninguno lo está, el de más minutos. Nunca se carga el mismo
+    // gol a dos porteros (p. ej. tras un cambio de portero).
+    const gkByTeam = {};
+    for (const pl of Object.values(state.players)) {
+      const meta = (ctx.playersById && ctx.playersById[pl.id]) || {};
+      if (meta.posicion !== 'G' || meta.equipo == null) continue;
+      const team = String(meta.equipo);
+      if (team !== String(ctx.homeTeamId) && team !== String(ctx.awayTeamId)) continue;
+      const cand = { id: pl.id, onPitch: !!pl.onPitch, mins: minutesOf(state, pl.id, playhead) };
+      const cur = gkByTeam[team];
+      if (!cur
+        || (cand.onPitch && !cur.onPitch)
+        || (cand.onPitch === cur.onPitch && cand.mins > cur.mins)) {
+        gkByTeam[team] = cand;
+      }
+    }
+    const gkIdByTeam = {};
+    for (const [team, gk] of Object.entries(gkByTeam)) gkIdByTeam[team] = gk.id;
     const jugadores = Object.values(state.players).map(pl => {
       const meta = (ctx.playersById && ctx.playersById[pl.id]) || {};
       const esPortero = meta.posicion === 'G';
       let golesRecibidos = pl.goalsReceived;
       if (esPortero && meta.equipo != null) {
-        golesRecibidos = meta.equipo === ctx.homeTeamId ? state.score.away
-                       : meta.equipo === ctx.awayTeamId ? state.score.home
-                       : golesRecibidos;
+        const team = String(meta.equipo);
+        const responsible = gkIdByTeam[team];
+        if (responsible != null) {
+          golesRecibidos = String(responsible) === String(pl.id)
+            ? (concededByTeam[team] ?? golesRecibidos)
+            : 0;
+        }
       }
       return {
         id: String(pl.id),
@@ -177,6 +220,82 @@
     }
   }
 
+  // id del jugador protagonista de un evento (los eventos del backend NO traen
+  // playerName; el nombre se resuelve vía playersById a partir de estos ids).
+  function eventScorerId(ev) {
+    if (!ev) return null;
+    const p = ev.payload || {};
+    switch (ev.type) {
+      case 'goal': return p.scorerId != null ? p.scorerId : (ev.playerId != null ? ev.playerId : null);
+      case 'assist': return ev.playerId != null ? ev.playerId : null;
+      case 'penalty_saved': return p.keeperId != null ? p.keeperId : null;
+      case 'rating': return ev.playerId != null ? ev.playerId : null;
+      default: return ev.playerId != null ? ev.playerId : null;
+    }
+  }
+
+  function eventPlayerName(ev, playersById) {
+    const pid = eventScorerId(ev);
+    if (pid == null || !playersById) return null;
+    const meta = playersById[String(pid)];
+    return meta && meta.nombre ? meta.nombre : null;
+  }
+
+  /** reasonLabel resolviendo el nombre del protagonista desde playersById. */
+  function liveV2ReasonForEvent(ev, playersById, delta) {
+    const scorer = eventPlayerName(ev, playersById) || 'un jugador';
+    return reasonLabel(ev, { scorer, delta: delta != null ? delta : 0 });
+  }
+
+  /** Etiqueta compacta para el feed de última hora (cubre más tipos que reasonLabel). */
+  function feedLabel(ev, playersById) {
+    if (!ev) return null;
+    const p = ev.payload || {};
+    const min = ev.minute != null ? `${ev.minute}' ` : '';
+    const nameOf = (id) => {
+      if (id == null || !playersById) return null;
+      const meta = playersById[String(id)];
+      return meta && meta.nombre ? meta.nombre : null;
+    };
+    switch (ev.type) {
+      case 'goal': {
+        const n = nameOf(p.scorerId != null ? p.scorerId : ev.playerId);
+        return { icon: '⚽', text: n ? `${min}Gol de ${n}` : `${min}Gol` };
+      }
+      case 'goal_cancelled': return { icon: '↩️', text: `${min}Gol anulado · VAR` };
+      case 'penalty_saved': {
+        const n = nameOf(p.keeperId);
+        return { icon: '🧤', text: n ? `${min}Penalti parado por ${n}` : `${min}Penalti parado` };
+      }
+      case 'penalty_missed': {
+        const n = nameOf(p.takerId);
+        return { icon: '❌', text: n ? `${min}Penalti fallado · ${n}` : `${min}Penalti fallado` };
+      }
+      case 'assist': {
+        const n = nameOf(ev.playerId);
+        return { icon: '🅰️', text: n ? `${min}Asistencia de ${n}` : `${min}Asistencia` };
+      }
+      case 'card': {
+        const red = p.cardType === 'red' || p.cardType === 'yellowRed';
+        const n = nameOf(ev.playerId);
+        return { icon: red ? '🟥' : '🟨', text: n ? `${min}${red ? 'Roja' : 'Amarilla'} · ${n}` : `${min}${red ? 'Roja' : 'Amarilla'}` };
+      }
+      case 'substitution': return { icon: '🔁', text: `${min}Cambio` };
+      case 'rating': {
+        const n = nameOf(ev.playerId);
+        return { icon: '⭐', text: n ? `${min}Nota · ${n}` : `${min}Nota` };
+      }
+      case 'status': {
+        const s = p.status;
+        const txt = s === 'HT' ? 'Descanso' : s === 'FT' ? 'Final' : s === 'LIVE' ? 'En juego' : '';
+        return txt ? { icon: '●', text: txt } : null;
+      }
+      case 'score': return { icon: '🔧', text: 'Corrección de marcador' };
+      case 'match_final': return { icon: '🏁', text: 'Final del partido' };
+      default: return null;
+    }
+  }
+
   function flipDelta(firstRects, lastRects) {
     const out = {};
     for (const id of Object.keys(lastRects)) {
@@ -185,7 +304,7 @@
     return out;
   }
 
-  const liveV2Api = { createMatchState, applyEvent, newPlayer, matchClockAt, minutesOf, foldMatch, foldAll, stateAt, matchStateToStats, rankRows, reasonLabel, flipDelta };
+  const liveV2Api = { createMatchState, applyEvent, newPlayer, matchClockAt, minutesOf, foldMatch, foldAll, stateAt, matchStateToStats, rankRows, reasonLabel, liveV2ReasonForEvent, feedLabel, flipDelta };
   global.liveV2Api = liveV2Api;
   if (typeof module !== 'undefined' && module.exports) module.exports = liveV2Api;
 })(typeof window !== 'undefined' ? window : globalThis);

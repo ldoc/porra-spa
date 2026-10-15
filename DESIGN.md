@@ -219,8 +219,9 @@ Overlay `rgba(0,0,0,0.6)` + blur 20px; content surface/card con 20px radius + `0
 
 ### Live en directo
 - **Elevación "elevar 3D":** al reordenarse la clasificación en vivo, la fila sube con `transform` + `box-shadow` (FLIP: vuela de su posición previa a la nueva con curva `cubic-bezier(.22,1,.36,1)` ~700ms); el contenedor se atenúa (`.dim`), la fila protagonista se exime (`.mv`) y recibe destello `emerald` (`.fu`) o `red` (`.fd`). Respeta `prefers-reduced-motion`.
-- **Etiqueta de motivo:** píldora flotante sobre la fila (`⚽ Gol de …`, `▲ Subes al 3º`) con el delta de puntos, visible ~2.5s.
-- **Reproductor (timeline):** pista con marcas por evento coloreadas por tipo (gol, anulado, penalti, tarjeta, cambio…), knob arrastrable, botón play/pausa y "⏭ Volver al directo". Al arrastrar se reconstruye el instante con `stateAt(T)`; el badge pasa de `● EN DIRECTO` (rojo) a `▶ REPRODUCIENDO` (oro).
+- **Etiqueta de motivo:** píldora flotante sobre la fila con una etiqueta derivada del evento (gol, anulado, penalti parado, asistencia, nota), p. ej. `⚽ 67' Gol de …`, más el delta de puntos, visible ~2.5s.
+- **Reproductor (timeline):** pista con marcas por evento coloreadas por tipo (gol, anulado, penalti, tarjeta, cambio…), knob arrastrable, botón play/pausa y "⏭ Volver al directo". Al arrastrar se reconstruye el instante con `stateAt(T)`; el badge pasa de `● EN DIRECTO` (emerald, `--accent-primary`) a `▶ REPRODUCIENDO` (violeta, `--accent-purple`).
+- **Feed de última hora:** lista compacta de los eventos más recientes (hasta el playhead en replay) bajo la clasificación; en directo usa el encabezado `📣 Última hora` y en replay `⏱ <hora> · <n> eventos`.
 
 ## Do's and Don'ts
 

@@ -124,6 +124,17 @@ test('foldAll agrupa por eventId', () => {
   assert.deepEqual(all[2].score, { home: 0, away: 1 });
 });
 
+test('foldMatch desempata por ingestedAt cuando el ts coincide', () => {
+  // Mismo minuto: el orden debe seguir ingestedAt (gol antes que su anulación),
+  // independientemente del orden del array entre lotes de delta.
+  const events = [
+    { eventId: 100, ts: '2026-09-16T20:05:00Z', ingestedAt: '2026-09-16T20:06:00Z', type: 'goal_cancelled', sourceId: 'c1', payload: { ofSourceId: 'g1' } },
+    { eventId: 100, ts: '2026-09-16T20:05:00Z', ingestedAt: '2026-09-16T20:05:30Z', type: 'goal', sourceId: 'g1', payload: { scorerId: 11, isHome: true } }
+  ];
+  const s = foldMatch(events, CTX);
+  assert.deepEqual(s.score, { home: 0, away: 0 });
+});
+
 const { matchStateToStats } = liveV2;
 
 test('matchStateToStats produce stats con marcador y jugadores', () => {
@@ -156,6 +167,48 @@ test('matchStateToStats atribuye goles recibidos al portero', () => {
   assert.equal(gk.golesRecibidos, 1);
 });
 
+test('matchStateToStats solo carga los goles recibidos al portero en el campo', () => {
+  const s = createMatchState();
+  const ctx = { homeTeamId: 1, awayTeamId: 2, playersById: {
+    1: { nombre: 'GK1', posicion: 'G', equipo: 1 },
+    2: { nombre: 'GK2', posicion: 'G', equipo: 1 },
+    11: { nombre: 'A', posicion: 'F', equipo: 2 }
+  } };
+  applyEvent(s, { type: 'lineup', payload: { starters: [1, 11] } }, ctx);
+  applyEvent(s, { type: 'goal', playerId: 11, payload: { scorerId: 11, isHome: false } }, ctx); // 0-1
+  applyEvent(s, { type: 'substitution', minute: 60, payload: { inId: 2, outId: 1 } }, ctx);
+  const stats = matchStateToStats(s, ctx, Date.parse('2026-09-16T21:10:00Z'));
+  const gk1 = stats.jugadores.find(j => String(j.id) === '1');
+  const gk2 = stats.jugadores.find(j => String(j.id) === '2');
+  assert.equal(gk2.golesRecibidos, 1);
+  assert.equal(gk1.golesRecibidos, 0);
+});
+
+test('matchStateToStats cae al portero con más minutos si ninguno está en el campo', () => {
+  const s = createMatchState();
+  s.players[1] = { ...liveV2.newPlayer(1), onPitch: false, entryMinute: 0, exitMinute: 30 };
+  s.players[2] = { ...liveV2.newPlayer(2), onPitch: false, entryMinute: 0, exitMinute: 70 };
+  applyEvent(s, { type: 'goal', playerId: 11, payload: { scorerId: 11, isHome: false } }, { homeTeamId: 1, awayTeamId: 2 });
+  const ctx = { homeTeamId: 1, awayTeamId: 2, playersById: {
+    1: { nombre: 'GK1', posicion: 'G', equipo: 1 },
+    2: { nombre: 'GK2', posicion: 'G', equipo: 1 }
+  } };
+  const stats = matchStateToStats(s, ctx, Date.parse('2026-09-16T21:10:00Z'));
+  const gk1 = stats.jugadores.find(j => String(j.id) === '1');
+  const gk2 = stats.jugadores.find(j => String(j.id) === '2');
+  assert.equal(gk2.golesRecibidos, 1);
+  assert.equal(gk1.golesRecibidos, 0);
+});
+
+test('goal_cancelled revierte el penalti marcado del goleador', () => {
+  const s = createMatchState();
+  applyEvent(s, { type: 'goal', sourceId: 'g|pen', playerId: 11, payload: { scorerId: 11, isHome: true, isPenalty: true } }, CTX);
+  assert.equal(s.players[11].penaltyScored, 1);
+  applyEvent(s, { type: 'goal_cancelled', payload: { ofSourceId: 'g|pen' } }, CTX);
+  assert.equal(s.players[11].penaltyScored, 0);
+  assert.equal(s.players[11].goals, 0);
+});
+
 const { rankRows, reasonLabel, flipDelta } = liveV2;
 
 test('rankRows ordena por puntos y calcula delta de puesto', () => {
@@ -177,4 +230,28 @@ test('flipDelta calcula desplazamientos', () => {
   const first = { a: { top: 10 }, b: { top: 30 } };
   const last = { a: { top: 30 }, b: { top: 10 } };
   assert.deepEqual(flipDelta(first, last), { a: -20, b: 20 });
+});
+
+const { liveV2ReasonForEvent, feedLabel } = liveV2;
+
+test('liveV2ReasonForEvent resuelve el nombre del protagonista desde playersById', () => {
+  const players = { 7: { nombre: 'Mbappé' } };
+  assert.deepEqual(
+    liveV2ReasonForEvent({ type: 'goal', playerId: 7, payload: { scorerId: 7 }, minute: 67 }, players, 5),
+    { icon: '⚽', text: "67' Gol de Mbappé", delta: 5 });
+  // goal sin scorerId usa playerId; goal sin jugador conocido cae a 'un jugador'
+  assert.equal(liveV2ReasonForEvent({ type: 'goal', playerId: 7, payload: {}, minute: 12 }, players, 1).text, "12' Gol de Mbappé");
+  assert.equal(liveV2ReasonForEvent({ type: 'goal', payload: {}, minute: 12 }, players, 1).text, "12' Gol de un jugador");
+  // assist/penalty_saved resuelven sin romper
+  assert.equal(liveV2ReasonForEvent({ type: 'assist', playerId: 7, payload: {} }, players, 1).icon, '🅰️');
+  assert.equal(liveV2ReasonForEvent({ type: 'penalty_saved', payload: { keeperId: 7 }, minute: 12 }, players, 3).icon, '🧤');
+});
+
+test('feedLabel resuelve el nombre del goleador y cubre tipos del feed', () => {
+  const players = { 7: { nombre: 'Mbappé' } };
+  assert.deepEqual(feedLabel({ type: 'goal', playerId: 7, payload: { scorerId: 7 }, minute: 67 }, players),
+    { icon: '⚽', text: "67' Gol de Mbappé" });
+  assert.equal(feedLabel({ type: 'card', playerId: 7, payload: { cardType: 'yellow' }, minute: 20 }, players).text, "20' Amarilla · Mbappé");
+  assert.equal(feedLabel({ type: 'goal_cancelled', payload: {}, minute: 30 }, players).icon, '↩️');
+  assert.equal(feedLabel({ type: 'lineup', payload: {} }, players), null);
 });
