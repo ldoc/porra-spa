@@ -4,6 +4,12 @@ const liveV2 = require('../js/liveV2.js');
 const { createMatchState, applyEvent } = liveV2;
 const CTX = { homeTeamId: 1, awayTeamId: 2 };
 
+test('el módulo expone liveV2Api en globalThis', () => {
+  assert.equal(typeof globalThis.liveV2Api, 'object');
+  assert.equal(globalThis.liveV2Api.createMatchState, createMatchState);
+  assert.equal(globalThis.liveV2Api.applyEvent, applyEvent);
+});
+
 test('createMatchState arranca en NS y 0-0', () => {
   const s = createMatchState();
   assert.equal(s.status, 'NS');

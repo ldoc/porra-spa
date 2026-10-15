@@ -1,4 +1,4 @@
-(function () {
+(function (global) {
   'use strict';
 
   function newPlayer(id) {
@@ -79,6 +79,6 @@
   }
 
   const liveV2Api = { createMatchState, applyEvent, newPlayer };
+  global.liveV2Api = liveV2Api;
   if (typeof module !== 'undefined' && module.exports) module.exports = liveV2Api;
-  if (typeof global !== 'undefined') global.liveV2Api = liveV2Api;
-})();
+})(typeof window !== 'undefined' ? window : globalThis);
