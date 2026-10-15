@@ -123,3 +123,23 @@ test('foldAll agrupa por eventId', () => {
   assert.deepEqual(all[1].score, { home: 1, away: 0 });
   assert.deepEqual(all[2].score, { home: 0, away: 1 });
 });
+
+const { matchStateToStats } = liveV2;
+
+test('matchStateToStats produce stats con marcador y jugadores', () => {
+  const s = createMatchState();
+  const ctx = { homeTeamId: 1, awayTeamId: 2, playersById: {
+    11: { nombre: 'A', posicion: 'F', equipo: 1 }, 12: { nombre: 'B', posicion: 'G', equipo: 2 }
+  } };
+  applyEvent(s, { type: 'status', ts: '2026-09-16T20:00:00Z', payload: { status: 'LIVE' } }, ctx);
+  applyEvent(s, { type: 'lineup', payload: { starters: [11, 12] } }, ctx);
+  applyEvent(s, { type: 'goal', playerId: 11, payload: { scorerId: 11, isHome: true } }, ctx);
+  applyEvent(s, { type: 'rating', playerId: 11, payload: { rating: 7.5 } }, ctx);
+  const stats = matchStateToStats(s, ctx);
+  assert.equal(stats[1].goles, 1);
+  assert.equal(stats[2].goles, 0);
+  const p11 = stats.jugadores.find(j => String(j.id) === '11');
+  assert.equal(p11.goles, 1);
+  assert.equal(p11.puntos, 7.5);
+  assert.equal(p11.posicion, 'F');
+});

@@ -119,7 +119,34 @@
     return foldAll(events.filter(e => new Date(e.ts).getTime() <= T), ctxById);
   }
 
-  const liveV2Api = { createMatchState, applyEvent, newPlayer, matchClockAt, minutesOf, foldMatch, foldAll, stateAt };
+  function matchStateToStats(state, ctx, playheadTs) {
+    const playhead = playheadTs != null ? playheadTs : Date.now();
+    const jugadores = Object.values(state.players).map(pl => {
+      const meta = (ctx.playersById && ctx.playersById[pl.id]) || {};
+      return {
+        id: String(pl.id),
+        nombre: meta.nombre || String(pl.id),
+        posicion: meta.posicion || null,
+        equipo: meta.equipo ?? null,
+        puntos: pl.rating,
+        goles: pl.goals,
+        minutos: minutesOf(state, pl.id, playhead),
+        paradas: 0,
+        esSuplente: !pl.onPitch && (pl.entryMinute || 0) > 0,
+        penaltiMarcado: pl.penaltyScored,
+        penaltiParado: pl.penaltySaved,
+        golesRecibidos: pl.goalsReceived,
+        asistencias: pl.assists
+      };
+    });
+    return {
+      [ctx.homeTeamId]: { goles: state.score.home },
+      [ctx.awayTeamId]: { goles: state.score.away },
+      jugadores
+    };
+  }
+
+  const liveV2Api = { createMatchState, applyEvent, newPlayer, matchClockAt, minutesOf, foldMatch, foldAll, stateAt, matchStateToStats };
   global.liveV2Api = liveV2Api;
   if (typeof module !== 'undefined' && module.exports) module.exports = liveV2Api;
 })(typeof window !== 'undefined' ? window : globalThis);
