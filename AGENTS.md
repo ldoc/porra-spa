@@ -887,7 +887,7 @@ Pestaña que muestra los resultados de los partidos jugados, agrupados por jorna
 `renderResultadosTab()` renderiza 4 sub-tabs (estado `AppState.resultadosTab`, default `'jornadas'`):
 
 1. **Jornadas**: Partidos agrupados por fase (`liga`, `16`, `8`, `4`, `semis`, `final`) y jornada, con navegación ◀/▶ entre rondas disponibles. Solo se muestran las fases hasta la fase actual del juego. Cada partido muestra su resultado y los puntos de cada jugador (colapsable).
-2. **Live**: subtab en directo mediante **event-sourcing**. `renderLiveV2Tab()` descarga los eventos (`GET /api/live/events`, delta con `?since=`) y pliega el estado con `js/liveV2.js` (`applyEvent` → `foldAll`/`stateAt` → `matchStateToStats`) para reconstruir la clasificación en vivo (`rankRows`), los chips de partidos, el delta de puntos y el **motivo del cambio** sobre la fila protagonista, con animación **"elevar 3D" + FLIP** (`updateLiveV2Dom`/`liveV2AnimateReorder`, `reasonLabel`). Incluye un **reproductor temporal** (scrub/play/volver al directo) que reconstruye el instante del día con `stateAt(T)`. El poll se hace en segundo plano sin recargar la pestaña. Helpers genéricos en `js/live.js` (`resolveLiveRefreshSecs`, `liveGoalsOf`, `buildLiveTabsHtml`). Estado: `AppState.liveV2`.
+2. **Live**: subtab en directo mediante **event-sourcing**. `renderLiveV2Tab()` descarga los eventos (`GET /api/live/events`, delta con `?since=`) y pliega el estado con `js/liveV2.js` (`applyEvent` → `foldAll`/`stateAt` → `matchStateToStats`) para reconstruir la clasificación en vivo (`rankRows`), los chips de partidos, el delta de puntos y el **motivo del cambio** sobre la fila protagonista, con animación **"elevar 3D" + FLIP** (`updateLiveV2Dom`/`liveV2AnimateReorder`, `reasonLabel`). El poll se hace en segundo plano sin recargar la pestaña. Helpers genéricos en `js/live.js` (`resolveLiveRefreshSecs`, `liveGoalsOf`, `buildLiveTabsHtml`). Estado: `AppState.liveV2`.
 3. **Clasificación Real**: `renderRealStandingsTable()` con la clasificación calculada desde los resultados (`calculateRealStandings()`).
 4. **Eliminatorias**: `renderEliminatoriasView()` con las rondas de eliminatorias resueltas y equipos eliminados.
 
@@ -898,7 +898,7 @@ Pestaña que muestra los resultados de los partidos jugados, agrupados por jorna
 3. **Calcular clasificación real**: `calculateRealStandings()` (usa `AppState.leagueMatches` y `AppState.matchStats`)
 4. **Agrupar por jornada/fase**: Filtrar `AppState.matches` por fase y ronda según la ronda seleccionada
 5. **Renderizar**: Partidos con resultado + puntos de cada usuario (expansible)
-6. **Live (v2)**: Eventos desde `GET /api/live/events` (delta con `?since=`) → fold con `js/liveV2.js` (`foldAll`/`stateAt`) → clasificación en vivo (`rankRows`) + chips + motivo/delta; el reproductor reconstruye cualquier instante con `stateAt(T)`
+6. **Live (v2)**: Eventos desde `GET /api/live/events` (delta con `?since=`) → fold con `js/liveV2.js` (`foldAll`/`stateAt`) → clasificación en vivo (`rankRows`) + chips + motivo/delta
 
 #### Funciones JavaScript
 
@@ -909,10 +909,10 @@ Pestaña que muestra los resultados de los partidos jugados, agrupados por jorna
 | `renderRealStandingsTable()` | Renderiza la clasificación real de los 36 equipos |
 | `renderEliminatoriasView()` | Renderiza las eliminatorias resueltas (read-only) |
 | `calculateRealStandings()` | Calcula la clasificación real desde los matchstats |
-| `renderLiveV2Tab(preserveReplay)` / `renderLiveV2Html(rows, folded)` | Render del subtab Live v2 (fetch de eventos + fold + poll + reproductor) |
+| `renderLiveV2Tab()` / `renderLiveV2Html(rows, folded)` | Render del subtab Live v2 (fetch de eventos + fold + poll) |
 | `fetchLiveEvents(forceFull)` | Carga eventos del directo (full o delta con `?since=serverTime`) |
 | `foldAll` / `stateAt` / `matchStateToStats` (`js/liveV2.js`) | Event-sourcing: pliega los eventos a estado y stats por partido |
-| `updateLiveV2Dom(rows, folded, opts)` / `liveV2AnimateReorder()` | Actualización incremental del DOM + animación FLIP "elevar 3D" + motivo |
+| `updateLiveV2Dom(rows, folded)` / `liveV2AnimateReorder()` | Actualización incremental del DOM + animación FLIP "elevar 3D" + motivo |
 
 #### Diseño Visual
 
