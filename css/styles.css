@@ -6559,6 +6559,87 @@ html, body {
   color: #F87171;
 }
 
+/* ── Animación "elevar 3D" + etiqueta de motivo (Task 7) ── */
+
+/* Al volar, las filas que no son la protagonista se atenúan */
+.livev2-rows.dim .livev2-row:not(.mv) .livev2-inner {
+  opacity: 0.5;
+}
+
+/* La fila que sube se "eleva": escala + glow esmeralda + z-index */
+.livev2-row .livev2-inner.lift {
+  transform: scale(1.09);
+  box-shadow: 0 20px 40px rgba(16, 185, 129, 0.5), 0 0 0 1.5px rgba(16, 185, 129, 0.85);
+  background: #0E2A25;
+  z-index: 9;
+}
+
+.livev2-row.mv {
+  position: relative;
+  z-index: 5;
+}
+
+/* Destello verde (sube / gana puntos) y rojo (baja / pierde puntos) */
+.livev2-inner.fu {
+  animation: livev2-fu 0.7s ease;
+}
+
+.livev2-inner.fd {
+  animation: livev2-fd 0.7s ease;
+}
+
+/* El destello usa background + outline para no pisar el glow (box-shadow) del lift */
+@keyframes livev2-fu {
+  0%, 100% { background-color: var(--ucl-card); outline: 0 solid rgba(16, 185, 129, 0); }
+  25% { background-color: #0E2A25; outline: 3px solid rgba(16, 185, 129, 0.55); outline-offset: -2px; }
+}
+
+@keyframes livev2-fd {
+  0%, 100% { background-color: var(--ucl-card); outline: 0 solid rgba(248, 113, 113, 0); }
+  25% { background-color: #2A0E0E; outline: 3px solid rgba(248, 113, 113, 0.5); outline-offset: -2px; }
+}
+
+/* Etiqueta flotante con el motivo del cambio */
+.livev2-reason {
+  position: absolute;
+  left: 50%;
+  transform: translate(-50%, 6px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.28s, transform 0.28s;
+  background: #0E2A25;
+  border: 1px solid rgba(16, 185, 129, 0.7);
+  color: #D1FAE5;
+  border-radius: 10px;
+  padding: 5px 10px;
+  font-size: 10px;
+  font-weight: 800;
+  white-space: nowrap;
+  z-index: 12;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.45);
+}
+
+.livev2-reason.show {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+.livev2-reason.neg {
+  background: #2A0E0E;
+  border-color: rgba(248, 113, 113, 0.7);
+  color: #FECACA;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .livev2-row > .livev2-inner {
+    transition: none;
+  }
+  .livev2-inner.fu,
+  .livev2-inner.fd {
+    animation: none;
+  }
+}
+
 .livev2-player,
 .livev2-feed {
   min-height: 0;

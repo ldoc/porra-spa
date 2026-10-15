@@ -2301,7 +2301,7 @@ function bindLiveTabInteractions() {
 
 function liveV2State() {
   if (!AppState.liveV2) {
-    AppState.liveV2 = { events: [], serverTime: null, prevRanks: null, playheadM: null, mode: 'live', polling: false, _lastRows: [] };
+    AppState.liveV2 = { events: [], serverTime: null, prevRanks: null, playheadM: null, mode: 'live', polling: false, _lastRows: [], _seenEventIds: null };
   }
   return AppState.liveV2;
 }
@@ -2458,11 +2458,212 @@ function renderLiveV2Html(rows, folded) {
     + `</div>`;
 }
 
+// ── Animación "elevar 3D" + motivo (Task 7) ─────────────────────────────
+
+const LIVEV2_FLIGHT_MS = 700;
+const LIVEV2_REASON_MS = 2500;
+const LIVEV2_REASON_TYPES = { goal: 1, goal_cancelled: 1, penalty_saved: 1, assist: 1, rating: 1 };
+
+/** Snapshot ligero de filas (rank + puntos) para comparar en el siguiente update */
+function liveV2Snapshot(rows) {
+  return rows.map(r => ({ name: r.name, rank: r.rank, livePoints: r.livePoints }));
+}
+
+function liveV2PrefersReducedMotion() {
+  try {
+    return typeof window !== 'undefined' && typeof window.matchMedia === 'function'
+      && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  } catch (e) { return false; }
+}
+
+/** Count-up de un número de puntos de `from` a `to` */
+function liveV2CountUp(el, from, to, duration) {
+  if (!el || from === to) { if (el) el.textContent = to; return; }
+  if (typeof requestAnimationFrame !== 'function') { el.textContent = to; return; }
+  const now = () => (typeof performance !== 'undefined' ? performance.now() : Date.now());
+  const t0 = now();
+  const tick = (t) => {
+    const k = Math.min(1, (t - t0) / duration);
+    const eased = 1 - Math.pow(1 - k, 3);
+    el.textContent = Math.round(from + (to - from) * eased);
+    if (k < 1) requestAnimationFrame(tick); else el.textContent = to;
+  };
+  requestAnimationFrame(tick);
+}
+
+/** playerId relevante de un evento (playerId o payload.scorerId/keeperId) */
+function liveV2EventPlayerId(ev) {
+  if (!ev) return null;
+  const p = ev.payload || {};
+  const id = ev.playerId != null ? ev.playerId : (p.scorerId != null ? p.scorerId : (p.keeperId != null ? p.keeperId : null));
+  return id != null ? String(id) : null;
+}
+
+/** Usuarios cuya plantilla incluye al jugador del evento (mapeo evento→fila por plantilla) */
+function liveV2UsersAffectedBy(ev) {
+  const pid = liveV2EventPlayerId(ev);
+  if (!pid) return [];
+  const out = [];
+  for (const [user, squad] of Object.entries(AppState.squadsCache || {})) {
+    if (Array.isArray(squad) && squad.some(sp => String(sp.id) === pid)) out.push(user);
+  }
+  return out;
+}
+
+/**
+ * Elige la fila "protagonista" y su motivo a partir de las filas que cambiaron
+ * (puesto y/o puntos) y de los eventos nuevos del último poll.
+ * Mapeo: evento→usuario por plantilla (squadsCache); si no hay datos de plantilla
+ * se cae al evento relevante más reciente. Prioriza siempre la fila propia.
+ * Devuelve `{ name, rankDelta, pointsDelta, label }` o `null`.
+ */
+function liveV2MoverReason(rows, prevByName, newEvents) {
+  if (typeof liveV2Api === 'undefined') return null;
+  const relevant = (newEvents || []).filter(e => e && LIVEV2_REASON_TYPES[e.type]);
+  const changed = [];
+  for (const r of rows) {
+    const p = prevByName ? prevByName[r.name] : null;
+    const rankDelta = p ? p.rank - r.rank : 0;
+    const pointsDelta = p ? r.livePoints - p.livePoints : 0;
+    if (rankDelta !== 0 || pointsDelta !== 0) changed.push({ name: r.name, rankDelta, pointsDelta });
+  }
+  if (!changed.length) return null;
+
+  const evByUser = {};
+  for (const ev of relevant) {
+    for (const u of liveV2UsersAffectedBy(ev)) {
+      const cur = evByUser[u];
+      if (!cur || new Date(ev.ts).getTime() >= new Date(cur.ts).getTime()) evByUser[u] = ev;
+    }
+  }
+  const score = (c) => {
+    let s = Math.abs(c.pointsDelta) * 10 + Math.abs(c.rankDelta) * 3;
+    if (evByUser[c.name]) s += 300;
+    if (rows.some(r => r.name === c.name && r.isMe)) s += 1000;
+    return s;
+  };
+  changed.sort((a, b) => score(b) - score(a));
+  const pick = changed[0];
+  const ev = evByUser[pick.name] || (relevant.length ? relevant[relevant.length - 1] : null);
+  if (!ev) return null;
+  const label = liveV2Api.reasonLabel(ev, { scorer: ev.playerName, delta: pick.pointsDelta });
+  if (!label) return null;
+  return { name: pick.name, rankDelta: pick.rankDelta, pointsDelta: pick.pointsDelta, label };
+}
+
+/** Etiqueta flotante del motivo sobre la fila indicada; se retira tras ~2.5 s */
+function liveV2ShowReason(container, rowEl, label) {
+  if (!container || !rowEl || !label) return;
+  container.querySelectorAll('.livev2-reason').forEach(el => el.remove());
+  const el = document.createElement('div');
+  el.className = 'livev2-reason' + (label.delta < 0 ? ' neg' : '');
+  el.textContent = `${label.icon} ${label.text}` + (label.delta ? ` · ${label.delta > 0 ? '+' : ''}${label.delta} pts` : '');
+  el.style.top = Math.max(0, rowEl.offsetTop - 6) + 'px';
+  container.appendChild(el);
+  if (typeof requestAnimationFrame === 'function') requestAnimationFrame(() => el.classList.add('show'));
+  else el.classList.add('show');
+  setTimeout(() => {
+    el.classList.remove('show');
+    setTimeout(() => el.remove(), 320);
+  }, LIVEV2_REASON_MS);
+}
+
+/** FLIP + lift/dim/destello para una actualización con cambios. `mover` = motivo elegido */
+function liveV2AnimateReorder(container, firstRects, rows, prevByName, mover) {
+  if (typeof liveV2Api === 'undefined') return;
+  const elByName = {};
+  const lastRects = {};
+  container.querySelectorAll('[data-livev2-row]').forEach(el => {
+    const name = el.getAttribute('data-livev2-row');
+    elByName[name] = el;
+    lastRects[name] = el.getBoundingClientRect();
+  });
+  const deltas = liveV2Api.flipDelta(firstRects, lastRects);
+
+  const changed = [];
+  let liftName = null, liftScore = 0;
+  for (const r of rows) {
+    const p = prevByName ? prevByName[r.name] : null;
+    const rankDelta = p ? p.rank - r.rank : 0;
+    const pointsDelta = p ? r.livePoints - p.livePoints : 0;
+    if (rankDelta !== 0 || pointsDelta !== 0) changed.push({ name: r.name, rankDelta, pointsDelta });
+    if (rankDelta > liftScore) { liftScore = rankDelta; liftName = r.name; }
+  }
+  if (!changed.length) return;
+
+  const spotlight = (mover && mover.name) || liftName;
+
+  // FIRST→invert: colocar cada fila movida en su posición previa, sin transición
+  const flying = [];
+  for (const name of Object.keys(lastRects)) {
+    const el = elByName[name];
+    const inner = el && el.querySelector('.livev2-inner');
+    if (!inner) continue;
+    const dy = deltas[name] || 0;
+    if (dy) {
+      inner.style.transition = 'none';
+      inner.style.transform = `translateY(${dy}px)`;
+      flying.push({ inner });
+    }
+  }
+  void container.offsetHeight; // forzar reflow
+
+  // clases de estado: dim al contenedor, mv a la protagonista, lift a la que sube, fu/fd destello
+  container.classList.add('dim');
+  for (const c of changed) {
+    const el = elByName[c.name];
+    const inner = el && el.querySelector('.livev2-inner');
+    if (!inner) continue;
+    if (c.name === spotlight) el.classList.add('mv');
+    if (c.name === liftName) inner.classList.add('lift');
+    if (c.rankDelta > 0 || (c.rankDelta === 0 && c.pointsDelta > 0)) inner.classList.add('fu');
+    else if (c.rankDelta < 0 || (c.rankDelta === 0 && c.pointsDelta < 0)) inner.classList.add('fd');
+  }
+
+  // LAST→play: animar a destino con la curva de vuelo
+  const flight = `transform ${LIVEV2_FLIGHT_MS}ms cubic-bezier(.22,1,.36,1), box-shadow .3s, opacity .3s, background .3s`;
+  for (const f of flying) {
+    f.inner.style.transition = flight;
+    f.inner.style.transform = '';
+  }
+
+  // settle: retirar clases y estilos inline
+  setTimeout(() => {
+    container.classList.remove('dim');
+    for (const c of changed) {
+      const el = elByName[c.name];
+      if (!el) continue;
+      el.classList.remove('mv');
+      const inner = el.querySelector('.livev2-inner');
+      if (inner) {
+        inner.style.transition = '';
+        inner.style.transform = '';
+        inner.classList.remove('lift', 'fu', 'fd');
+      }
+    }
+    container.querySelectorAll('.livev2-reason').forEach(el => {
+      if (!el.classList.contains('show')) el.remove();
+    });
+  }, LIVEV2_FLIGHT_MS + 60);
+}
+
 /** Actualización incremental del DOM keyed por usuario (sin re-render completo) */
 function updateLiveV2Dom(rows, folded) {
   const root = document.querySelector('.resultados-scroll .livev2') || document.querySelector('.livev2');
   const container = document.getElementById('livev2-rows');
   if (!root || !container) return;
+
+  const st = liveV2State();
+  const prevByName = {};
+  for (const r of (st._lastRows || [])) prevByName[r.name] = r;
+
+  // Eventos aparecidos desde el último render (para la etiqueta de motivo)
+  if (!(st._seenEventIds instanceof Set)) st._seenEventIds = new Set();
+  const newEvents = [];
+  for (const e of (st.events || [])) {
+    const id = String(e._id);
+    if (!st._seenEventIds.has(id)) { newEvents.push(e); st._seenEventIds.add(id); }
+  }
 
   // Transición vacío↔en vivo: re-render completo del contenido live (chips y mensaje
   // de "sin partidos" no se pueden parchear limpiamente entre sí).
@@ -2472,12 +2673,24 @@ function updateLiveV2Dom(rows, folded) {
     const scroll = root.parentElement;
     const target = scroll && scroll.classList.contains('resultados-scroll') ? scroll : root;
     target.innerHTML = renderLiveV2Html(rows, folded);
+    st._lastRows = liveV2Snapshot(rows);
     return;
+  }
+
+  const reduced = liveV2PrefersReducedMotion();
+
+  // FIRST: medir posiciones previas de cada fila (solo si vamos a animar)
+  const firstRects = {};
+  if (!reduced) {
+    container.querySelectorAll('[data-livev2-row]').forEach(el => {
+      firstRects[el.getAttribute('data-livev2-row')] = el.getBoundingClientRect();
+    });
   }
 
   const existing = new Map();
   container.querySelectorAll('[data-livev2-row]').forEach(el => existing.set(el.getAttribute('data-livev2-row'), el));
   const present = new Set(rows.map(r => r.name));
+  const countUps = [];
   let prev = null;
   for (const r of rows) {
     let el = existing.get(r.name);
@@ -2487,7 +2700,14 @@ function updateLiveV2Dom(rows, folded) {
       el = tmp.firstElementChild;
     } else {
       el.querySelector('.livev2-rank').textContent = r.rank;
-      el.querySelector('.livev2-pts').textContent = r.livePoints;
+      const ptsEl = el.querySelector('.livev2-pts');
+      const prevPts = prevByName[r.name] ? prevByName[r.name].livePoints : null;
+      if (!reduced && prevPts != null && prevPts !== r.livePoints) {
+        ptsEl.textContent = prevPts;
+        countUps.push({ el: ptsEl, from: prevPts, to: r.livePoints });
+      } else {
+        ptsEl.textContent = r.livePoints;
+      }
       const d = r.delta || 0;
       const arrow = el.querySelector('.livev2-arrow');
       arrow.textContent = d > 0 ? `▲${d}` : d < 0 ? `▼${Math.abs(d)}` : '';
@@ -2539,6 +2759,22 @@ function updateLiveV2Dom(rows, folded) {
     badgeEl.textContent = badge.text;
     badgeEl.className = `livev2-badge ${badge.cls}`;
   }
+
+  // Motivo del cambio (fila protagonista) + animación "elevar 3D"
+  const mover = liveV2MoverReason(rows, prevByName, newEvents);
+  if (!reduced && Object.keys(firstRects).length) {
+    liveV2AnimateReorder(container, firstRects, rows, prevByName, mover);
+  }
+  for (const c of countUps) liveV2CountUp(c.el, c.from, c.to, LIVEV2_FLIGHT_MS);
+  if (mover) {
+    let rowEl = null;
+    container.querySelectorAll('[data-livev2-row]').forEach(el => {
+      if (el.getAttribute('data-livev2-row') === mover.name) rowEl = el;
+    });
+    liveV2ShowReason(container, rowEl, mover.label);
+  }
+
+  st._lastRows = liveV2Snapshot(rows);
 }
 
 let _liveV2PollTimer = null;
@@ -2581,8 +2817,7 @@ async function pollLiveV2() {
     await fetchLiveEvents(false);
     const folded = liveV2Folded(null);
     const rows = liveV2Rows(folded);
-    st._lastRows = rows.map(r => ({ name: r.name, rank: r.rank }));
-    updateLiveV2Dom(rows, folded);
+    updateLiveV2Dom(rows, folded); // actualiza st._lastRows tras comparar/anima
   } catch (e) { /* reintenta al siguiente tick */ }
   st.polling = false;
 }
@@ -2596,7 +2831,8 @@ async function renderLiveV2Tab() {
   try { await fetchLiveEvents(!st.serverTime); } catch (e) { /* sin eventos disponibles */ }
   const folded = liveV2Folded(null);
   const rows = liveV2Rows(folded);
-  st._lastRows = rows.map(r => ({ name: r.name, rank: r.rank }));
+  st._lastRows = liveV2Snapshot(rows);
+  st._seenEventIds = new Set((st.events || []).map(e => String(e._id)));
   startLiveV2Polling();
   return renderLiveV2Html(rows, folded);
 }
