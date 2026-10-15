@@ -9,8 +9,9 @@
 3. [Clasificación](#3-clasificación)
 4. [Resultados](#4-resultados)
    - 4.1 Subtab: Jornadas
-   - 4.2 Subtab: Clasificación real
-   - 4.3 Subtab: Eliminatorias
+   - 4.2 Subtab: Live
+   - 4.3 Subtab: Clasificación real
+   - 4.4 Subtab: Eliminatorias
 5. [Pronósticos](#5-pronósticos)
    - 5.1 Subpantalla: Clasificación pronosticada
    - 5.2 Subpantalla: Eliminatorias
@@ -168,14 +169,29 @@ Al pulsar sobre un usuario se abre un modal con 3 tabs: **Pronósticos**, **Plan
 | FASE_FINAL | ✅ | Todas | ✅ |
 | FASE_POSTFINAL | ✅ | Todas (finales) | ✅ |
 
-### 4.2 Subtab: Clasificación real
+### 4.2 Subtab: Live
+
+Directo de los partidos en juego mediante **event-sourcing** (`js/liveV2.js`). Muestra la clasificación en vivo (puntos oficiales + delta de los partidos en directo), los chips de los partidos en juego, el delta de tus puntos y el motivo del último cambio, con un reproductor temporal.
+
+| Fase | Visible | Contenido |
+|---|---|---|
+| FASE_PRETEMPORADA | ❌ No disponible | — |
+| FASE_LIGA → FASE_POSTFINAL | ✅ | Partidos en directo, clasificación en vivo y reproductor (scrub + play + volver al directo) |
+
+**Comportamiento:**
+- Poll en segundo plano (intervalo `AppState.liveRefreshSecs`) sin recargar la pestaña: descarga de eventos (`GET /api/live/events`, delta con `?since=`) y fold con `js/liveV2.js`.
+- La clasificación suma a los puntos oficiales el delta de los partidos aún no finalizados.
+- Animación **"elevar 3D" + FLIP** al reordenarse las filas, con etiqueta de motivo (gol, gol anulado, cambio de puesto…).
+- Reproductor temporal: arrastra la línea de tiempo para reconstruir el estado en un instante pasado; "Volver al directo" retoma el presente.
+
+### 4.3 Subtab: Clasificación real
 
 | Fase | Visible | Contenido |
 |---|---|---|
 | FASE_PRETEMPORADA | ❌ No disponible | — |
 | FASE_LIGA → FASE_POSTFINAL | ✅ | Tabla de equipos con Pts, DG, GF, GC, PJ (calculada desde matchStats) |
 
-### 4.3 Subtab: Eliminatorias
+### 4.4 Subtab: Eliminatorias
 
 Muestra los equipos eliminados en cada ronda de la fase final (a partir de dieciseisavos), calculado por agregado de goles de ida y vuelta.
 

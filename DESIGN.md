@@ -217,6 +217,11 @@ Degradado `135deg #0B193C → #1E1B4B → #047857`, 20px radius, `shadow-card`, 
 ### Modal / Rules
 Overlay `rgba(0,0,0,0.6)` + blur 20px; content surface/card con 20px radius + `0 20px 40px rgba(0,0,0,0.8)`. Header con título + close `×`, body scrolleable, footer con actions. Variante `rules-modal` añade chips de navegación con `.active` emerald.
 
+### Live en directo
+- **Elevación "elevar 3D":** al reordenarse la clasificación en vivo, la fila sube con `transform` + `box-shadow` (FLIP: vuela de su posición previa a la nueva con curva `cubic-bezier(.22,1,.36,1)` ~700ms); el contenedor se atenúa (`.dim`), la fila protagonista se exime (`.mv`) y recibe destello `emerald` (`.fu`) o `red` (`.fd`). Respeta `prefers-reduced-motion`.
+- **Etiqueta de motivo:** píldora flotante sobre la fila (`⚽ Gol de …`, `▲ Subes al 3º`) con el delta de puntos, visible ~2.5s.
+- **Reproductor (timeline):** pista con marcas por evento coloreadas por tipo (gol, anulado, penalti, tarjeta, cambio…), knob arrastrable, botón play/pausa y "⏭ Volver al directo". Al arrastrar se reconstruye el instante con `stateAt(T)`; el badge pasa de `● EN DIRECTO` (rojo) a `▶ REPRODUCIENDO` (oro).
+
 ## Do's and Don'ts
 
 ### Do:
