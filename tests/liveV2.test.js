@@ -70,6 +70,15 @@ test('matchClockAt cuenta minutos desde kickoff', () => {
   assert.equal(matchClockAt(s, Date.parse('2026-09-16T20:23:00Z')), 23);
 });
 
+test('matchClockAt topa a 45 en el descanso y resta 15 en la 2ª parte', () => {
+  const s = createMatchState();
+  applyEvent(s, { type: 'status', ts: '2026-09-16T20:00:00Z', payload: { status: 'LIVE', period: 'period1' } }, CTX);
+  applyEvent(s, { type: 'status', ts: '2026-09-16T20:45:00Z', payload: { status: 'HT', period: 'halftime' } }, CTX);
+  assert.equal(matchClockAt(s, Date.parse('2026-09-16T20:50:00Z')), 45);
+  applyEvent(s, { type: 'status', ts: '2026-09-16T21:00:00Z', payload: { status: 'LIVE', period: 'period2' } }, CTX);
+  assert.equal(matchClockAt(s, Date.parse('2026-09-16T21:10:00Z')), 55);
+});
+
 test('minutesOf titulares acumula y se congela al salir', () => {
   const s = createMatchState();
   applyEvent(s, { type: 'status', ts: '2026-09-16T20:00:00Z', payload: { status: 'LIVE' } }, CTX);

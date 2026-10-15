@@ -83,8 +83,10 @@
     const start = new Date(state.kickoffTs).getTime();
     const end = playheadTs;
     let mins = Math.floor((end - start) / 60000);
-    // descanso: si pasó HT y hay periodo 2, restar 15' de descanso aproximado
-    if (state.htTs && new Date(state.htTs).getTime() <= end) mins -= 15;
+    if (state.htTs && new Date(state.htTs).getTime() <= end) {
+      const resumed = state.period && state.period !== 'period1' && state.period !== 'halftime';
+      if (resumed) mins -= 15; else mins = Math.min(mins, 45); // durante el descanso, tope 45'
+    }
     return Math.max(0, mins);
   }
 
