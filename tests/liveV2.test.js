@@ -93,3 +93,33 @@ test('penalti parado suma al portero', () => {
   applyEvent(s, { type: 'penalty_saved', payload: { keeperId: 1, takerId: 9 } }, CTX);
   assert.equal(s.players[1].penaltySaved, 1);
 });
+
+const { foldMatch, foldAll, stateAt } = liveV2;
+
+test('foldMatch ordena por ts antes de plegar', () => {
+  const events = [
+    { eventId: 100, ts: '2026-09-16T20:05:00Z', type: 'goal', sourceId: 'g2', payload: { scorerId: 12, isHome: false } },
+    { eventId: 100, ts: '2026-09-16T20:01:00Z', type: 'goal', sourceId: 'g1', payload: { scorerId: 11, isHome: true } }
+  ];
+  const s = foldMatch(events, CTX);
+  assert.deepEqual(s.score, { home: 1, away: 1 });
+});
+
+test('stateAt solo pliega eventos hasta T', () => {
+  const events = [
+    { eventId: 100, ts: '2026-09-16T20:01:00Z', type: 'goal', sourceId: 'g1', payload: { scorerId: 11, isHome: true } },
+    { eventId: 100, ts: '2026-09-16T20:30:00Z', type: 'goal', sourceId: 'g2', payload: { scorerId: 12, isHome: false } }
+  ];
+  const at = stateAt(events, Date.parse('2026-09-16T20:10:00Z'), { 100: CTX });
+  assert.deepEqual(at[100].score, { home: 1, away: 0 });
+});
+
+test('foldAll agrupa por eventId', () => {
+  const events = [
+    { eventId: 1, ts: '2026-09-16T20:01:00Z', type: 'goal', sourceId: 'a', payload: { isHome: true } },
+    { eventId: 2, ts: '2026-09-16T20:01:00Z', type: 'goal', sourceId: 'b', payload: { isHome: false } }
+  ];
+  const all = foldAll(events, { 1: { homeTeamId: 1, awayTeamId: 2 }, 2: { homeTeamId: 3, awayTeamId: 4 } });
+  assert.deepEqual(all[1].score, { home: 1, away: 0 });
+  assert.deepEqual(all[2].score, { home: 0, away: 1 });
+});

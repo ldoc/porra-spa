@@ -99,7 +99,27 @@
     return Math.max(0, end - (p.entryMinute || 0));
   }
 
-  const liveV2Api = { createMatchState, applyEvent, newPlayer, matchClockAt, minutesOf };
+  function byTs(a, b) { return new Date(a.ts) - new Date(b.ts); }
+
+  function foldMatch(events, ctx) {
+    const state = createMatchState();
+    for (const ev of [...events].sort(byTs)) applyEvent(state, ev, ctx);
+    return state;
+  }
+
+  function foldAll(events, ctxById) {
+    const groups = {};
+    for (const ev of events) (groups[ev.eventId] = groups[ev.eventId] || []).push(ev);
+    const out = {};
+    for (const [id, list] of Object.entries(groups)) out[id] = foldMatch(list, ctxById[id] || {});
+    return out;
+  }
+
+  function stateAt(events, T, ctxById) {
+    return foldAll(events.filter(e => new Date(e.ts).getTime() <= T), ctxById);
+  }
+
+  const liveV2Api = { createMatchState, applyEvent, newPlayer, matchClockAt, minutesOf, foldMatch, foldAll, stateAt };
   global.liveV2Api = liveV2Api;
   if (typeof module !== 'undefined' && module.exports) module.exports = liveV2Api;
 })(typeof window !== 'undefined' ? window : globalThis);
