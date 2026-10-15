@@ -123,6 +123,13 @@
     const playhead = playheadTs != null ? playheadTs : Date.now();
     const jugadores = Object.values(state.players).map(pl => {
       const meta = (ctx.playersById && ctx.playersById[pl.id]) || {};
+      const esPortero = meta.posicion === 'G';
+      let golesRecibidos = pl.goalsReceived;
+      if (esPortero && meta.equipo != null) {
+        golesRecibidos = meta.equipo === ctx.homeTeamId ? state.score.away
+                       : meta.equipo === ctx.awayTeamId ? state.score.home
+                       : golesRecibidos;
+      }
       return {
         id: String(pl.id),
         nombre: meta.nombre || String(pl.id),
@@ -135,7 +142,7 @@
         esSuplente: !pl.onPitch && (pl.entryMinute || 0) > 0,
         penaltiMarcado: pl.penaltyScored,
         penaltiParado: pl.penaltySaved,
-        golesRecibidos: pl.goalsReceived,
+        golesRecibidos,
         asistencias: pl.assists
       };
     });

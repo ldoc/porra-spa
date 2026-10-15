@@ -143,3 +143,15 @@ test('matchStateToStats produce stats con marcador y jugadores', () => {
   assert.equal(p11.puntos, 7.5);
   assert.equal(p11.posicion, 'F');
 });
+
+test('matchStateToStats atribuye goles recibidos al portero', () => {
+  const s = createMatchState();
+  const ctx = { homeTeamId: 1, awayTeamId: 2, playersById: {
+    11: { nombre: 'A', posicion: 'F', equipo: 1 }, 12: { nombre: 'B', posicion: 'G', equipo: 2 }
+  } };
+  applyEvent(s, { type: 'lineup', payload: { starters: [11, 12] } }, ctx);
+  applyEvent(s, { type: 'goal', playerId: 11, payload: { scorerId: 11, isHome: true, isOwnGoal: false } }, ctx);
+  const stats = matchStateToStats(s, ctx);
+  const gk = stats.jugadores.find(j => String(j.id) === '12');
+  assert.equal(gk.golesRecibidos, 1);
+});
