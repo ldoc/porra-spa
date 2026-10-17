@@ -1876,10 +1876,18 @@ function liveOfficialRows() {
 
 function liveV2State() {
   if (!AppState.liveV2) {
-    AppState.liveV2 = { events: [], serverTime: null, prevRanks: null, polling: false, _lastRows: [], _seenEventIds: null };
+    AppState.liveV2 = {
+      events: [], serverTime: null, prevRanks: null, polling: false, _lastRows: [], _seenEventIds: null,
+      _chipChanged: {}, // eventId -> ts del último cambio de marcador (para glow + orden)
+      _chipScores: {},  // eventId -> "home-away" del poll anterior (detección de cambios)
+    };
   }
+  if (!AppState.liveV2._chipChanged) AppState.liveV2._chipChanged = {};
+  if (!AppState.liveV2._chipScores) AppState.liveV2._chipScores = {};
   return AppState.liveV2;
 }
+
+const LIVEV2_CHIP_GLOW_MS = 10000;
 
 /** playerId -> { nombre, posicion, equipo } desde AppState.allPlayers */
 function liveV2PlayersById() {
@@ -1968,11 +1976,78 @@ function liveV2ChipHtml(eventId, state) {
   const meta = liveMatchMeta({ eventId: match ? match.id : eventId });
   const score = state && state.score ? `${state.score.home}-${state.score.away}` : '–';
   const live = !!(state && (state.status === 'LIVE' || state.status === 'HT'));
-  return `<div class="livev2-chip${live ? ' live' : ''}">`
+  const changed = liveV2ChipIsRecentChange(eventId);
+  return `<div class="livev2-chip${live ? ' live' : ''}${changed ? ' changed' : ''}" data-livev2-chip="${liveV2Esc(eventId)}">`
     + `<span class="livev2-chip-team">${liveV2Esc(meta.homeTeam || '?')}</span>`
     + `<span class="livev2-chip-score">${score}</span>`
     + `<span class="livev2-chip-team">${liveV2Esc(meta.awayTeam || '?')}</span>`
     + `</div>`;
+}
+
+/** Timestamp de kickoff (segundos Unix) de un partido, o Infinity si no se conoce */
+function liveV2KickoffTs(eventId) {
+  const m = (AppState.matches || []).find(x => String(x.id) === String(eventId));
+  return m && isFinite(m.fechaTs) ? m.fechaTs : Infinity;
+}
+
+/** true si el chip cambió de marcador en los últimos LIVEV2_CHIP_GLOW_MS */
+function liveV2ChipIsRecentChange(eventId) {
+  const st = liveV2State();
+  const ts = st._chipChanged ? st._chipChanged[String(eventId)] : null;
+  return !!(ts && (Date.now() - ts) < LIVEV2_CHIP_GLOW_MS);
+}
+
+/**
+ * Detecta cambios de marcador entre polls comparando el `score` plegado.
+ * Al cambiar, guarda `changedAt` (para glow + salto al frente). Puro sobre AppState.
+ */
+function liveV2DetectChipChanges(folded) {
+  const st = liveV2State();
+  const now = Date.now();
+  for (const [id, s] of Object.entries((folded && folded.states) || {})) {
+    const key = String(id);
+    const cur = s && s.score ? `${s.score.home}-${s.score.away}` : null;
+    const prev = st._chipScores[key];
+    if (prev != null && cur != null && prev !== cur) st._chipChanged[key] = now;
+    st._chipScores[key] = cur;
+  }
+}
+
+/**
+ * Orden de los chips (regla aprobada):
+ * - Los partidos cuyo marcador cambió van al frente, más reciente primero.
+ * - El resto, por hora de kickoff ascendente.
+ */
+function liveV2OrderedStateEntries(folded) {
+  const st = liveV2State();
+  const changed = st._chipChanged || {};
+  const entries = Object.entries((folded && folded.states) || {});
+  const changedEntries = entries.filter(([id]) => changed[String(id)]);
+  const unchanged = entries.filter(([id]) => !changed[String(id)]);
+  changedEntries.sort((a, b) => (changed[String(b[0])] || 0) - (changed[String(a[0])] || 0));
+  unchanged.sort((a, b) => liveV2KickoffTs(a[0]) - liveV2KickoffTs(b[0]));
+  return [...changedEntries, ...unchanged];
+}
+
+/** Texto del delta de puntos: ▲ +N / ▼ N / +0 */
+function liveV2DeltaText(d) {
+  if (d > 0) return `▲ +${d}`;
+  if (d < 0) return `▼ ${d}`;
+  return '+0';
+}
+
+/** Reaplica el glow 10 s a los chips que acaban de cambiar y lo retira solo (mantiene posición) */
+function liveV2ScheduleChipGlowTimers(root) {
+  const st = liveV2State();
+  const now = Date.now();
+  (root || document).querySelectorAll('.livev2-chip.changed').forEach(chip => {
+    const id = chip.getAttribute('data-livev2-chip');
+    const ts = id != null && st._chipChanged ? st._chipChanged[id] : null;
+    if (!ts) return;
+    const remaining = LIVEV2_CHIP_GLOW_MS - (now - ts);
+    if (remaining <= 0) { chip.classList.remove('changed'); return; }
+    setTimeout(() => chip.classList.remove('changed'), remaining);
+  });
 }
 
 function liveV2RowHtml(r) {
@@ -1990,25 +2065,25 @@ function liveV2RowHtml(r) {
 
 /** innerHTML de los chips de partidos ('' si no hay ninguno en folded.states) */
 function liveV2ChipsHtml(folded) {
-  return Object.entries(folded.states || {}).map(([id, s]) => liveV2ChipHtml(id, s)).join('');
+  return liveV2OrderedStateEntries(folded).map(([id, s]) => liveV2ChipHtml(id, s)).join('');
 }
 
-/** Feed compacto de los eventos más recientes del presente. */
+/** Ticker compacto (1–2 líneas) con los eventos más recientes del presente. */
 function liveV2FeedHtml() {
   const st = liveV2State();
   const playersById = liveV2PlayersById();
   const events = (st.events || [])
     .filter(e => isFinite(new Date(e.ts).getTime()))
     .sort((a, b) => new Date(a.ts).getTime() - new Date(b.ts).getTime())
-    .slice(-8)
+    .slice(-2)
     .reverse();
   const items = events.map(e => {
     const l = (typeof liveV2Api !== 'undefined' && liveV2Api.feedLabel) ? liveV2Api.feedLabel(e, playersById) : null;
     if (!l) return '';
-    return `<div class="livev2-feed-item">${l.icon} ${liveV2Esc(l.text)}</div>`;
-  }).join('');
-  return `<div class="livev2-feed-head">📣 Última hora</div>`
-    + (items || `<div class="livev2-feed-empty">Aún no hay eventos.</div>`);
+    return `<span class="livev2-ticker-item">${l.icon} ${liveV2Esc(l.text)}</span>`;
+  }).filter(Boolean).join('');
+  return `<div class="livev2-ticker-head">📣 Últimos eventos</div>`
+    + `<div class="livev2-ticker-body">${items || `<span class="livev2-ticker-empty">Aún no hay eventos.</span>`}</div>`;
 }
 
 function liveV2ClockText() {
@@ -2027,6 +2102,7 @@ function renderLiveV2Html(rows, folded) {
   const clock = liveV2ClockText();
   const ptsDelta = me ? (me.pointsDelta || 0) : 0;
   return `<div class="livev2">`
+    + `<div class="livev2-fixed">`
     + `<div class="livev2-status">`
     + `<span class="livev2-badge ${status.cls}">${status.text}</span>`
     + `<span class="livev2-clock">${clock}</span>`
@@ -2034,13 +2110,18 @@ function renderLiveV2Html(rows, folded) {
     + `<div class="livev2-hero">`
     + `<div class="livev2-hero-label">⚡ TUS PUNTOS LIVE</div>`
     + `<div class="livev2-hero-points">${me ? me.livePoints : 0}`
-    + `<span class="livev2-hero-delta ${ptsDelta < 0 ? 'down' : 'up'}">${ptsDelta >= 0 ? '+' : ''}${ptsDelta}</span></div>`
+    + `<span class="livev2-hero-delta ${ptsDelta < 0 ? 'down' : 'up'}">${liveV2DeltaText(ptsDelta)}</span></div>`
     + `</div>`
+    + `<div class="livev2-chips-host" id="livev2-chips-host">`
     + (chips ? `<div class="livev2-chips">${chips}</div>`
       : `<div class="livev2-empty">Sin partidos en directo ahora mismo</div>`)
+    + `</div>`
+    + `<div id="livev2-feed" class="livev2-feed">${liveV2FeedHtml()}</div>`
+    + `</div>`
+    + `<div class="livev2-body">`
     + `<div class="livev2-section-title">Clasificación en vivo</div>`
     + `<div class="livev2-rows" id="livev2-rows">${rows.map(liveV2RowHtml).join('')}</div>`
-    + `<div id="livev2-feed" class="livev2-feed">${liveV2FeedHtml()}</div>`
+    + `</div>`
     + `</div>`;
 }
 
@@ -2257,6 +2338,9 @@ function updateLiveV2Dom(rows, folded) {
   const prevByName = {};
   for (const r of (st._lastRows || [])) prevByName[r.name] = r;
 
+  // Detectar cambios de marcador (glow + salto al frente) antes de reconstruir chips
+  liveV2DetectChipChanges(folded);
+
   // Eventos aparecidos desde el último render (para la etiqueta de motivo)
   if (!(st._seenEventIds instanceof Set)) st._seenEventIds = new Set();
   const newEvents = [];
@@ -2276,6 +2360,7 @@ function updateLiveV2Dom(rows, folded) {
     const scroll = root.parentElement;
     const target = scroll && scroll.classList.contains('resultados-scroll') ? scroll : root;
     target.innerHTML = renderLiveV2Html(rows, folded);
+    liveV2ScheduleChipGlowTimers(target);
     st._lastRows = liveV2Snapshot(rows);
     return;
   }
@@ -2330,27 +2415,17 @@ function updateLiveV2Dom(rows, folded) {
   const heroPoints = root.querySelector('.livev2-hero-points');
   if (heroPoints && me) {
     const pd = me.pointsDelta || 0;
-    heroPoints.innerHTML = `${me.livePoints}<span class="livev2-hero-delta ${pd < 0 ? 'down' : 'up'}">${pd >= 0 ? '+' : ''}${pd}</span>`;
+    heroPoints.innerHTML = `${me.livePoints}<span class="livev2-hero-delta ${pd < 0 ? 'down' : 'up'}">${liveV2DeltaText(pd)}</span>`;
   }
 
-  // Chips: rebuild siempre desde el estado actual (crear si falta)
+  // Chips: rebuild siempre desde el estado actual dentro del host estable
   const chipsHtml = liveV2ChipsHtml(folded);
-  const chipHost = root.querySelector('.livev2-chips') || root.querySelector('.livev2-empty');
-  if (chipsHtml) {
-    if (chipHost && chipHost.classList.contains('livev2-chips')) {
-      chipHost.innerHTML = chipsHtml;
-    } else {
-      const html = `<div class="livev2-chips">${chipsHtml}</div>`;
-      if (chipHost) chipHost.outerHTML = html;
-      else root.querySelector('.livev2-section-title')?.insertAdjacentHTML('beforebegin', html);
-    }
-  } else {
-    // Sin partidos: mostrar el mensaje (nunca una barra vacía)
-    if (!(chipHost && chipHost.classList.contains('livev2-empty'))) {
-      const html = `<div class="livev2-empty">Sin partidos en directo ahora mismo</div>`;
-      if (chipHost) chipHost.outerHTML = html;
-      else root.querySelector('.livev2-section-title')?.insertAdjacentHTML('beforebegin', html);
-    }
+  const chipHost = root.querySelector('#livev2-chips-host');
+  if (chipHost) {
+    chipHost.innerHTML = chipsHtml
+      ? `<div class="livev2-chips">${chipsHtml}</div>`
+      : `<div class="livev2-empty">Sin partidos en directo ahora mismo</div>`;
+    liveV2ScheduleChipGlowTimers(chipHost);
   }
 
   // Reloj y badge de estado: refrescar en cada update para que el reloj avance
@@ -2434,6 +2509,7 @@ async function renderLiveV2Tab() {
   const st = liveV2State();
   try { await fetchLiveEvents(!st.serverTime); } catch (e) { /* sin eventos disponibles */ }
   const folded = liveV2Folded();
+  liveV2DetectChipChanges(folded);
   const rows = liveV2Rows(folded);
   st._lastRows = liveV2Snapshot(rows);
   st._seenEventIds = new Set((st.events || []).map(e => String(e._id)));

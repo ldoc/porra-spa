@@ -6371,6 +6371,32 @@ html, body {
   padding-top: 10px;
 }
 
+/* Cabecera fija: se pega al top del scroll container (.resultados-scroll) */
+.livev2-fixed {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: var(--ucl-dark);
+  padding: 10px 0 8px;
+  border-bottom: 1px solid var(--border-color);
+  box-shadow: 0 10px 18px -14px rgba(0, 0, 0, 0.9);
+}
+
+/* Región de la clasificación (el header queda fuera de su flujo visual) */
+.livev2-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 0;
+}
+
+.livev2-chips-host {
+  min-height: 0;
+}
+
 .livev2-status {
   display: flex;
   align-items: center;
@@ -6446,11 +6472,23 @@ html, body {
   border-radius: var(--radius-full);
   padding: 6px 12px;
   font-size: var(--font-size-xs);
-  min-height: 32px;
+  min-height: 44px;
 }
 
 .livev2-chip.live {
   border-color: rgba(16, 185, 129, 0.5);
+}
+
+/* Glow de 10 s al cambiar el marcador (la posición se mantiene al retirarlo) */
+.livev2-chip.changed {
+  border-color: rgba(16, 185, 129, 0.85);
+  animation: livev2-chip-glow 10s ease-out forwards;
+}
+
+@keyframes livev2-chip-glow {
+  0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.85); background-color: #0E2A25; }
+  15% { box-shadow: 0 0 16px 3px rgba(16, 185, 129, 0.75); }
+  100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
 }
 
 .livev2-chip-team {
@@ -6634,6 +6672,9 @@ html, body {
   .livev2-inner.fd {
     animation: none;
   }
+  .livev2-chip.changed {
+    animation: none;
+  }
 }
 
 .livev2-feed {
@@ -6647,40 +6688,33 @@ html, body {
   padding: 8px 10px;
 }
 
-.livev2-feed-head {
+/* Ticker compacto de últimos eventos (1–2 líneas) */
+.livev2-ticker-head {
   font-size: var(--font-size-xs);
   color: var(--text-secondary);
   font-weight: 800;
   letter-spacing: 0.5px;
   text-transform: uppercase;
-  margin-bottom: 4px;
 }
 
-.livev2-feed-item {
-  font-size: var(--font-size-sm);
+.livev2-ticker-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 3px;
+}
+
+.livev2-ticker-item {
+  font-size: var(--font-size-xs);
   color: var(--text-primary);
-  padding: 4px 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  font-variant-numeric: tabular-nums;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.livev2-feed-item:last-child {
-  border-bottom: none;
-}
-
-.livev2-feed-empty {
-  font-size: var(--font-size-sm);
-  color: var(--text-muted);
-  padding: 4px 0;
-}
-
-.livev2-feed-item {
+.livev2-ticker-empty {
   font-size: var(--font-size-xs);
-  color: var(--text-secondary);
-  font-variant-numeric: tabular-nums;
-  padding: 2px;
-  text-align: center;
+  color: var(--text-muted);
 }
 
