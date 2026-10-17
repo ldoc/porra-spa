@@ -2233,7 +2233,8 @@ function liveV2ShowReason(container, rowEl, label) {
   const el = document.createElement('div');
   el.className = 'livev2-reason' + (label.delta < 0 ? ' neg' : '');
   el.textContent = `${label.icon} ${label.text}` + (label.delta ? ` · ${label.delta > 0 ? '+' : ''}${label.delta} pts` : '');
-  el.style.top = Math.max(0, rowEl.offsetTop - 6) + 'px';
+  // Se coloca DEBAJO de la fila para no quedar oculto por la cabecera fija (.livev2-fixed, z-index 20)
+  el.style.top = (rowEl.offsetTop + rowEl.offsetHeight + 4) + 'px';
   container.appendChild(el);
   if (typeof requestAnimationFrame === 'function') requestAnimationFrame(() => el.classList.add('show'));
   else el.classList.add('show');
@@ -2674,6 +2675,9 @@ async function renderResultadosTab() {
     <div class="resultados-header">${headerHtml}</div>
     <div class="resultados-scroll">${scrollHtml}</div>
   `;
+
+  // Render inicial del Live: retirar el glow de los chips cambiados tras 10 s (no solo en el poll)
+  if (isLiveTab) liveV2ScheduleChipGlowTimers(container);
 
   // Auto-scroll al último partido disputado cuando la jornada se auto-seleccionó
   if (shouldAutoScroll) {
