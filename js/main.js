@@ -1813,6 +1813,110 @@ function unlockLiveAudio() {
   return _liveAudioCtx;
 }
 
+// Sonido del Live v2: preferencia persistida en localStorage (default ON).
+// El AudioContext se crea perezosamente en el primer tap del usuario (unlockLiveAudio).
+let _liveV2SoundEnabled = null;
+function liveV2SoundEnabled() {
+  if (_liveV2SoundEnabled === null) {
+    try {
+      _liveV2SoundEnabled = (typeof soundApi !== 'undefined' && soundApi.loadSoundEnabled)
+        ? soundApi.loadSoundEnabled(localStorage) : true;
+    } catch (e) { _liveV2SoundEnabled = true; }
+  }
+  return _liveV2SoundEnabled;
+}
+
+function setLiveV2SoundEnabled(v) {
+  _liveV2SoundEnabled = !!v;
+  try {
+    if (typeof soundApi !== 'undefined' && soundApi.saveSoundEnabled) {
+      soundApi.saveSoundEnabled(localStorage, _liveV2SoundEnabled);
+    }
+  } catch (e) { /* sin storage */ }
+}
+
+/** Botón 🔔/🔕 de la cabecera fija del Live v2 (zona táctil ≥44px). */
+function liveV2SoundToggleHtml() {
+  const on = liveV2SoundEnabled();
+  return `<button type="button" id="livev2-sound-toggle" class="livev2-sound${on ? ' on' : ''}"`
+    + ` aria-label="${on ? 'Silenciar sonido' : 'Activar sonido'}" aria-pressed="${on ? 'true' : 'false'}">${on ? '🔔' : '🔕'}</button>`;
+}
+
+function updateLiveV2SoundToggle(root) {
+  const scope = root || document;
+  const btn = scope.querySelector('#livev2-sound-toggle');
+  if (!btn) return;
+  const on = liveV2SoundEnabled();
+  btn.textContent = on ? '🔔' : '🔕';
+  btn.classList.toggle('on', on);
+  btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+  btn.setAttribute('aria-label', on ? 'Silenciar sonido' : 'Activar sonido');
+}
+
+function bindLiveV2SoundToggle(root) {
+  const scope = root || document;
+  const btn = scope.querySelector('#livev2-sound-toggle');
+  if (!btn || btn.dataset.bound === '1') return;
+  btn.dataset.bound = '1';
+  btn.addEventListener('click', () => {
+    setLiveV2SoundEnabled(!liveV2SoundEnabled());
+    unlockLiveAudio(); // crea el AudioContext en un gesto del usuario
+    updateLiveV2SoundToggle(scope);
+  });
+}
+
+/** deps de soundApi.playLiveEvent, o null si el sonido está desactivado. */
+function liveV2SoundDeps() {
+  if (typeof soundApi === 'undefined' || !soundApi.playLiveEvent || !soundApi.loadSoundEnabled) return null;
+  let enabled = true;
+  try { enabled = soundApi.loadSoundEnabled(localStorage); } catch (e) { enabled = true; }
+  if (!enabled) return null;
+  return { enabled, ctx: _liveAudioCtx, navigatorRef: (typeof navigator !== 'undefined' ? navigator : null) };
+}
+
+/** Traduce un evento live a la forma que entiende soundApi.eventToTone (o null si no suena). */
+function liveV2ToneEventFor(ev) {
+  if (!ev) return null;
+  if (ev.type === 'goal') return { type: 'goal' };
+  if (ev.type === 'status') {
+    const status = ev.payload && ev.payload.status;
+    return status === 'FT' ? { type: 'end' } : { type: 'status' };
+  }
+  return null;
+}
+
+/** true si el goleador pertenece a mi plantilla (AppState.squadsCache[yo]). */
+function liveV2GoalIsMine(ev) {
+  const me = AppState.currentUser && AppState.currentUser.name;
+  if (!me) return false;
+  const squad = (AppState.squadsCache || {})[me];
+  if (!Array.isArray(squad) || !squad.length) return false;
+  const p = (ev && ev.payload) || {};
+  const id = p.scorerId != null ? p.scorerId : (p.playerId != null ? p.playerId : ev.playerId);
+  if (id == null) return false;
+  return squad.some(sp => String(sp.id) === String(id));
+}
+
+/** Suena cada evento nuevo con tono (solo si el sonido está activo). */
+function liveV2PlayNewEventSounds(newEvents) {
+  const deps = liveV2SoundDeps();
+  if (!deps) return;
+  for (const ev of newEvents || []) {
+    const tone = liveV2ToneEventFor(ev);
+    if (!tone) continue;
+    const isMine = tone.type === 'goal' ? liveV2GoalIsMine(ev) : false;
+    soundApi.playLiveEvent(tone, isMine, deps);
+  }
+}
+
+/** Suena rankUp/rankDown cuando mi puesto cambia respecto al poll anterior. */
+function liveV2PlayRankSound(meRow, prevMe) {
+  if (!meRow || !prevMe || prevMe.rank === meRow.rank) return;
+  const deps = liveV2SoundDeps();
+  if (!deps) return;
+  soundApi.playLiveEvent({ type: meRow.rank < prevMe.rank ? 'rankUp' : 'rankDown' }, true, deps);
+}
+
 function liveState() {
   if (!AppState.live) AppState.live = {};
   return AppState.live;
@@ -2105,7 +2209,7 @@ function renderLiveV2Html(rows, folded) {
     + `<div class="livev2-fixed">`
     + `<div class="livev2-status">`
     + `<span class="livev2-badge ${status.cls}">${status.text}</span>`
-    + `<span class="livev2-clock">${clock}</span>`
+    + `<span class="livev2-status-right"><span class="livev2-clock">${clock}</span>${liveV2SoundToggleHtml()}</span>`
     + `</div>`
     + `<div class="livev2-hero">`
     + `<div class="livev2-hero-label">⚡ TUS PUNTOS LIVE</div>`
@@ -2353,6 +2457,11 @@ function updateLiveV2Dom(rows, folded) {
     }
   }
 
+  // Sonido: eventos nuevos (gol/estado) y cambio de MI puesto vs el poll anterior.
+  liveV2PlayNewEventSounds(newEvents);
+  const meRowNow = rows.find(r => r.isMe);
+  liveV2PlayRankSound(meRowNow, meRowNow ? prevByName[meRowNow.name] : null);
+
   // Transición vacío↔en vivo: re-render completo del contenido live (chips y mensaje
   // de "sin partidos" no se pueden parchear limpiamente entre sí).
   const nowEmpty = Object.keys(folded.states || {}).length === 0;
@@ -2362,6 +2471,7 @@ function updateLiveV2Dom(rows, folded) {
     const target = scroll && scroll.classList.contains('resultados-scroll') ? scroll : root;
     target.innerHTML = renderLiveV2Html(rows, folded);
     liveV2ScheduleChipGlowTimers(target);
+    bindLiveV2SoundToggle(target);
     st._lastRows = liveV2Snapshot(rows);
     return;
   }
@@ -2441,6 +2551,7 @@ function updateLiveV2Dom(rows, folded) {
     badgeEl.textContent = badge.text;
     badgeEl.className = `livev2-badge ${badge.cls}`;
   }
+  updateLiveV2SoundToggle(root);
 
   // Motivo del cambio (fila protagonista) + animación "elevar 3D"
   const mover = liveV2MoverReason(rows, prevByName, newEvents);
@@ -2717,6 +2828,7 @@ async function renderResultadosTab() {
 
   // Eventos de tabs (comunes a ambos modos)
   bindResultadosTabClicks(container);
+  if (isLiveTab) bindLiveV2SoundToggle(container);
 
   if (currentTab === 'live' && prevLiveScrollTop !== null) {
     const sc = container.querySelector('.resultados-scroll');

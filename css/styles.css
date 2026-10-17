@@ -6420,6 +6420,38 @@ html, body {
   font-variant-numeric: tabular-nums;
 }
 
+.livev2-status-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Botón de sonido del Live v2 (zona táctil ≥44px) */
+.livev2-sound {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 1.05rem;
+  line-height: 1;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.15s, color 0.2s;
+}
+
+.livev2-sound.on {
+  color: var(--accent-gold);
+}
+
+.livev2-sound:active {
+  transform: scale(0.92);
+}
+
 .livev2-hero {
   background: var(--ucl-card);
   border: 1px solid rgba(245, 158, 11, 0.35);
