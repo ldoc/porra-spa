@@ -6496,18 +6496,19 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 5px;
+  gap: 4px;
   background: var(--ucl-card);
   border: 1px solid var(--border-color);
   border-radius: 7px;
-  padding: 3px 5px;
+  padding: 3px 4px;
   font-size: var(--font-size-xs);
   min-width: 0;
+  overflow: hidden;
 }
 
 .livev2-cell-badge {
-  width: 14px;
-  height: 14px;
+  width: 12px;
+  height: 12px;
   flex: 0 0 auto;
   object-fit: contain;
 }
@@ -6533,9 +6534,11 @@ html, body {
 }
 
 .livev2-cell-team {
-  flex: 1;
+  flex: 0 0 auto;
   min-width: 0;
   text-align: center;
+  font-size: 9px;
+  font-weight: 700;
   color: var(--text-secondary);
   overflow: hidden;
   text-overflow: ellipsis;
