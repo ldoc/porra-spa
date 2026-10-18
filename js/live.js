@@ -65,9 +65,10 @@
   }
 
   function buildLiveTabsHtml(currentTab) {
-    const tabs = [['jornadas', 'Jornadas'], ['live', '🔴 Live'], ['clasificacion', 'Clasif.'], ['eliminatorias', 'Elim.']];
-    return '<div class="resultados-tabs">' + tabs.map(([key, label]) =>
-      `<button class="resultados-tab ${currentTab === key ? 'active' : ''}" data-tab="${key}">${label}</button>`
+    const tabs = [['jornadas', '📅', 'Jornadas'], ['live', '🔴', 'Live'], ['clasificacion', '📊', 'Clasif.'], ['eliminatorias', '🏆', 'Elim.']];
+    return '<div class="resultados-tabs">' + tabs.map(([key, icon, label]) =>
+      `<button class="resultados-tab ${currentTab === key ? 'active' : ''}" data-tab="${key}">`
+      + `<span class="resultados-tab-ic">${icon}</span><span class="resultados-tab-lb">${label}</span></button>`
     ).join('') + '</div>';
   }
 

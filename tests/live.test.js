@@ -51,7 +51,8 @@ test('el servidor manda, fichero de respaldo, default 60', () => {
 test('tabs con Live activa', () => {
   const html = buildLiveTabsHtml('live');
   assert.ok(html.includes('data-tab="live"'));
-  assert.ok(html.includes('🔴 Live'));
+  assert.ok(html.includes('🔴'));
+  assert.ok(html.includes('Live'));
   assert.ok(html.includes('resultados-tab active'));
 });
 
