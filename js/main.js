@@ -2198,14 +2198,18 @@ function liveV2StatusBadge() {
   return { text: '● EN DIRECTO', cls: 'live' };
 }
 
-/** [DEBUG temporal] texto de diagnóstico del live: eventos, partidos plegados, predicciones, delta propio */
+/** [DEBUG temporal] diagnóstico del live: eventos, partidos plegados, predicciones, delta propio, marcador muestra, top-3 */
 function liveV2DebugText(rows, folded) {
   const st = liveV2State();
   const me = (rows || []).find(r => r.isMe);
-  const n = Object.keys((folded && folded.states) || {}).length;
+  const states = (folded && folded.states) || {};
+  const n = Object.keys(states).length;
   const preds = Object.keys(AppState.allPredictions || {}).length;
-  const time = new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-  return `ev:${(st.events || []).length} pl:${n} pr:${preds} Δ:${me ? me.pointsDelta : '-'} ${time}`;
+  const anyScore = Object.values(states)[0];
+  const sc = anyScore && anyScore.score ? `${anyScore.score.home}-${anyScore.score.away}` : '-';
+  const top = (rows || []).slice(0, 3).map(r => `${r.name.slice(0, 5)}:${r.livePoints}`).join(' ');
+  const base = (rows || []).slice(0, 2).map(r => r.officialPoints === undefined ? '?' : r.officialPoints).join('/');
+  return `ev:${(st.events || []).length} pl:${n} pred:${preds} Δ:${me ? me.pointsDelta : '-'} sc:${sc} base:${base} top3:${top}`;
 }
 
 /** HTML de layout A (sin el header de subtabs, que lo pone renderResultadosTab) */
@@ -2220,7 +2224,6 @@ function renderLiveV2Html(rows, folded) {
     + `<div class="livev2-status">`
     + `<span class="livev2-badge ${status.cls}">${status.text}</span>`
     + `<span class="livev2-clock">${clock}</span>`
-    + `<span class="livev2-debug" id="livev2-debug">${liveV2DebugText(rows, folded)}</span>`
     + `</div>`
     + `<div class="livev2-hero">`
     + `<div class="livev2-hero-label">⚡ TUS PUNTOS LIVE</div>`
@@ -2232,6 +2235,7 @@ function renderLiveV2Html(rows, folded) {
       : `<div class="livev2-empty">Sin partidos en directo ahora mismo</div>`)
     + `</div>`
     + `<div id="livev2-feed" class="livev2-feed">${liveV2FeedHtml()}</div>`
+    + `<div class="livev2-debug" id="livev2-debug">${liveV2DebugText(rows, folded)}</div>`
     + `</div>`
     + `<div class="livev2-body">`
     + `<div class="livev2-section-title">Clasificación en vivo</div>`

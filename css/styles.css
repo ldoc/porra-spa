@@ -6422,11 +6422,12 @@ html, body {
 
 .livev2-debug {
   font-size: 9px;
+  line-height: 1.4;
   color: #64748B;
-  margin-left: auto;
-  opacity: .75;
+  opacity: .85;
   font-variant-numeric: tabular-nums;
-  white-space: nowrap;
+  word-break: break-word;
+  padding: 2px 12px 5px;
 }
 
 .livev2-status-right {
