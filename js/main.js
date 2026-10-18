@@ -2210,7 +2210,21 @@ function liveV2DebugText(rows, folded) {
   const top = (rows || []).slice(0, 3).map(r => `${r.name.slice(0, 5)}:${r.livePoints}`).join(',');
   const domTop = Array.from(document.querySelectorAll('#livev2-rows [data-livev2-row]')).slice(0, 3).map(el => String(el.getAttribute('data-livev2-row')).slice(0, 5)).join(',');
   const base = (rows || []).slice(0, 2).map(r => r.officialPoints === undefined ? '?' : r.officialPoints).join('/');
-  return `ev:${(st.events || []).length} pl:${n} pred:${preds} Δ:${me ? me.pointsDelta : '-'} sc:${sc} base:${base} dato:${top} dom:${domTop}`;
+  // Diagnóstico del delta del primer partido plegado
+  const firstId = Object.keys(states)[0];
+  const firstStats = folded && folded.statsById ? folded.statsById[firstId] : null;
+  const fin = firstId != null ? liveV2FinalizedIds().has(String(firstId)) : false;
+  const myPreds = me ? (AppState.allPredictions[me.name] || {}) : {};
+  const p1 = firstId != null ? myPreds[String(firstId)] : null;
+  let d1 = '-';
+  try {
+    if (me && firstStats) {
+      const m = (AppState.matches || []).find(x => String(x.id) === String(firstId));
+      const lm = { eventId: m ? m.id : firstId, stats: firstStats, status: 'LIVE' };
+      d1 = liveUserMatchPoints(me.name, lm, liveMatchMeta(lm)).total;
+    }
+  } catch (e) { d1 = 'ERR:' + (e && e.message ? e.message.slice(0, 24) : 'x'); }
+  return `ev:${(st.events || []).length} pl:${n} pred:${preds} Δ:${me ? me.pointsDelta : '-'} sc:${sc} base:${base} fin:${fin ? 1 : 0} p1:${p1 ? p1.home + '-' + p1.away : 'no'} d1:${d1} dato:${top} dom:${domTop}`;
 }
 
 /** HTML de layout A (sin el header de subtabs, que lo pone renderResultadosTab) */
