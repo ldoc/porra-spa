@@ -6393,10 +6393,6 @@ html, body {
   min-height: 0;
 }
 
-.livev2-chips-host {
-  min-height: 0;
-}
-
 .livev2-status {
   display: flex;
   align-items: center;
@@ -6412,12 +6408,6 @@ html, body {
 
 .livev2-badge.live {
   color: var(--accent-primary);
-}
-
-.livev2-clock {
-  font-size: var(--font-size-xs);
-  color: var(--text-muted);
-  font-variant-numeric: tabular-nums;
 }
 
 .livev2-status-right {
@@ -6452,92 +6442,93 @@ html, body {
   transform: scale(0.92);
 }
 
-.livev2-hero {
-  background: var(--ucl-card);
-  border: 1px solid rgba(245, 158, 11, 0.35);
-  border-radius: var(--radius-md);
-  padding: 12px 14px;
-}
-
-.livev2-hero-label {
-  font-size: var(--font-size-xs);
-  color: var(--text-secondary);
-  font-weight: 700;
-  letter-spacing: 0.5px;
-}
-
-.livev2-hero-points {
-  font-size: 1.75rem;
-  font-weight: 900;
-  margin-top: 2px;
-  color: var(--text-primary);
-}
-
-.livev2-hero-delta {
+/* Puntos live inline (cabecera compacta, sin hero) */
+.livev2-points-inline {
+  display: flex;
+  align-items: center;
+  gap: 4px;
   font-size: var(--font-size-sm);
-  margin-left: 8px;
+  color: var(--text-secondary);
   font-variant-numeric: tabular-nums;
 }
 
-.livev2-hero-delta.up {
+.livev2-points-inline b {
+  color: var(--text-primary);
+  font-weight: 900;
+}
+
+.livev2-points-delta {
+  font-size: var(--font-size-xs);
+  font-weight: 800;
+}
+
+.livev2-points-delta.up {
   color: var(--accent-primary);
 }
 
-.livev2-hero-delta.down {
+.livev2-points-delta.down {
   color: #F87171;
 }
 
-.livev2-chips {
-  display: flex;
-  gap: 8px;
-  overflow-x: auto;
-  padding-bottom: 4px;
+/* Grid de partidos: 3 columnas fijas, sin scroll horizontal */
+.livev2-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
 }
 
-.livev2-chip {
+.livev2-cell {
   display: flex;
   align-items: center;
-  gap: 6px;
-  flex-shrink: 0;
+  justify-content: center;
+  gap: 5px;
   background: var(--ucl-card);
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-full);
-  padding: 6px 12px;
+  border-radius: 7px;
+  padding: 3px 5px;
   font-size: var(--font-size-xs);
-  min-height: 44px;
+  min-width: 0;
 }
 
-.livev2-chip.live {
-  border-color: rgba(16, 185, 129, 0.5);
+.livev2-cell.live {
+  border-color: rgba(16, 185, 129, 0.6);
+}
+
+.livev2-cell.ft {
+  opacity: 0.55;
 }
 
 /* Glow de 10 s al cambiar el marcador (la posición se mantiene al retirarlo) */
-.livev2-chip.changed {
+.livev2-cell.changed {
   border-color: rgba(16, 185, 129, 0.85);
-  animation: livev2-chip-glow 10s ease-out forwards;
+  animation: livev2-cell-glow 10s ease-out forwards;
 }
 
-@keyframes livev2-chip-glow {
+@keyframes livev2-cell-glow {
   0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.85); background-color: #0E2A25; }
   15% { box-shadow: 0 0 16px 3px rgba(16, 185, 129, 0.75); }
   100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
 }
 
-.livev2-chip-team {
+.livev2-cell-team {
+  flex: 1;
+  min-width: 0;
+  text-align: center;
   color: var(--text-secondary);
-  max-width: 80px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.livev2-chip-score {
+.livev2-cell-score {
+  flex-shrink: 0;
   font-weight: 900;
-  color: var(--text-primary);
+  color: #FFFFFF;
   font-variant-numeric: tabular-nums;
 }
 
 .livev2-empty {
+  grid-column: 1 / -1;
   text-align: center;
   color: var(--text-muted);
   font-size: var(--font-size-sm);
@@ -6722,7 +6713,7 @@ html, body {
   .livev2-inner.fd {
     animation: none;
   }
-  .livev2-chip.changed {
+  .livev2-cell.changed {
     animation: none;
   }
 }
