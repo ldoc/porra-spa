@@ -6457,6 +6457,64 @@ html, body {
   transform: scale(0.92);
 }
 
+/* Botón de pantalla completa del Live v2 (táctil ≥44px) */
+.livev2-fs {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 1.05rem;
+  line-height: 1;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.15s, color 0.2s;
+}
+
+.livev2-fs.on {
+  color: var(--accent-primary);
+}
+
+.livev2-fs:active {
+  transform: scale(0.92);
+}
+
+/* Pantalla completa del Live: oculta header principal, nav inferior y tabs de Resultados */
+body.live-fs {
+  overflow: hidden;
+}
+
+body.live-fs .app-header,
+body.live-fs .bottom-nav,
+body.live-fs .resultados-tabs {
+  display: none !important;
+}
+
+body.live-fs #tab-resultados {
+  position: fixed;
+  inset: 0;
+  z-index: 900;
+  background: var(--ucl-dark);
+  display: flex;
+  flex-direction: column;
+}
+
+body.live-fs #resultados-container {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+body.live-fs .resultados-scroll {
+  flex: 1;
+  min-height: 0;
+}
+
 /* Puntos live inline (cabecera compacta, sin hero) */
 .livev2-points-inline {
   display: flex;

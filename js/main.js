@@ -1865,6 +1865,55 @@ function bindLiveV2SoundToggle(root) {
   });
 }
 
+// ── Pantalla completa del Live v2 (oculta header, nav inferior y tabs) ──
+let _liveV2FsChangeBound = false;
+
+function liveV2FsActive() {
+  return typeof document !== 'undefined' && document.body.classList.contains('live-fs');
+}
+
+function liveV2FsToggleHtml() {
+  const on = liveV2FsActive();
+  return `<button type="button" id="livev2-fs-toggle" class="livev2-fs${on ? ' on' : ''}"`
+    + ` aria-label="${on ? 'Salir de pantalla completa' : 'Pantalla completa'}">${on ? '⤡' : '⛶'}</button>`;
+}
+
+function updateLiveV2FsToggle(root) {
+  const btn = (root || document).querySelector('#livev2-fs-toggle');
+  if (!btn) return;
+  const on = liveV2FsActive();
+  btn.textContent = on ? '⤡' : '⛶';
+  btn.classList.toggle('on', on);
+  btn.setAttribute('aria-label', on ? 'Salir de pantalla completa' : 'Pantalla completa');
+}
+
+function enterLiveV2Fullscreen() {
+  document.body.classList.add('live-fs');
+  try { if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(() => {}); } catch (e) { /* sin API */ }
+  updateLiveV2FsToggle();
+}
+
+function exitLiveV2Fullscreen() {
+  document.body.classList.remove('live-fs');
+  try { if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen().catch(() => {}); } catch (e) { /* sin API */ }
+  updateLiveV2FsToggle();
+}
+
+function bindLiveV2Fullscreen(root) {
+  const btn = (root || document).querySelector('#livev2-fs-toggle');
+  if (btn && btn.dataset.bound !== '1') {
+    btn.dataset.bound = '1';
+    btn.addEventListener('click', () => { if (liveV2FsActive()) exitLiveV2Fullscreen(); else enterLiveV2Fullscreen(); });
+  }
+  if (!_liveV2FsChangeBound && typeof document !== 'undefined') {
+    _liveV2FsChangeBound = true;
+    document.addEventListener('fullscreenchange', () => {
+      updateLiveV2FsToggle();
+      if (!document.fullscreenElement) document.body.classList.remove('live-fs');
+    });
+  }
+}
+
 /** deps de soundApi.playLiveEvent, o null si el sonido está desactivado. */
 function liveV2SoundDeps() {
   if (typeof soundApi === 'undefined' || !soundApi.playLiveEvent || !soundApi.loadSoundEnabled) return null;
@@ -2242,6 +2291,7 @@ function renderLiveV2Html(rows, folded) {
     + `<div class="livev2-status-right">`
     + `<span class="livev2-points-inline" id="livev2-points-inline">⚡ <b>${me ? me.livePoints : 0}</b>`
     + `<span class="livev2-points-delta ${ptsDelta < 0 ? 'down' : 'up'}">${liveV2DeltaText(ptsDelta)}</span></span>`
+    + liveV2FsToggleHtml()
     + liveV2SoundToggleHtml()
     + `</div>`
     + `</div>`
@@ -2500,6 +2550,7 @@ function updateLiveV2Dom(rows, folded) {
     target.innerHTML = renderLiveV2Html(rows, folded);
     liveV2ScheduleChipGlowTimers(target);
     bindLiveV2SoundToggle(target);
+    bindLiveV2Fullscreen(target);
     st._lastRows = liveV2Snapshot(rows);
     return;
   }
@@ -2853,6 +2904,7 @@ async function renderResultadosTab() {
   // Eventos de tabs (comunes a ambos modos)
   bindResultadosTabClicks(container);
   if (isLiveTab) bindLiveV2SoundToggle(container);
+  if (isLiveTab) bindLiveV2Fullscreen(container);
 
   if (currentTab === 'live' && prevLiveScrollTop !== null) {
     const sc = container.querySelector('.resultados-scroll');
@@ -3168,6 +3220,7 @@ function renderMatchResult({ match, homeGoals, awayGoals, hasResult }) {
 
 /** Cierra la sesión por completo: limpia localStorage, estado, cachés y polling */
 function logout() {
+  if (typeof document !== 'undefined') exitLiveV2Fullscreen();
   localStorage.removeItem('porra_ucl_user');
   localStorage.removeItem('session_token');
   porraCache.clearPorraCaches();
@@ -4178,6 +4231,7 @@ function navigateToTab(tabName) {
 
   // Resetear ronda de resultados al salir de la pestaña
   if (tabName !== 'resultados') {
+    if (typeof document !== 'undefined') document.body.classList.remove('live-fs');
     AppState.resultadosRound = null;
     AppState.resultadosRoundKey = null;
     stopLiveV2Polling();
