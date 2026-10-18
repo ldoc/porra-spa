@@ -6420,6 +6420,15 @@ html, body {
   font-variant-numeric: tabular-nums;
 }
 
+.livev2-debug {
+  font-size: 9px;
+  color: #64748B;
+  margin-left: auto;
+  opacity: .75;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
 .livev2-status-right {
   display: flex;
   align-items: center;

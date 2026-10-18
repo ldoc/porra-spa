@@ -2198,6 +2198,16 @@ function liveV2StatusBadge() {
   return { text: '● EN DIRECTO', cls: 'live' };
 }
 
+/** [DEBUG temporal] texto de diagnóstico del live: eventos, partidos plegados, predicciones, delta propio */
+function liveV2DebugText(rows, folded) {
+  const st = liveV2State();
+  const me = (rows || []).find(r => r.isMe);
+  const n = Object.keys((folded && folded.states) || {}).length;
+  const preds = Object.keys(AppState.allPredictions || {}).length;
+  const time = new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  return `ev:${(st.events || []).length} pl:${n} pr:${preds} Δ:${me ? me.pointsDelta : '-'} ${time}`;
+}
+
 /** HTML de layout A (sin el header de subtabs, que lo pone renderResultadosTab) */
 function renderLiveV2Html(rows, folded) {
   const me = rows.find(r => r.isMe);
@@ -2209,7 +2219,8 @@ function renderLiveV2Html(rows, folded) {
     + `<div class="livev2-fixed">`
     + `<div class="livev2-status">`
     + `<span class="livev2-badge ${status.cls}">${status.text}</span>`
-    + `<span class="livev2-status-right"><span class="livev2-clock">${clock}</span>${liveV2SoundToggleHtml()}</span>`
+    + `<span class="livev2-clock">${clock}</span>`
+    + `<span class="livev2-debug" id="livev2-debug">${liveV2DebugText(rows, folded)}</span>`
     + `</div>`
     + `<div class="livev2-hero">`
     + `<div class="livev2-hero-label">⚡ TUS PUNTOS LIVE</div>`
@@ -2542,6 +2553,8 @@ function updateLiveV2Dom(rows, folded) {
   // Reloj y badge de estado: refrescar en cada update para que el reloj avance
   const clockEl = root.querySelector('.livev2-clock');
   if (clockEl) clockEl.textContent = liveV2ClockText();
+  const dbgEl = root.querySelector('#livev2-debug');
+  if (dbgEl) dbgEl.textContent = liveV2DebugText(rows, folded);
   // Feed de última hora (eventos más recientes del presente)
   const feedEl = root.querySelector('#livev2-feed');
   if (feedEl) feedEl.innerHTML = liveV2FeedHtml();
