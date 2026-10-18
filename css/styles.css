@@ -6490,6 +6490,13 @@ html, body {
   min-width: 0;
 }
 
+.livev2-cell-badge {
+  width: 14px;
+  height: 14px;
+  flex: 0 0 auto;
+  object-fit: contain;
+}
+
 .livev2-cell.live {
   border-color: rgba(16, 185, 129, 0.6);
 }

@@ -2108,10 +2108,18 @@ function liveV2ChipHtml(eventId, state) {
   const ft = !!(state && state.status === 'FT');
   const changed = liveV2ChipIsRecentChange(eventId);
   const cls = `livev2-cell${live ? ' live' : ''}${ft ? ' ft' : ''}${changed ? ' changed' : ''}`;
+  const hb = meta.homeTeamId != null
+    ? `<img class="livev2-cell-badge" src="data/imgEquipos/${meta.homeTeamId}.${meta.homeBadgeExt || 'webp'}" alt="" loading="lazy" onerror="this.onerror=null;this.src='data/imgEquipos/default.webp'">`
+    : '';
+  const ub = meta.awayTeamId != null
+    ? `<img class="livev2-cell-badge" src="data/imgEquipos/${meta.awayTeamId}.${meta.awayBadgeExt || 'webp'}" alt="" loading="lazy" onerror="this.onerror=null;this.src='data/imgEquipos/default.webp'">`
+    : '';
   return `<div class="${cls}" data-livev2-chip="${liveV2Esc(eventId)}">`
+    + hb
     + `<span class="livev2-cell-team">${liveV2Esc(liveV2Abbr(meta.homeTeam))}</span>`
     + `<span class="livev2-cell-score">${score}</span>`
     + `<span class="livev2-cell-team">${liveV2Esc(liveV2Abbr(meta.awayTeam))}</span>`
+    + ub
     + `</div>`;
 }
 
