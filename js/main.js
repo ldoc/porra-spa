@@ -2198,35 +2198,6 @@ function liveV2StatusBadge() {
   return { text: '● EN DIRECTO', cls: 'live' };
 }
 
-/** [DEBUG temporal] diagnóstico del live: eventos, partidos plegados, predicciones, delta propio, marcador muestra, top-3 */
-function liveV2DebugText(rows, folded) {
-  const st = liveV2State();
-  const me = (rows || []).find(r => r.isMe);
-  const states = (folded && folded.states) || {};
-  const n = Object.keys(states).length;
-  const preds = Object.keys(AppState.allPredictions || {}).length;
-  const anyScore = Object.values(states)[0];
-  const sc = anyScore && anyScore.score ? `${anyScore.score.home}-${anyScore.score.away}` : '-';
-  const top = (rows || []).slice(0, 3).map(r => `${r.name.slice(0, 5)}:${r.livePoints}`).join(',');
-  const domTop = Array.from(document.querySelectorAll('#livev2-rows [data-livev2-row]')).slice(0, 3).map(el => String(el.getAttribute('data-livev2-row')).slice(0, 5)).join(',');
-  const base = (rows || []).slice(0, 2).map(r => r.officialPoints === undefined ? '?' : r.officialPoints).join('/');
-  // Diagnóstico del delta del primer partido plegado
-  const firstId = Object.keys(states)[0];
-  const firstStats = folded && folded.statsById ? folded.statsById[firstId] : null;
-  const fin = firstId != null ? liveV2FinalizedIds().has(String(firstId)) : false;
-  const myPreds = me ? (AppState.allPredictions[me.name] || {}) : {};
-  const p1 = firstId != null ? myPreds[String(firstId)] : null;
-  let d1 = '-';
-  try {
-    if (me && firstStats) {
-      const m = (AppState.matches || []).find(x => String(x.id) === String(firstId));
-      const lm = { eventId: m ? m.id : firstId, stats: firstStats, status: 'LIVE' };
-      d1 = liveUserMatchPoints(me.name, lm, liveMatchMeta(lm)).total;
-    }
-  } catch (e) { d1 = 'ERR:' + (e && e.message ? e.message.slice(0, 24) : 'x'); }
-  return `ev:${(st.events || []).length} pl:${n} pred:${preds} Δ:${me ? me.pointsDelta : '-'} sc:${sc} base:${base} fin:${fin ? 1 : 0} p1:${p1 ? p1.home + '-' + p1.away : 'no'} d1:${d1} dato:${top} dom:${domTop}`;
-}
-
 /** HTML de layout A (sin el header de subtabs, que lo pone renderResultadosTab) */
 function renderLiveV2Html(rows, folded) {
   const me = rows.find(r => r.isMe);
@@ -2250,7 +2221,6 @@ function renderLiveV2Html(rows, folded) {
       : `<div class="livev2-empty">Sin partidos en directo ahora mismo</div>`)
     + `</div>`
     + `<div id="livev2-feed" class="livev2-feed">${liveV2FeedHtml()}</div>`
-    + `<div class="livev2-debug" id="livev2-debug">${liveV2DebugText(rows, folded)}</div>`
     + `</div>`
     + `<div class="livev2-body">`
     + `<div class="livev2-section-title">Clasificación en vivo</div>`
@@ -2572,8 +2542,6 @@ function updateLiveV2Dom(rows, folded) {
   // Reloj y badge de estado: refrescar en cada update para que el reloj avance
   const clockEl = root.querySelector('.livev2-clock');
   if (clockEl) clockEl.textContent = liveV2ClockText();
-  const dbgEl = root.querySelector('#livev2-debug');
-  if (dbgEl) dbgEl.textContent = liveV2DebugText(rows, folded);
   // Feed de última hora (eventos más recientes del presente)
   const feedEl = root.querySelector('#livev2-feed');
   if (feedEl) feedEl.innerHTML = liveV2FeedHtml();
