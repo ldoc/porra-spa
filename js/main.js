@@ -2207,9 +2207,10 @@ function liveV2DebugText(rows, folded) {
   const preds = Object.keys(AppState.allPredictions || {}).length;
   const anyScore = Object.values(states)[0];
   const sc = anyScore && anyScore.score ? `${anyScore.score.home}-${anyScore.score.away}` : '-';
-  const top = (rows || []).slice(0, 3).map(r => `${r.name.slice(0, 5)}:${r.livePoints}`).join(' ');
+  const top = (rows || []).slice(0, 3).map(r => `${r.name.slice(0, 5)}:${r.livePoints}`).join(',');
+  const domTop = Array.from(document.querySelectorAll('#livev2-rows [data-livev2-row]')).slice(0, 3).map(el => String(el.getAttribute('data-livev2-row')).slice(0, 5)).join(',');
   const base = (rows || []).slice(0, 2).map(r => r.officialPoints === undefined ? '?' : r.officialPoints).join('/');
-  return `ev:${(st.events || []).length} pl:${n} pred:${preds} Δ:${me ? me.pointsDelta : '-'} sc:${sc} base:${base} top3:${top}`;
+  return `ev:${(st.events || []).length} pl:${n} pred:${preds} Δ:${me ? me.pointsDelta : '-'} sc:${sc} base:${base} dato:${top} dom:${domTop}`;
 }
 
 /** HTML de layout A (sin el header de subtabs, que lo pone renderResultadosTab) */
