@@ -379,6 +379,16 @@ function liveV2Esc(s) {
   return liveV2Api.escapeHtml(s);
 }
 
+/** Etiqueta de estado del chip: NS, LIVE 63', HT o FT (fallback `·` si no hay minuto). */
+function liveV2ChipLabel(state) {
+  if (!state) return 'NS';
+  if (state.status === 'NS') return 'NS';
+  if (state.status === 'HT') return 'HT';
+  if (state.status === 'FT') return 'FT';
+  const m = state.lastMinute != null ? state.lastMinute : '·';
+  return `LIVE ${m}'`;
+}
+
 function liveV2ChipHtml(eventId, state) {
   // foldAll usa claves string (ids de partido); normaliza a match.id (number) para liveMatchMeta
   const match = (AppState.matches || []).find(m => String(m.id) === String(eventId));
@@ -388,16 +398,20 @@ function liveV2ChipHtml(eventId, state) {
   const ft = !!(state && state.status === 'FT');
   const changed = liveV2ChipIsRecentChange(eventId);
   const cls = `livev2-cell${live ? ' live' : ''}${ft ? ' ft' : ''}${changed ? ' changed' : ''}`;
+  const label = liveV2ChipLabel(state);
+  const chipCls = ((state && state.status) || 'NS').toLowerCase();
+  const fullTitle = `${meta.homeTeam} ${score} ${meta.awayTeam} · ${label}`;
   const hb = meta.homeTeamId != null
     ? `<img class="livev2-cell-badge" src="data/imgEquipos/${meta.homeTeamId}.${meta.homeBadgeExt || 'webp'}" alt="" loading="lazy" onerror="this.onerror=null;this.src='data/imgEquipos/default.webp'">`
     : '';
   const ub = meta.awayTeamId != null
     ? `<img class="livev2-cell-badge" src="data/imgEquipos/${meta.awayTeamId}.${meta.awayBadgeExt || 'webp'}" alt="" loading="lazy" onerror="this.onerror=null;this.src='data/imgEquipos/default.webp'">`
     : '';
-  return `<div class="${cls}" data-livev2-chip="${liveV2Esc(eventId)}">`
+  return `<div class="${cls}" data-livev2-chip="${liveV2Esc(eventId)}" title="${liveV2Esc(fullTitle)}" aria-label="${liveV2Esc(fullTitle)}">`
     + hb
     + `<span class="livev2-cell-team">${liveV2Esc(liveV2Abbr(meta.homeTeam))}</span>`
     + `<span class="livev2-cell-score">${score}</span>`
+    + `<span class="livev2-chip-state ${chipCls}">${liveV2Esc(label)}</span>`
     + `<span class="livev2-cell-team">${liveV2Esc(liveV2Abbr(meta.awayTeam))}</span>`
     + ub
     + `</div>`;
@@ -962,6 +976,7 @@ async function renderLiveV2Tab() {
     bindLiveV2SoundToggle,
     bindLiveV2Fullscreen,
     liveV2State,
+    liveV2ChipLabel,
     liveV2ScheduleChipGlowTimers,
     unlockLiveAudio,
     exitLiveV2Fullscreen,

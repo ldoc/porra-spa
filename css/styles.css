@@ -6562,6 +6562,7 @@ body.live-fs .resultados-scroll {
   font-size: var(--font-size-xs);
   min-width: 0;
   overflow: hidden;
+  flex-wrap: wrap;
 }
 
 .livev2-cell-badge {
@@ -6609,6 +6610,21 @@ body.live-fs .resultados-scroll {
   color: #FFFFFF;
   font-variant-numeric: tabular-nums;
 }
+
+.livev2-chip-state {
+  order: 99;
+  flex: 0 0 100%;
+  text-align: center;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .02em;
+  opacity: .8;
+  white-space: nowrap;
+}
+
+.livev2-chip-state.live { color: var(--accent-primary); }
+.livev2-chip-state.ht { color: var(--accent-gold); }
+.livev2-chip-state.ft { color: var(--text-muted); }
 
 .livev2-empty {
   grid-column: 1 / -1;
