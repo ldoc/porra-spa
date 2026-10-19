@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 const {
   liveV2ChipLabel,
   liveV2StatusBadge,
+  liveV2NextPollState,
   fetchLiveEvents,
   init,
 } = require('../js/live-v2-ui.js');
@@ -47,6 +48,21 @@ test('liveV2StatusBadge sin lastFetchAt indica que no hay actualización', () =>
   const badge = liveV2StatusBadge({ error: null, lastFetchAt: null });
   assert.equal(badge.cls, 'live');
   assert.equal(badge.title, 'Sin actualizar');
+});
+
+test('liveV2StatusBadge cambia a stale justo después de 90 s', () => {
+  assert.equal(liveV2StatusBadge({ error: null, lastFetchAt: Date.now() - 90000 }).cls, 'live');
+  assert.equal(liveV2StatusBadge({ error: null, lastFetchAt: Date.now() - 91000 }).cls, 'stale');
+});
+
+test('liveV2NextPollState limpia el error y fija la hora en éxito', () => {
+  const next = liveV2NextPollState({ lastFetchAt: 100, error: true }, true, 200);
+  assert.deepEqual(next, { lastFetchAt: 200, error: null });
+});
+
+test('liveV2NextPollState conserva lastFetchAt y marca error en fallo', () => {
+  const next = liveV2NextPollState({ lastFetchAt: 100, error: null }, false, 200);
+  assert.deepEqual(next, { lastFetchAt: 100, error: true });
 });
 
 test('fetchLiveEvents con payload.ok=false lanza y no pisa el estado previo', async () => {

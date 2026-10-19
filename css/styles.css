@@ -6464,6 +6464,11 @@ html, body {
   background: rgba(239, 68, 68, 0.12);
 }
 
+.livev2-retry:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
 .livev2-status-right {
   display: flex;
   align-items: center;

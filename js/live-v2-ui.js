@@ -542,20 +542,57 @@ function liveV2StatusBadge(st) {
   return { text: '● EN DIRECTO', cls: 'live', title };
 }
 
+/** Estado puro tras un poll: éxito fija la hora y limpia error; fallo conserva la última hora. */
+function liveV2NextPollState(st, ok, now) {
+  return {
+    lastFetchAt: ok ? now : (st ? st.lastFetchAt : null),
+    error: ok ? null : true,
+  };
+}
+
+/** Repinta solo el badge y el estado del botón de reintento (sin tocar filas/chips). */
+function updateLiveV2Badge(root) {
+  const scope = root || document;
+  const badgeEl = scope.querySelector('.livev2-badge');
+  if (!badgeEl) return;
+  const badge = liveV2StatusBadge();
+  badgeEl.textContent = badge.text;
+  badgeEl.className = `livev2-badge ${badge.cls}`;
+  badgeEl.setAttribute('title', badge.title);
+  updateLiveV2RetryState(scope);
+}
+
+function updateLiveV2RetryState(root) {
+  const btn = (root || document).querySelector('#livev2-retry');
+  if (!btn) return;
+  const busy = !!liveV2State().polling;
+  btn.disabled = busy;
+  btn.setAttribute('aria-busy', busy ? 'true' : 'false');
+  btn.textContent = busy ? '↻ Reintentando…' : '↻ Reintentar';
+}
+
 /** Reintento manual: fuerza un full y repinta el subtab Live sin recargar la página. */
 async function retryLiveV2() {
   const st = liveV2State();
-  if (st.polling) return;
+  if (st.polling) { updateLiveV2RetryState(); return; }
   const root = document.querySelector('.resultados-scroll .livev2') || document.querySelector('.livev2');
   if (!root) return;
-  st._fullAt = 0;
-  const html = await renderLiveV2Tab();
-  const scroll = root.parentElement;
-  const target = scroll && scroll.classList.contains('resultados-scroll') ? scroll : root;
-  target.innerHTML = html;
-  liveV2ScheduleChipGlowTimers(target);
-  bindLiveV2SoundToggle(target);
-  bindLiveV2Fullscreen(target);
+  st.polling = true;
+  updateLiveV2RetryState(root);
+  let target = root;
+  try {
+    st._fullAt = 0;
+    const html = await renderLiveV2Tab();
+    const scroll = root.parentElement;
+    target = scroll && scroll.classList.contains('resultados-scroll') ? scroll : root;
+    target.innerHTML = html;
+    liveV2ScheduleChipGlowTimers(target);
+    bindLiveV2SoundToggle(target);
+    bindLiveV2Fullscreen(target);
+  } finally {
+    st.polling = false;
+    updateLiveV2Badge(target);
+  }
 }
 
 /** HTML de layout A (sin el header de subtabs, que lo pone renderResultadosTab) */
@@ -901,13 +938,7 @@ function updateLiveV2Dom(rows, folded) {
   // Feed de última hora (eventos más recientes del presente)
   const feedEl = root.querySelector('#livev2-feed');
   if (feedEl) feedEl.innerHTML = liveV2FeedHtml();
-  const badgeEl = root.querySelector('.livev2-badge');
-  if (badgeEl) {
-    const badge = liveV2StatusBadge();
-    badgeEl.textContent = badge.text;
-    badgeEl.className = `livev2-badge ${badge.cls}`;
-    badgeEl.setAttribute('title', badge.title);
-  }
+  updateLiveV2Badge(root);
   updateLiveV2SoundToggle(root);
 
   // Motivo del cambio (fila protagonista) + animación "elevar 3D"
@@ -963,6 +994,7 @@ async function pollLiveV2() {
   const st = liveV2State();
   if (st.polling || AppState.resultadosTab !== 'live') return;
   st.polling = true;
+  updateLiveV2RetryState();
   try {
     const prevRanks = {};
     for (const r of (st._lastRows || [])) prevRanks[r.name] = r.rank;
@@ -970,15 +1002,17 @@ async function pollLiveV2() {
     const forceFull = !st.serverTime || (Date.now() - (st._fullAt || 0) > 10 * 60 * 1000);
     await fetchLiveEvents(forceFull);
     if (forceFull) st._fullAt = Date.now();
+    // Estado antes del render: el badge debe reflejar ya este poll, no el anterior.
+    Object.assign(st, liveV2NextPollState(st, true, Date.now()));
     const folded = liveV2Folded();
     const rows = liveV2Rows(folded);
     updateLiveV2Dom(rows, folded); // actualiza st._lastRows tras comparar/anima
-    st.lastFetchAt = Date.now();
-    st.error = null;
   } catch (e) {
-    st.error = true; // reintenta al siguiente tick
+    Object.assign(st, liveV2NextPollState(st, false));
+    updateLiveV2Badge(); // error visible de inmediato (y botón de reintento)
   } finally {
     st.polling = false;
+    updateLiveV2RetryState();
   }
 }
 
@@ -1015,6 +1049,7 @@ async function renderLiveV2Tab() {
     liveV2State,
     liveV2ChipLabel,
     liveV2StatusBadge,
+    liveV2NextPollState,
     fetchLiveEvents,
     retryLiveV2,
     liveV2ScheduleChipGlowTimers,
