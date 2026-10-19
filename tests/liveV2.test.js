@@ -124,6 +124,26 @@ test('foldAll agrupa por eventId', () => {
   assert.deepEqual(all[2].score, { home: 0, away: 1 });
 });
 
+test('score del mismo ts se aplica despues de los goles (no suma doble)', () => {
+  const t = '2026-09-16T20:30:00.000Z';
+  const events = [
+    { eventId: 1, type: 'score', ts: t, ingestedAt: t, sourceId: 'score|1-0', payload: { scoreHome: 1, scoreAway: 0 } },
+    { eventId: 1, type: 'goal', ts: t, ingestedAt: t, sourceId: 'goal|g', payload: { isHome: true, scorerId: 11 } }
+  ];
+  const state = liveV2Api.foldMatch(events, {});
+  assert.deepEqual(state.score, { home: 1, away: 0 });
+});
+
+test('goal_cancelled del mismo ts se aplica despues del gol', () => {
+  const t = '2026-09-16T20:30:00.000Z';
+  const events = [
+    { eventId: 1, type: 'goal_cancelled', ts: t, ingestedAt: t, sourceId: 'cancel|v', payload: { ofSourceId: 'goal|g' } },
+    { eventId: 1, type: 'goal', ts: t, ingestedAt: t, sourceId: 'goal|g', payload: { isHome: true, scorerId: 11 } }
+  ];
+  const state = liveV2Api.foldMatch(events, {});
+  assert.deepEqual(state.score, { home: 0, away: 0 });
+});
+
 test('foldMatch desempata por ingestedAt cuando el ts coincide', () => {
   // Mismo minuto: el orden debe seguir ingestedAt (gol antes que su anulación),
   // independientemente del orden del array entre lotes de delta.

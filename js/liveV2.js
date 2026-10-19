@@ -108,13 +108,28 @@
     return isNaN(t) ? 0 : t;
   }
 
-  // Orden estable de plegado: por `ts` (eje del timeline, minuto) y, a igualdad,
-  // por `ingestedAt` (instante de detección monótono). Sin el desempate, un `goal`
-  // y su `goal_cancelled` del mismo minuto podrían plegarse en orden arbitrario
-  // entre distintos lotes de delta.
+  // Orden determinista de plegado: `ts` (eje del timeline, minuto), `ingestedAt`
+  // (instante de detección monótono), `seq`, tipo y, por último, `sourceId`.
+  // `score` y `match_final` van después de goles/anulaciones para que el marcador
+  // autoritativo no se aplique antes de los eventos que lo modifican.
+  function typeRank(t) {
+    if (t === 'goal') return 1;
+    if (t === 'goal_cancelled') return 2;
+    if (t === 'score') return 3;
+    if (t === 'match_final') return 4;
+    return 1;
+  }
+
   function byTs(a, b) {
     const d = parseTs(a.ts) - parseTs(b.ts);
-    return d !== 0 ? d : parseTs(a.ingestedAt) - parseTs(b.ingestedAt);
+    if (d !== 0) return d;
+    const ing = parseTs(a.ingestedAt) - parseTs(b.ingestedAt);
+    if (ing !== 0) return ing;
+    const seq = (a.seq || 0) - (b.seq || 0);
+    if (seq !== 0) return seq;
+    const tr = typeRank(a.type) - typeRank(b.type);
+    if (tr !== 0) return tr;
+    return String(a.sourceId || '').localeCompare(String(b.sourceId || ''));
   }
 
   function foldMatch(events, ctx) {
