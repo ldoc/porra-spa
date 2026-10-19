@@ -515,14 +515,15 @@ function liveV2ChipsHtml(folded) {
   return liveV2OrderedStateEntries(folded).map(([id, s]) => liveV2ChipHtml(id, s)).join('');
 }
 
-/** Ticker compacto (1–2 líneas) con los eventos más recientes del presente. */
+/** Ticker compacto (3–4 líneas) con los eventos útiles más recientes del presente. */
 function liveV2FeedHtml() {
   const st = liveV2State();
   const playersById = liveV2PlayersById();
   const events = (st.events || [])
     .filter(e => isFinite(new Date(e.ts).getTime()))
-    .sort((a, b) => new Date(a.ts).getTime() - new Date(b.ts).getTime())
-    .slice(-2)
+    .filter(e => !['lineup', 'status'].includes(e.type))
+    .sort((a, b) => new Date(a.ts) - new Date(b.ts) || ((a.seq || 0) - (b.seq || 0)))
+    .slice(-4)
     .reverse();
   const items = events.map(e => {
     const l = (typeof liveV2Api !== 'undefined' && liveV2Api.feedLabel) ? liveV2Api.feedLabel(e, playersById) : null;
@@ -719,11 +720,14 @@ function liveV2MoverReason(rows, prevByName, newEvents) {
     : null;
   const ev = evByUser[pick.name] || newestRelevant;
   if (!ev) return null;
+  // Solo se puede atribuir el delta del poll a un evento cuando este es el único
+  // relevante. Con varios eventos no se reparte el total (sería inventado).
+  const attributableDelta = relevant.length === 1 ? pick.pointsDelta : 0;
   const label = liveV2Api.liveV2ReasonForEvent
-    ? liveV2Api.liveV2ReasonForEvent(ev, liveV2PlayersById(), pick.pointsDelta)
-    : liveV2Api.reasonLabel(ev, { delta: pick.pointsDelta });
+    ? liveV2Api.liveV2ReasonForEvent(ev, liveV2PlayersById(), attributableDelta)
+    : liveV2Api.reasonLabel(ev, { delta: attributableDelta });
   if (!label) return null;
-  return { name: pick.name, rankDelta: pick.rankDelta, pointsDelta: pick.pointsDelta, label };
+  return { name: pick.name, rankDelta: pick.rankDelta, pointsDelta: attributableDelta, label };
 }
 
 /** Etiqueta flotante del motivo sobre la fila indicada; se retira tras ~2.5 s */
@@ -1048,6 +1052,8 @@ async function renderLiveV2Tab() {
     bindLiveV2Fullscreen,
     liveV2State,
     liveV2ChipLabel,
+    liveV2FeedHtml,
+    liveV2MoverReason,
     liveV2StatusBadge,
     liveV2NextPollState,
     fetchLiveEvents,

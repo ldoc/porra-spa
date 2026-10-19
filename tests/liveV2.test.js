@@ -322,3 +322,70 @@ test('eventKey deduplica por eventId|sourceId sin depender de _id', () => {
     liveV2Api.eventKey({ eventId: 100, sourceId: 'goal|2' })
   );
 });
+
+// ── Feed y motivo (Task 9) ──────────────────────────────────────────
+
+const liveV2Ui = require('../js/live-v2-ui.js');
+const uiState = { allPlayers: [], liveV2: null };
+liveV2Ui.init({ AppState: uiState, liveV2Api: liveV2 });
+
+test('feed filtra lineup/status antes de recortar y ordena por (ts, seq)', () => {
+  uiState.liveV2 = { events: [
+    { type: 'goal', ts: '2026-09-16T20:01:00Z', seq: 1, minute: 1, payload: {} },
+    { type: 'goal', ts: '2026-09-16T20:02:00Z', seq: 1, minute: 2, payload: {} },
+    { type: 'status', ts: '2026-09-16T20:02:30Z', seq: 1, payload: { status: 'LIVE' } },
+    { type: 'goal', ts: '2026-09-16T20:03:00Z', seq: 1, minute: 4, payload: {} },
+    { type: 'lineup', ts: '2026-09-16T20:03:30Z', seq: 1, payload: {} },
+    { type: 'goal', ts: '2026-09-16T20:03:00Z', seq: 2, minute: 3, payload: {} },
+    { type: 'goal', ts: '2026-09-16T20:04:00Z', seq: 1, minute: 5, payload: {} },
+  ] };
+  const html = liveV2Ui.liveV2FeedHtml();
+  assert.equal((html.match(/livev2-ticker-item/g) || []).length, 4);
+  const pos = [5, 3, 4, 2].map(m => html.indexOf(`${m}&#39; Gol`));
+  assert.ok(pos.every(p => p >= 0), 'muestra los cuatro goles útiles');
+  assert.deepEqual(pos.slice().sort((a, b) => a - b), pos, 'más reciente primero');
+});
+
+test('feed descarta eventos con ts inválido', () => {
+  uiState.liveV2 = { events: [
+    { type: 'goal', ts: 'no-es-fecha', seq: 1, minute: 9, payload: {} },
+    { type: 'goal', ts: '2026-09-16T20:01:00Z', seq: 1, minute: 1, payload: {} },
+  ] };
+  const html = liveV2Ui.liveV2FeedHtml();
+  assert.equal((html.match(/livev2-ticker-item/g) || []).length, 1);
+  assert.ok(html.includes("1&#39; Gol"));
+});
+
+test('motivo atribuye el delta del poll cuando hay un único evento relevante', () => {
+  uiState.allPlayers = [{ id: 7, nombre: 'Mbappé' }];
+  uiState.squadsCache = { ana: [{ id: 7 }] };
+  const rows = [
+    { name: 'ana', rank: 1, livePoints: 15, isMe: false },
+    { name: 'beto', rank: 2, livePoints: 10, isMe: false },
+  ];
+  const prev = { ana: { rank: 2, livePoints: 10 }, beto: { rank: 1, livePoints: 10 } };
+  const mover = liveV2Ui.liveV2MoverReason(rows, prev, [
+    { type: 'goal', ts: '2026-09-16T20:10:00Z', playerId: 7, payload: { scorerId: 7 }, minute: 67 },
+  ]);
+  assert.equal(mover.name, 'ana');
+  assert.equal(mover.label.delta, 5);
+  assert.equal(mover.pointsDelta, 5);
+});
+
+test('motivo con varios eventos no inventa atribución (delta 0)', () => {
+  uiState.allPlayers = [{ id: 7, nombre: 'Mbappé' }, { id: 8, nombre: 'Vini Jr.' }];
+  uiState.squadsCache = { ana: [{ id: 7 }, { id: 8 }] };
+  const rows = [
+    { name: 'ana', rank: 1, livePoints: 15, isMe: false },
+    { name: 'beto', rank: 2, livePoints: 10, isMe: false },
+  ];
+  const prev = { ana: { rank: 2, livePoints: 10 }, beto: { rank: 1, livePoints: 10 } };
+  const mover = liveV2Ui.liveV2MoverReason(rows, prev, [
+    { type: 'goal', ts: '2026-09-16T20:10:00Z', seq: 1, playerId: 7, payload: { scorerId: 7 }, minute: 67 },
+    { type: 'assist', ts: '2026-09-16T20:11:00Z', seq: 2, playerId: 8, payload: {} },
+  ]);
+  assert.equal(mover.name, 'ana');
+  assert.equal(mover.label.delta, 0);
+  assert.equal(mover.pointsDelta, 0);
+  assert.match(mover.label.text, /Asistencia|Gol/);
+});
