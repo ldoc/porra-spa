@@ -306,6 +306,11 @@ test('matchStateToStats de un partido NS no genera puntos', () => {
   assert.equal(st.status, 'NS');
 });
 
+test('escapeHtml neutraliza HTML', () => {
+  assert.equal(liveV2Api.escapeHtml('<img src=x onerror=alert(1)>'),
+    '&lt;img src=x onerror=alert(1)&gt;');
+});
+
 test('eventKey deduplica por eventId|sourceId sin depender de _id', () => {
   assert.equal(liveV2Api.eventKey({ eventId: 100, sourceId: 'goal|1' }), '100|goal|1');
   assert.equal(

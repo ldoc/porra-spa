@@ -2136,7 +2136,7 @@ function liveV2Rows(folded) {
 }
 
 function liveV2Esc(s) {
-  return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  return liveV2Api.escapeHtml(s);
 }
 
 /**
@@ -2260,7 +2260,7 @@ function liveV2RowHtml(r) {
   return `<div class="livev2-row${r.isMe ? ' me' : ''}" data-livev2-row="${liveV2Esc(r.name)}">`
     + `<div class="livev2-inner">`
     + `<span class="livev2-rank">${r.rank}</span>`
-    + `<span class="livev2-avatar">${r.avatar || '⚽'}</span>`
+    + `<span class="livev2-avatar">${liveV2Esc(r.avatar) || '⚽'}</span>`
     + `<span class="livev2-name">${liveV2Esc(r.name)}</span>`
     + `<span class="livev2-pts">${r.livePoints}</span>`
     + `<span class="livev2-arrow ${d > 0 ? 'up' : d < 0 ? 'down' : ''}">${arrow}</span>`

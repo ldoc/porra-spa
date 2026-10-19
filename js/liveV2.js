@@ -337,7 +337,12 @@
     return out;
   }
 
-  const liveV2Api = { createMatchState, applyEvent, newPlayer, matchClockAt, minutesOf, foldMatch, foldAll, stateAt, eventKey, matchStateToStats, rankRows, reasonLabel, liveV2ReasonForEvent, feedLabel, flipDelta };
+  function escapeHtml(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g,
+      c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  }
+
+  const liveV2Api = { createMatchState, applyEvent, escapeHtml, newPlayer, matchClockAt, minutesOf, foldMatch, foldAll, stateAt, eventKey, matchStateToStats, rankRows, reasonLabel, liveV2ReasonForEvent, feedLabel, flipDelta };
   global.liveV2Api = liveV2Api;
   if (typeof module !== 'undefined' && module.exports) module.exports = liveV2Api;
 })(typeof window !== 'undefined' ? window : globalThis);
