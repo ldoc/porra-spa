@@ -6425,6 +6425,45 @@ html, body {
   color: var(--accent-primary);
 }
 
+.livev2-badge.stale {
+  color: var(--accent-gold);
+}
+
+.livev2-badge.error {
+  color: var(--accent-danger, #EF4444);
+}
+
+/* Botón Reintentar del banner de error/stale (zona táctil ≥44px) */
+.livev2-retry {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  margin-left: 8px;
+  padding: 0 10px;
+  border: 1px solid var(--accent-danger, #EF4444);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--accent-danger, #EF4444);
+  font-family: inherit;
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.15s, background 0.2s;
+}
+
+.livev2-badge.error ~ .livev2-retry,
+.livev2-badge.stale ~ .livev2-retry {
+  display: inline-flex;
+}
+
+.livev2-retry:active {
+  transform: scale(0.95);
+  background: rgba(239, 68, 68, 0.12);
+}
+
 .livev2-status-right {
   display: flex;
   align-items: center;

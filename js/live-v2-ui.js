@@ -93,8 +93,18 @@ function updateLiveV2SoundToggle(root) {
   btn.setAttribute('aria-label', on ? 'Silenciar sonido' : 'Activar sonido');
 }
 
+/** Botón Reintentar del banner de error/stale (zona táctil ≥44px). */
+function bindLiveV2Retry(root) {
+  const scope = root || document;
+  const btn = scope.querySelector('#livev2-retry');
+  if (!btn || btn.dataset.bound === '1') return;
+  btn.dataset.bound = '1';
+  btn.addEventListener('click', () => { retryLiveV2(); });
+}
+
 function bindLiveV2SoundToggle(root) {
   const scope = root || document;
+  bindLiveV2Retry(scope);
   const btn = scope.querySelector('#livev2-sound-toggle');
   if (!btn || btn.dataset.bound === '1') return;
   btn.dataset.bound = '1';
@@ -304,7 +314,11 @@ async function fetchLiveEvents(forceFull) {
   const res = await fetchWithPhase(url);
   if (!res.ok) throw new Error('HTTP ' + res.status);
   const payload = await res.json();
-  if (!payload || !payload.ok) return;
+  if (!payload || !payload.ok) {
+    st.error = true;
+    const detail = payload && payload.error ? String(payload.error) : 'respuesta no válida';
+    throw new Error('Live events: ' + detail);
+  }
   const keyOf = e => liveV2Api.eventKey(e);
   const incoming = payload.events || [];
   if (forceFull) {
@@ -519,8 +533,29 @@ function liveV2FeedHtml() {
     + `<div class="livev2-ticker-body">${items || `<span class="livev2-ticker-empty">Aún no hay eventos.</span>`}</div>`;
 }
 
-function liveV2StatusBadge() {
-  return { text: '● EN DIRECTO', cls: 'live' };
+function liveV2StatusBadge(st) {
+  st = st || liveV2State();
+  const age = st.lastFetchAt ? Math.max(0, Math.floor((Date.now() - st.lastFetchAt) / 1000)) : null;
+  const title = age != null ? `Actualizado hace ${age}s` : 'Sin actualizar';
+  if (st.error) return { text: '⚠️ Sin conexión', cls: 'error', title };
+  if (age != null && age > 90) return { text: `⏸ Datos de hace ${age}s`, cls: 'stale', title };
+  return { text: '● EN DIRECTO', cls: 'live', title };
+}
+
+/** Reintento manual: fuerza un full y repinta el subtab Live sin recargar la página. */
+async function retryLiveV2() {
+  const st = liveV2State();
+  if (st.polling) return;
+  const root = document.querySelector('.resultados-scroll .livev2') || document.querySelector('.livev2');
+  if (!root) return;
+  st._fullAt = 0;
+  const html = await renderLiveV2Tab();
+  const scroll = root.parentElement;
+  const target = scroll && scroll.classList.contains('resultados-scroll') ? scroll : root;
+  target.innerHTML = html;
+  liveV2ScheduleChipGlowTimers(target);
+  bindLiveV2SoundToggle(target);
+  bindLiveV2Fullscreen(target);
 }
 
 /** HTML de layout A (sin el header de subtabs, que lo pone renderResultadosTab) */
@@ -532,7 +567,8 @@ function renderLiveV2Html(rows, folded) {
   return `<div class="livev2">`
     + `<div class="livev2-fixed">`
     + `<div class="livev2-status">`
-    + `<span class="livev2-badge ${status.cls}">${status.text}</span>`
+    + `<span class="livev2-badge ${status.cls}" title="${liveV2Esc(status.title)}">${status.text}</span>`
+    + `<button type="button" id="livev2-retry" class="livev2-retry" aria-label="Reintentar conexión">↻ Reintentar</button>`
     + `<div class="livev2-status-right">`
     + `<span class="livev2-points-inline" id="livev2-points-inline">⚡ <b>${me ? me.livePoints : 0}</b>`
     + `<span class="livev2-points-delta ${ptsDelta < 0 ? 'down' : 'up'}">${liveV2DeltaText(ptsDelta)}</span></span>`
@@ -870,6 +906,7 @@ function updateLiveV2Dom(rows, folded) {
     const badge = liveV2StatusBadge();
     badgeEl.textContent = badge.text;
     badgeEl.className = `livev2-badge ${badge.cls}`;
+    badgeEl.setAttribute('title', badge.title);
   }
   updateLiveV2SoundToggle(root);
 
@@ -949,7 +986,7 @@ async function pollLiveV2() {
 async function renderLiveV2Tab() {
   stopLiveV2Polling();
   const st = liveV2State();
-  const forceFull = !st.serverTime;
+  const forceFull = !st.serverTime || !st._fullAt;
   try {
     await fetchLiveEvents(forceFull);
     if (forceFull) st._fullAt = Date.now();
@@ -977,6 +1014,9 @@ async function renderLiveV2Tab() {
     bindLiveV2Fullscreen,
     liveV2State,
     liveV2ChipLabel,
+    liveV2StatusBadge,
+    fetchLiveEvents,
+    retryLiveV2,
     liveV2ScheduleChipGlowTimers,
     unlockLiveAudio,
     exitLiveV2Fullscreen,
