@@ -248,3 +248,27 @@ test('render Live v2 anuncia filas/feed y conserva la salida', () => {
   assert.match(html, /id="livev2-rows"[^>]*aria-live="polite"/);
   assert.match(html, /id="livev2-fs-toggle"/);
 });
+
+test('liveV2HasInPlay solo cuenta LIVE y HT', () => {
+  const { liveV2HasInPlay: has } = require('../js/live-v2-ui.js');
+  assert.equal(has({ states: {} }), false);
+  assert.equal(has({ states: { 1: { status: 'NS' }, 2: { status: 'FT' } } }), false);
+  assert.equal(has({ states: { 1: { status: 'LIVE' } } }), true);
+  assert.equal(has({ states: { 1: { status: 'NS' }, 2: { status: 'HT' } } }), true);
+});
+
+test('liveV2ShouldPoll evita peticiones fuera de la ventana de partido', () => {
+  const ui = freshUi();
+  const now = Date.now();
+  const AppState = {
+    liveRefreshSecs: 30,
+    matches: [{ id: 1, fechaTs: Math.floor((now + 60 * 60 * 1000) / 1000) }],
+  };
+  ui.init({ AppState, liveV2Api: { eventKey: e => e.id } });
+  assert.equal(ui.liveV2ShouldPoll({ states: {} }, now), false);
+  assert.equal(ui.liveV2ShouldPoll({ states: { 1: { status: 'LIVE' } } }, now), true);
+
+  AppState.matches = [{ id: 1, fechaTs: Math.floor(now / 1000) }];
+  assert.equal(ui.liveV2ShouldPoll({ states: {} }, now), true);
+  assert.equal(ui.liveV2ShouldPoll({ states: { 1: { status: 'FT' } } }, now), false);
+});

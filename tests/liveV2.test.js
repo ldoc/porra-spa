@@ -341,6 +341,7 @@ test('feed filtra lineup/status antes de recortar y ordena por (ts, seq)', () =>
   ] };
   const html = liveV2Ui.liveV2FeedHtml();
   assert.equal((html.match(/livev2-ticker-item/g) || []).length, 4);
+  assert.equal((html.match(/data-livev2-key=/g) || []).length, 4, 'items keyed para parchear sin recrear');
   const pos = [5, 3, 4, 2].map(m => html.indexOf(`${m}&#39; Gol`));
   assert.ok(pos.every(p => p >= 0), 'muestra los cuatro goles útiles');
   assert.deepEqual(pos.slice().sort((a, b) => a - b), pos, 'más reciente primero');
