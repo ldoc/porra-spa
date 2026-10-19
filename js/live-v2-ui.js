@@ -720,9 +720,10 @@ function liveV2MoverReason(rows, prevByName, newEvents) {
     : null;
   const ev = evByUser[pick.name] || newestRelevant;
   if (!ev) return null;
-  // Solo se puede atribuir el delta del poll a un evento cuando este es el único
-  // relevante. Con varios eventos no se reparte el total (sería inventado).
-  const attributableDelta = relevant.length === 1 ? pick.pointsDelta : 0;
+  // Solo se puede atribuir el delta del poll a un evento cuando es el único del
+  // poll. Otros tipos (match_final, score, substitution, roja...) también mueven
+  // puntos/minutos; con varios eventos no se reparte el total (sería inventado).
+  const attributableDelta = (newEvents || []).length === 1 ? pick.pointsDelta : 0;
   const label = liveV2Api.liveV2ReasonForEvent
     ? liveV2Api.liveV2ReasonForEvent(ev, liveV2PlayersById(), attributableDelta)
     : liveV2Api.reasonLabel(ev, { delta: attributableDelta });

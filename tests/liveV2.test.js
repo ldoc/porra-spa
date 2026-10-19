@@ -372,6 +372,24 @@ test('motivo atribuye el delta del poll cuando hay un único evento relevante', 
   assert.equal(mover.pointsDelta, 5);
 });
 
+test('motivo no atribuye el delta si el poll trae goal + match_final', () => {
+  uiState.allPlayers = [{ id: 7, nombre: 'Mbappé' }];
+  uiState.squadsCache = { ana: [{ id: 7 }] };
+  const rows = [
+    { name: 'ana', rank: 1, livePoints: 15, isMe: false },
+    { name: 'beto', rank: 2, livePoints: 10, isMe: false },
+  ];
+  const prev = { ana: { rank: 2, livePoints: 10 }, beto: { rank: 1, livePoints: 10 } };
+  const mover = liveV2Ui.liveV2MoverReason(rows, prev, [
+    { type: 'goal', ts: '2026-09-16T20:10:00Z', seq: 1, playerId: 7, payload: { scorerId: 7 }, minute: 67 },
+    { type: 'match_final', ts: '2026-09-16T21:50:00Z', seq: 2, payload: {} },
+  ]);
+  assert.equal(mover.name, 'ana');
+  assert.match(mover.label.text, /Gol de Mbappé/);
+  assert.equal(mover.label.delta, 0);
+  assert.equal(mover.pointsDelta, 0);
+});
+
 test('motivo con varios eventos no inventa atribución (delta 0)', () => {
   uiState.allPlayers = [{ id: 7, nombre: 'Mbappé' }, { id: 8, nombre: 'Vini Jr.' }];
   uiState.squadsCache = { ana: [{ id: 7 }, { id: 8 }] };
