@@ -117,6 +117,9 @@
     return Math.max(0, end - (p.entryMinute || 0));
   }
 
+  /** Clave de dedupe de un evento: la API de fase 3 ya no envía `_id`. */
+  function eventKey(e) { return String(e.eventId) + '|' + String(e.sourceId); }
+
   function parseTs(v) {
     if (v == null) return 0;
     const t = v instanceof Date ? v.getTime() : new Date(v).getTime();
@@ -334,7 +337,7 @@
     return out;
   }
 
-  const liveV2Api = { createMatchState, applyEvent, newPlayer, matchClockAt, minutesOf, foldMatch, foldAll, stateAt, matchStateToStats, rankRows, reasonLabel, liveV2ReasonForEvent, feedLabel, flipDelta };
+  const liveV2Api = { createMatchState, applyEvent, newPlayer, matchClockAt, minutesOf, foldMatch, foldAll, stateAt, eventKey, matchStateToStats, rankRows, reasonLabel, liveV2ReasonForEvent, feedLabel, flipDelta };
   global.liveV2Api = liveV2Api;
   if (typeof module !== 'undefined' && module.exports) module.exports = liveV2Api;
 })(typeof window !== 'undefined' ? window : globalThis);

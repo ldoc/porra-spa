@@ -2031,6 +2031,7 @@ function liveV2State() {
   if (!AppState.liveV2) {
     AppState.liveV2 = {
       events: [], serverTime: null, prevRanks: null, polling: false, _lastRows: [], _seenEventIds: null,
+      _fullAt: 0, lastFetchAt: null, error: null,
       _chipChanged: {}, // eventId -> ts del último cambio de marcador (para glow + orden)
       _chipScores: {},  // eventId -> "home-away" del poll anterior (detección de cambios)
     };
@@ -2056,21 +2057,32 @@ function liveV2CtxById() {
   return out;
 }
 
-/** Carga inicial (forceFull) o delta (?since=serverTime); dedup por _id */
+/** Carga inicial (forceFull) o delta (?since=serverTime); dedup por eventId|sourceId */
 async function fetchLiveEvents(forceFull) {
   const st = liveV2State();
   const url = API_BASE + '/api/live/events' + (!forceFull && st.serverTime ? `?since=${encodeURIComponent(st.serverTime)}` : '');
   const res = await fetchWithPhase(url);
+  if (!res.ok) throw new Error('HTTP ' + res.status);
   const payload = await res.json();
   if (!payload || !payload.ok) return;
+  const keyOf = e => liveV2Api.eventKey(e);
   const incoming = payload.events || [];
   if (forceFull) {
+    // Un full es autoritativo: reemplaza eventos y resetea el estado derivado.
     st.events = incoming;
+    st._seenEventIds = new Set(incoming.map(keyOf));
+    st._chipChanged = {};
+    st._chipScores = {};
   } else {
-    const seen = new Set(st.events.map(e => String(e._id)));
-    for (const e of incoming) { if (!seen.has(String(e._id))) { st.events.push(e); seen.add(String(e._id)); } }
+    const seen = new Set(st.events.map(keyOf));
+    for (const e of incoming) {
+      const k = keyOf(e);
+      if (!seen.has(k)) { st.events.push(e); seen.add(k); }
+    }
   }
   st.serverTime = payload.serverTime || st.serverTime;
+  st.lastFetchAt = Date.now();
+  if (payload.resync) st._fullAt = 0;
 }
 
 /** Pliega todos los eventos (presente) → { states, statsById } */
@@ -2081,9 +2093,10 @@ function liveV2Folded() {
   const playersById = liveV2PlayersById();
   const states = liveV2Api.foldAll(st.events, ctxById);
   const statsById = {};
+  const playhead = st.serverTime ? new Date(st.serverTime).getTime() : null;
   for (const [id, s] of Object.entries(states)) {
     const ctx = { ...(ctxById[id] || {}), playersById };
-    statsById[id] = liveV2Api.matchStateToStats(s, ctx, null);
+    statsById[id] = liveV2Api.matchStateToStats(s, ctx, playhead);
   }
   return { states, statsById };
 }
@@ -2110,7 +2123,10 @@ function liveV2Rows(folded) {
       if (finalized.has(String(id))) continue; // ya cuenta en los puntos oficiales
       const match = (AppState.matches || []).find(m => String(m.id) === String(id));
       if (!match) continue;
-      const lm = { eventId: match.id, stats: folded.statsById[id], status: 'LIVE' };
+      const state = folded.states[id];
+      const status = state?.status || 'NS';
+      if (status === 'NS') continue;
+      const lm = { eventId: match.id, stats: folded.statsById[id], status };
       delta += liveUserMatchPoints(pl.name, lm, liveMatchMeta(lm)).total;
     }
     const officialPoints = officialByName[pl.name] || 0;
@@ -2528,10 +2544,10 @@ function updateLiveV2Dom(rows, folded) {
   if (!(st._seenEventIds instanceof Set)) st._seenEventIds = new Set();
   const newEvents = [];
   for (const e of (st.events || [])) {
-    const id = String(e._id);
-    if (!st._seenEventIds.has(id)) {
+    const key = liveV2Api.eventKey(e);
+    if (!st._seenEventIds.has(key)) {
       newEvents.push(e);
-      st._seenEventIds.add(id);
+      st._seenEventIds.add(key);
     }
   }
 
@@ -2661,7 +2677,10 @@ function startLiveV2Polling() {
   const total = AppState.liveRefreshSecs || 30;
   if (typeof document !== 'undefined') {
     const onVis = () => {
-      if (document.visibilityState === 'visible' && AppState.resultadosTab === 'live') pollLiveV2();
+      if (document.visibilityState === 'visible' && AppState.resultadosTab === 'live') {
+        liveV2State()._fullAt = 0; // al volver a visible se resincroniza con un full
+        pollLiveV2();
+      }
     };
     _liveV2VisHandler = onVis;
     document.addEventListener('visibilitychange', onVis);
@@ -2682,24 +2701,37 @@ async function pollLiveV2() {
     const prevRanks = {};
     for (const r of (st._lastRows || [])) prevRanks[r.name] = r.rank;
     st.prevRanks = prevRanks;
-    await fetchLiveEvents(false);
+    const forceFull = !st.serverTime || (Date.now() - (st._fullAt || 0) > 10 * 60 * 1000);
+    await fetchLiveEvents(forceFull);
+    if (forceFull) st._fullAt = Date.now();
     const folded = liveV2Folded();
     const rows = liveV2Rows(folded);
     updateLiveV2Dom(rows, folded); // actualiza st._lastRows tras comparar/anima
-  } catch (e) { /* reintenta al siguiente tick */ }
-  st.polling = false;
+    st.lastFetchAt = Date.now();
+    st.error = null;
+  } catch (e) {
+    st.error = true; // reintenta al siguiente tick
+  } finally {
+    st.polling = false;
+  }
 }
 
 /** Render del subtab Live v2 (fetch + fold + poll). Devuelve el HTML de layout A. */
 async function renderLiveV2Tab() {
   stopLiveV2Polling();
   const st = liveV2State();
-  try { await fetchLiveEvents(!st.serverTime); } catch (e) { /* sin eventos disponibles */ }
+  const forceFull = !st.serverTime;
+  try {
+    await fetchLiveEvents(forceFull);
+    if (forceFull) st._fullAt = Date.now();
+    st.error = null;
+  } catch (e) { st.error = true; /* sin eventos disponibles */ }
   const folded = liveV2Folded();
   liveV2DetectChipChanges(folded);
+  st.prevRanks = null;
   const rows = liveV2Rows(folded);
   st._lastRows = liveV2Snapshot(rows);
-  st._seenEventIds = new Set((st.events || []).map(e => String(e._id)));
+  st._seenEventIds = new Set((st.events || []).map(e => liveV2Api.eventKey(e)));
   if (AppState.resultadosTab === 'live') startLiveV2Polling();
   return renderLiveV2Html(rows, folded);
 }

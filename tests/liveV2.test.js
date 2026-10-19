@@ -298,3 +298,22 @@ test('el reloj se congela en FT', () => {
     payload: { status: 'FT', period: null, kickoffTs: '2026-09-16T20:00:00Z' } });
   assert.equal(liveV2Api.matchClockAt(st, Date.parse('2026-09-16T23:00:00Z')), 90);
 });
+
+test('matchStateToStats de un partido NS no genera puntos', () => {
+  const st = liveV2Api.createMatchState();
+  const stats = liveV2Api.matchStateToStats(st, { homeTeamId: 1, awayTeamId: 2, playersById: {} }, null);
+  assert.deepEqual(stats[1], { goles: 0 });
+  assert.equal(st.status, 'NS');
+});
+
+test('eventKey deduplica por eventId|sourceId sin depender de _id', () => {
+  assert.equal(liveV2Api.eventKey({ eventId: 100, sourceId: 'goal|1' }), '100|goal|1');
+  assert.equal(
+    liveV2Api.eventKey({ eventId: 100, sourceId: 'goal|1', _id: 'a' }),
+    liveV2Api.eventKey({ eventId: 100, sourceId: 'goal|1', _id: 'b' })
+  );
+  assert.notEqual(
+    liveV2Api.eventKey({ eventId: 100, sourceId: 'goal|1' }),
+    liveV2Api.eventKey({ eventId: 100, sourceId: 'goal|2' })
+  );
+});
