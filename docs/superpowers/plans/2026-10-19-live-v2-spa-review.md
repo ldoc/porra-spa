@@ -284,6 +284,16 @@ st.lastFetchAt = Date.now();
 if (payload.resync) st._fullAt = 0;
 ```
 
+- **Dedupe sin `_id`**: la API de la fase 3 omite `_id`. Añade en `js/liveV2.js`:
+
+```js
+function eventKey(e) { return String(e.eventId) + '|' + String(e.sourceId); }
+```
+
+Expórtalo en `liveV2Api` y úsalo en `fetchLiveEvents` (delta),
+`renderLiveV2Tab` (`st._seenEventIds`) y `liveV2PlayNewEventSounds` en lugar de
+`String(e._id)`. Añade un test puro de `eventKey`.
+
 - [ ] **Step 4: Run tests**
 
 Run: `node --test tests/liveV2.test.js tests/live.test.js`
