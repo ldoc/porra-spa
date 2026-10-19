@@ -275,3 +275,26 @@ test('feedLabel resuelve el nombre del goleador y cubre tipos del feed', () => {
   assert.equal(feedLabel({ type: 'goal_cancelled', payload: {}, minute: 30 }, players).icon, '↩️');
   assert.equal(feedLabel({ type: 'lineup', payload: {} }, players), null);
 });
+
+test('una roja saca al jugador del campo', () => {
+  const st = liveV2Api.createMatchState();
+  liveV2Api.applyEvent(st, { type: 'lineup', minute: 0, payload: { starters: [11] } });
+  liveV2Api.applyEvent(st, { type: 'status', minute: 0, ts: '2026-09-16T20:00:00Z',
+    payload: { status: 'LIVE', period: 'period1', kickoffTs: '2026-09-16T20:00:00Z' } });
+  liveV2Api.applyEvent(st, { type: 'card', minute: 20, playerId: 11, payload: { cardType: 'red' } });
+  assert.equal(liveV2Api.minutesOf(st, 11, Date.parse('2026-09-16T21:00:00Z')), 20);
+});
+
+test('el reloj no depende del primer estado observado (kickoffTs explicito)', () => {
+  const st = liveV2Api.createMatchState();
+  liveV2Api.applyEvent(st, { type: 'status', minute: 45, ts: '2026-09-16T21:00:00Z',
+    payload: { status: 'LIVE', period: 'period2', kickoffTs: '2026-09-16T20:00:00Z' } });
+  assert.equal(liveV2Api.matchClockAt(st, Date.parse('2026-09-16T21:10:00Z')), 55);
+});
+
+test('el reloj se congela en FT', () => {
+  const st = liveV2Api.createMatchState();
+  liveV2Api.applyEvent(st, { type: 'status', minute: 90, ts: '2026-09-16T21:45:00Z',
+    payload: { status: 'FT', period: null, kickoffTs: '2026-09-16T20:00:00Z' } });
+  assert.equal(liveV2Api.matchClockAt(st, Date.parse('2026-09-16T23:00:00Z')), 90);
+});

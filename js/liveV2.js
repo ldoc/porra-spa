@@ -8,7 +8,7 @@
 
   function createMatchState() {
     return { status: 'NS', score: { home: 0, away: 0 }, period: null,
-      kickoffTs: null, htTs: null, ftTs: null, goals: [], players: {} };
+      kickoffTs: null, htTs: null, ftTs: null, lastMinute: null, goals: [], players: {} };
   }
 
   function ensure(state, id) {
@@ -31,9 +31,11 @@
       case 'status':
         state.status = p.status || state.status;
         state.period = p.period || state.period;
-        if (p.status === 'LIVE' && !state.kickoffTs) state.kickoffTs = ev.ts || null;
+        if (p.kickoffTs) state.kickoffTs = p.kickoffTs;
+        else if (p.status === 'LIVE' && !state.kickoffTs) state.kickoffTs = ev.ts || null;
         if (p.status === 'HT') state.htTs = ev.ts || null;
         if (p.status === 'FT') state.ftTs = ev.ts || null;
+        if (ev.minute != null) state.lastMinute = ev.minute;
         break;
       case 'goal': {
         const home = creditedHome(p);
@@ -60,7 +62,18 @@
       }
       case 'penalty_saved': { const gk = ensure(state, p.keeperId); if (gk) gk.penaltySaved += 1; break; }
       case 'assist': { const a = ensure(state, ev.playerId); if (a) a.assists = p.asistencias ?? (a.assists + 1); break; }
-      case 'card': { const c = ensure(state, ev.playerId); if (c) c.cards.push(p.cardType || 'yellow'); break; }
+      case 'card': {
+        const c = ensure(state, ev.playerId);
+        if (c) {
+          const type = p.cardType || 'yellow';
+          c.cards.push(type);
+          if (type === 'red' || type === 'yellowRed' || type === 'secondYellow') {
+            c.onPitch = false;
+            c.exitMinute = ev.minute ?? null;
+          }
+        }
+        break;
+      }
       case 'substitution': {
         const out = ensure(state, p.outId); if (out) { out.onPitch = false; out.exitMinute = ev.minute ?? null; }
         const inn = ensure(state, p.inId); if (inn) { inn.onPitch = true; inn.entryMinute = ev.minute ?? 0; }
@@ -83,12 +96,14 @@
 
   function matchClockAt(state, playheadTs) {
     if (!state.kickoffTs || state.status === 'NS') return null;
+    if (state.status === 'FT' || state.ftTs) return state.lastMinute != null ? state.lastMinute : 90;
     const start = new Date(state.kickoffTs).getTime();
-    const end = playheadTs;
+    const end = playheadTs != null ? playheadTs : Date.now();
     let mins = Math.floor((end - start) / 60000);
-    if (state.htTs && new Date(state.htTs).getTime() <= end) {
-      const resumed = state.period && state.period !== 'period1' && state.period !== 'halftime';
-      if (resumed) mins -= 15; else mins = Math.min(mins, 45); // durante el descanso, tope 45'
+    if (state.period && state.period !== 'period1' && state.period !== 'halftime') {
+      mins -= 15;
+    } else if (state.htTs && new Date(state.htTs).getTime() <= end) {
+      mins = Math.min(mins, 45); // durante el descanso, tope 45'
     }
     return Math.max(0, mins);
   }
