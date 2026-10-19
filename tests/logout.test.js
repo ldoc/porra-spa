@@ -11,6 +11,9 @@ global.localStorage = {
 let cacheCleared = 0;
 const porraCache = { clearPorraCaches: () => { cacheCleared++; } };
 
+let liveV2Purged = 0;
+const liveV2Ui = { purgeLiveV2Caches: () => { liveV2Purged++; } };
+
 const AppState = {
   currentUser: null,
   sessionToken: null,
@@ -32,6 +35,7 @@ function logout() {
   localStorage.removeItem('porra_ucl_user');
   localStorage.removeItem('session_token');
   porraCache.clearPorraCaches();
+  try { liveV2Ui.purgeLiveV2Caches(localStorage); } catch (e) { /* storage no disponible */ }
   AppState._allPredictionsSeeded = false;
   AppState.currentUser = null;
   AppState.sessionToken = null;
@@ -55,6 +59,7 @@ function shouldCloseSessionAfterSave(hasPredictions, hasSquad, predOk, squadOk) 
 function reset() {
   localStorageStore = { session_token: 'tok', porra_ucl_user: '{"name":"juan"}' };
   cacheCleared = 0;
+  liveV2Purged = 0;
   authStatusCalls = 0;
   countdownCalls = 0;
   pollingCalls = 0;
@@ -78,6 +83,7 @@ function test_logout_limpia_estado_y_sesion() {
   assert.strictEqual(AppState.hasUnsavedFinalChanges, false, 'hasUnsavedFinalChanges a false');
   assert.strictEqual(AppState._allPredictionsSeeded, false, '_allPredictionsSeeded a false');
   assert.strictEqual(cacheCleared, 1, 'logout debe purgar las cachés porra_cache_*');
+  assert.strictEqual(liveV2Purged, 1, 'logout debe purgar las cachés porra_live_events_v1*');
   assert.strictEqual(authStatusCalls, 1, 'logout debe re-evaluar el estado de auth');
   assert.strictEqual(countdownCalls, 1, 'logout debe limpiar el countdown');
   assert.strictEqual(pollingCalls, 1, 'logout debe parar el polling de matchstats');

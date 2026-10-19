@@ -324,41 +324,87 @@ function liveOfficialRows() {
 const LIVEV2_CACHE_KEY = 'porra_live_events_v1';
 let _liveV2CacheRestored = false;
 
-/** sessionStorage del Live (datos públicos) o null si no está disponible (modo privado). */
+/** localStorage del Live (datos públicos) o null si no está disponible (modo privado). */
 function liveV2CacheStorage() {
   try {
-    const storage = global.sessionStorage;
+    const storage = global.localStorage;
     return storage && typeof storage.getItem === 'function' && typeof storage.setItem === 'function'
       ? storage : null;
   } catch (e) { return null; }
 }
 
-/** Restaura el último full cacheado una sola vez por carga de página. */
+/** Día local en formato YYYY-MM-DD (la caché caduca al cambiar de día). */
+function liveV2CacheDay(now) {
+  const d = now == null ? new Date() : new Date(now);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+/** Clave de caché acotada a día local + usuario (null si no hay usuario). */
+function liveV2CacheKey(username, now) {
+  if (!username) return null;
+  return `${LIVEV2_CACHE_KEY}:${liveV2CacheDay(now)}:${username}`;
+}
+
+/** Un full cacheado solo sirve si trae eventos, cursor y sello fullAt. */
+function liveV2CacheIsFresh(cached) {
+  return !!cached
+    && Array.isArray(cached.events)
+    && typeof cached.serverTime === 'string' && !!cached.serverTime
+    && Number.isFinite(cached.fullAt);
+}
+
+/** Restaura el último full cacheado de hoy/usuario una sola vez por carga de página. */
 function restoreLiveV2Cache(st) {
   if (_liveV2CacheRestored) return;
+  const username = AppState && AppState.currentUser && AppState.currentUser.name;
+  const key = liveV2CacheKey(username);
+  if (!key) return; // aún sin sesión: se intentará al entrar en Live
   _liveV2CacheRestored = true;
   const storage = liveV2CacheStorage();
   if (!storage) return;
   try {
-    const cached = JSON.parse(storage.getItem(LIVEV2_CACHE_KEY) || 'null');
-    if (!cached || !Array.isArray(cached.events) || typeof cached.serverTime !== 'string' || !cached.serverTime) return;
+    const cached = JSON.parse(storage.getItem(key) || 'null');
+    if (!liveV2CacheIsFresh(cached)) return; // sin fullAt o clave ajena → full
     st.events = cached.events;
     st.serverTime = cached.serverTime;
-    if (Number.isFinite(cached.fullAt)) st._fullAt = cached.fullAt;
+    st.serverNow = cached.serverTime;
+    st._fullAt = cached.fullAt;
   } catch (e) { /* caché ausente, corrupta o sin storage */ }
 }
 
 /** Guarda el último full (eventos + cursor) para reutilizarlo como delta al recargar. */
 function saveLiveV2Cache(st) {
+  const username = AppState && AppState.currentUser && AppState.currentUser.name;
+  const key = liveV2CacheKey(username);
+  if (!key) return;
   const storage = liveV2CacheStorage();
   if (!storage) return;
   try {
-    storage.setItem(LIVEV2_CACHE_KEY, JSON.stringify({
+    storage.setItem(key, JSON.stringify({
       events: st.events || [],
       serverTime: st.serverTime || null,
       fullAt: st._fullAt || Date.now(),
     }));
   } catch (e) { /* sin espacio o storage no disponible */ }
+}
+
+/** Elimina todas las claves porra_live_events_v1* (logout). Devuelve cuántas borró. */
+function purgeLiveV2Caches(storage) {
+  const s = storage || liveV2CacheStorage();
+  if (!s) return 0;
+  let removed = 0;
+  try {
+    const keys = [];
+    for (let i = 0; i < s.length; i++) {
+      const k = s.key(i);
+      if (k && k.indexOf(LIVEV2_CACHE_KEY) === 0) keys.push(k);
+    }
+    for (const k of keys) { s.removeItem(k); removed++; }
+  } catch (e) { /* storage no disponible */ }
+  return removed;
 }
 
 function liveV2State() {
@@ -1367,7 +1413,10 @@ async function renderLiveV2Tab() {
     retryLiveV2,
     liveV2ScheduleChipGlowTimers,
     unlockLiveAudio,
-    exitLiveV2Fullscreen,
+    liveV2CacheKey,
+    liveV2CacheDay,
+    liveV2CacheIsFresh,
+    purgeLiveV2Caches,
   };
 
   global.liveV2Ui = api;

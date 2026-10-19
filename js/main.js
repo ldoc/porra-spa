@@ -2361,6 +2361,7 @@ function logout() {
   localStorage.removeItem('porra_ucl_user');
   localStorage.removeItem('session_token');
   porraCache.clearPorraCaches();
+  try { liveV2Ui.purgeLiveV2Caches(localStorage); } catch (e) { /* storage no disponible */ }
   AppState._allPredictionsSeeded = false;
   AppState.currentUser = null;
   AppState.sessionToken = null;
