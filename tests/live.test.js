@@ -1,6 +1,11 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
 const { resolveLiveRefreshSecs, diffLiveMatches, computeLiveGaps, ringOffset, liveGoalsOf, buildLiveTabsHtml, buildRingHtml, buildZoneHtml, buildLiveSquadPlayersHtml, liveStatusStyle, buildLivePredictionPill, buildLiveTeamCell, describeLiveEvent, liveDayKey, pruneLiveEvents, appendLiveEvent, buildLiveEventsFeed, liveCountsLabel } = require('../js/live.js');
+
+const indexHtml = fs.readFileSync(path.join(__dirname, '../index.html'), 'utf8');
+const css = fs.readFileSync(path.join(__dirname, '../css/styles.css'), 'utf8');
 
 test('liveGoalsOf extrae goles de stats Sofascore', () => {
   assert.deepEqual(liveGoalsOf({ 17: { goles: 2 }, 42: { goles: 1 }, jugadores: [] }), { 17: 2, 42: 1 });
@@ -48,12 +53,33 @@ test('el servidor manda, fichero de respaldo, default 60', () => {
   assert.equal(resolveLiveRefreshSecs(-3, 0), 60);
 });
 
-test('tabs con Live activa', () => {
+test('tabs con Live activa y contrato ARIA', () => {
   const html = buildLiveTabsHtml('live');
   assert.ok(html.includes('data-tab="live"'));
   assert.ok(html.includes('🔴'));
   assert.ok(html.includes('Live'));
   assert.ok(html.includes('resultados-tab active'));
+  assert.ok(html.includes('role="tablist"'));
+  assert.equal((html.match(/role="tab"/g) || []).length, 4);
+  const liveBtn = html.match(/<button[^>]*data-tab="live"[^>]*>/)[0];
+  const jornadasBtn = html.match(/<button[^>]*data-tab="jornadas"[^>]*>/)[0];
+  assert.match(liveBtn, /role="tab"/);
+  assert.match(liveBtn, /aria-selected="true"/);
+  assert.match(jornadasBtn, /role="tab"/);
+  assert.match(jornadasBtn, /aria-selected="false"/);
+});
+
+test('los tabs de resultados tienen objetivo táctil de 44px', () => {
+  const block = css.match(/\.resultados-tab\s*\{([^}]*)\}/);
+  assert.ok(block);
+  assert.match(block[1], /min-height:\s*44px/);
+});
+
+test('el viewport permite hacer zoom', () => {
+  const meta = indexHtml.match(/<meta name="viewport"[^>]*content="([^"]+)"/);
+  assert.ok(meta);
+  assert.doesNotMatch(meta[1], /user-scalable\s*=\s*no/i);
+  assert.doesNotMatch(meta[1], /maximum-scale/i);
 });
 
 test('anillo con segundos dentro', () => {

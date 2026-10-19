@@ -66,10 +66,11 @@
 
   function buildLiveTabsHtml(currentTab) {
     const tabs = [['jornadas', '📅', 'Jornadas'], ['live', '🔴', 'Live'], ['clasificacion', '📊', 'Clasif.'], ['eliminatorias', '🏆', 'Elim.']];
-    return '<div class="resultados-tabs">' + tabs.map(([key, icon, label]) =>
-      `<button class="resultados-tab ${currentTab === key ? 'active' : ''}" data-tab="${key}">`
-      + `<span class="resultados-tab-ic">${icon}</span><span class="resultados-tab-lb">${label}</span></button>`
-    ).join('') + '</div>';
+    return '<div class="resultados-tabs" role="tablist">' + tabs.map(([key, icon, label]) => {
+      const active = currentTab === key;
+      return `<button type="button" class="resultados-tab ${active ? 'active' : ''}" role="tab" aria-selected="${active}" data-tab="${key}">`
+        + `<span class="resultados-tab-ic">${icon}</span><span class="resultados-tab-lb">${label}</span></button>`;
+    }).join('') + '</div>';
   }
 
   function buildRingHtml(secsLeft, total) {

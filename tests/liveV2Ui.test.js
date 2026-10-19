@@ -6,6 +6,12 @@ const {
   liveV2NextPollState,
   fetchLiveEvents,
   init,
+  enterLiveV2Fullscreen,
+  exitLiveV2Fullscreen,
+  bindLiveV2Fullscreen,
+  liveV2SkeletonHtml,
+  liveV2ShowReason,
+  renderLiveV2Html,
 } = require('../js/live-v2-ui.js');
 
 test('liveV2ChipLabel sin estado devuelve NS', () => {
@@ -87,4 +93,158 @@ test('fetchLiveEvents con payload.ok=false lanza y no pisa el estado previo', as
   assert.equal(AppState.liveV2.lastFetchAt, 123);
   assert.equal(AppState.liveV2._fullAt, 456);
   assert.equal(AppState.liveV2.error, true);
+});
+
+function setupDom() {
+  const bodyClasses = new Set();
+  const toggleClasses = new Set();
+  const toggleAttrs = {};
+  const listeners = {};
+  let fullscreenEl = null;
+  const makeClassList = (set) => ({
+    add: c => set.add(c),
+    remove: c => set.delete(c),
+    toggle: (c, on) => { if (on) set.add(c); else set.delete(c); },
+    contains: c => set.has(c),
+  });
+  const toggle = {
+    textContent: '',
+    dataset: {},
+    classList: makeClassList(toggleClasses),
+    setAttribute: (k, v) => { toggleAttrs[k] = v; },
+    addEventListener: (type, fn) => { toggle[`on${type}`] = fn; },
+  };
+  const doc = {
+    body: { classList: makeClassList(bodyClasses) },
+    documentElement: {
+      requestFullscreen: () => {
+        fullscreenEl = doc.documentElement;
+        return Promise.resolve();
+      },
+    },
+    get fullscreenElement() { return fullscreenEl; },
+    set fullscreenElement(v) { fullscreenEl = v; },
+    exitFullscreen: () => { fullscreenEl = null; return Promise.resolve(); },
+    querySelector: sel => (sel === '#livev2-fs-toggle' ? toggle : null),
+    addEventListener: (type, fn) => { listeners[type] = fn; },
+    removeEventListener: () => {},
+    createElement: () => makeElement(),
+  };
+  return { doc, bodyClasses, toggleClasses, toggleAttrs, listeners, toggle };
+}
+
+function makeElement() {
+  const attrs = {};
+  return {
+    className: '',
+    textContent: '',
+    style: {},
+    classList: { add() {}, remove() {}, contains() { return false; } },
+    setAttribute(k, v) { attrs[k] = v; },
+    getAttribute(k) { return attrs[k]; },
+    remove() {},
+  };
+}
+
+function setupHistory() {
+  const stack = [{ state: null }];
+  return {
+    pushCount: 0,
+    backCount: 0,
+    get state() { return stack[stack.length - 1].state; },
+    pushState(state) { stack.push({ state }); this.pushCount++; },
+    back() { this.backCount++; if (stack.length > 1) stack.pop(); },
+  };
+}
+
+function freshUi() {
+  const file = require.resolve('../js/live-v2-ui.js');
+  delete require.cache[file];
+  return require('../js/live-v2-ui.js');
+}
+
+function withFullscreenGlobals(dom, hist, fn) {
+  const prevDoc = global.document;
+  const prevHistory = global.history;
+  global.document = dom.doc;
+  global.history = hist;
+  try {
+    fn();
+  } finally {
+    if (prevDoc === undefined) delete global.document; else global.document = prevDoc;
+    if (prevHistory === undefined) delete global.history; else global.history = prevHistory;
+  }
+}
+
+test('fullscreen entra con historial y mantiene salida en el skeleton', () => {
+  const ui = freshUi();
+  const dom = setupDom();
+  const hist = setupHistory();
+  withFullscreenGlobals(dom, hist, () => {
+    ui.enterLiveV2Fullscreen();
+    assert.ok(dom.bodyClasses.has('live-fs'));
+    assert.equal(hist.pushCount, 1);
+    assert.deepEqual(hist.state, { liveFs: true });
+    assert.equal(dom.toggle.textContent, '⤡');
+    const skeleton = ui.liveV2SkeletonHtml('<div class="skeleton-row"></div>');
+    assert.match(skeleton, /id="livev2-fs-toggle"/);
+    assert.ok(skeleton.includes('⤡'));
+    assert.match(skeleton, /aria-label="Salir de pantalla completa"/);
+  });
+});
+
+test('Escape y popstate salen de pantalla completa', () => {
+  const ui = freshUi();
+  const dom = setupDom();
+  const hist = setupHistory();
+  withFullscreenGlobals(dom, hist, () => {
+    ui.bindLiveV2Fullscreen();
+    ui.enterLiveV2Fullscreen();
+    let prevented = false;
+    dom.listeners.keydown({ key: 'Escape', preventDefault() { prevented = true; } });
+    assert.ok(prevented);
+    assert.ok(!dom.bodyClasses.has('live-fs'));
+    assert.equal(hist.backCount, 1);
+    assert.equal(hist.state, null);
+
+    ui.enterLiveV2Fullscreen();
+    hist.back();
+    dom.listeners.popstate();
+    assert.ok(!dom.bodyClasses.has('live-fs'));
+    assert.equal(hist.backCount, 2);
+    assert.equal(hist.state, null);
+  });
+});
+
+test('el motivo del cambio usa aria-live polite', () => {
+  const ui = freshUi();
+  const created = [];
+  const prevDoc = global.document;
+  const prevRaf = global.requestAnimationFrame;
+  const prevSetTimeout = global.setTimeout;
+  global.document = { createElement: () => { const el = makeElement(); created.push(el); return el; } };
+  global.requestAnimationFrame = fn => fn();
+  global.setTimeout = () => 0;
+  try {
+    const container = { querySelectorAll: () => [], appendChild: () => {} };
+    ui.liveV2ShowReason(container, { offsetTop: 10, offsetHeight: 44 }, { icon: '⚽', text: 'Gol', delta: 1 });
+    assert.equal(created.length, 1);
+    assert.equal(created[0].getAttribute('aria-live'), 'polite');
+  } finally {
+    if (prevDoc === undefined) delete global.document; else global.document = prevDoc;
+    if (prevRaf === undefined) delete global.requestAnimationFrame; else global.requestAnimationFrame = prevRaf;
+    if (prevSetTimeout === undefined) delete global.setTimeout; else global.setTimeout = prevSetTimeout;
+  }
+});
+
+test('render Live v2 anuncia filas/feed y conserva la salida', () => {
+  const ui = freshUi();
+  ui.init({
+    AppState: { liveV2: null, matches: [], allPlayers: [], squadsCache: {}, currentUser: null },
+    liveV2Api: { escapeHtml: s => String(s) },
+  });
+  const html = ui.renderLiveV2Html([], { states: {} });
+  assert.match(html, /id="livev2-feed"[^>]*aria-live="polite"/);
+  assert.match(html, /id="livev2-rows"[^>]*aria-live="polite"/);
+  assert.match(html, /id="livev2-fs-toggle"/);
 });

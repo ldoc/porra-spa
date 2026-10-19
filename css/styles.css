@@ -3830,6 +3830,7 @@ html, body {
   align-items: center;
   justify-content: center;
   gap: 1px;
+  min-height: 44px;
   padding: 6px 3px;
   background: transparent;
   border: 1px solid transparent;

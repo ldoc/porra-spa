@@ -1852,7 +1852,12 @@ async function renderResultadosTab() {
   const prevLiveScrollTop = isLiveTab ? (container.querySelector('.resultados-scroll')?.scrollTop ?? null) : null;
   if (!isLiveTab) liveV2Ui.stopLiveV2Polling();
 
-  container.innerHTML = skeletonRows(6);
+  if (isLiveTab) {
+    container.innerHTML = liveV2Ui.liveV2SkeletonHtml(skeletonRows(6));
+    liveV2Ui.bindLiveV2Fullscreen(container);
+  } else {
+    container.innerHTML = skeletonRows(6);
+  }
   await Promise.all([fetchMatchStats(), fetchAllPredictions()]);
   // El Live ordena por jugadores: asegurar players antes de pintar (navegación temprana tras boot)
   if (isLiveTab && !(AppState.players || []).length) {
@@ -3363,7 +3368,7 @@ function navigateToTab(tabName) {
 
   // Resetear ronda de resultados al salir de la pestaña
   if (tabName !== 'resultados') {
-    if (typeof document !== 'undefined') document.body.classList.remove('live-fs');
+    if (typeof document !== 'undefined') liveV2Ui.exitLiveV2Fullscreen();
     AppState.resultadosRound = null;
     AppState.resultadosRoundKey = null;
     liveV2Ui.stopLiveV2Polling();

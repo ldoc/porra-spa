@@ -117,6 +117,15 @@ function bindLiveV2SoundToggle(root) {
 
 // ── Pantalla completa del Live v2 (oculta header, nav inferior y tabs) ──
 let _liveV2FsChangeBound = false;
+let _liveV2FsHistoryPushed = false;
+
+function liveV2FsHistoryRef() {
+  try {
+    if (typeof window !== 'undefined' && window.history) return window.history;
+    if (typeof history !== 'undefined') return history;
+  } catch (e) { /* sin historial */ }
+  return null;
+}
 
 function liveV2FsActive() {
   return typeof document !== 'undefined' && document.body.classList.contains('live-fs');
@@ -138,15 +147,33 @@ function updateLiveV2FsToggle(root) {
 }
 
 function enterLiveV2Fullscreen() {
+  if (typeof document === 'undefined' || liveV2FsActive()) return;
   document.body.classList.add('live-fs');
+  const hist = liveV2FsHistoryRef();
+  if (hist && typeof hist.pushState === 'function') {
+    try {
+      hist.pushState({ liveFs: true }, '');
+      _liveV2FsHistoryPushed = true;
+    } catch (e) { _liveV2FsHistoryPushed = false; }
+  }
   try { if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(() => {}); } catch (e) { /* sin API */ }
   updateLiveV2FsToggle();
 }
 
-function exitLiveV2Fullscreen() {
-  document.body.classList.remove('live-fs');
-  try { if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen().catch(() => {}); } catch (e) { /* sin API */ }
-  updateLiveV2FsToggle();
+function exitLiveV2Fullscreen(fromHistory) {
+  if (typeof document !== 'undefined') {
+    document.body.classList.remove('live-fs');
+    try { if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen().catch(() => {}); } catch (e) { /* sin API */ }
+    updateLiveV2FsToggle();
+  }
+  const wasPushed = _liveV2FsHistoryPushed;
+  _liveV2FsHistoryPushed = false;
+  if (!fromHistory && wasPushed) {
+    const hist = liveV2FsHistoryRef();
+    if (hist && hist.state && hist.state.liveFs && typeof hist.back === 'function') {
+      try { hist.back(); } catch (e) { /* sin historial */ }
+    }
+  }
 }
 
 function bindLiveV2Fullscreen(root) {
@@ -158,10 +185,27 @@ function bindLiveV2Fullscreen(root) {
   if (!_liveV2FsChangeBound && typeof document !== 'undefined') {
     _liveV2FsChangeBound = true;
     document.addEventListener('fullscreenchange', () => {
-      updateLiveV2FsToggle();
-      if (!document.fullscreenElement) document.body.classList.remove('live-fs');
+      if (!document.fullscreenElement) exitLiveV2Fullscreen();
+      else updateLiveV2FsToggle();
+    });
+    document.addEventListener('popstate', () => {
+      _liveV2FsHistoryPushed = false;
+      if (liveV2FsActive()) exitLiveV2Fullscreen(true);
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape' || !liveV2FsActive()) return;
+      e.preventDefault();
+      exitLiveV2Fullscreen();
     });
   }
+}
+
+/** Skeleton del Live con la salida de pantalla completa siempre disponible. */
+function liveV2SkeletonHtml(bodyHtml) {
+  return `<div class="livev2"><div class="livev2-fixed"><div class="livev2-status">`
+    + `<span class="livev2-badge live">● CARGANDO</span>`
+    + `<div class="livev2-status-right">${liveV2FsToggleHtml()}</div>`
+    + `</div></div><div class="livev2-body">${bodyHtml || ''}</div></div>`;
 }
 
 /** deps de soundApi.playLiveEvent, o null si el sonido está desactivado. */
@@ -617,11 +661,11 @@ function renderLiveV2Html(rows, folded) {
     + `<div class="livev2-grid" id="livev2-chips-host">`
     + (chips || `<div class="livev2-empty">Sin partidos en directo ahora mismo</div>`)
     + `</div>`
-    + `<div id="livev2-feed" class="livev2-feed">${liveV2FeedHtml()}</div>`
+    + `<div id="livev2-feed" class="livev2-feed" aria-live="polite">${liveV2FeedHtml()}</div>`
     + `</div>`
     + `<div class="livev2-body">`
     + `<div class="livev2-section-title">Clasificación en vivo</div>`
-    + `<div class="livev2-rows" id="livev2-rows">${rows.map(liveV2RowHtml).join('')}</div>`
+    + `<div class="livev2-rows" id="livev2-rows" aria-live="polite">${rows.map(liveV2RowHtml).join('')}</div>`
     + `</div>`
     + `</div>`;
 }
@@ -737,6 +781,7 @@ function liveV2ShowReason(container, rowEl, label) {
   container.querySelectorAll('.livev2-reason').forEach(el => el.remove());
   const el = document.createElement('div');
   el.className = 'livev2-reason' + (label.delta < 0 ? ' neg' : '');
+  el.setAttribute('aria-live', 'polite');
   el.textContent = `${label.icon} ${label.text}` + (label.delta ? ` · ${label.delta > 0 ? '+' : ''}${label.delta} pts` : '');
   // Se coloca DEBAJO de la fila para no quedar oculto por la cabecera fija (.livev2-fixed, z-index 20)
   el.style.top = (rowEl.offsetTop + rowEl.offsetHeight + 4) + 'px';
@@ -1051,6 +1096,10 @@ async function renderLiveV2Tab() {
     stopLiveV2Polling,
     bindLiveV2SoundToggle,
     bindLiveV2Fullscreen,
+    enterLiveV2Fullscreen,
+    exitLiveV2Fullscreen,
+    liveV2SkeletonHtml,
+    liveV2ShowReason,
     liveV2State,
     liveV2ChipLabel,
     liveV2FeedHtml,
