@@ -392,8 +392,16 @@ function liveV2CtxById() {
   return out;
 }
 
+/** ms del reloj de pared del servidor (X-Server-Time), o null si no hay. */
+function liveV2PlayheadMs(st) {
+  const raw = st && st.serverNow;
+  if (!raw) return null;
+  const t = new Date(raw).getTime();
+  return Number.isFinite(t) ? t : null;
+}
+
 /** Carga inicial (forceFull) o delta (?since=serverTime); dedup por eventId|sourceId */
-async function fetchLiveEvents(forceFull) {
+async function fetchLiveEvents(forceFull, _resyncGuard) {
   const st = liveV2State();
   const url = API_BASE + '/api/live/events' + (!forceFull && st.serverTime ? `?since=${encodeURIComponent(st.serverTime)}` : '');
   const res = await fetchWithPhase(url);
@@ -404,32 +412,39 @@ async function fetchLiveEvents(forceFull) {
     const detail = payload && payload.error ? String(payload.error) : 'respuesta no válida';
     throw new Error('Live events: ' + detail);
   }
+  // Reloj de pared del servidor: el cursor `serverTime` es max(ingestedAt), no "ahora".
+  const headerTime = res.headers && typeof res.headers.get === 'function'
+    ? res.headers.get('X-Server-Time') : null;
+  st.serverNow = headerTime || new Date().toISOString();
+
   const keyOf = e => liveV2Api.eventKey(e);
   const incoming = payload.events || [];
+  if (!forceFull && payload.resync && !_resyncGuard) {
+    // Delta truncado/cursor inválido: NO se anexa nada; full inmediato y autoritativo.
+    st._needFull = true;
+    return fetchLiveEvents(true, true);
+  }
   if (forceFull) {
     // Un full es autoritativo: reemplaza eventos y resetea el estado derivado.
     st.events = incoming;
     st._seenEventIds = new Set(incoming.map(keyOf));
     st._chipChanged = {};
     st._chipScores = {};
+    st.prevRanks = null;
+    // Si el full no trae cursor, se invalida el delta (no se conserva el anterior).
+    st.serverTime = payload.serverTime || null;
+    st._fullAt = Date.now();
+    st._needFull = false;
+    saveLiveV2Cache(st);
   } else {
     const seen = new Set(st.events.map(keyOf));
     for (const e of incoming) {
       const k = keyOf(e);
       if (!seen.has(k)) { st.events.push(e); seen.add(k); }
     }
+    st.serverTime = payload.serverTime || st.serverTime;
   }
-  st.serverTime = payload.serverTime || st.serverTime;
   st.lastFetchAt = Date.now();
-  if (forceFull) {
-    // El full ya es autoritativo: consume el resync y refresca la caché de sesión.
-    st._fullAt = Date.now();
-    st._needFull = false;
-    saveLiveV2Cache(st);
-  } else if (payload.resync) {
-    // Delta truncado o cursor inválido: el siguiente fetch debe ser full.
-    st._needFull = true;
-  }
 }
 
 /** Pliega todos los eventos (presente) → { states, statsById } */
@@ -440,7 +455,7 @@ function liveV2Folded() {
   const playersById = liveV2PlayersById();
   const states = liveV2Api.foldAll(st.events, ctxById);
   const statsById = {};
-  const playhead = st.serverTime ? new Date(st.serverTime).getTime() : null;
+  const playhead = liveV2PlayheadMs(st);
   for (const [id, s] of Object.entries(states)) {
     const ctx = { ...(ctxById[id] || {}), playersById };
     statsById[id] = liveV2Api.matchStateToStats(s, ctx, playhead);
@@ -486,14 +501,23 @@ function liveV2Esc(s) {
   return liveV2Api.escapeHtml(s);
 }
 
-/** Etiqueta de estado del chip: NS, LIVE 63', HT o FT (fallback `·` si no hay minuto). */
-function liveV2ChipLabel(state) {
+/** Etiqueta de estado del chip: NS, LIVE 63', HT o FT (LIVE si no hay minuto). */
+function liveV2ChipLabel(state, playheadTs) {
   if (!state) return 'NS';
   if (state.status === 'NS') return 'NS';
   if (state.status === 'HT') return 'HT';
   if (state.status === 'FT') return 'FT';
-  const m = state.lastMinute != null ? state.lastMinute : '·';
-  return `LIVE ${m}'`;
+  const ts = playheadTs != null
+    ? playheadTs
+    : (typeof AppState !== 'undefined' && AppState ? liveV2PlayheadMs(liveV2State()) : null);
+  const api = (typeof liveV2Api !== 'undefined' && liveV2Api) || global.liveV2Api;
+  let minute = null;
+  if (api && typeof api.matchClockAt === 'function') {
+    minute = api.matchClockAt(state, ts);
+  }
+  if (minute == null) minute = state.lastMinute;
+  if (minute == null) return 'LIVE';
+  return `LIVE ${minute}'`;
 }
 
 /** true si hay al menos un partido en juego (LIVE o descanso HT). */
@@ -1218,8 +1242,9 @@ function updateLiveV2Dom(rows, folded) {
 // ventana se sigue sondeando aunque aún no haya eventos LIVE (arranque del scraper).
 const LIVEV2_KICKOFF_WINDOW_MS = 3.5 * 60 * 60 * 1000;
 
-/** true si hay que sondear: partido en juego o kickoff dentro de la ventana. */
+/** true si hay que sondear: full pendiente, partido en juego o kickoff en ventana. */
 function liveV2ShouldPoll(folded, now) {
+  if (liveV2State()._needFull) return true;
   if (liveV2HasInPlay(folded)) return true;
   const at = now == null ? Date.now() : now;
   const interval = (AppState.liveRefreshSecs || 30) * 1000;
@@ -1249,6 +1274,7 @@ function startLiveV2Polling() {
   if (typeof document !== 'undefined') {
     const onVis = () => {
       if (document.visibilityState === 'visible' && AppState.resultadosTab === 'live') {
+        if (!liveV2ShouldPoll(liveV2Folded())) return; // respeta la ventana de partido
         liveV2State()._needFull = true; // al volver a visible se resincroniza con un full
         pollLiveV2();
       }

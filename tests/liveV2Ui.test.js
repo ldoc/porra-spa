@@ -25,10 +25,19 @@ test('liveV2ChipLabel devuelve NS, HT y FT', () => {
   assert.equal(liveV2ChipLabel({ status: 'FT' }), 'FT');
 });
 
-test('liveV2ChipLabel en LIVE usa el minuto y cae a · sin minuto', () => {
+test('liveV2ChipLabel en LIVE usa el minuto y cae a LIVE sin minuto', () => {
   assert.equal(liveV2ChipLabel({ status: 'LIVE', lastMinute: 63 }), "LIVE 63'");
   assert.equal(liveV2ChipLabel({ status: 'LIVE', lastMinute: 0 }), "LIVE 0'");
-  assert.equal(liveV2ChipLabel({ status: 'LIVE', lastMinute: null }), "LIVE ·'");
+  assert.equal(liveV2ChipLabel({ status: 'LIVE', lastMinute: null }), 'LIVE');
+});
+
+test('liveV2ChipLabel calcula el minuto con el reloj del servidor', () => {
+  const liveV2 = require('../js/liveV2.js');
+  init({ AppState: { liveV2: null, matches: [], allPlayers: [] }, liveV2Api: liveV2 });
+  const state = {
+    status: 'LIVE', kickoffTs: '2026-09-16T20:00:00Z', period: 'period1', lastMinute: 0,
+  };
+  assert.equal(liveV2ChipLabel(state, Date.parse('2026-09-16T21:03:00Z')), "LIVE 63'");
 });
 
 test('liveV2StatusBadge marca error y deja el título con la última actualización', () => {
