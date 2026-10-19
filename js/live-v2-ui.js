@@ -321,14 +321,55 @@ function liveOfficialRows() {
 // Layout A: estado (badge + puntos inline + sonido) + grid de partidos + clasificación general.
 // ============================================================
 
+const LIVEV2_CACHE_KEY = 'porra_live_events_v1';
+let _liveV2CacheRestored = false;
+
+/** sessionStorage del Live (datos públicos) o null si no está disponible (modo privado). */
+function liveV2CacheStorage() {
+  try {
+    const storage = global.sessionStorage;
+    return storage && typeof storage.getItem === 'function' && typeof storage.setItem === 'function'
+      ? storage : null;
+  } catch (e) { return null; }
+}
+
+/** Restaura el último full cacheado una sola vez por carga de página. */
+function restoreLiveV2Cache(st) {
+  if (_liveV2CacheRestored) return;
+  _liveV2CacheRestored = true;
+  const storage = liveV2CacheStorage();
+  if (!storage) return;
+  try {
+    const cached = JSON.parse(storage.getItem(LIVEV2_CACHE_KEY) || 'null');
+    if (!cached || !Array.isArray(cached.events) || typeof cached.serverTime !== 'string' || !cached.serverTime) return;
+    st.events = cached.events;
+    st.serverTime = cached.serverTime;
+    if (Number.isFinite(cached.fullAt)) st._fullAt = cached.fullAt;
+  } catch (e) { /* caché ausente, corrupta o sin storage */ }
+}
+
+/** Guarda el último full (eventos + cursor) para reutilizarlo como delta al recargar. */
+function saveLiveV2Cache(st) {
+  const storage = liveV2CacheStorage();
+  if (!storage) return;
+  try {
+    storage.setItem(LIVEV2_CACHE_KEY, JSON.stringify({
+      events: st.events || [],
+      serverTime: st.serverTime || null,
+      fullAt: st._fullAt || Date.now(),
+    }));
+  } catch (e) { /* sin espacio o storage no disponible */ }
+}
+
 function liveV2State() {
   if (!AppState.liveV2) {
     AppState.liveV2 = {
       events: [], serverTime: null, prevRanks: null, polling: false, _lastRows: [], _seenEventIds: null,
-      _fullAt: 0, lastFetchAt: null, error: null,
+      _fullAt: 0, _needFull: false, lastFetchAt: null, error: null,
       _chipChanged: {}, // eventId -> ts del último cambio de marcador (para glow + orden)
       _chipScores: {},  // eventId -> "home-away" del poll anterior (detección de cambios)
     };
+    restoreLiveV2Cache(AppState.liveV2);
   }
   if (!AppState.liveV2._chipChanged) AppState.liveV2._chipChanged = {};
   if (!AppState.liveV2._chipScores) AppState.liveV2._chipScores = {};
@@ -380,7 +421,15 @@ async function fetchLiveEvents(forceFull) {
   }
   st.serverTime = payload.serverTime || st.serverTime;
   st.lastFetchAt = Date.now();
-  if (payload.resync) st._fullAt = 0;
+  if (forceFull) {
+    // El full ya es autoritativo: consume el resync y refresca la caché de sesión.
+    st._fullAt = Date.now();
+    st._needFull = false;
+    saveLiveV2Cache(st);
+  } else if (payload.resync) {
+    // Delta truncado o cursor inválido: el siguiente fetch debe ser full.
+    st._needFull = true;
+  }
 }
 
 /** Pliega todos los eventos (presente) → { states, statsById } */
@@ -806,7 +855,7 @@ async function retryLiveV2() {
   updateLiveV2RetryState(root);
   let target = root;
   try {
-    st._fullAt = 0;
+    st._needFull = true;
     const html = await renderLiveV2Tab();
     const scroll = root.parentElement;
     target = scroll && scroll.classList.contains('resultados-scroll') ? scroll : root;
@@ -1200,7 +1249,7 @@ function startLiveV2Polling() {
   if (typeof document !== 'undefined') {
     const onVis = () => {
       if (document.visibilityState === 'visible' && AppState.resultadosTab === 'live') {
-        liveV2State()._fullAt = 0; // al volver a visible se resincroniza con un full
+        liveV2State()._needFull = true; // al volver a visible se resincroniza con un full
         pollLiveV2();
       }
     };
@@ -1225,9 +1274,9 @@ async function pollLiveV2() {
     const prevRanks = {};
     for (const r of (st._lastRows || [])) prevRanks[r.name] = r.rank;
     st.prevRanks = prevRanks;
-    const forceFull = !st.serverTime || (Date.now() - (st._fullAt || 0) > 10 * 60 * 1000);
+    const forceFull = !st.serverTime || !st.events.length || !!st._needFull
+      || (Date.now() - (st._fullAt || 0) > 10 * 60 * 1000);
     await fetchLiveEvents(forceFull);
-    if (forceFull) st._fullAt = Date.now();
     // Estado antes del render: el badge debe reflejar ya este poll, no el anterior.
     Object.assign(st, liveV2NextPollState(st, true, Date.now()));
     const folded = liveV2Folded();
@@ -1246,10 +1295,11 @@ async function pollLiveV2() {
 async function renderLiveV2Tab() {
   stopLiveV2Polling();
   const st = liveV2State();
-  const forceFull = !st.serverTime || !st._fullAt;
+  // Con eventos y cursor en memoria (visita anterior o caché de sesión) se entra
+  // con delta: el full solo se fuerza en resync/retry, nunca por entrar a Live.
+  const forceFull = !st.serverTime || !st.events.length || !!st._needFull;
   try {
     await fetchLiveEvents(forceFull);
-    if (forceFull) st._fullAt = Date.now();
     st.error = null;
   } catch (e) { st.error = true; /* sin eventos disponibles */ }
   const folded = liveV2Folded();
