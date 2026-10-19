@@ -9,13 +9,16 @@ function loadLiveV2Abbr() {
   const src = fs.readFileSync(path.join(__dirname, '../js/main.js'), 'utf8');
   const match = src.match(/function liveV2Abbr\(name\) \{[\s\S]*?\n\}/);
   assert.ok(match, 'liveV2Abbr(name) debe existir en js/main.js');
-  return new Function(`${match[0]}\nreturn liveV2Abbr;`)();
+  const overrides = src.match(/const LIVEV2_ABBR_OVERRIDES = \{[\s\S]*?\n\};/);
+  return new Function(
+    `${overrides ? overrides[0] : 'const LIVEV2_ABBR_OVERRIDES = {};'}\n${match[0]}\nreturn liveV2Abbr;`
+  )();
 }
 
 const liveV2Abbr = loadLiveV2Abbr();
 
 test('liveV2Abbr ignora los tokens de club y usa las 3 primeras letras', () => {
-  assert.equal(liveV2Abbr('Real Madrid'), 'REA');
+  assert.equal(liveV2Abbr('Real Madrid'), 'RMA');
   assert.equal(liveV2Abbr('FC Barcelona'), 'BAR');
   assert.equal(liveV2Abbr('AS Roma'), 'ROM');
   assert.equal(liveV2Abbr('Inter'), 'INT');
@@ -25,6 +28,13 @@ test('liveV2Abbr ignora los tokens de club y usa las 3 primeras letras', () => {
 test('liveV2Abbr normaliza acentos y descarta numeración ("1.")', () => {
   assert.equal(liveV2Abbr('1. FC Köln'), 'KOL');
   assert.equal(liveV2Abbr('Bayern München'), 'BAY');
+});
+
+test('abreviaturas ambiguas se desambiguan', () => {
+  assert.equal(liveV2Abbr('Manchester City'), 'MCI');
+  assert.equal(liveV2Abbr('Manchester United'), 'MUN');
+  assert.equal(liveV2Abbr('Real Madrid'), 'RMA');
+  assert.equal(liveV2Abbr('Real Betis'), 'BET');
 });
 
 test('liveV2Abbr es determinista y tolera entradas vacías', () => {

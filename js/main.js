@@ -1796,7 +1796,13 @@ let _liveRenderGen = 0;
 
 // Abreviatura de 3 letras de un equipo (determinista).
 // Se mantiene aquí porque tests/liveV2Abbr.test.js la extrae de este fichero.
+const LIVEV2_ABBR_OVERRIDES = {
+  'Manchester City': 'MCI', 'Manchester United': 'MUN',
+  'Real Madrid': 'RMA', 'Real Betis': 'BET'
+};
 function liveV2Abbr(name) {
+  const key = String(name == null ? '' : name).trim();
+  if (LIVEV2_ABBR_OVERRIDES[key]) return LIVEV2_ABBR_OVERRIDES[key];
   const DROP = {
     FC: 1, CF: 1, AS: 1, AC: 1, SK: 1, FK: 1, BK: 1, CD: 1, RC: 1, SC: 1,
     CS: 1, SV: 1, AFC: 1, SSC: 1, SAD: 1
