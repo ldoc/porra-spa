@@ -12,6 +12,9 @@ const {
   liveV2SkeletonHtml,
   liveV2ShowReason,
   renderLiveV2Html,
+  liveV2CacheKey,
+  liveV2CacheIsFresh,
+  purgeLiveV2Caches,
 } = require('../js/live-v2-ui.js');
 
 test('liveV2ChipLabel sin estado devuelve NS', () => {
@@ -280,4 +283,171 @@ test('liveV2ShouldPoll evita peticiones fuera de la ventana de partido', () => {
   AppState.matches = [{ id: 1, fechaTs: Math.floor(now / 1000) }];
   assert.equal(ui.liveV2ShouldPoll({ states: {} }, now), true);
   assert.equal(ui.liveV2ShouldPoll({ states: { 1: { status: 'FT' } } }, now), false);
+});
+
+test('liveV2ShouldPoll devuelve true mientras hay que forzar un full', () => {
+  const ui = freshUi();
+  const now = Date.now();
+  const AppState = {
+    liveRefreshSecs: 30,
+    matches: [],
+    liveV2: {
+      events: [], serverTime: '2026-10-19T10:00:00Z', prevRanks: null, polling: false,
+      _lastRows: [], _fullAt: 1, _needFull: true, lastFetchAt: null, error: null,
+    },
+  };
+  ui.init({ AppState, liveV2Api: { eventKey: e => e.id } });
+  assert.equal(ui.liveV2ShouldPoll({ states: {} }, now), true);
+  AppState.liveV2._needFull = false;
+  assert.equal(ui.liveV2ShouldPoll({ states: {} }, now), false);
+});
+
+function jsonResponse(payload, serverTime) {
+  return {
+    ok: true,
+    headers: { get: h => (h === 'X-Server-Time' ? (serverTime || null) : null) },
+    json: async () => payload,
+  };
+}
+
+test('fetchLiveEvents guarda X-Server-Time y el reloj avanza entre eventos', async () => {
+  const liveV2 = require('../js/liveV2.js');
+  const T1 = '2026-09-16T20:00:00Z';
+  const T2 = '2026-09-16T21:03:00Z';
+  let call = 0;
+  const AppState = {
+    liveV2: {
+      events: [], serverTime: T1, prevRanks: null, polling: false, _lastRows: [],
+      _fullAt: 0, _needFull: false, lastFetchAt: null, error: null,
+    },
+    matches: [], allPlayers: [],
+  };
+  const fetchWithPhase = async () => {
+    const t = call++ === 0 ? T1 : T2;
+    return jsonResponse({
+      ok: true, serverTime: t,
+      events: [{ eventId: 100, type: 'status', ts: T1, sourceId: 's', payload: { status: 'LIVE', period: 'period1', kickoffTs: T1 } }],
+    }, t);
+  };
+  init({ AppState, API_BASE: 'https://api.test', fetchWithPhase, liveV2Api: liveV2 });
+
+  await fetchLiveEvents(true);
+  const st = AppState.liveV2;
+  assert.equal(st.serverNow, T1);
+  const fold1 = liveV2.foldAll(st.events, { 100: { homeTeamId: 1, awayTeamId: 2 } });
+  assert.equal(liveV2.matchClockAt(fold1[100], Date.parse(T1)), 0);
+
+  await fetchLiveEvents(false);
+  assert.equal(st.serverNow, T2);
+  const fold2 = liveV2.foldAll(st.events, { 100: { homeTeamId: 1, awayTeamId: 2 } });
+  assert.equal(liveV2.matchClockAt(fold2[100], Date.parse(st.serverNow)), 63);
+});
+
+test('fetchLiveEvents ejecuta el resync al momento y reemplaza con el full', async () => {
+  const AppState = {
+    currentUser: { name: 'juan' },
+    liveV2: {
+      events: [{ eventId: 1, sourceId: 'old', type: 'goal', payload: {} }],
+      serverTime: '2026-10-19T10:00:00Z', prevRanks: { juan: 1 }, polling: false,
+      _lastRows: [], _fullAt: 1, _needFull: false, lastFetchAt: null, error: null,
+    },
+    matches: [], allPlayers: [],
+  };
+  let calls = 0;
+  const fetchWithPhase = async () => {
+    calls++;
+    if (calls === 1) {
+      return jsonResponse({
+        ok: true, resync: true, serverTime: '2026-10-19T10:01:00Z',
+        events: [{ eventId: 9, sourceId: 'partial', type: 'goal', payload: {} }],
+      }, '2026-10-19T10:01:00Z');
+    }
+    return jsonResponse({
+      ok: true, resync: false, serverTime: '2026-10-19T10:02:00Z',
+      events: [
+        { eventId: 2, sourceId: 'full-a', type: 'goal', payload: {} },
+        { eventId: 3, sourceId: 'full-b', type: 'goal', payload: {} },
+      ],
+    }, '2026-10-19T10:02:00Z');
+  };
+  init({ AppState, API_BASE: 'https://api.test', fetchWithPhase, liveV2Api: { eventKey: e => e.sourceId } });
+
+  await fetchLiveEvents(false);
+  assert.equal(calls, 2, 'el resync dispara un full inmediato');
+  assert.deepEqual(AppState.liveV2.events.map(e => e.sourceId), ['full-a', 'full-b']);
+  assert.equal(AppState.liveV2.serverTime, '2026-10-19T10:02:00Z');
+  assert.equal(AppState.liveV2._needFull, false);
+  assert.equal(AppState.liveV2.prevRanks, null);
+});
+
+test('un full con serverTime null resetea el cursor', async () => {
+  const AppState = {
+    liveV2: {
+      events: [{ eventId: 1, sourceId: 'old' }], serverTime: '2026-10-19T10:00:00Z',
+      prevRanks: null, polling: false, _lastRows: [], _fullAt: 1, _needFull: true,
+      lastFetchAt: null, error: null,
+    },
+    matches: [], allPlayers: [],
+  };
+  const fetchWithPhase = async () => jsonResponse(
+    { ok: true, serverTime: null, events: [] }, '2026-10-19T10:05:00Z');
+  init({ AppState, API_BASE: 'https://api.test', fetchWithPhase, liveV2Api: { eventKey: e => e.id } });
+
+  await fetchLiveEvents(true);
+  assert.equal(AppState.liveV2.serverTime, null);
+  assert.equal(AppState.liveV2._needFull, false);
+  assert.equal(AppState.liveV2.serverNow, '2026-10-19T10:05:00Z');
+});
+
+test('liveV2CacheKey incluye día local y usuario', () => {
+  const now = new Date(2026, 9, 19, 12, 0, 0).getTime();
+  assert.equal(liveV2CacheKey('juan', now), 'porra_live_events_v1:2026-10-19:juan');
+});
+
+test('liveV2CacheIsFresh exige eventos, cursor y fullAt', () => {
+  assert.equal(liveV2CacheIsFresh({ events: [], serverTime: 'T', fullAt: 1 }), true);
+  assert.equal(liveV2CacheIsFresh({ events: [], serverTime: 'T' }), false);
+  assert.equal(liveV2CacheIsFresh({ events: [], serverTime: null, fullAt: 1 }), false);
+  assert.equal(liveV2CacheIsFresh(null), false);
+});
+
+test('restoreLiveV2Cache ignora claves de otro día', () => {
+  const ui = freshUi();
+  const saved = JSON.stringify({
+    events: [{ eventId: 1, sourceId: 'a' }], serverTime: '2026-10-18T10:00:00Z', fullAt: 1,
+  });
+  const store = { 'porra_live_events_v1:2026-10-18:juan': saved };
+  const prev = global.localStorage;
+  global.localStorage = {
+    getItem: k => (k in store ? store[k] : null),
+    setItem: (k, v) => { store[k] = String(v); },
+    removeItem: k => { delete store[k]; },
+    get length() { return Object.keys(store).length; },
+    key: i => Object.keys(store)[i],
+  };
+  try {
+    const AppState = { currentUser: { name: 'juan' }, liveV2: null };
+    ui.init({ AppState, liveV2Api: {} });
+    const st = ui.liveV2State();
+    assert.equal(st.serverTime, null, 'la caché de ayer no se restaura');
+    assert.deepEqual(st.events, []);
+  } finally {
+    if (prev === undefined) delete global.localStorage; else global.localStorage = prev;
+  }
+});
+
+test('purgeLiveV2Caches elimina solo las claves del live', () => {
+  const store = {
+    a: 'x',
+    'porra_live_events_v1:2026-10-19:juan': '{}',
+    'porra_live_events_v1:2026-10-18:ana': '{}',
+    other: 'y',
+  };
+  const storage = {
+    get length() { return Object.keys(store).length; },
+    key: i => Object.keys(store)[i],
+    removeItem: k => { delete store[k]; },
+  };
+  assert.equal(purgeLiveV2Caches(storage), 2);
+  assert.deepEqual(Object.keys(store), ['a', 'other']);
 });
