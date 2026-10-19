@@ -84,6 +84,8 @@
       case 'match_final': {
         state.status = 'FT';
         if (p.scoreHome != null) state.score = { home: p.scoreHome, away: p.scoreAway };
+        if (state.lastMinute == null && ev.minute != null) state.lastMinute = ev.minute;
+        if (!state.ftTs) state.ftTs = ev.ts || null;
         for (const [id, r] of Object.entries(p.ratings || {})) { const pl = ensure(state, Number(id)); if (pl) pl.rating = r; }
         for (const [id, m] of Object.entries(p.minutes || {})) { const pl = ensure(state, Number(id)); if (pl) { pl.authoritativeMinutes = m; } }
         break;
@@ -143,11 +145,13 @@
     if (d !== 0) return d;
     const ing = parseTs(a.ingestedAt) - parseTs(b.ingestedAt);
     if (ing !== 0) return ing;
-    const seq = (a.seq || 0) - (b.seq || 0);
+    const seq = (Number(a.seq) || 0) - (Number(b.seq) || 0);
     if (seq !== 0) return seq;
     const tr = typeRank(a.type) - typeRank(b.type);
     if (tr !== 0) return tr;
-    return String(a.sourceId || '').localeCompare(String(b.sourceId || ''));
+    const sa = String(a.sourceId || '');
+    const sb = String(b.sourceId || '');
+    return sa < sb ? -1 : sa > sb ? 1 : 0;
   }
 
   function foldMatch(events, ctx) {
@@ -219,7 +223,8 @@
         penaltiMarcado: pl.penaltyScored,
         penaltiParado: pl.penaltySaved,
         golesRecibidos,
-        asistencias: pl.assists
+        asistencias: pl.assists,
+        expulsado: pl.cards.some(c => c === 'red' || c === 'yellowRed' || c === 'secondYellow')
       };
     });
     return {
@@ -249,6 +254,9 @@
       case 'penalty_saved': return { icon: '🧤', text: `${min}Penalti parado`, delta: d };
       case 'assist': return { icon: '🅰️', text: `${min}Asistencia`, delta: d };
       case 'rating': return { icon: d >= 0 ? '📈' : '📉', text: `${min}Nota del jugador`, delta: d };
+      case 'score': return { icon: '🔧', text: `${min}Corrección de marcador`, delta: d };
+      case 'match_final': return { icon: '🏁', text: `${min}Final del partido`, delta: d };
+      case 'substitution': return { icon: '🔁', text: `${min}Cambio`, delta: d };
       default: return null;
     }
   }

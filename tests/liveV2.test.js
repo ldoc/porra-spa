@@ -408,3 +408,63 @@ test('motivo con varios eventos no inventa atribución (delta 0)', () => {
   assert.equal(mover.pointsDelta, 0);
   assert.match(mover.label.text, /Asistencia|Gol/);
 });
+
+// ── Revisión final (reloj servidor, resync, expulsados, motivos) ──────
+
+const playerPoints = require('../js/playerPoints.js');
+
+test('reasonLabel cubre score, match_final y substitution', () => {
+  assert.deepEqual(reasonLabel({ type: 'score', minute: 45, payload: {} }, { delta: 0 }),
+    { icon: '🔧', text: "45' Corrección de marcador", delta: 0 });
+  assert.deepEqual(reasonLabel({ type: 'match_final', minute: 90, payload: {} }, { delta: 0 }),
+    { icon: '🏁', text: "90' Final del partido", delta: 0 });
+  assert.deepEqual(reasonLabel({ type: 'substitution', minute: 60, payload: {} }, { delta: 0 }),
+    { icon: '🔁', text: "60' Cambio", delta: 0 });
+});
+
+test('match_final fija lastMinute y ftTs si faltan', () => {
+  const st = createMatchState();
+  applyEvent(st, {
+    type: 'status', ts: '2026-09-16T20:00:00Z',
+    payload: { status: 'LIVE', period: 'period1', kickoffTs: '2026-09-16T20:00:00Z' }
+  }, CTX);
+  applyEvent(st, {
+    type: 'match_final', ts: '2026-09-16T21:50:00Z', minute: 90,
+    payload: { scoreHome: 1, scoreAway: 0 }
+  }, CTX);
+  assert.equal(st.status, 'FT');
+  assert.equal(st.lastMinute, 90);
+  assert.equal(st.ftTs, '2026-09-16T21:50:00Z');
+  assert.equal(matchClockAt(st, Date.parse('2026-09-16T23:00:00Z')), 90);
+});
+
+test('un expulsado a los 80 no recibe bonus de portería a cero', () => {
+  const st = createMatchState();
+  const ctx = {
+    homeTeamId: 1, awayTeamId: 2,
+    playersById: { 11: { nombre: 'Def', posicion: 'D', equipo: 1 } }
+  };
+  applyEvent(st, {
+    type: 'status', minute: 0, ts: '2026-09-16T20:00:00Z',
+    payload: { status: 'LIVE', period: 'period1', kickoffTs: '2026-09-16T20:00:00Z' }
+  }, ctx);
+  applyEvent(st, { type: 'lineup', payload: { starters: [11] } }, ctx);
+  applyEvent(st, { type: 'card', minute: 80, playerId: 11, payload: { cardType: 'red' } }, ctx);
+  const stats = matchStateToStats(st, ctx, Date.parse('2026-09-16T21:20:00Z'));
+  const p = stats.jugadores.find(j => String(j.id) === '11');
+  assert.equal(p.expulsado, true);
+  assert.equal(p.minutos, 80);
+  // 0-0 y >70 min: sin expulsión serían +2; expulsado no cobra nada.
+  assert.equal(playerPoints.cleanSheetBonus(p.posicion, p.minutos, 0, p.expulsado), 0);
+  assert.equal(playerPoints.cleanSheetBonus(p.posicion, p.minutos, 0, false), 2);
+});
+
+test('foldMatch ordena sourceId por code unit (Z antes que a)', () => {
+  const t = '2026-09-16T20:30:00.000Z';
+  const events = [
+    { eventId: 1, type: 'score', ts: t, ingestedAt: t, seq: 0, sourceId: 'a', payload: { scoreHome: 1, scoreAway: 0 } },
+    { eventId: 1, type: 'score', ts: t, ingestedAt: t, seq: 0, sourceId: 'Z', payload: { scoreHome: 2, scoreAway: 0 } },
+  ];
+  const s = foldMatch(events, CTX);
+  assert.deepEqual(s.score, { home: 1, away: 0 });
+});

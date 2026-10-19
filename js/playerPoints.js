@@ -19,7 +19,20 @@
     return Math.max(-13, -1 - Math.floor((57 - tenths) / 3));
   }
 
-  const api = { ratingToPoints };
+  /**
+   * Bonus de portería a cero: +5 portero / +2 defensa si jugó más de 70 min
+   * y su equipo no encajó. Un expulsado no lo cobra (aunque el equipo acabe 0).
+   */
+  function cleanSheetBonus(posicion, minutos, golesRival, expulsado) {
+    if (expulsado) return 0;
+    if (!(minutos > 70)) return 0;
+    if (golesRival !== 0) return 0;
+    if (posicion === 'G') return 5;
+    if (posicion === 'D') return 2;
+    return 0;
+  }
+
+  const api = { ratingToPoints, cleanSheetBonus };
   global.playerPointsApi = api;
   if (typeof module !== 'undefined' && module.exports) {
     module.exports = api;

@@ -607,8 +607,8 @@ function liveV2ChipHtml(eventId, state) {
   return `<div class="${d.cls}" data-livev2-chip="${liveV2Esc(eventId)}" title="${liveV2Esc(d.fullTitle)}" aria-label="${liveV2Esc(d.fullTitle)}">`
     + hb
     + `<span class="livev2-cell-team">${liveV2Esc(d.homeAbbr)}</span>`
-    + `<span class="livev2-cell-score">${d.score}</span>`
-    + `<span class="livev2-chip-state ${d.chipCls}">${liveV2Esc(d.label)}</span>`
+    + `<span class="livev2-cell-score">${liveV2Esc(d.score)}</span>`
+    + `<span class="livev2-chip-state ${liveV2Esc(d.chipCls)}">${liveV2Esc(d.label)}</span>`
     + `<span class="livev2-cell-team">${liveV2Esc(d.awayAbbr)}</span>`
     + ub
     + `</div>`;
@@ -973,7 +973,10 @@ function renderLiveV2Html(rows, folded) {
 
 const LIVEV2_FLIGHT_MS = 700;
 const LIVEV2_REASON_MS = 2500;
-const LIVEV2_REASON_TYPES = { goal: 1, goal_cancelled: 1, penalty_saved: 1, assist: 1, rating: 1 };
+const LIVEV2_REASON_TYPES = {
+  goal: 1, goal_cancelled: 1, penalty_saved: 1, assist: 1, rating: 1,
+  score: 1, match_final: 1, substitution: 1,
+};
 let _liveV2SettleTimer = null;
 
 /** Snapshot ligero de filas (rank + puntos) para comparar en el siguiente update */
