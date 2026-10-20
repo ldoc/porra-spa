@@ -1,4 +1,4 @@
-# Design: Live v2 — ocultar notas, movimiento de puestos, desglose y popup por partido
+# Design: Live v2 — notas, puestos, diferencial de puntos, desglose y popup por partido
 
 **Fecha:** 2026-10-20
 **Rama:** `main` en `porra-spa`
@@ -6,16 +6,18 @@
 
 ## Resumen
 
-Cinco cambios sobre el Live v2, todos front-end:
+Seis cambios sobre el Live v2, todos front-end:
 
 1. **Ocultar los eventos de cambio de nota** del ticker de últimos eventos.
 2. **Movimiento de puestos visible 30 s**: junto al número de puesto se muestra
    `▲N`, `▼N` o `=` cuando no cambia o ya pasaron los 30 s.
-3. **Desglose en la cabecera superior**: puntos del Live en curso separados en
+3. **Diferencial de puntos por refresco**: nueva columna con `+5pts`, `-2pts` o
+   `0pts` respecto al poll anterior, independiente del movimiento de puestos.
+4. **Desglose en la cabecera superior**: puntos del Live en curso separados en
    pronósticos y plantilla.
-4. **Popup por partido**: al pulsar un chip se abre el desglose del usuario para
+5. **Popup por partido**: al pulsar un chip se abre el desglose del usuario para
    ese partido, con pronóstico y plantilla, también en NS.
-5. **Pronóstico en el chip**: línea compacta `Tú 2-1` (o `S/P`) siempre visible.
+6. **Pronóstico en el chip**: línea compacta `Tú 2-1` (o `S/P`) siempre visible.
 
 No hay cambios de backend, scoring, event-sourcing ni base de datos.
 
@@ -24,6 +26,8 @@ No hay cambios de backend, scoring, event-sourcing ni base de datos.
 - El ticker no muestra ruido de notas de jugadores.
 - El usuario ve de forma clara e inmediata si ha subido o bajado puestos, y
   cuántos, durante 30 s.
+- El usuario ve cuántos puntos ha ganado o perdido en el último refresco, sin
+  confundirlo con el movimiento de puestos.
 - La cabecera explica de dónde salen los puntos live del usuario.
 - Cada partido del Live ofrece su desglose completo (pronóstico + plantilla)
   sin salir de la pantalla.
@@ -42,6 +46,8 @@ No hay cambios de backend, scoring, event-sourcing ni base de datos.
 - El desglose de cabecera es **solo del Live en curso**, no los totales
   oficiales de la porra.
 - El indicador `▲/▼/=` va **junto al número de puesto**.
+- El diferencial de puntos se calcula **desde el refresco anterior**, no contra
+  los puntos oficiales ni contra el total live acumulado.
 - Las notas se ocultan **solo del ticker**; el motivo y el sonido no cambian.
 - El pronóstico del chip se muestra **siempre** (NS, LIVE, HT y FT).
 - El popup se abre **también en NS**, con pronóstico y plantilla a 0 pts.
@@ -52,7 +58,8 @@ No hay cambios de backend, scoring, event-sourcing ni base de datos.
   modal de motivo, polling y cache.
 - `liveV2FeedItems()` filtra `lineup` y `status`; hoy deja pasar `rating`.
 - `liveV2RowHtml()` pinta una flecha derecha con el delta de puesto que
-  devuelve `rankRows()` (`delta = prevRank - rank`).
+  devuelve `rankRows()` (`delta = prevRank - rank`). Esa flecha se sustituye
+  por el badge junto al puesto y por la nueva columna de puntos.
 - `liveUserMatchPoints(username, lm, meta)` ya calcula, por partido:
   `matchPts`, `breakdown`, `squadPts`, `squadDetail` y `total`.
 - `AppState.allPredictions[usuario][eventId]` contiene `{ home, away }`.
@@ -135,9 +142,50 @@ a:
 - `aria-label` textual: “Sube 2 puestos”, “Baja 1 puesto”, “Sin cambios”.
 - El color no es el único indicador: siempre hay símbolo y texto accesible.
 
-## 3. Desglose en la cabecera superior
+## 3. Diferencial de puntos por refresco
 
 ### 3.1 Cálculo
+
+En `updateLiveV2Dom`, comparar los puntos live de cada fila con los del poll
+anterior (`prevByName`):
+
+```js
+diff = row.livePoints - prev.livePoints
+```
+
+- `diff > 0`: el usuario ha sumado puntos en este refresco.
+- `diff < 0`: ha restado puntos.
+- `diff === 0`: sin cambios.
+- En el render inicial o al volver a entrar al tab no hay anterior: `0pts`.
+- El valor se mantiene visible hasta el siguiente poll; si en el siguiente no
+  hay cambios, pasa a `0pts`.
+
+No se usa `pointsDelta` (acumulado live contra el oficial) para esta columna.
+
+### 3.2 UI
+
+Nueva columna al final de la fila, tras los puntos totales:
+
+```html
+<span class="livev2-pts-diff up">+5pts</span>
+```
+
+- `up` → `+5pts` (verde).
+- `down` → `-2pts` (rojo).
+- `eq` → `0pts` (atenuado).
+- Ancho fijo y alineación derecha para que los valores queden alineados.
+- Se actualiza en sitio en cada poll, sin recrear la fila.
+- No hay temporizador de 30 s: el valor corresponde al último refresco.
+
+### 3.3 Accesibilidad
+
+- `aria-label` textual: “Suma 5 puntos en este refresco”, “Resta 2 puntos en
+  este refresco”, “Sin cambios de puntos”.
+- El signo y el texto `pts` están siempre presentes, no solo el color.
+
+## 4. Desglose en la cabecera superior
+
+### 4.1 Cálculo
 
 Nuevo helper `liveV2HeaderBreakdown(folded)`:
 
@@ -153,7 +201,7 @@ Nuevo helper `liveV2HeaderBreakdown(folded)`:
 
 Sin sesión: `{ predictionPts: 0, squadPts: 0, total: 0 }`.
 
-### 3.2 UI
+### 4.2 UI
 
 Nueva fila compacta dentro de `.livev2-fixed`, debajo de la fila de estado:
 
@@ -168,9 +216,9 @@ Nueva fila compacta dentro de `.livev2-fixed`, debajo de la fila de estado:
 - En móvil la fila puede envolver (`flex-wrap`) sin romper el layout.
 - Si no hay usuario o no hay partidos live, muestra `0` en los tres valores.
 
-## 4. Popup de desglose por partido
+## 5. Popup de desglose por partido
 
-### 4.1 Apertura
+### 5.1 Apertura
 
 - Los chips pasan a ser interactivos: `role="button"`, `tabindex="0"` y
   `aria-label` con el título del partido.
@@ -180,7 +228,7 @@ Nueva fila compacta dentro de `.livev2-fixed`, debajo de la fila de estado:
 - Se llama a `bindLiveV2Chips` al renderizar el tab Live y al reintentar.
 - Se guarda el `eventId` abierto en `AppState.liveV2._openMatchModal`.
 
-### 4.2 Contenido
+### 5.2 Contenido
 
 Se reutiliza la estructura de `.breakdown-modal-overlay` / `.breakdown-modal`
 con una clase adicional `.livev2-match-modal`.
@@ -205,7 +253,7 @@ Sección **Plantilla**:
 - Si no hay ninguno: “Ningún jugador de tu plantilla en este partido”.
 - En NS: lista con 0 pts o aviso equivalente.
 
-### 4.3 Datos
+### 5.3 Datos
 
 Nuevo helper `liveV2MatchBreakdown(eventId, state)` que devuelve:
 
@@ -222,7 +270,7 @@ Nuevo helper `liveV2MatchBreakdown(eventId, state)` que devuelve:
 Se apoya en `liveUserMatchPoints()` y en las predicciones del usuario actual,
 sin recalcular reglas de puntuación.
 
-### 4.4 Cierre y refresco
+### 5.4 Cierre y refresco
 
 - Cierre con ✕, click en el overlay y tecla Escape.
 - Si el popup está abierto durante un poll, se refresca su contenido con el
@@ -230,9 +278,9 @@ sin recalcular reglas de puntuación.
 - El foco vuelve al chip que lo abrió.
 - Se bloquea el scroll del body mientras está abierto, igual que otros modales.
 
-## 5. Pronóstico en el chip
+## 6. Pronóstico en el chip
 
-### 5.1 Contenido
+### 6.1 Contenido
 
 - `liveV2ChipData()` añade `predictionText`:
   - Con pronóstico: `Tú 2-1`.
@@ -240,7 +288,7 @@ sin recalcular reglas de puntuación.
 - Se obtiene de `AppState.allPredictions[usuario][eventId]` usando el usuario
   actual.
 
-### 5.2 UI
+### 6.2 UI
 
 - El texto se integra en la línea de estado del chip para no añadir otra fila:
 
@@ -253,12 +301,13 @@ LIVE 63' · Tú 2-1
 - `patchLiveV2Chip()` actualiza el texto sin recrear el nodo.
 - Si no hay usuario, se muestra `S/P`.
 
-## 6. Arquitectura y archivos
+## 7. Arquitectura y archivos
 
 - `js/live-v2-ui.js`
   - Filtro `rating` en `liveV2FeedItems`.
   - Estado y helpers de movimiento de puestos.
-  - `liveV2RowHtml` y `updateLiveV2Dom` con el nuevo badge.
+  - `liveV2RowHtml` y `updateLiveV2Dom` con el badge de puesto y la columna
+    de diferencial de puntos.
   - `liveV2HeaderBreakdown` y `liveV2HeaderBreakdownHtml`.
   - `liveV2MatchBreakdown`, `liveV2MatchModalHtml`, apertura/cierre/refresco.
   - `bindLiveV2Chips` exportado en la API.
@@ -270,13 +319,14 @@ LIVE 63' · Tú 2-1
   - El popup se cierra al salir del tab Live.
 - `css/styles.css`
   - `.livev2-rank-group`, `.livev2-rank-move.up/.down/.eq`.
+  - `.livev2-pts-diff.up/.down/.eq` y el ajuste de anchos de la fila.
   - `.livev2-breakdown` y sus segmentos.
   - `.livev2-cell-pred`.
   - Ajustes de `.livev2-match-modal` reutilizando los estilos de modal.
 - `tests/liveV2Ui.test.js`
-  - Nuevos tests de feed, puestos, cabecera, chip y popup.
+  - Nuevos tests de feed, puestos, diferencial de puntos, cabecera, chip y popup.
 
-## 7. Casos límite
+## 8. Casos límite
 
 - Sin usuario: cabecera a 0, chip `S/P` y popup con el mensaje “Inicia sesión
   para ver tu desglose”; no se muestran datos personales.
@@ -287,19 +337,26 @@ LIVE 63' · Tú 2-1
   popup sigue mostrando el desglose live si el chip existe.
 - Cambio de puesto seguido de otro cambio antes de 30 s: prevalece el último
   delta y se reinicia el contador.
+- Refresco sin cambios: el diferencial de puntos pasa a `0pts`; el badge de
+  puesto conserva su movimiento hasta caducar.
+- Varios cambios de puntos seguidos: la columna muestra solo el neto del último
+  refresco, no la suma histórica.
+- Cambio de puesto sin cambio de puntos: `▲/▼` puede aparecer junto a `0pts`.
+- Cambio de puntos sin cambio de puesto: `=` puede aparecer junto a `+5pts`.
 - Poll sin cambios: el badge conserva el último movimiento hasta caducar.
 - Pestaña oculta o poll pausado: no se alteran los badges; el temporizador de
   30 s sigue su curso.
 - Modal abierto y partido que desaparece del fold: se cierra automáticamente.
 
-## 8. Testing
+## 9. Testing
 
 - Unitarios en `tests/liveV2Ui.test.js`:
   - `liveV2FeedItems` excluye `rating` y mantiene el resto.
   - Movimiento de puestos: sube, baja, `=`, caducidad a 30 s y reinicio.
+  - Diferencial de puntos: `+`, `-`, `0`, inicial y neto entre polls.
   - `liveV2HeaderBreakdown` separa pronóstico y plantilla y excluye oficiales.
   - Chip con pronóstico y sin pronóstico.
   - HTML del popup con pronóstico, desglose, plantilla y caso NS.
 - Ejecutar `node --test tests/` y comprobar que no hay regresiones.
 - Comprobación manual en local: chips clicables, popup, cabecera, ticker sin
-  notas y badges de puesto.
+  notas, badges de puesto y columna de diferencial de puntos.
