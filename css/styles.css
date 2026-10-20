@@ -6739,15 +6739,31 @@ body.live-fs .resultados-scroll {
   font-variant-numeric: tabular-nums;
 }
 
-.livev2-chip-state {
+.livev2-chip-meta {
   order: 99;
   flex: 0 0 100%;
-  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.livev2-chip-state {
   font-size: 9px;
   font-weight: 700;
   letter-spacing: .02em;
   opacity: .8;
-  white-space: nowrap;
+}
+
+.livev2-cell-pred {
+  font-size: 9px;
+  font-weight: 800;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .livev2-chip-state.live { color: var(--accent-primary); }

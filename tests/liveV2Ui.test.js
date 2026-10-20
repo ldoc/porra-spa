@@ -1021,3 +1021,48 @@ test('liveV2ChipEventId resuelve el chip desde el target', () => {
   assert.equal(ui.liveV2ChipEventId({ closest: () => null }), null);
   assert.equal(ui.liveV2ChipEventId(null), null);
 });
+
+test('el chip muestra el pronostico propio', () => {
+  const ui = freshUi();
+  const liveV2 = require('../js/liveV2.js');
+  ui.init({
+    AppState: {
+      currentUser: { name: 'me' },
+      liveV2: null,
+      matches: [{ id: 1, homeTeamId: 1, awayTeamId: 2, homeTeam: 'A', awayTeam: 'B', homeBadgeExt: 'webp', awayBadgeExt: 'webp' }],
+      allPlayers: [],
+      allPredictions: { me: { 1: { home: 2, away: 1 } } },
+      squadsCache: {},
+      matchStats: [],
+    },
+    liveV2Api: liveV2,
+    liveV2Abbr: () => 'A',
+    calculateMatchPoints: () => ({ points: 0, breakdown: [] }),
+    calculatePlayerMatchPoints: () => ({ total: 0, desglose: [] }),
+  });
+  const html = ui.renderLiveV2Html([], { states: { 1: { status: 'LIVE', lastMinute: 63, score: { home: 1, away: 0 } } }, statsById: {} });
+  assert.match(html, /livev2-cell-pred/);
+  assert.match(html, /Tú 2-1/);
+});
+
+test('el chip muestra S/P sin pronostico', () => {
+  const ui = freshUi();
+  const liveV2 = require('../js/liveV2.js');
+  ui.init({
+    AppState: {
+      currentUser: { name: 'me' },
+      liveV2: null,
+      matches: [{ id: 1, homeTeamId: 1, awayTeamId: 2, homeTeam: 'A', awayTeam: 'B', homeBadgeExt: 'webp', awayBadgeExt: 'webp' }],
+      allPlayers: [],
+      allPredictions: { me: {} },
+      squadsCache: {},
+      matchStats: [],
+    },
+    liveV2Api: liveV2,
+    liveV2Abbr: () => 'A',
+    calculateMatchPoints: () => ({ points: 0, breakdown: [] }),
+    calculatePlayerMatchPoints: () => ({ total: 0, desglose: [] }),
+  });
+  const html = ui.renderLiveV2Html([], { states: { 1: { status: 'NS', score: { home: 0, away: 0 } } }, statsById: {} });
+  assert.match(html, /S\/P/);
+});

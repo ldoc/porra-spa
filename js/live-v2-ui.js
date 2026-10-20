@@ -757,6 +757,12 @@ function liveV2ChipData(eventId, state) {
   // foldAll usa claves string (ids de partido); normaliza a match.id (number) para liveMatchMeta
   const match = (AppState.matches || []).find(m => String(m.id) === String(eventId));
   const meta = liveMatchMeta({ eventId: match ? match.id : eventId });
+  const me = AppState.currentUser && AppState.currentUser.name;
+  const preds = me ? ((AppState.allPredictions || {})[me] || {}) : {};
+  const matchId = match ? match.id : eventId;
+  const pred = preds[matchId] != null ? preds[matchId] : preds[String(matchId)];
+  const hasPred = pred && pred.home != null && pred.away != null;
+  const predictionText = hasPred ? `Tú ${pred.home}-${pred.away}` : 'S/P';
   return {
     meta,
     score: state && state.score ? `${state.score.home}-${state.score.away}` : '–',
@@ -765,7 +771,9 @@ function liveV2ChipData(eventId, state) {
     cls: `livev2-cell${state && (state.status === 'LIVE' || state.status === 'HT') ? ' live' : ''}`
       + `${state && state.status === 'FT' ? ' ft' : ''}`
       + `${liveV2ChipIsRecentChange(eventId) ? ' changed' : ''}`,
-    fullTitle: `${meta.homeTeam} ${state && state.score ? `${state.score.home}-${state.score.away}` : '–'} ${meta.awayTeam} · ${liveV2ChipLabel(state)}`,
+    predictionText,
+    chipMetaText: `${liveV2ChipLabel(state)} · ${predictionText}`,
+    fullTitle: `${meta.homeTeam} ${state && state.score ? `${state.score.home}-${state.score.away}` : '–'} ${meta.awayTeam} · ${liveV2ChipLabel(state)} · ${predictionText}`,
     homeBadge: liveV2BadgeSrc(meta.homeTeamId, meta.homeBadgeExt),
     awayBadge: liveV2BadgeSrc(meta.awayTeamId, meta.awayBadgeExt),
     homeAbbr: liveV2Abbr(meta.homeTeam),
@@ -808,7 +816,10 @@ function liveV2ChipHtml(eventId, state) {
     + hb
     + `<span class="livev2-cell-team">${liveV2Esc(d.homeAbbr)}</span>`
     + `<span class="livev2-cell-score">${liveV2Esc(d.score)}</span>`
+    + `<span class="livev2-chip-meta">`
     + `<span class="livev2-chip-state ${liveV2Esc(d.chipCls)}">${liveV2Esc(d.label)}</span>`
+    + `<span class="livev2-cell-pred">${liveV2Esc(d.predictionText)}</span>`
+    + `</span>`
     + `<span class="livev2-cell-team">${liveV2Esc(d.awayAbbr)}</span>`
     + ub
     + `</div>`;
@@ -843,6 +854,8 @@ function patchLiveV2Chip(el, eventId, state) {
     if (stateEl.className !== cls) stateEl.className = cls;
     if (stateEl.textContent !== d.label) stateEl.textContent = d.label;
   }
+  const predEl = el.querySelector('.livev2-cell-pred');
+  if (predEl && predEl.textContent !== d.predictionText) predEl.textContent = d.predictionText;
 }
 
 function createLiveV2Chip(eventId, state) {
