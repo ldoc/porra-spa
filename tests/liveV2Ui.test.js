@@ -912,3 +912,88 @@ test('render Live v2 incluye la cabecera de desglose', () => {
   const html = ui.renderLiveV2Html([], { states: {}, statsById: {} });
   assert.match(html, /id="livev2-breakdown"/);
 });
+
+function liveMatchFixture() {
+  return {
+    currentUser: { name: 'me' },
+    liveV2: null,
+    matches: [{
+      id: 1, homeTeamId: 1, awayTeamId: 2, homeTeam: 'A', awayTeam: 'B',
+      homeBadgeExt: 'webp', awayBadgeExt: 'webp',
+    }],
+    allPlayers: [{ id: 13, nombre: 'F', posicion: 'F', equipo: 1 }],
+    allPredictions: { me: { 1: { home: 1, away: 0 } } },
+    squadsCache: { me: [{ id: 13, nombre: 'F', posicion: 'F', equipo: 1 }] },
+    matchStats: [],
+  };
+}
+
+test('liveV2MatchBreakdown devuelve pronostico y plantilla', () => {
+  const ui = freshUi();
+  const liveV2 = require('../js/liveV2.js');
+  const AppState = liveMatchFixture();
+  ui.init({
+    AppState,
+    liveV2Api: liveV2,
+    calculateMatchPoints: () => ({ points: 8, breakdown: ['8 por acertar resultado'] }),
+    calculatePlayerMatchPoints: () => ({ total: 3, desglose: [{ concepto: 'Gol marcado', puntos: 3 }] }),
+  });
+  const state = {
+    status: 'LIVE', score: { home: 1, away: 0 },
+    players: {
+      13: {
+        id: 13, rating: 7, goals: 1, assists: 0, penaltyScored: 0, penaltySaved: 0,
+        cards: [], onPitch: true, entered: true, entryMinute: 0, exitMinute: null, goalsReceived: 0,
+      },
+    },
+    goals: [],
+    kickoffTs: '2026-09-16T20:00:00Z', lastMinute: 60,
+  };
+  const d = ui.liveV2MatchBreakdown(1, state);
+  assert.equal(d.prediction.home, 1);
+  assert.equal(d.prediction.away, 0);
+  assert.equal(d.predictionPts, 8);
+  assert.equal(d.squadPts, 3);
+  assert.equal(d.total, 11);
+  assert.equal(d.status, 'LIVE');
+});
+
+test('liveV2MatchBreakdown en NS no da puntos pero conserva el pronostico', () => {
+  const ui = freshUi();
+  const liveV2 = require('../js/liveV2.js');
+  const AppState = liveMatchFixture();
+  ui.init({
+    AppState,
+    liveV2Api: liveV2,
+    calculateMatchPoints: () => ({ points: 8, breakdown: [] }),
+    calculatePlayerMatchPoints: () => ({ total: 3, desglose: [] }),
+  });
+  const d = ui.liveV2MatchBreakdown(1, { status: 'NS', score: { home: 0, away: 0 }, players: {} });
+  assert.equal(d.prediction.home, 1);
+  assert.equal(d.predictionPts, 0);
+  assert.equal(d.squadPts, 0);
+  assert.equal(d.total, 0);
+  assert.equal(d.label, 'NS');
+});
+
+test('liveV2MatchModalHtml pinta pronostico, plantilla, total y aviso NS', () => {
+  const ui = freshUi();
+  ui.init({ AppState: {}, liveV2Api: { escapeHtml: s => String(s) } });
+  const html = ui.liveV2MatchModalHtml({
+    meta: { homeTeam: 'A', awayTeam: 'B', homeTeamId: 1, awayTeamId: 2, homeBadgeExt: 'webp', awayBadgeExt: 'webp' },
+    status: 'NS',
+    label: 'NS',
+    score: { home: 0, away: 0 },
+    loggedIn: true,
+    prediction: { home: 1, away: 0 },
+    predictionPts: 0,
+    predictionBreakdown: [],
+    squadPts: 0,
+    squadDetail: [],
+    total: 0,
+  });
+  assert.match(html, /Tú 1-0/);
+  assert.match(html, /Pronóstico/);
+  assert.match(html, /Plantilla/);
+  assert.match(html, /El partido aún no ha empezado/);
+});

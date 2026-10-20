@@ -617,6 +617,86 @@ function liveV2BadgeSrc(teamId, ext) {
   return teamId != null ? `data/imgEquipos/${teamId}.${ext || 'webp'}` : null;
 }
 
+function liveV2MatchBreakdown(eventId, state) {
+  const me = AppState.currentUser && AppState.currentUser.name;
+  const match = (AppState.matches || []).find(m => String(m.id) === String(eventId));
+  const id = match ? match.id : eventId;
+  const meta = liveMatchMeta({ eventId: id });
+  const status = (state && state.status) || 'NS';
+  let stats = null;
+  if (status !== 'NS' && state && typeof liveV2Api !== 'undefined' && liveV2Api.matchStateToStats) {
+    const ctx = { ...(liveV2CtxById()[id] || {}), playersById: liveV2PlayersById() };
+    stats = liveV2Api.matchStateToStats(state, ctx, liveV2PlayheadMs(liveV2State()));
+  }
+  const lm = { eventId: id, stats, status };
+  const r = liveUserMatchPoints(me, lm, meta);
+  const preds = me ? ((AppState.allPredictions || {})[me] || {}) : {};
+  const pred = preds[id] != null ? preds[id] : preds[String(id)];
+  const hasPred = pred && pred.home != null && pred.away != null;
+  return {
+    eventId: id,
+    meta,
+    status,
+    label: liveV2ChipLabel(state),
+    score: state && state.score ? { ...state.score } : null,
+    loggedIn: !!me,
+    prediction: hasPred ? { home: pred.home, away: pred.away } : null,
+    predictionPts: r.matchPts,
+    predictionBreakdown: r.breakdown || [],
+    squadPts: r.squadPts,
+    squadDetail: r.squadDetail || [],
+    total: r.total,
+  };
+}
+
+function liveV2MatchModalHtml(d) {
+  const score = d.score ? `${d.score.home}-${d.score.away}` : '–';
+  const homeBadge = liveV2BadgeSrc(d.meta.homeTeamId, d.meta.homeBadgeExt);
+  const awayBadge = liveV2BadgeSrc(d.meta.awayTeamId, d.meta.awayBadgeExt);
+  const badge = (src, cls) => src
+    ? `<img class="livev2-modal-badge ${cls}" src="${liveV2Esc(src)}" alt="" loading="lazy">`
+    : '';
+  const predScore = d.prediction
+    ? `<div class="livev2-modal-pred-score">Tú ${d.prediction.home}-${d.prediction.away}</div>`
+    : `<div class="livev2-modal-empty">Sin pronóstico</div>`;
+  const predPts = d.prediction
+    ? `<div class="livev2-modal-subtotal">${d.predictionPts > 0 ? '+' : ''}${d.predictionPts} pts</div>`
+    : '';
+  const predBreakdown = d.predictionBreakdown.length
+    ? `<ul class="livev2-modal-list">${d.predictionBreakdown.map(x => `<li>${liveV2Esc(x)}</li>`).join('')}</ul>`
+    : '';
+  const squad = d.squadDetail.length
+    ? `<div class="livev2-modal-squad">${d.squadDetail.map(p => `
+        <div class="livev2-modal-player">
+          <span class="livev2-modal-player-name">${liveV2Esc(p.nombre)}</span>
+          <b class="${p.puntos >= 0 ? 'positive' : 'negative'}">${p.puntos > 0 ? '+' : ''}${p.puntos} pts</b>
+          <small>${p.desglose.map(x => liveV2Esc(x.concepto)).join(' · ')}</small>
+        </div>`).join('')}</div>`
+    : `<div class="livev2-modal-empty">Ningún jugador de tu plantilla en este partido</div>`;
+  const note = d.status === 'NS'
+    ? `<div class="livev2-modal-note">El partido aún no ha empezado</div>`
+    : '';
+  const loggedOut = `<div class="livev2-modal-note">Inicia sesión para ver tu desglose</div>`;
+  const body = d.loggedIn
+    ? `<div class="livev2-modal-section"><h4>🎯 Pronóstico</h4>${predScore}${predPts}${predBreakdown}</div>`
+      + `<div class="livev2-modal-section"><h4>👥 Plantilla</h4>${squad}</div>`
+      + `<div class="livev2-modal-total">Total: <b>${d.total > 0 ? '+' : ''}${d.total} pts</b></div>`
+    : loggedOut;
+  return `<div class="breakdown-modal livev2-match-modal" role="dialog" aria-modal="true" aria-labelledby="livev2-match-modal-title">`
+    + `<div class="breakdown-modal-header">`
+    + `<h3 class="breakdown-modal-title" id="livev2-match-modal-title">${liveV2Esc(d.meta.homeTeam)} - ${liveV2Esc(d.meta.awayTeam)}</h3>`
+    + `<button class="breakdown-modal-close" data-livev2-modal-close="1" aria-label="Cerrar">✕</button>`
+    + `</div>`
+    + `<div class="breakdown-modal-content livev2-match-content">`
+    + `<div class="livev2-modal-score">${badge(homeBadge, 'home')}<b>${score}</b>`
+    + `<span class="livev2-modal-state">${liveV2Esc(d.label)}</span>${badge(awayBadge, 'away')}</div>`
+    + note
+    + body
+    + `<div class="livev2-modal-total">Total: <b>${d.total > 0 ? '+' : ''}${d.total} pts</b></div>`
+    + `</div>`
+    + `</div>`;
+}
+
 /** Datos derivados de un chip: se usan tanto para crear el HTML como para parchearlo. */
 function liveV2ChipData(eventId, state) {
   // foldAll usa claves string (ids de partido); normaliza a match.id (number) para liveMatchMeta
@@ -1766,6 +1846,8 @@ async function renderLiveV2Tab() {
     liveV2ApplyPointsClass,
     liveV2HeaderBreakdown,
     liveV2HeaderBreakdownHtml,
+    liveV2MatchBreakdown,
+    liveV2MatchModalHtml,
   };
 
   global.liveV2Ui = api;
