@@ -450,6 +450,7 @@ function liveV2State() {
       _fullAt: 0, _needFull: false, lastFetchAt: null, error: null,
       _chipChanged: {}, // eventId -> ts del último cambio de marcador (para glow + orden)
       _chipScores: {},  // eventId -> "home-away" del poll anterior (detección de cambios)
+      _chipUserPoints: {}, _chipPulse: {},
       _rankMoves: {},
       _openMatchModal: null, _modalReturnFocus: null, _modalPrevOverflow: null, _modalKeyHandler: null,
     };
@@ -457,6 +458,9 @@ function liveV2State() {
   }
   if (!AppState.liveV2._chipChanged) AppState.liveV2._chipChanged = {};
   if (!AppState.liveV2._chipScores) AppState.liveV2._chipScores = {};
+  if (!AppState.liveV2._chipPulse) AppState.liveV2._chipPulse = {};
+  if (!AppState.liveV2._chipUserPoints) AppState.liveV2._chipUserPoints = {};
+  if (!AppState.liveV2._rankMoves) AppState.liveV2._rankMoves = {};
   return AppState.liveV2;
 }
 
@@ -514,8 +518,6 @@ function openLiveV2MatchModal(eventId) {
   });
   refreshLiveV2MatchModal();
 }
-
-const LIVEV2_CHIP_GLOW_MS = 10000;
 
 /** playerId -> { nombre, posicion, equipo } desde AppState.allPlayers */
 function liveV2PlayersById() {
@@ -763,6 +765,13 @@ function liveV2ChipData(eventId, state) {
   const pred = preds[matchId] != null ? preds[matchId] : preds[String(matchId)];
   const hasPred = pred && pred.home != null && pred.away != null;
   const predictionText = hasPred ? `Tú ${pred.home}-${pred.away}` : 'S/P';
+  const pulse = liveV2State()._chipPulse && liveV2State()._chipPulse[String(eventId)];
+  const pulseCls = pulse ? ` score-${pulse.state}` : '';
+  const pulseTitle = pulse
+    ? pulse.state === 'fav' ? ' · marcador cambiado, sumas puntos'
+      : pulse.state === 'hurt' ? ' · marcador cambiado, restas puntos'
+      : ' · marcador cambiado, sin efecto en tus puntos'
+    : '';
   return {
     meta,
     score: state && state.score ? `${state.score.home}-${state.score.away}` : '–',
@@ -770,10 +779,10 @@ function liveV2ChipData(eventId, state) {
     chipCls: ((state && state.status) || 'NS').toLowerCase(),
     cls: `livev2-cell${state && (state.status === 'LIVE' || state.status === 'HT') ? ' live' : ''}`
       + `${state && state.status === 'FT' ? ' ft' : ''}`
-      + `${liveV2ChipIsRecentChange(eventId) ? ' changed' : ''}`,
+      + pulseCls,
     predictionText,
     chipMetaText: `${liveV2ChipLabel(state)} · ${predictionText}`,
-    fullTitle: `${meta.homeTeam} ${state && state.score ? `${state.score.home}-${state.score.away}` : '–'} ${meta.awayTeam} · ${liveV2ChipLabel(state)} · ${predictionText}`,
+    fullTitle: `${meta.homeTeam} ${state && state.score ? `${state.score.home}-${state.score.away}` : '–'} ${meta.awayTeam} · ${liveV2ChipLabel(state)} · ${predictionText}${pulseTitle}`,
     homeBadge: liveV2BadgeSrc(meta.homeTeamId, meta.homeBadgeExt),
     awayBadge: liveV2BadgeSrc(meta.awayTeamId, meta.awayBadgeExt),
     homeAbbr: liveV2Abbr(meta.homeTeam),
@@ -924,11 +933,10 @@ function liveV2KickoffTs(eventId) {
   return m && isFinite(m.fechaTs) ? m.fechaTs : Infinity;
 }
 
-/** true si el chip cambió de marcador en los últimos LIVEV2_CHIP_GLOW_MS */
-function liveV2ChipIsRecentChange(eventId) {
-  const st = liveV2State();
-  const ts = st._chipChanged ? st._chipChanged[String(eventId)] : null;
-  return !!(ts && (Date.now() - ts) < LIVEV2_CHIP_GLOW_MS);
+function liveV2ChipPulseState(delta) {
+  if (delta > 0) return 'fav';
+  if (delta < 0) return 'hurt';
+  return 'neutral';
 }
 
 /**
@@ -938,13 +946,31 @@ function liveV2ChipIsRecentChange(eventId) {
 function liveV2DetectChipChanges(folded) {
   const st = liveV2State();
   const now = Date.now();
+  const me = AppState.currentUser && AppState.currentUser.name;
+  const prevPoints = st._chipUserPoints || {};
+  const nextPoints = {};
   for (const [id, s] of Object.entries((folded && folded.states) || {})) {
     const key = String(id);
     const cur = s && s.score ? `${s.score.home}-${s.score.away}` : null;
     const prev = st._chipScores[key];
-    if (prev != null && cur != null && prev !== cur) st._chipChanged[key] = now;
+    const match = (AppState.matches || []).find(m => String(m.id) === key);
+    let total = 0;
+    if (me && match) {
+      const lm = { eventId: match.id, stats: (folded.statsById || {})[id], status: (s && s.status) || 'NS' };
+      total = liveUserMatchPoints(me, lm, liveMatchMeta(lm)).total;
+    }
+    nextPoints[key] = total;
+    if (prev != null && cur != null && prev !== cur) {
+      st._chipChanged[key] = now;
+      const before = prevPoints[key];
+      const delta = before != null ? total - before : 0;
+      st._chipPulse[key] = { state: liveV2ChipPulseState(delta), delta, at: now };
+    } else {
+      delete st._chipPulse[key];
+    }
     st._chipScores[key] = cur;
   }
+  st._chipUserPoints = nextPoints;
 }
 
 /**
@@ -970,17 +996,24 @@ function liveV2DeltaText(d) {
   return '+0';
 }
 
-/** Reaplica el glow 10 s a los chips que acaban de cambiar y lo retira solo (mantiene posición) */
+/** Mantiene el pulso hasta el siguiente poll y lo retira solo (mantiene posición) */
 function liveV2ScheduleChipGlowTimers(root) {
   const st = liveV2State();
   const now = Date.now();
-  (root || document).querySelectorAll('.livev2-cell.changed').forEach(chip => {
+  const interval = (AppState.liveRefreshSecs || 30) * 1000;
+  (root || document).querySelectorAll('.livev2-cell.score-fav, .livev2-cell.score-hurt, .livev2-cell.score-neutral').forEach(chip => {
     const id = chip.getAttribute('data-livev2-chip');
-    const ts = id != null && st._chipChanged ? st._chipChanged[id] : null;
-    if (!ts) return;
-    const remaining = LIVEV2_CHIP_GLOW_MS - (now - ts);
-    if (remaining <= 0) { chip.classList.remove('changed'); return; }
-    setTimeout(() => chip.classList.remove('changed'), remaining);
+    const pulse = id != null && st._chipPulse ? st._chipPulse[id] : null;
+    if (!pulse) return;
+    const remaining = interval - (now - pulse.at);
+    if (remaining <= 0) {
+      chip.classList.remove('score-fav', 'score-hurt', 'score-neutral');
+      return;
+    }
+    setTimeout(() => {
+      const cur = st._chipPulse && st._chipPulse[id];
+      if (cur && cur.at === pulse.at) chip.classList.remove('score-fav', 'score-hurt', 'score-neutral');
+    }, remaining);
   });
 }
 
@@ -1917,6 +1950,8 @@ async function renderLiveV2Tab() {
     fetchLiveEvents,
     retryLiveV2,
     liveV2ScheduleChipGlowTimers,
+    liveV2ChipPulseState,
+    liveV2DetectChipChanges,
     unlockLiveAudio,
     liveV2CacheKey,
     liveV2CacheDay,

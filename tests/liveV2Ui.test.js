@@ -1066,3 +1066,66 @@ test('el chip muestra S/P sin pronostico', () => {
   const html = ui.renderLiveV2Html([], { states: { 1: { status: 'NS', score: { home: 0, away: 0 } } }, statsById: {} });
   assert.match(html, /S\/P/);
 });
+
+test('liveV2ChipPulseState clasifica el delta', () => {
+  const ui = freshUi();
+  assert.equal(ui.liveV2ChipPulseState(5), 'fav');
+  assert.equal(ui.liveV2ChipPulseState(-2), 'hurt');
+  assert.equal(ui.liveV2ChipPulseState(0), 'neutral');
+});
+
+test('liveV2DetectChipChanges calcula el pulso y lo retira sin cambio', () => {
+  const ui = freshUi();
+  const liveV2 = require('../js/liveV2.js');
+  const AppState = {
+    currentUser: { name: 'me' },
+    liveV2: {
+      _chipScores: { 1: '0-0' },
+      _chipUserPoints: { 1: 0 },
+      _chipPulse: {},
+      _chipChanged: {},
+    },
+    matches: [{ id: 1, homeTeamId: 1, awayTeamId: 2 }],
+    allPlayers: [],
+    allPredictions: { me: { 1: { home: 1, away: 0 } } },
+    squadsCache: { me: [] },
+    matchStats: [],
+  };
+  ui.init({
+    AppState,
+    liveV2Api: liveV2,
+    calculateMatchPoints: () => ({ points: 5, breakdown: [] }),
+    calculatePlayerMatchPoints: () => ({ total: 0, desglose: [] }),
+  });
+  const folded = {
+    states: { 1: { status: 'LIVE', score: { home: 1, away: 0 }, players: {} } },
+    statsById: { 1: { 1: { goles: 1 }, 2: { goles: 0 }, jugadores: [] } },
+  };
+  ui.liveV2DetectChipChanges(folded);
+  assert.equal(AppState.liveV2._chipPulse['1'].state, 'fav');
+
+  ui.liveV2DetectChipChanges(folded);
+  assert.equal(AppState.liveV2._chipPulse['1'], undefined);
+});
+
+test('el chip aplica la clase de pulso', () => {
+  const ui = freshUi();
+  const liveV2 = require('../js/liveV2.js');
+  ui.init({
+    AppState: {
+      currentUser: { name: 'me' },
+      liveV2: { _chipPulse: { 1: { state: 'hurt', delta: -2, at: Date.now() } } },
+      matches: [{ id: 1, homeTeamId: 1, awayTeamId: 2, homeTeam: 'A', awayTeam: 'B', homeBadgeExt: 'webp', awayBadgeExt: 'webp' }],
+      allPlayers: [],
+      allPredictions: { me: {} },
+      squadsCache: {},
+      matchStats: [],
+    },
+    liveV2Api: liveV2,
+    liveV2Abbr: () => 'A',
+    calculateMatchPoints: () => ({ points: 0, breakdown: [] }),
+    calculatePlayerMatchPoints: () => ({ total: 0, desglose: [] }),
+  });
+  const html = ui.renderLiveV2Html([], { states: { 1: { status: 'LIVE', lastMinute: 20, score: { home: 1, away: 0 } } }, statsById: {} });
+  assert.match(html, /score-hurt/);
+});

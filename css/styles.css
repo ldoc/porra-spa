@@ -6708,16 +6708,34 @@ body.live-fs .resultados-scroll {
   opacity: 0.55;
 }
 
-/* Glow de 10 s al cambiar el marcador (la posición se mantiene al retirarlo) */
-.livev2-cell.changed {
-  border-color: rgba(16, 185, 129, 0.85);
-  animation: livev2-cell-glow 10s ease-out forwards;
+.livev2-cell.score-fav {
+  border-color: rgba(16, 185, 129, 0.9);
+  animation: livev2-chip-blink-fav 1s ease-in-out infinite alternate;
 }
 
-@keyframes livev2-cell-glow {
-  0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.85); background-color: #0E2A25; }
-  15% { box-shadow: 0 0 16px 3px rgba(16, 185, 129, 0.75); }
-  100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+.livev2-cell.score-hurt {
+  border-color: rgba(248, 113, 113, 0.9);
+  animation: livev2-chip-blink-hurt 1s ease-in-out infinite alternate;
+}
+
+.livev2-cell.score-neutral {
+  border-color: rgba(59, 130, 246, 0.9);
+  animation: livev2-chip-blink-neutral 1s ease-in-out infinite alternate;
+}
+
+@keyframes livev2-chip-blink-fav {
+  from { background-color: rgba(16, 185, 129, 0.08); box-shadow: 0 0 0 rgba(16, 185, 129, 0); }
+  to { background-color: rgba(16, 185, 129, 0.38); box-shadow: 0 0 12px rgba(16, 185, 129, 0.6); }
+}
+
+@keyframes livev2-chip-blink-hurt {
+  from { background-color: rgba(248, 113, 113, 0.08); box-shadow: 0 0 0 rgba(248, 113, 113, 0); }
+  to { background-color: rgba(248, 113, 113, 0.38); box-shadow: 0 0 12px rgba(248, 113, 113, 0.6); }
+}
+
+@keyframes livev2-chip-blink-neutral {
+  from { background-color: rgba(59, 130, 246, 0.08); box-shadow: 0 0 0 rgba(59, 130, 246, 0); }
+  to { background-color: rgba(59, 130, 246, 0.38); box-shadow: 0 0 12px rgba(59, 130, 246, 0.6); }
 }
 
 .livev2-cell-team {
@@ -7007,7 +7025,9 @@ body.live-fs .resultados-scroll {
   .livev2-inner.fd {
     animation: none;
   }
-  .livev2-cell.changed {
+  .livev2-cell.score-fav,
+  .livev2-cell.score-hurt,
+  .livev2-cell.score-neutral {
     animation: none;
   }
 }
