@@ -450,6 +450,7 @@ function liveV2State() {
       _fullAt: 0, _needFull: false, lastFetchAt: null, error: null,
       _chipChanged: {}, // eventId -> ts del último cambio de marcador (para glow + orden)
       _chipScores: {},  // eventId -> "home-away" del poll anterior (detección de cambios)
+      _rankMoves: {},
     };
     restoreLiveV2Cache(AppState.liveV2);
   }
@@ -1336,6 +1337,55 @@ function liveV2AnimateReorder(container, firstRects, rows, prevByName, mover) {
   }, LIVEV2_FLIGHT_MS + 60);
 }
 
+function liveV2ApplyPointsClass(el, diff) {
+  if (!el || !el.classList) return;
+  const next = diff > 0 ? 'points-up' : diff < 0 ? 'points-down' : null;
+  const had = el.classList.contains('points-up') || el.classList.contains('points-down');
+  if (had) el.classList.remove('points-up', 'points-down');
+  if (!next) return;
+  if (had && el.offsetWidth != null) void el.offsetWidth;
+  el.classList.add(next);
+}
+
+
+
+let _liveV2RankMoveTimer = null;
+
+function liveV2ScheduleRankMoveExpiry() {
+  if (_liveV2RankMoveTimer) {
+    clearTimeout(_liveV2RankMoveTimer);
+    _liveV2RankMoveTimer = null;
+  }
+  const st = liveV2State();
+  const now = Date.now();
+  let soonest = Infinity;
+  for (const move of Object.values(st._rankMoves || {})) {
+    const remaining = (move.at + LIVEV2_RANK_MOVE_MS) - now;
+    if (remaining <= 0) continue;
+    if (remaining < soonest) soonest = remaining;
+  }
+  if (!Number.isFinite(soonest)) return;
+  _liveV2RankMoveTimer = setTimeout(() => {
+    _liveV2RankMoveTimer = null;
+    const t = Date.now();
+    const moves = st._rankMoves || {};
+    for (const name of Object.keys(moves)) {
+      if (t - moves[name].at >= LIVEV2_RANK_MOVE_MS) delete moves[name];
+    }
+    if (typeof document === 'undefined') return;
+    document.querySelectorAll('[data-livev2-row]').forEach(el => {
+      const name = el.getAttribute('data-livev2-row');
+      const view = liveV2RankMoveView(name, moves, t);
+      const moveEl = el.querySelector('.livev2-rank-move');
+      if (!moveEl) return;
+      moveEl.textContent = view.text;
+      moveEl.className = `livev2-rank-move ${view.cls}`;
+      moveEl.setAttribute('aria-label', view.label);
+    });
+    liveV2ScheduleRankMoveExpiry();
+  }, soonest + 20);
+}
+
 /** Actualización incremental del DOM keyed por usuario (sin re-render completo) */
 function updateLiveV2Dom(rows, folded) {
   const root = document.querySelector('.resultados-scroll .livev2') || document.querySelector('.livev2');
@@ -1345,6 +1395,14 @@ function updateLiveV2Dom(rows, folded) {
   const st = liveV2State();
   const prevByName = {};
   for (const r of (st._lastRows || [])) prevByName[r.name] = r;
+
+  const now = Date.now();
+  st._rankMoves = liveV2DetectRankMoves(rows, prevByName, st._rankMoves, now);
+  for (const r of rows) {
+    const prev = prevByName[r.name];
+    r.pointsDiff = prev ? r.livePoints - prev.livePoints : 0;
+    r.rankMove = liveV2RankMoveView(r.name, st._rankMoves, now);
+  }
 
   // Detectar cambios de marcador (glow + salto al frente) antes de reconstruir chips
   liveV2DetectChipChanges(folded);
@@ -1396,12 +1454,19 @@ function updateLiveV2Dom(rows, folded) {
       } else {
         ptsEl.textContent = r.livePoints;
       }
-      const d = r.delta || 0;
-      const arrow = el.querySelector('.livev2-arrow');
-      if (arrow) {
-        arrow.textContent = d > 0 ? `▲${d}` : d < 0 ? `▼${Math.abs(d)}` : '';
-        arrow.className = `livev2-arrow ${d > 0 ? 'up' : d < 0 ? 'down' : ''}`;
+      const moveEl = el.querySelector('.livev2-rank-move');
+      if (moveEl) {
+        moveEl.textContent = r.rankMove.text;
+        moveEl.className = `livev2-rank-move ${r.rankMove.cls}`;
+        moveEl.setAttribute('aria-label', r.rankMove.label);
       }
+      const diffEl = el.querySelector('.livev2-pts-diff');
+      if (diffEl) {
+        diffEl.textContent = liveV2PointsDiffText(r.pointsDiff);
+        diffEl.className = `livev2-pts-diff ${liveV2PointsDiffClass(r.pointsDiff)}`;
+        diffEl.setAttribute('aria-label', liveV2PointsDiffLabel(r.pointsDiff));
+      }
+      liveV2ApplyPointsClass(el, r.pointsDiff);
       el.classList.toggle('me', !!r.isMe);
     }
     if (prev) {
@@ -1441,6 +1506,7 @@ function updateLiveV2Dom(rows, folded) {
     liveV2ShowReason(container, rowEl, mover);
   }
 
+  liveV2ScheduleRankMoveExpiry();
   st._lastRows = liveV2Snapshot(rows);
 }
 
@@ -1520,6 +1586,7 @@ let _liveV2VisHandler = null;
 function stopLiveV2Polling() {
   if (_liveV2PollTimer) { clearInterval(_liveV2PollTimer); _liveV2PollTimer = null; }
   if (_liveV2CountdownTimer) { clearInterval(_liveV2CountdownTimer); _liveV2CountdownTimer = null; }
+  if (_liveV2RankMoveTimer) { clearTimeout(_liveV2RankMoveTimer); _liveV2RankMoveTimer = null; }
   if (_liveV2VisHandler && typeof document !== 'undefined') {
     document.removeEventListener('visibilitychange', _liveV2VisHandler);
     _liveV2VisHandler = null;
@@ -1677,6 +1744,7 @@ async function renderLiveV2Tab() {
     liveV2RowPointsClass,
     liveV2PointsDiffText,
     liveV2PointsDiffLabel,
+    liveV2ApplyPointsClass,
   };
 
   global.liveV2Ui = api;

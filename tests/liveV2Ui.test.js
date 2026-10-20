@@ -834,3 +834,35 @@ test('liveV2RowPointsClass marca la fila según el diferencial', () => {
   assert.equal(ui.liveV2RowPointsClass(-2), ' points-down');
   assert.equal(ui.liveV2RowPointsClass(0), '');
 });
+
+test('liveV2ApplyPointsClass alterna las clases de color', () => {
+  const ui = freshUi();
+  const classes = new Set();
+  const el = {
+    classList: {
+      contains: c => classes.has(c),
+      add: c => classes.add(c),
+      remove: (...cs) => cs.forEach(c => classes.delete(c)),
+    },
+  };
+  ui.liveV2ApplyPointsClass(el, 5);
+  assert.ok(classes.has('points-up'));
+  ui.liveV2ApplyPointsClass(el, -2);
+  assert.ok(classes.has('points-down'));
+  assert.ok(!classes.has('points-up'));
+  ui.liveV2ApplyPointsClass(el, 0);
+  assert.equal(classes.size, 0);
+});
+
+test('liveV2PointsDiffText, clase y etiqueta', () => {
+  const ui = freshUi();
+  assert.equal(ui.liveV2PointsDiffText(5), '+5pts');
+  assert.equal(ui.liveV2PointsDiffText(-2), '-2pts');
+  assert.equal(ui.liveV2PointsDiffText(0), '0pts');
+  assert.equal(ui.liveV2PointsDiffClass(5), 'up');
+  assert.equal(ui.liveV2PointsDiffClass(-2), 'down');
+  assert.equal(ui.liveV2PointsDiffClass(0), 'eq');
+  assert.equal(ui.liveV2PointsDiffLabel(5), 'Suma 5 puntos en este refresco');
+  assert.equal(ui.liveV2PointsDiffLabel(-2), 'Resta 2 puntos en este refresco');
+  assert.equal(ui.liveV2PointsDiffLabel(0), 'Sin cambios de puntos');
+});

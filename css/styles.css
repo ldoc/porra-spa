@@ -6772,21 +6772,46 @@ body.live-fs .resultados-scroll {
   font-variant-numeric: tabular-nums;
 }
 
-.livev2-arrow {
-  width: 26px;
+.livev2-pts-diff {
+  width: 48px;
   flex-shrink: 0;
   text-align: right;
   font-size: var(--font-size-xs);
   font-weight: 800;
-  color: transparent;
+  font-variant-numeric: tabular-nums;
 }
 
-.livev2-arrow.up {
-  color: var(--accent-primary);
+.livev2-pts-diff.up { color: var(--accent-primary); }
+.livev2-pts-diff.down { color: #F87171; }
+.livev2-pts-diff.eq { color: var(--text-muted); }
+
+.livev2-row.points-up > .livev2-inner {
+  border-color: rgba(16, 185, 129, 0.65);
+  background: rgba(16, 185, 129, 0.12);
+  animation: livev2-row-points-up 0.8s ease-out;
 }
 
-.livev2-arrow.down {
-  color: #F87171;
+.livev2-row.points-down > .livev2-inner {
+  border-color: rgba(248, 113, 113, 0.65);
+  background: rgba(248, 113, 113, 0.12);
+  animation: livev2-row-points-down 0.8s ease-out;
+}
+
+@keyframes livev2-row-points-up {
+  0% { background: rgba(16, 185, 129, 0.35); box-shadow: 0 0 18px rgba(16, 185, 129, 0.35); }
+  100% { background: rgba(16, 185, 129, 0.12); box-shadow: none; }
+}
+
+@keyframes livev2-row-points-down {
+  0% { background: rgba(248, 113, 113, 0.35); box-shadow: 0 0 18px rgba(248, 113, 113, 0.35); }
+  100% { background: rgba(248, 113, 113, 0.12); box-shadow: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .livev2-row.points-up > .livev2-inner,
+  .livev2-row.points-down > .livev2-inner {
+    animation: none;
+  }
 }
 
 /* ── Animación "elevar 3D" + etiqueta de motivo (Task 7) ── */
