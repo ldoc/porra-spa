@@ -237,9 +237,10 @@ function liveV2EventDeltas(username, eventId, newEvents, allEvents, ctx, players
   let prev = before;
   const out = [];
   for (const ev of liveV2Api.sortEvents(newFor)) {
+    const nonScoring = ev.type === 'status' || ev.type === 'lineup';
     liveV2Api.applyEvent(state, ev, ctx || {});
     const now = pointsOf(state);
-    if (now !== prev) out.push({ event: ev, delta: now - prev });
+    if (!nonScoring && now !== prev) out.push({ event: ev, delta: now - prev });
     prev = now;
   }
   return { events: out, before, after: prev };
@@ -275,7 +276,8 @@ function liveV2PlayNewEventSounds(newEvents) {
   for (const [id, events] of Object.entries(byMatch)) {
     if (finalized.has(id)) continue;
     const res = liveV2EventDeltas(me, id, events, st.events, ctxById[id] || {}, playersById, serverNow);
-    const quality = liveV2SoundQuality(res.after - res.before, events.some(e => e.type === 'goal'));
+    const net = res.events.reduce((s, d) => s + d.delta, 0);
+    const quality = liveV2SoundQuality(net, events.some(e => e.type === 'goal'));
     if (!quality) continue;
     soundApi.playLiveEvent({ type: 'goal' }, quality, deps);
   }

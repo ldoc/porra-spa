@@ -549,3 +549,56 @@ test('liveV2EventDeltas aplica los eventos en orden canónico', () => {
   assert.equal(res.after, 10);
   assert.deepEqual(res.events.map(d => d.delta), [9, 1]);
 });
+
+test('liveV2EventDeltas no atribuye delta al evento status LIVE', () => {
+  const liveV2 = require('../js/liveV2.js');
+  const AppState = {
+    liveV2: null,
+    matches: [{ id: 1, homeTeamId: 1, awayTeamId: 2 }],
+    allPlayers: [{ id: 13, nombre: 'F', posicion: 'F', equipo: 1 }],
+    allPredictions: { me: { 1: { home: 1, away: 1 } } },
+    squadsCache: { me: [{ id: 13, posicion: 'F', equipo: 1 }] },
+    matchStats: []
+  };
+  init({
+    AppState,
+    liveV2Api: liveV2,
+    calculateMatchPoints: () => ({ points: 8 }),
+    calculatePlayerMatchPoints: () => ({ total: 0, desglose: [] })
+  });
+  const live = { eventId: 1, type: 'status', minute: 0, ts: '2026-09-16T20:00:00.000Z', ingestedAt: '2026-09-16T20:00:00.000Z', seq: 0, sourceId: 's', payload: { status: 'LIVE', period: 'period1', kickoffTs: '2026-09-16T20:00:00.000Z' } };
+  const res = liveV2EventDeltas('me', 1, [live], [live],
+    { homeTeamId: 1, awayTeamId: 2 },
+    { 13: { nombre: 'F', posicion: 'F', equipo: 1 } },
+    null);
+  assert.equal(res.before, 0);
+  assert.equal(res.after, 8);
+  assert.deepEqual(res.events, []);
+});
+
+test('liveV2EventDeltas no deja que status LIVE tape el delta del gol', () => {
+  const liveV2 = require('../js/liveV2.js');
+  const AppState = {
+    liveV2: null,
+    matches: [{ id: 1, homeTeamId: 1, awayTeamId: 2 }],
+    allPlayers: [{ id: 13, nombre: 'F', posicion: 'F', equipo: 1 }],
+    allPredictions: { me: { 1: { home: 1, away: 1 } } },
+    squadsCache: { me: [{ id: 13, posicion: 'F', equipo: 1 }] },
+    matchStats: []
+  };
+  init({
+    AppState,
+    liveV2Api: liveV2,
+    calculateMatchPoints: (pred, ms) => ({ points: (Number(ms.stats[1]?.goles) + Number(ms.stats[2]?.goles)) === 1 ? 8 : 0 }),
+    calculatePlayerMatchPoints: () => ({ total: 0, desglose: [] })
+  });
+  const live = { eventId: 1, type: 'status', minute: 0, ts: '2026-09-16T20:00:00.000Z', ingestedAt: '2026-09-16T20:00:00.000Z', seq: 0, sourceId: 's', payload: { status: 'LIVE', period: 'period1', kickoffTs: '2026-09-16T20:00:00.000Z' } };
+  const goal = { eventId: 1, type: 'goal', minute: 30, ts: '2026-09-16T20:30:00.000Z', ingestedAt: '2026-09-16T20:30:00.000Z', seq: 0, sourceId: 'g', payload: { scorerId: 13, isHome: true } };
+  const res = liveV2EventDeltas('me', 1, [live, goal], [live, goal],
+    { homeTeamId: 1, awayTeamId: 2 },
+    { 13: { nombre: 'F', posicion: 'F', equipo: 1 } },
+    null);
+  assert.equal(res.events.length, 1);
+  assert.equal(res.events[0].event, goal);
+  assert.equal(res.events[0].delta, 8);
+});
