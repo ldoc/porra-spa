@@ -1,0 +1,305 @@
+# Design: Live v2 — ocultar notas, movimiento de puestos, desglose y popup por partido
+
+**Fecha:** 2026-10-20
+**Rama:** `main` en `porra-spa`
+**Estado:** aprobado para implementación
+
+## Resumen
+
+Cinco cambios sobre el Live v2, todos front-end:
+
+1. **Ocultar los eventos de cambio de nota** del ticker de últimos eventos.
+2. **Movimiento de puestos visible 30 s**: junto al número de puesto se muestra
+   `▲N`, `▼N` o `=` cuando no cambia o ya pasaron los 30 s.
+3. **Desglose en la cabecera superior**: puntos del Live en curso separados en
+   pronósticos y plantilla.
+4. **Popup por partido**: al pulsar un chip se abre el desglose del usuario para
+   ese partido, con pronóstico y plantilla, también en NS.
+5. **Pronóstico en el chip**: línea compacta `Tú 2-1` (o `S/P`) siempre visible.
+
+No hay cambios de backend, scoring, event-sourcing ni base de datos.
+
+## Objetivos
+
+- El ticker no muestra ruido de notas de jugadores.
+- El usuario ve de forma clara e inmediata si ha subido o bajado puestos, y
+  cuántos, durante 30 s.
+- La cabecera explica de dónde salen los puntos live del usuario.
+- Cada partido del Live ofrece su desglose completo (pronóstico + plantilla)
+  sin salir de la pantalla.
+- El pronóstico propio queda visible en el propio chip del partido.
+
+## No-objetivos
+
+- Cambiar el backend, `liveevents`, el poll o el cálculo de puntuación.
+- Mostrar desgloses de otros usuarios.
+- Añadir histórico de posiciones más allá de los 30 s.
+- Cambiar el sonido o el cartel de motivo por los cambios de nota (solo se
+  ocultan del ticker).
+
+## Decisiones aprobadas
+
+- El desglose de cabecera es **solo del Live en curso**, no los totales
+  oficiales de la porra.
+- El indicador `▲/▼/=` va **junto al número de puesto**.
+- Las notas se ocultan **solo del ticker**; el motivo y el sonido no cambian.
+- El pronóstico del chip se muestra **siempre** (NS, LIVE, HT y FT).
+- El popup se abre **también en NS**, con pronóstico y plantilla a 0 pts.
+
+## Contexto actual
+
+- `js/live-v2-ui.js` contiene la UI del Live: chips, feed, cabecera, filas,
+  modal de motivo, polling y cache.
+- `liveV2FeedItems()` filtra `lineup` y `status`; hoy deja pasar `rating`.
+- `liveV2RowHtml()` pinta una flecha derecha con el delta de puesto que
+  devuelve `rankRows()` (`delta = prevRank - rank`).
+- `liveUserMatchPoints(username, lm, meta)` ya calcula, por partido:
+  `matchPts`, `breakdown`, `squadPts`, `squadDetail` y `total`.
+- `AppState.allPredictions[usuario][eventId]` contiene `{ home, away }`.
+- `AppState.squadsCache[usuario]` contiene la plantilla.
+- `liveV2Rows()` suma al total oficial el delta de los partidos plegados que
+  aún no están en `AppState.matchStats`.
+- Existen estilos reutilizables `.breakdown-modal-overlay` y
+  `.breakdown-modal`.
+
+## 1. Ticker sin eventos de nota
+
+`liveV2FeedItems()` añade `rating` a la lista de tipos excluidos:
+
+```js
+.filter(e => !['lineup', 'status', 'rating'].includes(e.type))
+```
+
+- El resto de eventos no cambia.
+- `liveV2ReasonHtml`/`liveV2MoverReason` no se tocan.
+- El sonido no se toca.
+- Si un poll solo trae notas, el ticker mantiene los últimos eventos anteriores.
+
+## 2. Movimiento de puestos durante 30 s
+
+### 2.1 Estado
+
+En `AppState.liveV2`:
+
+```js
+_rankMoves: {
+  [nombre]: { delta: number, at: number }
+}
+```
+
+- `delta > 0`: ha subido puestos (`prevRank - rank`).
+- `delta < 0`: ha bajado puestos.
+- `at`: `Date.now()` del poll en que se detectó el cambio.
+
+### 2.2 Detección
+
+En cada actualización, comparar las filas nuevas con las anteriores
+(`prevByName`, ya disponible en `updateLiveV2Dom`):
+
+- Si `prev.rank !== row.rank`, guardar
+  `{ delta: prev.rank - row.rank, at: Date.now() }`.
+- Si no cambia, conservar la entrada anterior hasta que caduque.
+- En el render inicial no hay anterior: todas las filas muestran `=`.
+
+### 2.3 Visualización
+
+La fila pasa de:
+
+```html
+<span class="livev2-rank">3</span>
+...
+<span class="livev2-arrow">▲2</span>
+```
+
+a:
+
+```html
+<span class="livev2-rank-group">
+  <span class="livev2-rank">3</span>
+  <span class="livev2-rank-move up" aria-label="Sube 2 puestos">▲2</span>
+</span>
+```
+
+- `up` → `▲N` (verde).
+- `down` → `▼N` (rojo).
+- `eq` → `=` (atenuado).
+- El indicador se muestra si `Date.now() - at < 30000`; si no, `=`.
+- Un temporizador (`liveV2ScheduleRankMoveExpiry`) actualiza a `=` al cumplirse
+  los 30 s sin esperar al siguiente poll. Si hay un cambio nuevo antes de
+  caducar, se guarda el nuevo `delta`/`at` y se reprograma el temporizador.
+- Se elimina la flecha derecha (`.livev2-arrow`) para no duplicar el dato; la
+  columna deja de reservar espacio.
+
+### 2.4 Accesibilidad
+
+- `aria-label` textual: “Sube 2 puestos”, “Baja 1 puesto”, “Sin cambios”.
+- El color no es el único indicador: siempre hay símbolo y texto accesible.
+
+## 3. Desglose en la cabecera superior
+
+### 3.1 Cálculo
+
+Nuevo helper `liveV2HeaderBreakdown(folded)`:
+
+- Usuario actual = `AppState.currentUser.name`.
+- Recorrer los partidos plegados que aún no están en `AppState.matchStats`
+  (misma condición que `liveV2Rows`).
+- Ignorar `status === 'NS'`.
+- Por partido, llamar a `liveUserMatchPoints(usuario, lm, meta)`.
+- Acumular:
+  - `predictionPts += matchPts`
+  - `squadPts += squadPts`
+  - `total = predictionPts + squadPts`
+
+Sin sesión: `{ predictionPts: 0, squadPts: 0, total: 0 }`.
+
+### 3.2 UI
+
+Nueva fila compacta dentro de `.livev2-fixed`, debajo de la fila de estado:
+
+```text
+⚡ 42   🎯 Pron. 12   👥 Plantilla 30
+```
+
+- `⚡` muestra el total live (pronóstico + plantilla).
+- `🎯 Pron.` y `👥 Plantilla` muestran el desglose.
+- Se retira el total de `.livev2-status-right` para no duplicarlo; allí quedan
+  countdown, pantalla completa y sonido.
+- En móvil la fila puede envolver (`flex-wrap`) sin romper el layout.
+- Si no hay usuario o no hay partidos live, muestra `0` en los tres valores.
+
+## 4. Popup de desglose por partido
+
+### 4.1 Apertura
+
+- Los chips pasan a ser interactivos: `role="button"`, `tabindex="0"` y
+  `aria-label` con el título del partido.
+- Delegación de click en `#livev2-chips-host` mediante
+  `bindLiveV2Chips(root)`.
+- Enter y Espacio abren el mismo popup.
+- Se llama a `bindLiveV2Chips` al renderizar el tab Live y al reintentar.
+- Se guarda el `eventId` abierto en `AppState.liveV2._openMatchModal`.
+
+### 4.2 Contenido
+
+Se reutiliza la estructura de `.breakdown-modal-overlay` / `.breakdown-modal`
+con una clase adicional `.livev2-match-modal`.
+
+Cabecera:
+
+- Equipos y badges.
+- Marcador actual y estado (`NS`, `LIVE 63'`, `HT`, `FT`).
+- Total del usuario en ese partido.
+
+Sección **Pronóstico**:
+
+- Marcador pronosticado: `Tú 2-1`.
+- Puntos y desglose (`8 por acertar resultado`, `3 por goles local`, …).
+- Si no hay pronóstico: “Sin pronóstico”.
+- En NS: 0 pts y aviso “El partido aún no ha empezado”.
+
+Sección **Plantilla**:
+
+- Jugadores del usuario que aparecen en `lm.stats.jugadores`, con nombre,
+  puntos y conceptos del desglose.
+- Si no hay ninguno: “Ningún jugador de tu plantilla en este partido”.
+- En NS: lista con 0 pts o aviso equivalente.
+
+### 4.3 Datos
+
+Nuevo helper `liveV2MatchBreakdown(eventId, state)` que devuelve:
+
+```js
+{
+  meta, status, score, label,
+  prediction: { home, away } | null,
+  predictionPts, predictionBreakdown,
+  squadPts, squadDetail,
+  total
+}
+```
+
+Se apoya en `liveUserMatchPoints()` y en las predicciones del usuario actual,
+sin recalcular reglas de puntuación.
+
+### 4.4 Cierre y refresco
+
+- Cierre con ✕, click en el overlay y tecla Escape.
+- Si el popup está abierto durante un poll, se refresca su contenido con el
+  estado plegado nuevo (`refreshLiveV2MatchModal`).
+- El foco vuelve al chip que lo abrió.
+- Se bloquea el scroll del body mientras está abierto, igual que otros modales.
+
+## 5. Pronóstico en el chip
+
+### 5.1 Contenido
+
+- `liveV2ChipData()` añade `predictionText`:
+  - Con pronóstico: `Tú 2-1`.
+  - Sin pronóstico: `S/P`.
+- Se obtiene de `AppState.allPredictions[usuario][eventId]` usando el usuario
+  actual.
+
+### 5.2 UI
+
+- El texto se integra en la línea de estado del chip para no añadir otra fila:
+
+```text
+LIVE 63' · Tú 2-1
+```
+
+- En NS: `NS · Tú 2-1`.
+- Clase `.livev2-cell-pred`, atenuada y con `font-variant-numeric: tabular-nums`.
+- `patchLiveV2Chip()` actualiza el texto sin recrear el nodo.
+- Si no hay usuario, se muestra `S/P`.
+
+## 6. Arquitectura y archivos
+
+- `js/live-v2-ui.js`
+  - Filtro `rating` en `liveV2FeedItems`.
+  - Estado y helpers de movimiento de puestos.
+  - `liveV2RowHtml` y `updateLiveV2Dom` con el nuevo badge.
+  - `liveV2HeaderBreakdown` y `liveV2HeaderBreakdownHtml`.
+  - `liveV2MatchBreakdown`, `liveV2MatchModalHtml`, apertura/cierre/refresco.
+  - `bindLiveV2Chips` exportado en la API.
+  - `liveV2ChipData`/`liveV2ChipHtml`/`patchLiveV2Chip` con el pronóstico.
+- `js/main.js`
+  - Llamar a `liveV2Ui.bindLiveV2Chips(container)` en el render del tab Live.
+- Temporizadores
+  - `stopLiveV2Polling` limpia también el temporizador de caducidad de puestos.
+  - El popup se cierra al salir del tab Live.
+- `css/styles.css`
+  - `.livev2-rank-group`, `.livev2-rank-move.up/.down/.eq`.
+  - `.livev2-breakdown` y sus segmentos.
+  - `.livev2-cell-pred`.
+  - Ajustes de `.livev2-match-modal` reutilizando los estilos de modal.
+- `tests/liveV2Ui.test.js`
+  - Nuevos tests de feed, puestos, cabecera, chip y popup.
+
+## 7. Casos límite
+
+- Sin usuario: cabecera a 0, chip `S/P` y popup con el mensaje “Inicia sesión
+  para ver tu desglose”; no se muestran datos personales.
+- Partido NS: popup completo, puntos 0 y aviso.
+- Partido sin pronóstico: “Sin pronóstico”; la plantilla se muestra igual.
+- Partido sin jugadores del usuario: mensaje específico.
+- Partido ya oficial (`AppState.matchStats`): no suma en la cabecera live; el
+  popup sigue mostrando el desglose live si el chip existe.
+- Cambio de puesto seguido de otro cambio antes de 30 s: prevalece el último
+  delta y se reinicia el contador.
+- Poll sin cambios: el badge conserva el último movimiento hasta caducar.
+- Pestaña oculta o poll pausado: no se alteran los badges; el temporizador de
+  30 s sigue su curso.
+- Modal abierto y partido que desaparece del fold: se cierra automáticamente.
+
+## 8. Testing
+
+- Unitarios en `tests/liveV2Ui.test.js`:
+  - `liveV2FeedItems` excluye `rating` y mantiene el resto.
+  - Movimiento de puestos: sube, baja, `=`, caducidad a 30 s y reinicio.
+  - `liveV2HeaderBreakdown` separa pronóstico y plantilla y excluye oficiales.
+  - Chip con pronóstico y sin pronóstico.
+  - HTML del popup con pronóstico, desglose, plantilla y caso NS.
+- Ejecutar `node --test tests/` y comprobar que no hay regresiones.
+- Comprobación manual en local: chips clicables, popup, cabecera, ticker sin
+  notas y badges de puesto.
