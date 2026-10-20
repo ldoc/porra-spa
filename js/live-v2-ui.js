@@ -1146,9 +1146,11 @@ function liveV2MoverReason(rows, prevByName, newEvents) {
       .map(d => ({ ...d, line: liveV2ReasonLine(d.event, d.delta) }))
       .filter(x => x.line);
     if (labeled.length) {
-      const top = labeled.slice(0, 3);
+      const top = liveV2TopContributions(labeled, 3);
+      const lines = top.map(x => x.line);
+      const more = Math.max(0, labeled.length - top.length);
       return { name: pick.name, rankDelta: pick.rankDelta, pointsDelta: pick.pointsDelta,
-        lines: top.map(x => x.line), total: pick.pointsDelta, more: labeled.length - top.length };
+        lines, total: pick.pointsDelta, more };
     }
   }
 

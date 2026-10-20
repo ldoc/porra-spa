@@ -451,10 +451,10 @@ test('motivo suma goal + assist en lineas separadas', () => {
   assert.equal(mover.more, 0);
 });
 
-test('motivo top-3 con total y +N mas usando deltas reales', () => {
-  const goal = { eventId: 1, type: 'goal', ts: '2026-09-16T20:10:00Z', seq: 1, sourceId: 'g', playerId: 7, payload: { scorerId: 7, isHome: true }, minute: 67 };
+test('motivo top-3 resiliente al orden cronologico (gol tras tres asistencias)', () => {
+  const goal = { eventId: 1, type: 'goal', ts: '2026-09-16T20:20:00Z', seq: 4, sourceId: 'g', playerId: 7, payload: { scorerId: 7, isHome: true }, minute: 67 };
   const assists = [8, 9, 10].map((id, i) => ({
-    eventId: 1, type: 'assist', ts: `2026-09-16T20:1${i + 1}:00Z`, seq: i + 2,
+    eventId: 1, type: 'assist', ts: `2026-09-16T20:1${i + 1}:00Z`, seq: i + 1,
     sourceId: `a${id}`, playerId: id, payload: { asistencias: 1 },
   }));
   const players = [7, 8, 9, 10].map((id, i) => ({
@@ -474,9 +474,8 @@ test('motivo top-3 con total y +N mas usando deltas reales', () => {
   const mover = liveV2Ui.liveV2MoverReason(rows, moverPrev(), [goal, ...assists]);
   assert.equal(mover.name, 'ana');
   assert.equal(mover.lines.length, 3);
+  assert.deepEqual(mover.lines.map(l => l.delta), [9, 1, 1]);
   assert.match(mover.lines[0].text, /Gol de Mbappé/);
-  assert.equal(mover.lines[0].delta, 9);
-  assert.deepEqual(mover.lines.slice(1).map(l => l.delta), [1, 1]);
   assert.equal(mover.total, 12);
   assert.equal(mover.pointsDelta, 12);
   assert.equal(mover.more, 1);
