@@ -1412,8 +1412,10 @@ function liveV2CountdownState(elapsedMs, intervalMs, opts = {}) {
   return { seconds, progress, label: `${seconds}s`, polling: false, paused: false };
 }
 
+const LIVEV2_COUNTDOWN_RADIUS = 8;
+
 function liveV2CountdownHtml() {
-  const r = 8;
+  const r = LIVEV2_COUNTDOWN_RADIUS;
   const c = 2 * Math.PI * r;
   return `<span class="livev2-countdown" id="livev2-countdown" role="status" aria-live="off" aria-label="Próxima actualización">`
     + `<svg viewBox="0 0 20 20" aria-hidden="true">`
@@ -1437,7 +1439,7 @@ function liveV2UpdateCountdown() {
   const num = el.querySelector('.livev2-countdown-num');
   const prog = el.querySelector('.livev2-countdown-progress');
   if (num) num.textContent = state.label;
-  if (prog) prog.style.strokeDashoffset = String(2 * Math.PI * 8 * (1 - state.progress));
+  if (prog) prog.style.strokeDashoffset = String(2 * Math.PI * LIVEV2_COUNTDOWN_RADIUS * (1 - state.progress));
   el.classList.toggle('paused', state.paused);
   el.classList.toggle('polling', state.polling);
   el.setAttribute('aria-label', state.paused
@@ -1457,13 +1459,16 @@ function stopLiveV2Polling() {
   }
 }
 
-function startLiveV2Polling() {
+function startLiveV2Polling(folded) {
   stopLiveV2Polling();
   const total = AppState.liveRefreshSecs || 30;
+  const snap = folded || liveV2Folded();
   _liveV2CountdownStart = Date.now();
-  _liveV2CountdownPaused = false;
+  _liveV2CountdownPaused = !liveV2ShouldPoll(snap);
   _liveV2CountdownTimer = setInterval(liveV2UpdateCountdown, 1000);
   liveV2UpdateCountdown();
+  if (typeof requestAnimationFrame === 'function') requestAnimationFrame(liveV2UpdateCountdown);
+  else setTimeout(liveV2UpdateCountdown, 0);
   if (typeof document !== 'undefined') {
     const onVis = () => {
       if (document.visibilityState !== 'visible') {
@@ -1531,6 +1536,7 @@ async function pollLiveV2() {
     updateLiveV2Badge(); // error visible de inmediato (y botón de reintento)
   } finally {
     st.polling = false;
+    liveV2UpdateCountdown();
     updateLiveV2RetryState();
   }
 }
@@ -1552,7 +1558,7 @@ async function renderLiveV2Tab() {
   const rows = liveV2Rows(folded);
   st._lastRows = liveV2Snapshot(rows);
   st._seenEventIds = new Set((st.events || []).map(e => liveV2Api.eventKey(e)));
-  if (AppState.resultadosTab === 'live') startLiveV2Polling();
+  if (AppState.resultadosTab === 'live') startLiveV2Polling(folded);
   return renderLiveV2Html(rows, folded);
 }
 
