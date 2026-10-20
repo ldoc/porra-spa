@@ -161,7 +161,7 @@ test('liveV2EventDeltas atribuye gol (+8 pronóstico +1 plantilla) y asistencia 
     { 13: { nombre: 'F', posicion: 'F', equipo: 1 }, 12: { nombre: 'M', posicion: 'M', equipo: 1 } },
     null);
   assert.equal(res.before, 0);
-  assert.equal(res.after, 9);
+  assert.equal(res.after, 10);
   assert.deepEqual(res.events.map(d => d.delta), [9, 1]);
 });
 ```
