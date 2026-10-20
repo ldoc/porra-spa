@@ -6570,33 +6570,30 @@ body.live-fs .resultados-scroll {
   min-height: 0;
 }
 
-/* Puntos live inline (cabecera compacta, sin hero) */
-.livev2-points-inline {
+/* Desglose de puntos del Live (cabecera fija) */
+.livev2-breakdown {
   display: flex;
   align-items: center;
-  gap: 4px;
-  font-size: var(--font-size-sm);
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  font-size: var(--font-size-xs);
   color: var(--text-secondary);
   font-variant-numeric: tabular-nums;
 }
 
-.livev2-points-inline b {
+.livev2-breakdown-total b {
   color: var(--text-primary);
   font-weight: 900;
+  font-size: var(--font-size-sm);
 }
 
-.livev2-points-delta {
-  font-size: var(--font-size-xs);
+.livev2-breakdown-item b {
+  color: var(--text-primary);
   font-weight: 800;
 }
 
-.livev2-points-delta.up {
-  color: var(--accent-primary);
-}
-
-.livev2-points-delta.down {
-  color: #F87171;
-}
+.livev2-breakdown-item.pred b { color: var(--accent-gold); }
+.livev2-breakdown-item.squad b { color: var(--accent-primary); }
 
 /* Grid de partidos: 3 columnas fijas, sin scroll horizontal */
 .livev2-grid {

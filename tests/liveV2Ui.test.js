@@ -866,3 +866,49 @@ test('liveV2PointsDiffText, clase y etiqueta', () => {
   assert.equal(ui.liveV2PointsDiffLabel(-2), 'Resta 2 puntos en este refresco');
   assert.equal(ui.liveV2PointsDiffLabel(0), 'Sin cambios de puntos');
 });
+
+test('liveV2HeaderBreakdown separa pronostico y plantilla y excluye oficiales', () => {
+  const ui = freshUi();
+  const liveV2 = require('../js/liveV2.js');
+  const AppState = {
+    currentUser: { name: 'me' },
+    liveV2: null,
+    matches: [{ id: 1, homeTeamId: 1, awayTeamId: 2, homeTeam: 'A', awayTeam: 'B' }],
+    allPlayers: [{ id: 13, nombre: 'F', posicion: 'F', equipo: 1 }],
+    allPredictions: { me: { 1: { home: 1, away: 0 } } },
+    squadsCache: { me: [{ id: 13, nombre: 'F', posicion: 'F', equipo: 1 }] },
+    matchStats: [],
+  };
+  ui.init({
+    AppState,
+    liveV2Api: liveV2,
+    calculateMatchPoints: () => ({ points: 8, breakdown: ['8 por acertar resultado'] }),
+    calculatePlayerMatchPoints: () => ({ total: 3, desglose: [{ concepto: 'Gol marcado', puntos: 3 }] }),
+  });
+  const folded = {
+    states: { 1: { status: 'LIVE' } },
+    statsById: { 1: { 1: { goles: 1 }, 2: { goles: 0 }, jugadores: [{ id: '13', nombre: 'F', posicion: 'F', equipo: 1, puntos: 7, goles: 1, minutos: 60 }] } },
+  };
+  assert.deepEqual(ui.liveV2HeaderBreakdown(folded), { total: 11, predictionPts: 8, squadPts: 3 });
+
+  AppState.matchStats = [{ eventId: 1 }];
+  assert.deepEqual(ui.liveV2HeaderBreakdown(folded), { total: 0, predictionPts: 0, squadPts: 0 });
+});
+
+test('liveV2HeaderBreakdownHtml pinta total, pronostico y plantilla', () => {
+  const ui = freshUi();
+  const html = ui.liveV2HeaderBreakdownHtml({ total: 11, predictionPts: 8, squadPts: 3 });
+  assert.match(html, /⚡ <b>11<\/b>/);
+  assert.match(html, /Pron\. <b>8<\/b>/);
+  assert.match(html, /Plantilla <b>3<\/b>/);
+});
+
+test('render Live v2 incluye la cabecera de desglose', () => {
+  const ui = freshUi();
+  ui.init({
+    AppState: { liveV2: null, matches: [], allPlayers: [], squadsCache: {}, currentUser: null },
+    liveV2Api: { escapeHtml: s => String(s) },
+  });
+  const html = ui.renderLiveV2Html([], { states: {}, statsById: {} });
+  assert.match(html, /id="livev2-breakdown"/);
+});

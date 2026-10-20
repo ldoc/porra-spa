@@ -1039,12 +1039,37 @@ async function retryLiveV2() {
   }
 }
 
+function liveV2HeaderBreakdown(folded) {
+  const out = { total: 0, predictionPts: 0, squadPts: 0 };
+  const me = AppState.currentUser && AppState.currentUser.name;
+  if (!me) return out;
+  const finalized = liveV2FinalizedIds();
+  for (const [id, state] of Object.entries((folded && folded.states) || {})) {
+    if (finalized.has(String(id))) continue;
+    const status = (state && state.status) || 'NS';
+    if (status === 'NS') continue;
+    const match = (AppState.matches || []).find(m => String(m.id) === String(id));
+    if (!match) continue;
+    const lm = { eventId: match.id, stats: (folded.statsById || {})[id], status };
+    const r = liveUserMatchPoints(me, lm, liveMatchMeta(lm));
+    out.predictionPts += r.matchPts;
+    out.squadPts += r.squadPts;
+    out.total += r.total;
+  }
+  return out;
+}
+
+function liveV2HeaderBreakdownHtml(b) {
+  return `<span class="livev2-breakdown-total">⚡ <b>${b.total}</b></span>`
+    + `<span class="livev2-breakdown-item pred">🎯 Pron. <b>${b.predictionPts}</b></span>`
+    + `<span class="livev2-breakdown-item squad">👥 Plantilla <b>${b.squadPts}</b></span>`;
+}
+
 /** HTML de layout A (sin el header de subtabs, que lo pone renderResultadosTab) */
 function renderLiveV2Html(rows, folded) {
-  const me = rows.find(r => r.isMe);
   const chips = liveV2ChipsHtml(folded);
   const status = liveV2StatusBadge();
-  const ptsDelta = me ? (me.pointsDelta || 0) : 0;
+  const breakdown = liveV2HeaderBreakdown(folded);
   return `<div class="livev2">`
     + `<div class="livev2-fixed">`
     + `<div class="livev2-status">`
@@ -1052,12 +1077,11 @@ function renderLiveV2Html(rows, folded) {
     + `<button type="button" id="livev2-retry" class="livev2-retry" aria-label="Reintentar conexión">↻ Reintentar</button>`
     + `<div class="livev2-status-right">`
     + liveV2CountdownHtml()
-    + `<span class="livev2-points-inline" id="livev2-points-inline">⚡ <b>${me ? me.livePoints : 0}</b>`
-    + `<span class="livev2-points-delta ${ptsDelta < 0 ? 'down' : 'up'}">${liveV2DeltaText(ptsDelta)}</span></span>`
     + liveV2FsToggleHtml()
     + liveV2SoundToggleHtml()
     + `</div>`
     + `</div>`
+    + `<div class="livev2-breakdown" id="livev2-breakdown">${liveV2HeaderBreakdownHtml(breakdown)}</div>`
     + `<div class="livev2-grid" id="livev2-chips-host">`
     + (chips || `<div class="livev2-empty">Sin partidos en directo ahora mismo</div>`)
     + `</div>`
@@ -1478,13 +1502,8 @@ function updateLiveV2Dom(rows, folded) {
   }
   for (const [name, el] of existing) { if (!present.has(name)) el.remove(); }
 
-  const me = rows.find(r => r.isMe);
-  const pointsInline = root.querySelector('#livev2-points-inline');
-  if (pointsInline && me) {
-    const pd = me.pointsDelta || 0;
-    pointsInline.innerHTML = `⚡ <b>${me.livePoints}</b>`
-      + `<span class="livev2-points-delta ${pd < 0 ? 'down' : 'up'}">${liveV2DeltaText(pd)}</span>`;
-  }
+  const breakdownEl = root.querySelector('#livev2-breakdown');
+  if (breakdownEl) breakdownEl.innerHTML = liveV2HeaderBreakdownHtml(liveV2HeaderBreakdown(folded));
 
   // Celdas y feed: parche por clave (solo se crean/eliminan nodos al cambiar el conjunto)
   updateLiveV2Chips(root, folded);
@@ -1745,6 +1764,8 @@ async function renderLiveV2Tab() {
     liveV2PointsDiffText,
     liveV2PointsDiffLabel,
     liveV2ApplyPointsClass,
+    liveV2HeaderBreakdown,
+    liveV2HeaderBreakdownHtml,
   };
 
   global.liveV2Ui = api;
