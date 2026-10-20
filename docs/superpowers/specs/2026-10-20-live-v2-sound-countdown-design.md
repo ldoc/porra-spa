@@ -76,6 +76,9 @@ En cada poll, para cada partido con eventos nuevos:
 4. `delta = after - before`.
 5. `hasGoal = algún evento nuevo del partido es de tipo goal`.
 
+`status` y `lineup` se pliegan para reconstruir el estado, pero **no aportan
+delta**: no generan contribución ni sonido de puntos por sí mismos.
+
 Los puntos se obtienen con la misma ruta que la clasificación live
 (`foldMatch`/`matchStateToStats` + `liveUserMatchPoints`), para que el sonido
 coincida con lo que se pinta.
@@ -92,8 +95,10 @@ Si el usuario no tiene sesión, no hay sonido.
 | `delta === 0` y sin gol | silencio |
 
 Un poll con eventos en varios partidos puede producir un sonido por partido
-(p. ej. uno bueno y otro malo). El ranking (`rankUp`/`rankDown`) y los tonos de
-estado/FT se mantienen como en v1 y pueden sonar además del sonido de puntos.
+(p. ej. uno bueno y otro malo). El efecto neto es la **suma de los deltas de los
+eventos con contribución** (no `after - before`); `status` y `lineup` no aportan
+delta. El ranking (`rankUp`/`rankDown`) y los tonos de estado/FT se mantienen
+como en v1 y pueden sonar además del sonido de puntos.
 
 Los partidos ya presentes en `AppState.matchStats` se excluyen (sus puntos ya
 son oficiales y el live no los mueve), para no sonar por correcciones ya
@@ -141,12 +146,12 @@ En la fila de estado del Live, después del badge:
 
 - Intervalo = `AppState.liveRefreshSecs || 30` (el mismo del poll).
 - Se actualiza cada segundo; el arco se vacía de lleno a vacío.
-- Se reinicia al completar cada poll (éxito o error) y al pulsar reintentar.
+- Se reinicia al iniciar cada poll (éxito o error) y al pulsar reintentar.
 - Mientras `st.polling` está en curso, muestra `…` o el anillo quieto (no baja
   de 0).
 - Si el poll está pausado (`liveV2ShouldPoll` falso: fuera de la ventana de
   partido) o la pestaña está oculta, el anillo queda atenuado y muestra `—`.
-- Si hay error de red, manda el badge de error; el anillo se detiene.
+- Si hay error, manda el badge de error y el anillo se detiene (muestra `—`).
 - Se limpia el timer al salir de Live (`stopLiveV2Polling`) y no se duplica en
   re-renders.
 

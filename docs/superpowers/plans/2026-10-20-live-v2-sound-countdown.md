@@ -232,7 +232,8 @@ function liveV2PlayNewEventSounds(newEvents) {
   for (const [id, events] of Object.entries(byMatch)) {
     if (finalized.has(id)) continue;
     const res = liveV2EventDeltas(me, id, events, st.events, ctxById[id] || {}, playersById, serverNow);
-    const quality = liveV2SoundQuality(res.after - res.before, events.some(e => e.type === 'goal'));
+    const net = res.events.reduce((s, d) => s + d.delta, 0);
+    const quality = liveV2SoundQuality(net, events.some(e => e.type === 'goal'));
     if (!quality) continue;
     soundApi.playLiveEvent({ type: 'goal' }, quality, deps);
   }
