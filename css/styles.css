@@ -6731,6 +6731,25 @@ body.live-fs .resultados-scroll {
   font-variant-numeric: tabular-nums;
 }
 
+.livev2-rank-group {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  flex-shrink: 0;
+}
+
+.livev2-rank-move {
+  width: 24px;
+  text-align: left;
+  font-size: 9px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.livev2-rank-move.up { color: var(--accent-primary); }
+.livev2-rank-move.down { color: #F87171; }
+.livev2-rank-move.eq { color: var(--text-muted); }
+
 .livev2-avatar {
   font-size: 1.1rem;
   flex-shrink: 0;

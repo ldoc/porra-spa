@@ -812,16 +812,71 @@ function liveV2ScheduleChipGlowTimers(root) {
   });
 }
 
+const LIVEV2_RANK_MOVE_MS = 30000;
+
+function liveV2DetectRankMoves(rows, prevByName, prevMoves, now) {
+  const next = { ...(prevMoves || {}) };
+  for (const r of rows) {
+    const p = prevByName && prevByName[r.name];
+    if (p && p.rank !== r.rank) next[r.name] = { delta: p.rank - r.rank, at: now };
+  }
+  return next;
+}
+
+function liveV2RankMoveView(name, moves, now) {
+  const m = moves && moves[name];
+  if (!m || now - m.at >= LIVEV2_RANK_MOVE_MS) {
+    return { text: '=', cls: 'eq', label: 'Sin cambios' };
+  }
+  if (m.delta > 0) {
+    return {
+      text: `▲${m.delta}`,
+      cls: 'up',
+      label: `Sube ${m.delta} ${m.delta === 1 ? 'puesto' : 'puestos'}`,
+    };
+  }
+  if (m.delta < 0) {
+    const n = Math.abs(m.delta);
+    return {
+      text: `▼${n}`,
+      cls: 'down',
+      label: `Baja ${n} ${n === 1 ? 'puesto' : 'puestos'}`,
+    };
+  }
+  return { text: '=', cls: 'eq', label: 'Sin cambios' };
+}
+
+function liveV2PointsDiffClass(d) {
+  return d > 0 ? 'up' : d < 0 ? 'down' : 'eq';
+}
+
+function liveV2RowPointsClass(d) {
+  return d > 0 ? ' points-up' : d < 0 ? ' points-down' : '';
+}
+
+function liveV2PointsDiffText(d) {
+  return d > 0 ? `+${d}pts` : d < 0 ? `${d}pts` : '0pts';
+}
+
+function liveV2PointsDiffLabel(d) {
+  if (d > 0) return `Suma ${d} puntos en este refresco`;
+  if (d < 0) return `Resta ${Math.abs(d)} puntos en este refresco`;
+  return 'Sin cambios de puntos';
+}
+
 function liveV2RowHtml(r) {
-  const d = r.delta || 0;
-  const arrow = d > 0 ? `▲${d}` : d < 0 ? `▼${Math.abs(d)}` : '';
-  return `<div class="livev2-row${r.isMe ? ' me' : ''}" data-livev2-row="${liveV2Esc(r.name)}">`
+  const move = r.rankMove || { text: '=', cls: 'eq', label: 'Sin cambios' };
+  const diff = r.pointsDiff || 0;
+  return `<div class="livev2-row${r.isMe ? ' me' : ''}${liveV2RowPointsClass(diff)}" data-livev2-row="${liveV2Esc(r.name)}">`
     + `<div class="livev2-inner">`
+    + `<span class="livev2-rank-group">`
     + `<span class="livev2-rank">${r.rank}</span>`
+    + `<span class="livev2-rank-move ${move.cls}" aria-label="${liveV2Esc(move.label)}">${liveV2Esc(move.text)}</span>`
+    + `</span>`
     + `<span class="livev2-avatar">${liveV2Esc(r.avatar) || '⚽'}</span>`
     + `<span class="livev2-name">${liveV2Esc(r.name)}</span>`
     + `<span class="livev2-pts">${r.livePoints}</span>`
-    + `<span class="livev2-arrow ${d > 0 ? 'up' : d < 0 ? 'down' : ''}">${arrow}</span>`
+    + `<span class="livev2-pts-diff ${liveV2PointsDiffClass(diff)}" aria-label="${liveV2Esc(liveV2PointsDiffLabel(diff))}">${liveV2PointsDiffText(diff)}</span>`
     + `</div></div>`;
 }
 
@@ -1343,8 +1398,10 @@ function updateLiveV2Dom(rows, folded) {
       }
       const d = r.delta || 0;
       const arrow = el.querySelector('.livev2-arrow');
-      arrow.textContent = d > 0 ? `▲${d}` : d < 0 ? `▼${Math.abs(d)}` : '';
-      arrow.className = `livev2-arrow ${d > 0 ? 'up' : d < 0 ? 'down' : ''}`;
+      if (arrow) {
+        arrow.textContent = d > 0 ? `▲${d}` : d < 0 ? `▼${Math.abs(d)}` : '';
+        arrow.className = `livev2-arrow ${d > 0 ? 'up' : d < 0 ? 'down' : ''}`;
+      }
       el.classList.toggle('me', !!r.isMe);
     }
     if (prev) {
@@ -1613,6 +1670,12 @@ async function renderLiveV2Tab() {
     liveV2ReasonHtml,
     liveV2CountdownState,
     liveV2CountdownHtml,
+    liveV2DetectRankMoves,
+    liveV2RankMoveView,
+    liveV2RowHtml,
+    liveV2PointsDiffClass,
+    liveV2PointsDiffText,
+    liveV2PointsDiffLabel,
   };
 
   global.liveV2Ui = api;

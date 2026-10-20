@@ -778,3 +778,52 @@ test('liveV2FeedItems omite los eventos de nota', () => {
   assert.equal(items.length, 1);
   assert.match(items[0].text, /Gol/);
 });
+
+test('liveV2DetectRankMoves guarda subidas y bajadas', () => {
+  const ui = freshUi();
+  const rows = [
+    { name: 'A', rank: 1 },
+    { name: 'B', rank: 3 },
+  ];
+  const prev = {
+    A: { rank: 3 },
+    B: { rank: 2 },
+  };
+  const moves = ui.liveV2DetectRankMoves(rows, prev, {}, 1000);
+  assert.deepEqual(moves, {
+    A: { delta: 2, at: 1000 },
+    B: { delta: -1, at: 1000 },
+  });
+});
+
+test('liveV2RankMoveView pinta el cambio y caduca a los 30 s', () => {
+  const ui = freshUi();
+  assert.deepEqual(ui.liveV2RankMoveView('A', { A: { delta: 2, at: 1000 } }, 1000), {
+    text: '▲2', cls: 'up', label: 'Sube 2 puestos',
+  });
+  assert.deepEqual(ui.liveV2RankMoveView('A', { A: { delta: -1, at: 1000 } }, 1000), {
+    text: '▼1', cls: 'down', label: 'Baja 1 puesto',
+  });
+  assert.deepEqual(ui.liveV2RankMoveView('A', { A: { delta: 2, at: 1000 } }, 31000), {
+    text: '=', cls: 'eq', label: 'Sin cambios',
+  });
+  assert.deepEqual(ui.liveV2RankMoveView('B', {}, 1000), {
+    text: '=', cls: 'eq', label: 'Sin cambios',
+  });
+});
+
+test('liveV2RowHtml pinta puesto, movimiento y diferencial sin flecha', () => {
+  const ui = freshUi();
+  ui.init({ AppState: { liveV2: null }, liveV2Api: { escapeHtml: s => String(s) } });
+  const html = ui.liveV2RowHtml({
+    name: 'Yo', avatar: '⚽', rank: 3, livePoints: 42, pointsDiff: 5, isMe: true,
+    rankMove: { text: '▲2', cls: 'up', label: 'Sube 2 puestos' },
+  });
+  assert.match(html, /livev2-rank-group/);
+  assert.match(html, /livev2-rank-move up/);
+  assert.match(html, /▲2/);
+  assert.match(html, /livev2-pts-diff up/);
+  assert.match(html, /\+5pts/);
+  assert.match(html, /points-up/);
+  assert.doesNotMatch(html, /livev2-arrow/);
+});
