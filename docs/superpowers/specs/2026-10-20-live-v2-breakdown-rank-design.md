@@ -13,6 +13,8 @@ Seis cambios sobre el Live v2, todos front-end:
    `▲N`, `▼N` o `=` cuando no cambia o ya pasaron los 30 s.
 3. **Diferencial de puntos por refresco**: nueva columna con `+5pts`, `-2pts` o
    `0pts` respecto al poll anterior, independiente del movimiento de puestos.
+   La caja del jugador se tiñe de verde o rojo durante ese refresco, con
+   animación, si sus puntos suben o bajan.
 4. **Desglose en la cabecera superior**: puntos del Live en curso separados en
    pronósticos y plantilla.
 5. **Popup por partido**: al pulsar un chip se abre el desglose del usuario para
@@ -28,6 +30,8 @@ No hay cambios de backend, scoring, event-sourcing ni base de datos.
   cuántos, durante 30 s.
 - El usuario ve cuántos puntos ha ganado o perdido en el último refresco, sin
   confundirlo con el movimiento de puestos.
+- La caja del jugador refuerza visualmente si sus puntos han subido o bajado,
+  con una animación de color durante ese poll.
 - La cabecera explica de dónde salen los puntos live del usuario.
 - Cada partido del Live ofrece su desglose completo (pronóstico + plantilla)
   sin salir de la pantalla.
@@ -48,6 +52,8 @@ No hay cambios de backend, scoring, event-sourcing ni base de datos.
 - El indicador `▲/▼/=` va **junto al número de puesto**.
 - El diferencial de puntos se calcula **desde el refresco anterior**, no contra
   los puntos oficiales ni contra el total live acumulado.
+- El color de la caja dura **hasta el siguiente refresco**: verde si suma,
+  rojo si resta y sin color si no cambia.
 - Las notas se ocultan **solo del ticker**; el motivo y el sonido no cambian.
 - El pronóstico del chip se muestra **siempre** (NS, LIVE, HT y FT).
 - El popup se abre **también en NS**, con pronóstico y plantilla a 0 pts.
@@ -177,11 +183,31 @@ Nueva columna al final de la fila, tras los puntos totales:
 - Se actualiza en sitio en cada poll, sin recrear la fila.
 - No hay temporizador de 30 s: el valor corresponde al último refresco.
 
-### 3.3 Accesibilidad
+### 3.3 Color de la caja
+
+La caja de la fila (`.livev2-inner`) refleja el mismo diferencial del refresco:
+
+- `diff > 0` → clase `points-up`: fondo y borde con tinte verde.
+- `diff < 0` → clase `points-down`: fondo y borde con tinte rojo.
+- `diff === 0` → sin clase: se mantiene el color normal de la fila.
+- El color se mantiene **durante todo el poll**, hasta el siguiente refresco.
+- Al cambiar el estado se aplica una animación corta (~0.8 s) que intensifica
+  el tinte y el glow y vuelve al color de reposo del estado.
+- Si el usuario ya tenía `points-up` y sigue subiendo en el siguiente poll, se
+  retira la clase, se fuerza un reflow y se vuelve a aplicar para reiniciar la
+  animación.
+- Si no hay cambio, se retiran ambas clases y la caja vuelve a su color normal.
+- Los estados de movimiento de puesto (`▲/▼`) y de puntos (`verde/rojo`) son
+  independientes y pueden coincidir en la misma fila.
+- Con `prefers-reduced-motion`, el color se aplica igual pero sin animación.
+
+### 3.4 Accesibilidad
 
 - `aria-label` textual: “Suma 5 puntos en este refresco”, “Resta 2 puntos en
   este refresco”, “Sin cambios de puntos”.
 - El signo y el texto `pts` están siempre presentes, no solo el color.
+- El color de la caja es un refuerzo visual; la información sigue disponible
+  en la columna de diferencial.
 
 ## 4. Desglose en la cabecera superior
 
@@ -320,6 +346,9 @@ LIVE 63' · Tú 2-1
 - `css/styles.css`
   - `.livev2-rank-group`, `.livev2-rank-move.up/.down/.eq`.
   - `.livev2-pts-diff.up/.down/.eq` y el ajuste de anchos de la fila.
+  - `.livev2-row.points-up > .livev2-inner` y
+    `.livev2-row.points-down > .livev2-inner`, con sus `@keyframes` y la
+    variante `prefers-reduced-motion`.
   - `.livev2-breakdown` y sus segmentos.
   - `.livev2-cell-pred`.
   - Ajustes de `.livev2-match-modal` reutilizando los estilos de modal.
@@ -337,8 +366,10 @@ LIVE 63' · Tú 2-1
   popup sigue mostrando el desglose live si el chip existe.
 - Cambio de puesto seguido de otro cambio antes de 30 s: prevalece el último
   delta y se reinicia el contador.
-- Refresco sin cambios: el diferencial de puntos pasa a `0pts`; el badge de
-  puesto conserva su movimiento hasta caducar.
+- Refresco sin cambios: el diferencial de puntos pasa a `0pts`, la caja vuelve
+  a su color normal; el badge de puesto conserva su movimiento hasta caducar.
+- Cambio de puntos en un poll y nuevo cambio en el siguiente: se reinicia la
+  animación de color con el nuevo signo.
 - Varios cambios de puntos seguidos: la columna muestra solo el neto del último
   refresco, no la suma histórica.
 - Cambio de puesto sin cambio de puntos: `▲/▼` puede aparecer junto a `0pts`.
@@ -354,9 +385,11 @@ LIVE 63' · Tú 2-1
   - `liveV2FeedItems` excluye `rating` y mantiene el resto.
   - Movimiento de puestos: sube, baja, `=`, caducidad a 30 s y reinicio.
   - Diferencial de puntos: `+`, `-`, `0`, inicial y neto entre polls.
+  - Clases de color de la caja: `points-up`, `points-down`, sin clase en `0` y
+    reinicio de la animación al repetir cambio.
   - `liveV2HeaderBreakdown` separa pronóstico y plantilla y excluye oficiales.
   - Chip con pronóstico y sin pronóstico.
   - HTML del popup con pronóstico, desglose, plantilla y caso NS.
 - Ejecutar `node --test tests/` y comprobar que no hay regresiones.
 - Comprobación manual en local: chips clicables, popup, cabecera, ticker sin
-  notas, badges de puesto y columna de diferencial de puntos.
+  notas, badges de puesto, columna de diferencial y color animado de la caja.
