@@ -1060,13 +1060,13 @@ function calculatePlayerMatchPoints(playerData, squadPlayer, matchStat) {
     }
   }
 
-  // 4. Portería a cero (G +5, D +2 si >70 min; el expulsado no cobra)
+  // 4. Portería a cero (G +5, D +2 si >70 min; la expulsión no lo anula)
   const equipoId = String(squadPlayer.equipo);
   const statsKeys = Object.keys(matchStat.stats || {});
   const rivalId = statsKeys.find(id => id !== equipoId && id !== 'jugadores');
   const golesRival = rivalId ? (matchStat.stats[rivalId]?.goles || 0) : 0;
   const cleanSheet = playerPointsApi.cleanSheetBonus(
-    squadPlayer.posicion, playerData.minutos, golesRival, playerData.expulsado);
+    squadPlayer.posicion, playerData.minutos, golesRival);
   if (cleanSheet) {
     total += cleanSheet;
     desglose.push({ concepto: 'Portería a cero', puntos: cleanSheet });

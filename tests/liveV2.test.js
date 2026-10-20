@@ -438,7 +438,7 @@ test('match_final fija lastMinute y ftTs si faltan', () => {
   assert.equal(matchClockAt(st, Date.parse('2026-09-16T23:00:00Z')), 90);
 });
 
-test('un expulsado a los 80 no recibe bonus de portería a cero', () => {
+test('un expulsado a los 80 cobra la portería a cero si jugó >70 min', () => {
   const st = createMatchState();
   const ctx = {
     homeTeamId: 1, awayTeamId: 2,
@@ -454,9 +454,10 @@ test('un expulsado a los 80 no recibe bonus de portería a cero', () => {
   const p = stats.jugadores.find(j => String(j.id) === '11');
   assert.equal(p.expulsado, true);
   assert.equal(p.minutos, 80);
-  // 0-0 y >70 min: sin expulsión serían +2; expulsado no cobra nada.
-  assert.equal(playerPoints.cleanSheetBonus(p.posicion, p.minutos, 0, p.expulsado), 0);
-  assert.equal(playerPoints.cleanSheetBonus(p.posicion, p.minutos, 0, false), 2);
+  // 0-0 y >70 min: +2 aunque esté expulsado (la regla solo mira minutos y goles).
+  assert.equal(playerPoints.cleanSheetBonus(p.posicion, p.minutos, 0), 2);
+  assert.equal(playerPoints.cleanSheetBonus('G', 71, 0), 5);
+  assert.equal(playerPoints.cleanSheetBonus('D', 70, 0), 0);
 });
 
 test('foldMatch ordena sourceId por code unit (Z antes que a)', () => {

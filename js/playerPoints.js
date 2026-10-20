@@ -21,10 +21,9 @@
 
   /**
    * Bonus de portería a cero: +5 portero / +2 defensa si jugó más de 70 min
-   * y su equipo no encajó. Un expulsado no lo cobra (aunque el equipo acabe 0).
+   * y su equipo no encajó. La expulsión no lo anula si jugó >70 min.
    */
-  function cleanSheetBonus(posicion, minutos, golesRival, expulsado) {
-    if (expulsado) return 0;
+  function cleanSheetBonus(posicion, minutos, golesRival) {
     if (!(minutos > 70)) return 0;
     if (golesRival !== 0) return 0;
     if (posicion === 'G') return 5;
