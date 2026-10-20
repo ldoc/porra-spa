@@ -1012,3 +1012,12 @@ test('liveV2MatchModalHtml muestra un solo total y ninguno sin sesion', () => {
   assert.doesNotMatch(loggedOut, /Total:/);
   assert.match(loggedOut, /Inicia sesión para ver tu desglose/);
 });
+
+test('liveV2ChipEventId resuelve el chip desde el target', () => {
+  const ui = freshUi();
+  const chip = { getAttribute: k => (k === 'data-livev2-chip' ? '1' : null) };
+  const target = { closest: sel => (sel === '[data-livev2-chip]' ? chip : null) };
+  assert.equal(ui.liveV2ChipEventId(target), '1');
+  assert.equal(ui.liveV2ChipEventId({ closest: () => null }), null);
+  assert.equal(ui.liveV2ChipEventId(null), null);
+});

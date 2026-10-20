@@ -451,12 +451,68 @@ function liveV2State() {
       _chipChanged: {}, // eventId -> ts del último cambio de marcador (para glow + orden)
       _chipScores: {},  // eventId -> "home-away" del poll anterior (detección de cambios)
       _rankMoves: {},
+      _openMatchModal: null, _modalReturnFocus: null, _modalPrevOverflow: null, _modalKeyHandler: null,
     };
     restoreLiveV2Cache(AppState.liveV2);
   }
   if (!AppState.liveV2._chipChanged) AppState.liveV2._chipChanged = {};
   if (!AppState.liveV2._chipScores) AppState.liveV2._chipScores = {};
   return AppState.liveV2;
+}
+
+function closeLiveV2MatchModal() {
+  const st = liveV2State();
+  const overlay = typeof document !== 'undefined' ? document.getElementById('livev2-match-modal-overlay') : null;
+  if (overlay) overlay.remove();
+  if (st._modalKeyHandler && typeof document !== 'undefined') {
+    document.removeEventListener('keydown', st._modalKeyHandler);
+  }
+  st._modalKeyHandler = null;
+  if (typeof document !== 'undefined' && document.body) {
+    document.body.style.overflow = st._modalPrevOverflow || '';
+  }
+  st._modalPrevOverflow = null;
+  st._openMatchModal = null;
+  const focus = st._modalReturnFocus;
+  st._modalReturnFocus = null;
+  if (focus && focus.focus) {
+    try { focus.focus(); } catch (e) { /* sin foco */ }
+  }
+}
+
+function refreshLiveV2MatchModal() {
+  const st = liveV2State();
+  if (st._openMatchModal == null) return;
+  if (typeof document === 'undefined') return;
+  const host = document.getElementById('livev2-match-modal');
+  if (!host) return;
+  const folded = liveV2Folded();
+  const state = folded.states[String(st._openMatchModal)];
+  if (!state) { closeLiveV2MatchModal(); return; }
+  host.innerHTML = liveV2MatchModalHtml(liveV2MatchBreakdown(st._openMatchModal, state));
+}
+
+function openLiveV2MatchModal(eventId) {
+  if (typeof document === 'undefined') return;
+  closeLiveV2MatchModal();
+  const st = liveV2State();
+  st._openMatchModal = String(eventId);
+  st._modalReturnFocus = document.activeElement || null;
+  st._modalPrevOverflow = document.body.style.overflow || '';
+  const overlay = document.createElement('div');
+  overlay.className = 'breakdown-modal-overlay livev2-match-overlay';
+  overlay.id = 'livev2-match-modal-overlay';
+  overlay.innerHTML = `<div id="livev2-match-modal"></div>`;
+  document.body.appendChild(overlay);
+  document.body.style.overflow = 'hidden';
+  const onKey = (e) => { if (e.key === 'Escape') closeLiveV2MatchModal(); };
+  st._modalKeyHandler = onKey;
+  document.addEventListener('keydown', onKey);
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) closeLiveV2MatchModal();
+    else if (e.target.closest && e.target.closest('[data-livev2-modal-close]')) closeLiveV2MatchModal();
+  });
+  refreshLiveV2MatchModal();
 }
 
 const LIVEV2_CHIP_GLOW_MS = 10000;
@@ -717,6 +773,29 @@ function liveV2ChipData(eventId, state) {
   };
 }
 
+function liveV2ChipEventId(target) {
+  const chip = target && typeof target.closest === 'function'
+    ? target.closest('[data-livev2-chip]') : null;
+  return chip ? chip.getAttribute('data-livev2-chip') : null;
+}
+
+function bindLiveV2Chips(root) {
+  const host = (root || document).querySelector('#livev2-chips-host');
+  if (!host || host.dataset.bound === '1') return;
+  host.dataset.bound = '1';
+  const openFromEvent = (e) => {
+    const id = liveV2ChipEventId(e.target);
+    if (id == null) return;
+    e.preventDefault();
+    openLiveV2MatchModal(id);
+  };
+  host.addEventListener('click', openFromEvent);
+  host.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    openFromEvent(e);
+  });
+}
+
 function liveV2ChipHtml(eventId, state) {
   const d = liveV2ChipData(eventId, state);
   const hb = d.homeBadge
@@ -725,7 +804,7 @@ function liveV2ChipHtml(eventId, state) {
   const ub = d.awayBadge
     ? `<img class="livev2-cell-badge away" src="${d.awayBadge}" alt="" loading="lazy" onerror="this.onerror=null;this.src='data/imgEquipos/default.webp'">`
     : '';
-  return `<div class="${d.cls}" data-livev2-chip="${liveV2Esc(eventId)}" title="${liveV2Esc(d.fullTitle)}" aria-label="${liveV2Esc(d.fullTitle)}">`
+  return `<div class="${d.cls}" data-livev2-chip="${liveV2Esc(eventId)}" role="button" tabindex="0" title="${liveV2Esc(d.fullTitle)}" aria-label="${liveV2Esc(d.fullTitle)}">`
     + hb
     + `<span class="livev2-cell-team">${liveV2Esc(d.homeAbbr)}</span>`
     + `<span class="livev2-cell-score">${liveV2Esc(d.score)}</span>`
@@ -1112,6 +1191,7 @@ async function retryLiveV2() {
     liveV2ScheduleChipGlowTimers(target);
     bindLiveV2SoundToggle(target);
     bindLiveV2Fullscreen(target);
+    bindLiveV2Chips(target);
   } finally {
     st.polling = false;
     updateLiveV2Badge(target);
@@ -1606,6 +1686,7 @@ function updateLiveV2Dom(rows, folded) {
 
   liveV2ScheduleRankMoveExpiry();
   st._lastRows = liveV2Snapshot(rows);
+  refreshLiveV2MatchModal();
 }
 
 // Fuera de la ventana de un partido no se pide nada al servidor. Dentro de la
@@ -1689,6 +1770,7 @@ function stopLiveV2Polling() {
     document.removeEventListener('visibilitychange', _liveV2VisHandler);
     _liveV2VisHandler = null;
   }
+  closeLiveV2MatchModal();
 }
 
 function startLiveV2Polling(folded) {
@@ -1847,6 +1929,11 @@ async function renderLiveV2Tab() {
     liveV2HeaderBreakdownHtml,
     liveV2MatchBreakdown,
     liveV2MatchModalHtml,
+    liveV2ChipEventId,
+    bindLiveV2Chips,
+    openLiveV2MatchModal,
+    closeLiveV2MatchModal,
+    refreshLiveV2MatchModal,
   };
 
   global.liveV2Ui = api;

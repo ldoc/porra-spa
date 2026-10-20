@@ -2040,6 +2040,7 @@ async function renderResultadosTab() {
   bindResultadosTabClicks(container);
   if (isLiveTab) liveV2Ui.bindLiveV2SoundToggle(container);
   if (isLiveTab) liveV2Ui.bindLiveV2Fullscreen(container);
+  if (isLiveTab) liveV2Ui.bindLiveV2Chips(container);
 
   if (currentTab === 'live' && prevLiveScrollTop !== null) {
     const sc = container.querySelector('.resultados-scroll');
