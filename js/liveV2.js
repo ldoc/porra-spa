@@ -122,6 +122,16 @@
   /** Clave de dedupe de un evento: la API de fase 3 ya no envía `_id`. */
   function eventKey(e) { return String(e.eventId) + '|' + String(e.sourceId); }
 
+  /**
+   * Solo en local (localhost/127.0.0.1) y con `?liveSim=1`, pide los eventos del
+   * simulador (`source=sim`). En producción/cualquier otro host siempre false.
+   */
+  function wantSimSource(search, hostname) {
+    if (hostname !== 'localhost' && hostname !== '127.0.0.1') return false;
+    try { return new URLSearchParams(search || '').get('liveSim') === '1'; }
+    catch { return false; }
+  }
+
   function parseTs(v) {
     if (v == null) return 0;
     const t = v instanceof Date ? v.getTime() : new Date(v).getTime();
@@ -350,7 +360,7 @@
       c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   }
 
-  const liveV2Api = { createMatchState, applyEvent, escapeHtml, newPlayer, matchClockAt, minutesOf, foldMatch, foldAll, stateAt, eventKey, matchStateToStats, rankRows, reasonLabel, liveV2ReasonForEvent, feedLabel, flipDelta };
+  const liveV2Api = { createMatchState, applyEvent, escapeHtml, newPlayer, matchClockAt, minutesOf, foldMatch, foldAll, stateAt, eventKey, wantSimSource, matchStateToStats, rankRows, reasonLabel, liveV2ReasonForEvent, feedLabel, flipDelta };
   global.liveV2Api = liveV2Api;
   if (typeof module !== 'undefined' && module.exports) module.exports = liveV2Api;
 })(typeof window !== 'undefined' ? window : globalThis);

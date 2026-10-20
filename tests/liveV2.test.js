@@ -468,3 +468,11 @@ test('foldMatch ordena sourceId por code unit (Z antes que a)', () => {
   const s = foldMatch(events, CTX);
   assert.deepEqual(s.score, { home: 1, away: 0 });
 });
+
+test('wantSimSource solo en localhost/127.0.0.1 con liveSim=1', () => {
+  assert.equal(liveV2.wantSimSource('?liveSim=1', 'localhost'), true);
+  assert.equal(liveV2.wantSimSource('?liveSim=1', '127.0.0.1'), true);
+  assert.equal(liveV2.wantSimSource('?liveSim=1', 'porra-spa.vercel.app'), false);
+  assert.equal(liveV2.wantSimSource('', 'localhost'), false);
+  assert.equal(liveV2.wantSimSource('?liveSim=0', 'localhost'), false);
+});

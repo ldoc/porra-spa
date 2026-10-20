@@ -449,7 +449,11 @@ function liveV2PlayheadMs(st) {
 /** Carga inicial (forceFull) o delta (?since=serverTime); dedup por eventId|sourceId */
 async function fetchLiveEvents(forceFull, _resyncGuard) {
   const st = liveV2State();
-  const url = API_BASE + '/api/live/events' + (!forceFull && st.serverTime ? `?since=${encodeURIComponent(st.serverTime)}` : '');
+  const params = new URLSearchParams();
+  if (!forceFull && st.serverTime) params.set('since', st.serverTime);
+  if (liveV2Api.wantSimSource(window.location.search, window.location.hostname)) params.set('source', 'sim');
+  const qs = params.toString();
+  const url = API_BASE + '/api/live/events' + (qs ? '?' + qs : '');
   const res = await fetchWithPhase(url);
   if (!res.ok) throw new Error('HTTP ' + res.status);
   const payload = await res.json();
