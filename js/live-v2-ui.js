@@ -451,7 +451,8 @@ async function fetchLiveEvents(forceFull, _resyncGuard) {
   const st = liveV2State();
   const params = new URLSearchParams();
   if (!forceFull && st.serverTime) params.set('since', st.serverTime);
-  if (liveV2Api.wantSimSource(window.location.search, window.location.hostname)) params.set('source', 'sim');
+  const win = typeof window !== 'undefined' ? window : null;
+  if (win && win.location && liveV2Api.wantSimSource(win.location.search, win.location.hostname)) params.set('source', 'sim');
   const qs = params.toString();
   const url = API_BASE + '/api/live/events' + (qs ? '?' + qs : '');
   const res = await fetchWithPhase(url);
