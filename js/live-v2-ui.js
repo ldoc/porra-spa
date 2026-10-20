@@ -217,7 +217,11 @@ function liveV2SoundDeps() {
   return { enabled, ctx: _liveAudioCtx, navigatorRef: (typeof navigator !== 'undefined' ? navigator : null) };
 }
 
-/** Delta de puntos del usuario por evento nuevo de un partido, antes/después del poll. */
+/**
+ * Delta de puntos del usuario por evento nuevo de un partido, antes/después del poll.
+ * Precondición: sin eventos nuevos devuelve ceros; no se usa para consultar los
+ * puntos actuales de un partido (ningún caller depende de `after` en ese caso).
+ */
 function liveV2EventDeltas(username, eventId, newEvents, allEvents, ctx, playersById, serverNow) {
   const id = String(eventId);
   const newFor = (newEvents || []).filter(e => String(e.eventId) === id);
@@ -261,8 +265,10 @@ function liveV2PlayNewEventSounds(newEvents) {
   if (!me) return;
   const deps = liveV2SoundDeps();
   if (!deps) return;
+  const finalized = new Set((AppState.matchStats || []).map(ms => String(ms.eventId)));
   for (const ev of newEvents) {
     if (ev.type !== 'status' || !ev.payload) continue;
+    if (finalized.has(String(ev.eventId))) continue;
     const type = ev.payload.status === 'FT' ? 'end' : 'status';
     soundApi.playLiveEvent({ type }, true, deps);
   }
@@ -270,7 +276,6 @@ function liveV2PlayNewEventSounds(newEvents) {
   const ctxById = liveV2CtxById();
   const playersById = liveV2PlayersById();
   const serverNow = liveV2PlayheadMs(st);
-  const finalized = new Set((AppState.matchStats || []).map(ms => String(ms.eventId)));
   const byMatch = {};
   for (const ev of newEvents) (byMatch[String(ev.eventId)] = byMatch[String(ev.eventId)] || []).push(ev);
   for (const [id, events] of Object.entries(byMatch)) {
@@ -1597,6 +1602,7 @@ async function renderLiveV2Tab() {
     purgeLiveV2Caches,
     liveV2EventDeltas,
     liveV2SoundQuality,
+    liveV2PlayNewEventSounds,
     liveV2TopContributions,
     liveV2ReasonLine,
     liveV2ReasonHtml,

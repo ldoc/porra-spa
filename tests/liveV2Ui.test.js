@@ -17,6 +17,7 @@ const {
   purgeLiveV2Caches,
   liveV2SoundQuality,
   liveV2EventDeltas,
+  liveV2PlayNewEventSounds,
   liveV2TopContributions,
   liveV2ReasonLine,
   liveV2ReasonHtml,
@@ -504,7 +505,7 @@ test('liveV2EventDeltas atribuye gol (+8 pronóstico +1 plantilla) y asistencia 
     AppState,
     liveV2Api: liveV2,
     calculateMatchPoints: (pred, ms) => ({ points: Number(ms.stats[1]?.goles) === 1 ? 8 : 0 }),
-    calculatePlayerMatchPoints: (jd) => ({ total: (jd.goles || 0) + (jd.asistencias || 0) })
+    calculatePlayerMatchPoints: (jd) => ({ total: (jd.goles || 0) + (jd.asistencias || 0), desglose: [] })
   });
   const t = '2026-09-16T20:30:00.000Z';
   const live = { eventId: 1, type: 'status', minute: 0, ts: '2026-09-16T20:00:00.000Z', ingestedAt: '2026-09-16T20:00:00.000Z', seq: 0, sourceId: 's', payload: { status: 'LIVE', period: 'period1', kickoffTs: '2026-09-16T20:00:00.000Z' } };
@@ -533,7 +534,7 @@ test('liveV2EventDeltas no atribuye puntos si el estado previo es NS', () => {
     AppState,
     liveV2Api: liveV2,
     calculateMatchPoints: (pred, ms) => ({ points: Number(ms.stats[1]?.goles) === 0 ? 15 : 3 }),
-    calculatePlayerMatchPoints: () => ({ total: 0 })
+    calculatePlayerMatchPoints: () => ({ total: 0, desglose: [] })
   });
   const t = '2026-09-16T20:30:00.000Z';
   const goal = { eventId: 1, type: 'goal', minute: 30, ts: t, ingestedAt: t, seq: 0, sourceId: 'g', payload: { scorerId: 13, isHome: true } };
@@ -562,7 +563,7 @@ test('liveV2EventDeltas aplica los eventos en orden canónico', () => {
     AppState,
     liveV2Api: liveV2,
     calculateMatchPoints: (pred, ms) => ({ points: Number(ms.stats[1]?.goles) === 1 ? 8 : 0 }),
-    calculatePlayerMatchPoints: (jd) => ({ total: (jd.goles || 0) + (jd.asistencias || 0) })
+    calculatePlayerMatchPoints: (jd) => ({ total: (jd.goles || 0) + (jd.asistencias || 0), desglose: [] })
   });
   const t = '2026-09-16T20:30:00.000Z';
   const live = { eventId: 1, type: 'status', minute: 0, ts: '2026-09-16T20:00:00.000Z', ingestedAt: '2026-09-16T20:00:00.000Z', seq: 0, sourceId: 's', payload: { status: 'LIVE', period: 'period1', kickoffTs: '2026-09-16T20:00:00.000Z' } };
@@ -647,4 +648,94 @@ test('liveV2EventDeltas no deja que status LIVE tape el delta del gol', () => {
   assert.equal(res.events.length, 1);
   assert.equal(res.events[0].event, goal);
   assert.equal(res.events[0].delta, 8);
+});
+
+// ── Sonido integrado por partido/poll ────────────────────────────────
+
+function withSoundApp({ newEvents, matchStats = [], matchPoints, playerPoints, allPredictions = {}, squadsCache = {} }) {
+  const liveV2 = require('../js/liveV2.js');
+  const calls = [];
+  const prevLocalStorage = globalThis.localStorage;
+  globalThis.localStorage = { getItem: () => '1' };
+  const live = { eventId: 1, type: 'status', minute: 0, ts: '2026-09-16T20:00:00.000Z', ingestedAt: '2026-09-16T20:00:00.000Z', seq: 0, sourceId: 's', payload: { status: 'LIVE', period: 'period1', kickoffTs: '2026-09-16T20:00:00.000Z' } };
+  const AppState = {
+    currentUser: { name: 'me' },
+    liveV2: { events: [live, ...newEvents] },
+    matches: [{ id: 1, homeTeamId: 1, awayTeamId: 2 }],
+    allPlayers: [
+      { id: 13, nombre: 'F', posicion: 'F', equipo: 1 },
+      { id: 12, nombre: 'M', posicion: 'M', equipo: 1 },
+    ],
+    allPredictions,
+    squadsCache,
+    matchStats,
+  };
+  init({
+    AppState,
+    liveV2Api: liveV2,
+    soundApi: {
+      loadSoundEnabled: () => true,
+      playLiveEvent: (event, quality) => calls.push({ event, quality }),
+    },
+    calculateMatchPoints: matchPoints,
+    calculatePlayerMatchPoints: playerPoints,
+  });
+  try {
+    liveV2PlayNewEventSounds(newEvents);
+  } finally {
+    if (prevLocalStorage === undefined) delete globalThis.localStorage;
+    else globalThis.localStorage = prevLocalStorage;
+  }
+  return calls;
+}
+
+function soundGoal() {
+  const t = '2026-09-16T20:30:00.000Z';
+  return { eventId: 1, type: 'goal', minute: 30, ts: t, ingestedAt: t, seq: 0, sourceId: 'g', payload: { scorerId: 13, isHome: true } };
+}
+
+function soundAssist() {
+  const t = '2026-09-16T20:30:00.000Z';
+  return { eventId: 1, type: 'assist', minute: 30, ts: t, ingestedAt: t, seq: 1, sourceId: 'a', playerId: 12, payload: { asistencias: 1 } };
+}
+
+test('liveV2PlayNewEventSounds: dos eventos con puntos producen un solo tono bueno', () => {
+  const calls = withSoundApp({
+    newEvents: [soundGoal(), soundAssist()],
+    allPredictions: { me: { 1: { home: 1, away: 0 } } },
+    squadsCache: { me: [{ id: 13, posicion: 'F', equipo: 1 }, { id: 12, posicion: 'M', equipo: 1 }] },
+    matchPoints: (pred, ms) => ({ points: Number(ms.stats[1]?.goles) === 1 ? 8 : 0, breakdown: [] }),
+    playerPoints: (jd) => ({ total: (jd.goles || 0) + (jd.asistencias || 0), desglose: [] }),
+  });
+  assert.deepEqual(calls, [{ event: { type: 'goal' }, quality: 'good' }]);
+});
+
+test('liveV2PlayNewEventSounds: partido finalizado no suena (ni puntos ni FT)', () => {
+  const ft = { eventId: 1, type: 'status', minute: 90, ts: '2026-09-16T21:50:00.000Z', ingestedAt: '2026-09-16T21:50:00.000Z', seq: 2, sourceId: 'ft', payload: { status: 'FT' } };
+  const calls = withSoundApp({
+    newEvents: [ft, soundGoal()],
+    matchStats: [{ eventId: 1 }],
+    matchPoints: () => ({ points: 8, breakdown: [] }),
+    playerPoints: () => ({ total: 1, desglose: [] }),
+  });
+  assert.deepEqual(calls, []);
+});
+
+test('liveV2PlayNewEventSounds: gol neutro usa el tono neutro', () => {
+  const calls = withSoundApp({
+    newEvents: [soundGoal()],
+    matchPoints: () => ({ points: 0, breakdown: [] }),
+    playerPoints: () => ({ total: 0, desglose: [] }),
+  });
+  assert.deepEqual(calls, [{ event: { type: 'goal' }, quality: 'neutral' }]);
+});
+
+test('liveV2PlayNewEventSounds: status FT emite el tono end', () => {
+  const ft = { eventId: 1, type: 'status', minute: 90, ts: '2026-09-16T21:50:00.000Z', ingestedAt: '2026-09-16T21:50:00.000Z', seq: 2, sourceId: 'ft', payload: { status: 'FT' } };
+  const calls = withSoundApp({
+    newEvents: [ft],
+    matchPoints: () => ({ points: 0, breakdown: [] }),
+    playerPoints: () => ({ total: 0, desglose: [] }),
+  });
+  assert.deepEqual(calls, [{ event: { type: 'end' }, quality: true }]);
 });

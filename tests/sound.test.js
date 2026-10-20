@@ -24,16 +24,21 @@ test('status y rank tienen tono, tipos raros no', () => {
   assert.equal(eventToTone({ type: 'nada' }, false), null);
 });
 
-test('playLiveEvent respeta enabled=false y usa fakes', () => {
+test('playLiveEvent respeta enabled=false, reproduce malo/bueno y usa fakes', () => {
   const played = [];
   const fakeCtx = { play: f => played.push(f) };
   const vibrated = [];
   const fakeNav = { vibrate: ms => vibrated.push(ms) };
   playLiveEvent({ type: 'goal' }, true, { enabled: false, ctx: fakeCtx, navigatorRef: fakeNav });
   assert.equal(played.length, 0);
-  playLiveEvent({ type: 'goal' }, true, { enabled: true, ctx: fakeCtx, navigatorRef: fakeNav });
+  playLiveEvent({ type: 'goal' }, 'bad', { enabled: true, ctx: fakeCtx, navigatorRef: fakeNav });
   assert.equal(played.length, 1);
-  assert.ok(vibrated.length > 0);
+  assert.equal(played[0].freq, 392);
+  assert.equal(vibrated[0], 120);
+  playLiveEvent({ type: 'goal' }, 'good', { enabled: true, ctx: fakeCtx, navigatorRef: fakeNav });
+  assert.equal(played.length, 2);
+  assert.equal(played[1].freq, 523);
+  assert.equal(vibrated[1], 200);
 });
 
 test('toggle persiste en storage', () => {
@@ -65,8 +70,3 @@ test('rank y status conservan los tonos v1', () => {
     { freqs: [660], durationMs: 100, vibrateMs: 0 });
 });
 
-test('playLiveEvent desactivado no reproduce', () => {
-  let plays = 0;
-  playLiveEvent({ type: 'goal' }, 'good', { enabled: false, ctx: { play: () => plays++ } });
-  assert.equal(plays, 0);
-});
