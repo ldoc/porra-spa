@@ -1144,8 +1144,8 @@ function liveV2MoverReason(rows, prevByName, newEvents) {
   for (const ev of freshEvents) (byMatch[String(ev.eventId)] = byMatch[String(ev.eventId)] || []).push(ev);
   const contributions = [];
   if (typeof calculateMatchPoints === 'function' && typeof calculatePlayerMatchPoints === 'function') {
+    // byMatch ya se construyó desde freshEvents, que excluye los finalizados.
     for (const [id, events] of Object.entries(byMatch)) {
-      if (finalized.has(id)) continue;
       const res = liveV2EventDeltas(pick.name, id, events, st.events, ctxById[id] || {}, playersById, serverNow);
       for (const d of res.events) contributions.push(d);
     }

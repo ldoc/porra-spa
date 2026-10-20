@@ -265,6 +265,9 @@ test('liveV2ReasonForEvent resuelve el nombre del protagonista desde playersById
   // assist/penalty_saved resuelven sin romper
   assert.equal(liveV2ReasonForEvent({ type: 'assist', playerId: 7, payload: {} }, players, 1).icon, '🅰️');
   assert.equal(liveV2ReasonForEvent({ type: 'penalty_saved', payload: { keeperId: 7 }, minute: 12 }, players, 3).icon, '🧤');
+  // card/assist incluyen el nombre resuelto del protagonista
+  assert.equal(liveV2ReasonForEvent({ type: 'assist', playerId: 7, payload: {}, minute: 30 }, players, 1).text, "30' Asistencia de Mbappé");
+  assert.equal(liveV2ReasonForEvent({ type: 'card', playerId: 7, payload: { cardType: 'secondYellow' }, minute: 80 }, players, -2).text, "80' Roja de Mbappé");
 });
 
 test('feedLabel resuelve el nombre del goleador y cubre tipos del feed', () => {
@@ -362,7 +365,7 @@ function initMoverUi(state) {
     AppState: state,
     liveV2Api: liveV2,
     calculateMatchPoints: (pred, ms) => ({ points: Number(ms.stats[1]?.goles) === 1 ? 8 : 0 }),
-    calculatePlayerMatchPoints: (jd) => ({ total: (jd.goles || 0) + (jd.asistencias || 0) }),
+    calculatePlayerMatchPoints: (jd) => ({ total: (jd.goles || 0) + (jd.asistencias || 0), desglose: [] }),
   });
 }
 
@@ -498,6 +501,32 @@ test('motivo no se muestra si todos los eventos son de partidos ya finalizados',
   assert.equal(mover, null);
 });
 
+test('motivo cae al evento mas reciente sin contribuciones de plantilla', () => {
+  const goal = { eventId: 1, type: 'goal', ts: '2026-09-16T20:44:00Z', seq: 1, sourceId: 'g', playerId: 9, payload: { scorerId: 9, isHome: true }, minute: 44 };
+  const state = {
+    matches: [{ id: 1, homeTeamId: 1, awayTeamId: 2 }],
+    allPlayers: [{ id: 9, nombre: 'Suplente', posicion: 'F', equipo: 1 }],
+    allPredictions: { ana: { 1: { home: 1, away: 0 } } },
+    squadsCache: { ana: [] },
+    matchStats: [],
+    liveV2: { events: [liveStatusEvent(), goal] },
+  };
+  liveV2Ui.init({
+    AppState: state,
+    liveV2Api: liveV2,
+    calculateMatchPoints: () => ({ points: 0, breakdown: [] }),
+    calculatePlayerMatchPoints: () => ({ total: 0, desglose: [] }),
+  });
+  const rows = moverRows();
+  rows[0].livePoints = 20;
+  const mover = liveV2Ui.liveV2MoverReason(rows, moverPrev(), [goal]);
+  assert.equal(mover.name, 'ana');
+  assert.equal(mover.lines.length, 1);
+  assert.equal(mover.lines[0].text, "44' Gol de Suplente");
+  assert.equal(mover.total, 10);
+  assert.equal(mover.more, 0);
+});
+
 // ── Revisión final (reloj servidor, resync, expulsados, motivos) ──────
 
 const playerPoints = require('../js/playerPoints.js');
@@ -511,11 +540,17 @@ test('reasonLabel cubre score, match_final y substitution', () => {
     { icon: '🔁', text: "60' Cambio", delta: 0 });
 });
 
-test('reasonLabel cubre tarjeta', () => {
+test('reasonLabel cubre tarjeta, secondYellow y nombres resueltos', () => {
   const red = liveV2.reasonLabel({ type: 'card', minute: 80, payload: { cardType: 'red' } }, { delta: -2 });
   assert.deepEqual(red, { icon: '🟥', text: "80' Roja", delta: -2 });
   const yellow = liveV2.reasonLabel({ type: 'card', minute: 12, payload: {} }, { delta: -1 });
   assert.deepEqual(yellow, { icon: '🟨', text: "12' Tarjeta", delta: -1 });
+  const secondYellow = liveV2.reasonLabel({ type: 'card', minute: 70, payload: { cardType: 'secondYellow' } }, { delta: -1 });
+  assert.deepEqual(secondYellow, { icon: '🟥', text: "70' Roja", delta: -1 });
+  const namedRed = liveV2.reasonLabel({ type: 'card', minute: 80, payload: { cardType: 'red' } }, { delta: -2, scorer: 'Mbappé' });
+  assert.deepEqual(namedRed, { icon: '🟥', text: "80' Roja de Mbappé", delta: -2 });
+  const namedAssist = liveV2.reasonLabel({ type: 'assist', minute: 30, payload: {} }, { delta: 1, scorer: 'Vini Jr.' });
+  assert.deepEqual(namedAssist, { icon: '🅰️', text: "30' Asistencia de Vini Jr.", delta: 1 });
 });
 
 test('match_final fija lastMinute y ftTs si faltan', () => {

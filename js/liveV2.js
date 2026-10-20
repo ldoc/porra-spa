@@ -299,18 +299,22 @@
     const min = event.minute != null ? `${event.minute}' ` : '';
     const d = c.delta != null ? c.delta : 0;
     const scorer = c.scorer || event.playerName || 'un jugador';
+    const scorerSuffix = c.scorer && c.scorer !== 'un jugador' ? ` de ${c.scorer}` : '';
+    const isRed = event.payload?.cardType === 'red'
+      || event.payload?.cardType === 'yellowRed'
+      || event.payload?.cardType === 'secondYellow';
     switch (event.type) {
       case 'goal': return { icon: '⚽', text: `${min}Gol de ${scorer}`, delta: d };
       case 'goal_cancelled': return { icon: '↩️', text: `${min}Gol anulado · VAR`, delta: d };
       case 'penalty_saved': return { icon: '🧤', text: `${min}Penalti parado`, delta: d };
-      case 'assist': return { icon: '🅰️', text: `${min}Asistencia`, delta: d };
+      case 'assist': return { icon: '🅰️', text: `${min}Asistencia${scorerSuffix}`, delta: d };
       case 'rating': return { icon: d >= 0 ? '📈' : '📉', text: `${min}Nota del jugador`, delta: d };
       case 'score': return { icon: '🔧', text: `${min}Corrección de marcador`, delta: d };
       case 'match_final': return { icon: '🏁', text: `${min}Final del partido`, delta: d };
       case 'substitution': return { icon: '🔁', text: `${min}Cambio`, delta: d };
       case 'card': return {
-        icon: (event.payload?.cardType === 'red' || event.payload?.cardType === 'yellowRed') ? '🟥' : '🟨',
-        text: `${min}${(event.payload?.cardType === 'red' || event.payload?.cardType === 'yellowRed') ? 'Roja' : 'Tarjeta'}`,
+        icon: isRed ? '🟥' : '🟨',
+        text: `${min}${isRed ? 'Roja' : 'Tarjeta'}${scorerSuffix}`,
         delta: d
       };
       default: return null;
@@ -373,7 +377,7 @@
         return { icon: '🅰️', text: n ? `${min}Asistencia de ${n}` : `${min}Asistencia` };
       }
       case 'card': {
-        const red = p.cardType === 'red' || p.cardType === 'yellowRed';
+        const red = p.cardType === 'red' || p.cardType === 'yellowRed' || p.cardType === 'secondYellow';
         const n = nameOf(ev.playerId);
         return { icon: red ? '🟥' : '🟨', text: n ? `${min}${red ? 'Roja' : 'Amarilla'} · ${n}` : `${min}${red ? 'Roja' : 'Amarilla'}` };
       }
