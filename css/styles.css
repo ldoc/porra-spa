@@ -6476,6 +6476,16 @@ html, body {
   gap: 6px;
 }
 
+/* Countdown circular del próximo poll (anillo C) */
+.livev2-countdown { display: inline-flex; align-items: center; gap: 3px; height: 20px; }
+.livev2-countdown svg { width: 20px; height: 20px; transform: rotate(-90deg); }
+.livev2-countdown-track { fill: none; stroke: var(--border-color); stroke-width: 2.5; }
+.livev2-countdown-progress { fill: none; stroke: var(--accent-primary); stroke-width: 2.5; stroke-linecap: round; transition: stroke-dashoffset 0.9s linear; }
+.livev2-countdown-num { font-size: 9px; font-weight: 700; color: var(--text-secondary); min-width: 14px; text-align: center; }
+.livev2-countdown.paused .livev2-countdown-progress { stroke: var(--text-muted); }
+.livev2-countdown.paused .livev2-countdown-num { color: var(--text-muted); }
+.livev2-countdown.polling .livev2-countdown-progress { stroke: var(--accent-gold); }
+
 /* Botón de sonido del Live v2 (zona táctil ≥44px) */
 .livev2-sound {
   display: flex;

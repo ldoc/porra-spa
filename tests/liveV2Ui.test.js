@@ -20,7 +20,22 @@ const {
   liveV2TopContributions,
   liveV2ReasonLine,
   liveV2ReasonHtml,
+  liveV2CountdownState,
+  liveV2CountdownHtml,
 } = require('../js/live-v2-ui.js');
+
+test('liveV2CountdownState calcula segundos, progreso y estados', () => {
+  assert.deepEqual(liveV2CountdownState(0, 30000, {}), { seconds: 30, progress: 1, label: '30s', polling: false, paused: false });
+  assert.deepEqual(liveV2CountdownState(15000, 30000, {}), { seconds: 15, progress: 0.5, label: '15s', polling: false, paused: false });
+  assert.equal(liveV2CountdownState(0, 30000, { polling: true }).label, '…');
+  assert.equal(liveV2CountdownState(0, 30000, { paused: true }).label, '—');
+});
+
+test('liveV2CountdownHtml incluye anillo y numero', () => {
+  const html = liveV2CountdownHtml();
+  assert.match(html, /livev2-countdown/);
+  assert.match(html, /livev2-countdown-num/);
+});
 
 test('liveV2ChipLabel sin estado devuelve NS', () => {
   assert.equal(liveV2ChipLabel(null), 'NS');

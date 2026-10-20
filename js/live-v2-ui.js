@@ -958,6 +958,9 @@ async function retryLiveV2() {
   const root = document.querySelector('.resultados-scroll .livev2') || document.querySelector('.livev2');
   if (!root) return;
   st.polling = true;
+  _liveV2CountdownStart = Date.now();
+  _liveV2CountdownPaused = false;
+  liveV2UpdateCountdown();
   updateLiveV2RetryState(root);
   let target = root;
   try {
@@ -987,6 +990,7 @@ function renderLiveV2Html(rows, folded) {
     + `<span class="livev2-badge ${status.cls}" title="${liveV2Esc(status.title)}">${status.text}</span>`
     + `<button type="button" id="livev2-retry" class="livev2-retry" aria-label="Reintentar conexión">↻ Reintentar</button>`
     + `<div class="livev2-status-right">`
+    + liveV2CountdownHtml()
     + `<span class="livev2-points-inline" id="livev2-points-inline">⚡ <b>${me ? me.livePoints : 0}</b>`
     + `<span class="livev2-points-delta ${ptsDelta < 0 ? 'down' : 'up'}">${liveV2DeltaText(ptsDelta)}</span></span>`
     + liveV2FsToggleHtml()
@@ -1397,11 +1401,56 @@ function liveV2ShouldPoll(folded, now) {
   });
 }
 
+function liveV2CountdownState(elapsedMs, intervalMs, opts = {}) {
+  const total = Math.max(1, intervalMs || 1);
+  const elapsed = Math.max(0, elapsedMs || 0);
+  const remaining = Math.max(0, total - elapsed);
+  const seconds = Math.ceil(remaining / 1000);
+  const progress = Math.max(0, Math.min(1, remaining / total));
+  if (opts.paused) return { seconds: 0, progress: 0, label: '—', polling: false, paused: true };
+  if (opts.polling) return { seconds, progress, label: '…', polling: true, paused: false };
+  return { seconds, progress, label: `${seconds}s`, polling: false, paused: false };
+}
+
+function liveV2CountdownHtml() {
+  const r = 8;
+  const c = 2 * Math.PI * r;
+  return `<span class="livev2-countdown" id="livev2-countdown" role="status" aria-live="off" aria-label="Próxima actualización">`
+    + `<svg viewBox="0 0 20 20" aria-hidden="true">`
+    + `<circle class="livev2-countdown-track" cx="10" cy="10" r="${r}"></circle>`
+    + `<circle class="livev2-countdown-progress" cx="10" cy="10" r="${r}" stroke-dasharray="${c}" stroke-dashoffset="0"></circle>`
+    + `</svg><span class="livev2-countdown-num">—</span></span>`;
+}
+
+let _liveV2CountdownTimer = null;
+let _liveV2CountdownStart = 0;
+let _liveV2CountdownPaused = false;
+
+function liveV2UpdateCountdown() {
+  if (typeof document === 'undefined') return;
+  const el = document.getElementById('livev2-countdown');
+  if (!el) return;
+  const st = liveV2State();
+  const intervalMs = (AppState.liveRefreshSecs || 30) * 1000;
+  const state = liveV2CountdownState(Date.now() - _liveV2CountdownStart, intervalMs,
+    { polling: st.polling, paused: _liveV2CountdownPaused });
+  const num = el.querySelector('.livev2-countdown-num');
+  const prog = el.querySelector('.livev2-countdown-progress');
+  if (num) num.textContent = state.label;
+  if (prog) prog.style.strokeDashoffset = String(2 * Math.PI * 8 * (1 - state.progress));
+  el.classList.toggle('paused', state.paused);
+  el.classList.toggle('polling', state.polling);
+  el.setAttribute('aria-label', state.paused
+    ? 'Actualización en pausa'
+    : `Próxima actualización en ${state.seconds} segundos`);
+}
+
 let _liveV2PollTimer = null;
 let _liveV2VisHandler = null;
 
 function stopLiveV2Polling() {
   if (_liveV2PollTimer) { clearInterval(_liveV2PollTimer); _liveV2PollTimer = null; }
+  if (_liveV2CountdownTimer) { clearInterval(_liveV2CountdownTimer); _liveV2CountdownTimer = null; }
   if (_liveV2VisHandler && typeof document !== 'undefined') {
     document.removeEventListener('visibilitychange', _liveV2VisHandler);
     _liveV2VisHandler = null;
@@ -1411,10 +1460,26 @@ function stopLiveV2Polling() {
 function startLiveV2Polling() {
   stopLiveV2Polling();
   const total = AppState.liveRefreshSecs || 30;
+  _liveV2CountdownStart = Date.now();
+  _liveV2CountdownPaused = false;
+  _liveV2CountdownTimer = setInterval(liveV2UpdateCountdown, 1000);
+  liveV2UpdateCountdown();
   if (typeof document !== 'undefined') {
     const onVis = () => {
-      if (document.visibilityState === 'visible' && AppState.resultadosTab === 'live') {
-        if (!liveV2ShouldPoll(liveV2Folded())) return; // respeta la ventana de partido
+      if (document.visibilityState !== 'visible') {
+        _liveV2CountdownPaused = true;
+        liveV2UpdateCountdown();
+        return;
+      }
+      if (AppState.resultadosTab === 'live') {
+        _liveV2CountdownStart = Date.now();
+        _liveV2CountdownPaused = false;
+        if (!liveV2ShouldPoll(liveV2Folded())) { // respeta la ventana de partido
+          _liveV2CountdownPaused = true;
+          liveV2UpdateCountdown();
+          return;
+        }
+        liveV2UpdateCountdown();
         liveV2State()._needFull = true; // al volver a visible se resincroniza con un full
         pollLiveV2();
       }
@@ -1423,9 +1488,19 @@ function startLiveV2Polling() {
     document.addEventListener('visibilitychange', onVis);
   }
   _liveV2PollTimer = setInterval(() => {
-    if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return;
+    if (typeof document !== 'undefined' && document.visibilityState !== 'visible') {
+      _liveV2CountdownPaused = true;
+      liveV2UpdateCountdown();
+      return;
+    }
     if (AppState.resultadosTab !== 'live') { stopLiveV2Polling(); return; }
-    if (!liveV2ShouldPoll(liveV2Folded())) return; // sin partidos en juego, no poll
+    if (!liveV2ShouldPoll(liveV2Folded())) { // sin partidos en juego, no poll
+      _liveV2CountdownPaused = true;
+      liveV2UpdateCountdown();
+      return;
+    }
+    _liveV2CountdownStart = Date.now();
+    _liveV2CountdownPaused = false;
     pollLiveV2();
   }, total * 1000);
 }
@@ -1435,6 +1510,9 @@ async function pollLiveV2() {
   const st = liveV2State();
   if (st.polling || AppState.resultadosTab !== 'live') return;
   st.polling = true;
+  _liveV2CountdownStart = Date.now();
+  _liveV2CountdownPaused = false;
+  liveV2UpdateCountdown();
   updateLiveV2RetryState();
   try {
     const prevRanks = {};
@@ -1516,6 +1594,8 @@ async function renderLiveV2Tab() {
     liveV2TopContributions,
     liveV2ReasonLine,
     liveV2ReasonHtml,
+    liveV2CountdownState,
+    liveV2CountdownHtml,
   };
 
   global.liveV2Ui = api;
