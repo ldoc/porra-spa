@@ -6,7 +6,7 @@
 
 ## Resumen
 
-Seis cambios sobre el Live v2, todos front-end:
+Siete cambios sobre el Live v2, todos front-end:
 
 1. **Ocultar los eventos de cambio de nota** del ticker de últimos eventos.
 2. **Movimiento de puestos visible 30 s**: junto al número de puesto se muestra
@@ -20,6 +20,8 @@ Seis cambios sobre el Live v2, todos front-end:
 5. **Popup por partido**: al pulsar un chip se abre el desglose del usuario para
    ese partido, con pronóstico y plantilla, también en NS.
 6. **Pronóstico en el chip**: línea compacta `Tú 2-1` (o `S/P`) siempre visible.
+7. **Color de los chips al cambiar el marcador**: verde, rojo o azul parpadeante
+   durante el poll según si el cambio suma, resta o no afecta a tus puntos.
 
 No hay cambios de backend, scoring, event-sourcing ni base de datos.
 
@@ -32,6 +34,8 @@ No hay cambios de backend, scoring, event-sourcing ni base de datos.
   confundirlo con el movimiento de puestos.
 - La caja del jugador refuerza visualmente si sus puntos han subido o bajado,
   con una animación de color durante ese poll.
+- Los chips de partido avisan del cambio de marcador con un color semántico
+  (verde/rojo/azul) y parpadeo durante el poll.
 - La cabecera explica de dónde salen los puntos live del usuario.
 - Cada partido del Live ofrece su desglose completo (pronóstico + plantilla)
   sin salir de la pantalla.
@@ -54,6 +58,10 @@ No hay cambios de backend, scoring, event-sourcing ni base de datos.
   los puntos oficiales ni contra el total live acumulado.
 - El color de la caja dura **hasta el siguiente refresco**: verde si suma,
   rojo si resta y sin color si no cambia.
+- El color del chip se calcula con el delta de puntos del usuario en ese
+  partido: verde si suma, rojo si resta y azul si no cambia.
+- El pulso del chip dura **hasta el siguiente refresco** y sustituye al glow
+  verde genérico de 10 s.
 - Las notas se ocultan **solo del ticker**; el motivo y el sonido no cambian.
 - El pronóstico del chip se muestra **siempre** (NS, LIVE, HT y FT).
 - El popup se abre **también en NS**, con pronóstico y plantilla a 0 pts.
@@ -72,6 +80,9 @@ No hay cambios de backend, scoring, event-sourcing ni base de datos.
 - `AppState.squadsCache[usuario]` contiene la plantilla.
 - `liveV2Rows()` suma al total oficial el delta de los partidos plegados que
   aún no están en `AppState.matchStats`.
+- `liveV2DetectChipChanges()` compara el marcador entre polls y aplica el glow
+  verde de 10 s (`.livev2-cell.changed`); ese glow se sustituye por el pulso
+  semántico de la sección 4.
 - Existen estilos reutilizables `.breakdown-modal-overlay` y
   `.breakdown-modal`.
 
@@ -209,9 +220,46 @@ La caja de la fila (`.livev2-inner`) refleja el mismo diferencial del refresco:
 - El color de la caja es un refuerzo visual; la información sigue disponible
   en la columna de diferencial.
 
-## 4. Desglose en la cabecera superior
+## 4. Color de los chips al cambiar el marcador
 
 ### 4.1 Cálculo
+
+- Mantener en `AppState.liveV2._chipUserPoints[eventId]` los puntos live del
+  usuario actual (pronóstico + plantilla) en ese partido durante el poll
+  anterior.
+- En cada poll, comparar el marcador con `_chipScores` (ya existente).
+- Si el marcador cambió:
+  - `delta = puntosActuales - puntosAnteriores`.
+  - `fav` si `delta > 0`.
+  - `hurt` si `delta < 0`.
+  - `neutral` si `delta === 0`.
+- Si no hay usuario o no hay puntos anteriores, el estado es `neutral`.
+- Guardar `{ state, at }` en `AppState.liveV2._chipPulse[eventId]`.
+- Si no hay cambio de marcador en el poll, retirar el pulso del chip.
+- Los puntos se calculan con `liveUserMatchPoints()` y el estado plegado actual,
+  igual que la clasificación y la cabecera.
+
+### 4.2 UI
+
+- Se sustituye el glow verde genérico de 10 s (`.livev2-cell.changed`) por:
+  - `.livev2-cell.score-fav`: borde, fondo y glow verdes, parpadeando.
+  - `.livev2-cell.score-hurt`: borde, fondo y glow rojos, parpadeando.
+  - `.livev2-cell.score-neutral`: borde, fondo y glow azules, parpadeando.
+- El pulso dura **todo el poll**, hasta el siguiente refresco:
+  - Si el siguiente poll no trae cambio de marcador, se retira.
+  - Si vuelve a cambiar, se actualiza el color según el nuevo delta.
+- Animación de parpadeo (~1 s, `infinite alternate`) sobre borde, fondo y glow,
+  sin mover el layout ni cambiar el tamaño del chip.
+- Se mantiene el orden actual de chips cambiados al frente; el pulso no altera
+  el orden.
+- Con `prefers-reduced-motion`: color fijo, sin parpadeo.
+- El `title` y el `aria-label` del chip añaden el efecto: “marcador cambiado,
+  sumas puntos”, “marcador cambiado, restas puntos” o “marcador cambiado, sin
+  efecto en tus puntos”.
+
+## 5. Desglose en la cabecera superior
+
+### 5.1 Cálculo
 
 Nuevo helper `liveV2HeaderBreakdown(folded)`:
 
@@ -227,7 +275,7 @@ Nuevo helper `liveV2HeaderBreakdown(folded)`:
 
 Sin sesión: `{ predictionPts: 0, squadPts: 0, total: 0 }`.
 
-### 4.2 UI
+### 5.2 UI
 
 Nueva fila compacta dentro de `.livev2-fixed`, debajo de la fila de estado:
 
@@ -242,9 +290,9 @@ Nueva fila compacta dentro de `.livev2-fixed`, debajo de la fila de estado:
 - En móvil la fila puede envolver (`flex-wrap`) sin romper el layout.
 - Si no hay usuario o no hay partidos live, muestra `0` en los tres valores.
 
-## 5. Popup de desglose por partido
+## 6. Popup de desglose por partido
 
-### 5.1 Apertura
+### 6.1 Apertura
 
 - Los chips pasan a ser interactivos: `role="button"`, `tabindex="0"` y
   `aria-label` con el título del partido.
@@ -254,7 +302,7 @@ Nueva fila compacta dentro de `.livev2-fixed`, debajo de la fila de estado:
 - Se llama a `bindLiveV2Chips` al renderizar el tab Live y al reintentar.
 - Se guarda el `eventId` abierto en `AppState.liveV2._openMatchModal`.
 
-### 5.2 Contenido
+### 6.2 Contenido
 
 Se reutiliza la estructura de `.breakdown-modal-overlay` / `.breakdown-modal`
 con una clase adicional `.livev2-match-modal`.
@@ -279,7 +327,7 @@ Sección **Plantilla**:
 - Si no hay ninguno: “Ningún jugador de tu plantilla en este partido”.
 - En NS: lista con 0 pts o aviso equivalente.
 
-### 5.3 Datos
+### 6.3 Datos
 
 Nuevo helper `liveV2MatchBreakdown(eventId, state)` que devuelve:
 
@@ -296,7 +344,7 @@ Nuevo helper `liveV2MatchBreakdown(eventId, state)` que devuelve:
 Se apoya en `liveUserMatchPoints()` y en las predicciones del usuario actual,
 sin recalcular reglas de puntuación.
 
-### 5.4 Cierre y refresco
+### 6.4 Cierre y refresco
 
 - Cierre con ✕, click en el overlay y tecla Escape.
 - Si el popup está abierto durante un poll, se refresca su contenido con el
@@ -304,9 +352,9 @@ sin recalcular reglas de puntuación.
 - El foco vuelve al chip que lo abrió.
 - Se bloquea el scroll del body mientras está abierto, igual que otros modales.
 
-## 6. Pronóstico en el chip
+## 7. Pronóstico en el chip
 
-### 6.1 Contenido
+### 7.1 Contenido
 
 - `liveV2ChipData()` añade `predictionText`:
   - Con pronóstico: `Tú 2-1`.
@@ -314,7 +362,7 @@ sin recalcular reglas de puntuación.
 - Se obtiene de `AppState.allPredictions[usuario][eventId]` usando el usuario
   actual.
 
-### 6.2 UI
+### 7.2 UI
 
 - El texto se integra en la línea de estado del chip para no añadir otra fila:
 
@@ -327,17 +375,20 @@ LIVE 63' · Tú 2-1
 - `patchLiveV2Chip()` actualiza el texto sin recrear el nodo.
 - Si no hay usuario, se muestra `S/P`.
 
-## 7. Arquitectura y archivos
+## 8. Arquitectura y archivos
 
 - `js/live-v2-ui.js`
   - Filtro `rating` en `liveV2FeedItems`.
+  - `_chipUserPoints` y `_chipPulse` en el estado del Live; cálculo del delta de
+    puntos por partido en `liveV2DetectChipChanges`/`updateLiveV2Dom`.
   - Estado y helpers de movimiento de puestos.
   - `liveV2RowHtml` y `updateLiveV2Dom` con el badge de puesto y la columna
     de diferencial de puntos.
   - `liveV2HeaderBreakdown` y `liveV2HeaderBreakdownHtml`.
   - `liveV2MatchBreakdown`, `liveV2MatchModalHtml`, apertura/cierre/refresco.
   - `bindLiveV2Chips` exportado en la API.
-  - `liveV2ChipData`/`liveV2ChipHtml`/`patchLiveV2Chip` con el pronóstico.
+  - `liveV2ChipData`/`liveV2ChipHtml`/`patchLiveV2Chip` con el pronóstico y las
+    clases de pulso semántico.
 - `js/main.js`
   - Llamar a `liveV2Ui.bindLiveV2Chips(container)` en el render del tab Live.
 - Temporizadores
@@ -349,13 +400,15 @@ LIVE 63' · Tú 2-1
   - `.livev2-row.points-up > .livev2-inner` y
     `.livev2-row.points-down > .livev2-inner`, con sus `@keyframes` y la
     variante `prefers-reduced-motion`.
+  - `.livev2-cell.score-fav`, `.score-hurt` y `.score-neutral`, con su
+    `@keyframes` de parpadeo y la variante `prefers-reduced-motion`.
   - `.livev2-breakdown` y sus segmentos.
   - `.livev2-cell-pred`.
   - Ajustes de `.livev2-match-modal` reutilizando los estilos de modal.
 - `tests/liveV2Ui.test.js`
   - Nuevos tests de feed, puestos, diferencial de puntos, cabecera, chip y popup.
 
-## 8. Casos límite
+## 9. Casos límite
 
 - Sin usuario: cabecera a 0, chip `S/P` y popup con el mensaje “Inicia sesión
   para ver tu desglose”; no se muestran datos personales.
@@ -374,12 +427,19 @@ LIVE 63' · Tú 2-1
   refresco, no la suma histórica.
 - Cambio de puesto sin cambio de puntos: `▲/▼` puede aparecer junto a `0pts`.
 - Cambio de puntos sin cambio de puesto: `=` puede aparecer junto a `+5pts`.
+- Cambio de marcador que suma puntos: chip verde parpadeando durante el poll.
+- Cambio de marcador que resta puntos: chip rojo parpadeando durante el poll.
+- Cambio de marcador sin efecto neto (o sin usuario): chip azul parpadeando.
+- Varios cambios de marcador en un mismo partido dentro del poll: prevalece el
+  delta neto y el color correspondiente.
+- Cambio de marcador seguido de un poll sin cambios: el pulso desaparece y el
+  chip recupera su color normal.
 - Poll sin cambios: el badge conserva el último movimiento hasta caducar.
 - Pestaña oculta o poll pausado: no se alteran los badges; el temporizador de
   30 s sigue su curso.
 - Modal abierto y partido que desaparece del fold: se cierra automáticamente.
 
-## 9. Testing
+## 10. Testing
 
 - Unitarios en `tests/liveV2Ui.test.js`:
   - `liveV2FeedItems` excluye `rating` y mantiene el resto.
@@ -387,9 +447,12 @@ LIVE 63' · Tú 2-1
   - Diferencial de puntos: `+`, `-`, `0`, inicial y neto entre polls.
   - Clases de color de la caja: `points-up`, `points-down`, sin clase en `0` y
     reinicio de la animación al repetir cambio.
+  - Pulso de chips: `score-fav`, `score-hurt`, `score-neutral`, retirada en el
+    siguiente poll sin cambio y caso sin usuario.
   - `liveV2HeaderBreakdown` separa pronóstico y plantilla y excluye oficiales.
   - Chip con pronóstico y sin pronóstico.
   - HTML del popup con pronóstico, desglose, plantilla y caso NS.
 - Ejecutar `node --test tests/` y comprobar que no hay regresiones.
 - Comprobación manual en local: chips clicables, popup, cabecera, ticker sin
-  notas, badges de puesto, columna de diferencial y color animado de la caja.
+  notas, badges de puesto, columna de diferencial, color animado de la caja y
+  parpadeo verde/rojo/azul de los chips al cambiar el marcador.
