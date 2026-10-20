@@ -42,3 +42,31 @@ test('toggle persiste en storage', () => {
   saveSoundEnabled(s, false);
   assert.equal(loadSoundEnabled(s), false);
 });
+
+test('eventToTone goal good/bad/neutral', () => {
+  assert.deepEqual(eventToTone({ type: 'goal' }, 'good'),
+    { freqs: [523, 659, 784], durationMs: 120, vibrateMs: 200 });
+  assert.deepEqual(eventToTone({ type: 'goal' }, 'bad'),
+    { freqs: [392, 311], durationMs: 140, vibrateMs: 120 });
+  assert.deepEqual(eventToTone({ type: 'goal' }, 'neutral'),
+    { freqs: [440, 440], durationMs: 120, vibrateMs: 0 });
+  assert.deepEqual(eventToTone({ type: 'goal' }, true),
+    eventToTone({ type: 'goal' }, 'good'));
+  assert.deepEqual(eventToTone({ type: 'goal' }, false),
+    eventToTone({ type: 'goal' }, 'neutral'));
+});
+
+test('rank y status conservan los tonos v1', () => {
+  assert.deepEqual(eventToTone({ type: 'rankUp' }, true),
+    { freqs: [392, 523], durationMs: 110, vibrateMs: 100 });
+  assert.deepEqual(eventToTone({ type: 'rankDown' }, false),
+    { freqs: [330, 262], durationMs: 110, vibrateMs: 0 });
+  assert.deepEqual(eventToTone({ type: 'status' }, true),
+    { freqs: [660], durationMs: 100, vibrateMs: 0 });
+});
+
+test('playLiveEvent desactivado no reproduce', () => {
+  let plays = 0;
+  playLiveEvent({ type: 'goal' }, 'good', { enabled: false, ctx: { play: () => plays++ } });
+  assert.equal(plays, 0);
+});

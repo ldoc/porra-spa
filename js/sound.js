@@ -1,12 +1,14 @@
 (function (global) {
   const KEY = 'porra_live_sound';
 
-  function eventToTone(event, isMine) {
+  function eventToTone(event, quality) {
     switch (event.type) {
       case 'goal':
-        return isMine
-          ? { freqs: [523, 659, 784], durationMs: 120, vibrateMs: 200 }
-          : { freqs: [440, 440], durationMs: 120, vibrateMs: 0 };
+        if (quality === 'bad') return { freqs: [392, 311], durationMs: 140, vibrateMs: 120 };
+        if (quality === 'good' || quality === true) {
+          return { freqs: [523, 659, 784], durationMs: 120, vibrateMs: 200 };
+        }
+        return { freqs: [440, 440], durationMs: 120, vibrateMs: 0 };
       case 'status':
       case 'start':
       case 'end':
@@ -25,10 +27,10 @@
     ctx.play({ freq, durationMs });
   }
 
-  function playLiveEvent(event, isMine, deps) {
+  function playLiveEvent(event, quality, deps) {
     const { enabled, ctx, navigatorRef } = deps || {};
     if (!enabled) return;
-    const tone = eventToTone(event, isMine);
+    const tone = eventToTone(event, quality);
     if (!tone) return;
     tone.freqs.forEach((f, i) => {
       if (i === 0) beep(ctx, f, tone.durationMs);
