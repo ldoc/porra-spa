@@ -1063,7 +1063,8 @@ function liveV2UsersAffectedBy(ev) {
 
 /** Eventos con delta != 0 ordenados por impacto absoluto y limitados a `limit`. */
 function liveV2TopContributions(list, limit = 3) {
-  return [...(list || [])].sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta)).slice(0, limit);
+  return [...(list || [])].filter(x => x.delta !== 0)
+    .sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta)).slice(0, limit);
 }
 
 /** Línea de motivo de un evento con su delta; null si el evento no tiene etiqueta. */
@@ -1093,7 +1094,9 @@ function liveV2ReasonHtml(reason) {
  */
 function liveV2MoverReason(rows, prevByName, newEvents) {
   if (typeof liveV2Api === 'undefined') return null;
-  const relevant = (newEvents || []).filter(e => e && LIVEV2_REASON_TYPES[e.type]);
+  const finalized = new Set((AppState.matchStats || []).map(ms => String(ms.eventId)));
+  const freshEvents = (newEvents || []).filter(ev => ev && !finalized.has(String(ev.eventId)));
+  const relevant = freshEvents.filter(e => LIVEV2_REASON_TYPES[e.type]);
   const changed = [];
   for (const r of rows) {
     const p = prevByName ? prevByName[r.name] : null;
@@ -1128,9 +1131,8 @@ function liveV2MoverReason(rows, prevByName, newEvents) {
   const ctxById = liveV2CtxById();
   const playersById = liveV2PlayersById();
   const serverNow = liveV2PlayheadMs(st);
-  const finalized = new Set((AppState.matchStats || []).map(ms => String(ms.eventId)));
   const byMatch = {};
-  for (const ev of newEvents || []) (byMatch[String(ev.eventId)] = byMatch[String(ev.eventId)] || []).push(ev);
+  for (const ev of freshEvents) (byMatch[String(ev.eventId)] = byMatch[String(ev.eventId)] || []).push(ev);
   const contributions = [];
   if (typeof calculateMatchPoints === 'function' && typeof calculatePlayerMatchPoints === 'function') {
     for (const [id, events] of Object.entries(byMatch)) {
@@ -1140,11 +1142,13 @@ function liveV2MoverReason(rows, prevByName, newEvents) {
     }
   }
   if (contributions.length) {
-    const top = liveV2TopContributions(contributions, 3);
-    const lines = top.map(d => liveV2ReasonLine(d.event, d.delta)).filter(Boolean);
-    if (lines.length) {
+    const labeled = contributions
+      .map(d => ({ ...d, line: liveV2ReasonLine(d.event, d.delta) }))
+      .filter(x => x.line);
+    if (labeled.length) {
+      const top = labeled.slice(0, 3);
       return { name: pick.name, rankDelta: pick.rankDelta, pointsDelta: pick.pointsDelta,
-        lines, total: pick.pointsDelta, more: Math.max(0, contributions.length - top.length) };
+        lines: top.map(x => x.line), total: pick.pointsDelta, more: labeled.length - top.length };
     }
   }
 
@@ -1153,7 +1157,7 @@ function liveV2MoverReason(rows, prevByName, newEvents) {
   // Solo se puede atribuir el delta del poll a un evento cuando es el único del
   // poll. Otros tipos (match_final, score, substitution, roja...) también mueven
   // puntos/minutos; con varios eventos no se reparte el total (sería inventado).
-  const attributableDelta = (newEvents || []).length === 1 ? pick.pointsDelta : 0;
+  const attributableDelta = freshEvents.length === 1 ? pick.pointsDelta : 0;
   const label = liveV2Api.liveV2ReasonForEvent
     ? liveV2Api.liveV2ReasonForEvent(ev, liveV2PlayersById(), attributableDelta)
     : liveV2Api.reasonLabel(ev, { delta: attributableDelta });

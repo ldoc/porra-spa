@@ -257,7 +257,7 @@ const { liveV2ReasonForEvent, feedLabel } = liveV2;
 test('liveV2ReasonForEvent resuelve el nombre del protagonista desde playersById', () => {
   const players = { 7: { nombre: 'Mbappé' } };
   assert.deepEqual(
-    liveV2ReasonForEvent({ type: 'goal', playerId: 7, payload: { scorerId: 7 }, minute: 67 }, players, 5),
+    liveV2ReasonForEvent({ type: 'goal', playerId: 7, payload: { scorerId: 7, isHome: true }, minute: 67 }, players, 5),
     { icon: '⚽', text: "67' Gol de Mbappé", delta: 5 });
   // goal sin scorerId usa playerId; goal sin jugador conocido cae a 'un jugador'
   assert.equal(liveV2ReasonForEvent({ type: 'goal', playerId: 7, payload: {}, minute: 12 }, players, 1).text, "12' Gol de Mbappé");
@@ -269,7 +269,7 @@ test('liveV2ReasonForEvent resuelve el nombre del protagonista desde playersById
 
 test('feedLabel resuelve el nombre del goleador y cubre tipos del feed', () => {
   const players = { 7: { nombre: 'Mbappé' } };
-  assert.deepEqual(feedLabel({ type: 'goal', playerId: 7, payload: { scorerId: 7 }, minute: 67 }, players),
+  assert.deepEqual(feedLabel({ type: 'goal', playerId: 7, payload: { scorerId: 7, isHome: true }, minute: 67 }, players),
     { icon: '⚽', text: "67' Gol de Mbappé" });
   assert.equal(feedLabel({ type: 'card', playerId: 7, payload: { cardType: 'yellow' }, minute: 20 }, players).text, "20' Amarilla · Mbappé");
   assert.equal(feedLabel({ type: 'goal_cancelled', payload: {}, minute: 30 }, players).icon, '↩️');
@@ -357,57 +357,146 @@ test('feed descarta eventos con ts inválido', () => {
   assert.ok(html.includes("1&#39; Gol"));
 });
 
+function initMoverUi(state) {
+  liveV2Ui.init({
+    AppState: state,
+    liveV2Api: liveV2,
+    calculateMatchPoints: (pred, ms) => ({ points: Number(ms.stats[1]?.goles) === 1 ? 8 : 0 }),
+    calculatePlayerMatchPoints: (jd) => ({ total: (jd.goles || 0) + (jd.asistencias || 0) }),
+  });
+}
+
+function moverRows() {
+  return [
+    { name: 'ana', rank: 1, livePoints: 15, isMe: false },
+    { name: 'beto', rank: 2, livePoints: 10, isMe: false },
+  ];
+}
+
+function moverPrev() {
+  return { ana: { rank: 2, livePoints: 10 }, beto: { rank: 1, livePoints: 10 } };
+}
+
+function liveStatusEvent() {
+  return { eventId: 1, type: 'status', ts: '2026-09-16T20:00:00Z', seq: 0, sourceId: 's', payload: { status: 'LIVE', period: 'period1', kickoffTs: '2026-09-16T20:00:00Z' } };
+}
+
 test('motivo atribuye el delta del poll cuando hay un único evento relevante', () => {
-  uiState.allPlayers = [{ id: 7, nombre: 'Mbappé' }];
-  uiState.squadsCache = { ana: [{ id: 7 }] };
-  const rows = [
-    { name: 'ana', rank: 1, livePoints: 15, isMe: false },
-    { name: 'beto', rank: 2, livePoints: 10, isMe: false },
-  ];
-  const prev = { ana: { rank: 2, livePoints: 10 }, beto: { rank: 1, livePoints: 10 } };
-  const mover = liveV2Ui.liveV2MoverReason(rows, prev, [
-    { type: 'goal', ts: '2026-09-16T20:10:00Z', playerId: 7, payload: { scorerId: 7 }, minute: 67 },
-  ]);
+  const goal = { eventId: 1, type: 'goal', ts: '2026-09-16T20:10:00Z', seq: 0, sourceId: 'g', playerId: 7, payload: { scorerId: 7, isHome: true }, minute: 67 };
+  const state = {
+    matches: [{ id: 1, homeTeamId: 1, awayTeamId: 2 }],
+    allPlayers: [{ id: 7, nombre: 'Mbappé', posicion: 'F', equipo: 1 }],
+    allPredictions: { ana: { 1: { home: 1, away: 0 } } },
+    squadsCache: { ana: [{ id: 7, posicion: 'F', equipo: 1 }] },
+    matchStats: [],
+    liveV2: { events: [liveStatusEvent(), goal] },
+  };
+  initMoverUi(state);
+  const rows = moverRows();
+  rows[0].livePoints = 19;
+  const mover = liveV2Ui.liveV2MoverReason(rows, moverPrev(), [goal]);
   assert.equal(mover.name, 'ana');
-  assert.equal(mover.lines[0].delta, 5);
-  assert.equal(mover.total, 5);
-  assert.equal(mover.pointsDelta, 5);
+  assert.equal(mover.lines.length, 1);
+  assert.equal(mover.lines[0].delta, 9);
+  assert.equal(mover.total, 9);
+  assert.equal(mover.pointsDelta, 9);
+  assert.equal(mover.more, 0);
 });
 
-test('motivo no atribuye el delta si el poll trae goal + match_final', () => {
-  uiState.allPlayers = [{ id: 7, nombre: 'Mbappé' }];
-  uiState.squadsCache = { ana: [{ id: 7 }] };
-  const rows = [
-    { name: 'ana', rank: 1, livePoints: 15, isMe: false },
-    { name: 'beto', rank: 2, livePoints: 10, isMe: false },
-  ];
-  const prev = { ana: { rank: 2, livePoints: 10 }, beto: { rank: 1, livePoints: 10 } };
-  const mover = liveV2Ui.liveV2MoverReason(rows, prev, [
-    { type: 'goal', ts: '2026-09-16T20:10:00Z', seq: 1, playerId: 7, payload: { scorerId: 7 }, minute: 67 },
-    { type: 'match_final', ts: '2026-09-16T21:50:00Z', seq: 2, payload: {} },
-  ]);
+test('motivo con goal + match_final conserva el delta del gol y no suma el final', () => {
+  const goal = { eventId: 1, type: 'goal', ts: '2026-09-16T20:10:00Z', seq: 1, sourceId: 'g', playerId: 7, payload: { scorerId: 7, isHome: true }, minute: 67 };
+  const final = { eventId: 1, type: 'match_final', ts: '2026-09-16T21:50:00Z', seq: 2, sourceId: 'f', payload: {} };
+  const state = {
+    matches: [{ id: 1, homeTeamId: 1, awayTeamId: 2 }],
+    allPlayers: [{ id: 7, nombre: 'Mbappé', posicion: 'F', equipo: 1 }],
+    allPredictions: { ana: { 1: { home: 1, away: 0 } } },
+    squadsCache: { ana: [{ id: 7, posicion: 'F', equipo: 1 }] },
+    matchStats: [],
+    liveV2: { events: [liveStatusEvent(), goal, final] },
+  };
+  initMoverUi(state);
+  const rows = moverRows();
+  rows[0].livePoints = 19;
+  const mover = liveV2Ui.liveV2MoverReason(rows, moverPrev(), [goal, final]);
   assert.equal(mover.name, 'ana');
+  assert.equal(mover.lines.length, 1);
   assert.match(mover.lines[0].text, /Gol de Mbappé/);
-  assert.equal(mover.lines[0].delta, 0);
-  assert.equal(mover.pointsDelta, 0);
+  assert.equal(mover.lines[0].delta, 9);
+  assert.equal(mover.pointsDelta, 9);
 });
 
-test('motivo con varios eventos no inventa atribución (delta 0)', () => {
-  uiState.allPlayers = [{ id: 7, nombre: 'Mbappé' }, { id: 8, nombre: 'Vini Jr.' }];
-  uiState.squadsCache = { ana: [{ id: 7 }, { id: 8 }] };
-  const rows = [
-    { name: 'ana', rank: 1, livePoints: 15, isMe: false },
-    { name: 'beto', rank: 2, livePoints: 10, isMe: false },
-  ];
-  const prev = { ana: { rank: 2, livePoints: 10 }, beto: { rank: 1, livePoints: 10 } };
-  const mover = liveV2Ui.liveV2MoverReason(rows, prev, [
-    { type: 'goal', ts: '2026-09-16T20:10:00Z', seq: 1, playerId: 7, payload: { scorerId: 7 }, minute: 67 },
-    { type: 'assist', ts: '2026-09-16T20:11:00Z', seq: 2, playerId: 8, payload: {} },
-  ]);
+test('motivo suma goal + assist en lineas separadas', () => {
+  const goal = { eventId: 1, type: 'goal', ts: '2026-09-16T20:10:00Z', seq: 1, sourceId: 'g', playerId: 7, payload: { scorerId: 7, isHome: true }, minute: 67 };
+  const assist = { eventId: 1, type: 'assist', ts: '2026-09-16T20:11:00Z', seq: 2, sourceId: 'a', playerId: 8, payload: { asistencias: 1 } };
+  const state = {
+    matches: [{ id: 1, homeTeamId: 1, awayTeamId: 2 }],
+    allPlayers: [
+      { id: 7, nombre: 'Mbappé', posicion: 'F', equipo: 1 },
+      { id: 8, nombre: 'Vini Jr.', posicion: 'M', equipo: 1 },
+    ],
+    allPredictions: { ana: { 1: { home: 1, away: 0 } } },
+    squadsCache: { ana: [{ id: 7, posicion: 'F', equipo: 1 }, { id: 8, posicion: 'M', equipo: 1 }] },
+    matchStats: [],
+    liveV2: { events: [liveStatusEvent(), goal, assist] },
+  };
+  initMoverUi(state);
+  const rows = moverRows();
+  rows[0].livePoints = 20;
+  const mover = liveV2Ui.liveV2MoverReason(rows, moverPrev(), [goal, assist]);
   assert.equal(mover.name, 'ana');
-  assert.equal(mover.lines[0].delta, 0);
-  assert.equal(mover.pointsDelta, 0);
-  assert.match(mover.lines[0].text, /Asistencia|Gol/);
+  assert.equal(mover.lines.length, 2);
+  assert.deepEqual(mover.lines.map(l => l.delta), [9, 1]);
+  assert.equal(mover.total, 10);
+  assert.equal(mover.pointsDelta, 10);
+  assert.equal(mover.more, 0);
+});
+
+test('motivo top-3 con total y +N mas usando deltas reales', () => {
+  const goal = { eventId: 1, type: 'goal', ts: '2026-09-16T20:10:00Z', seq: 1, sourceId: 'g', playerId: 7, payload: { scorerId: 7, isHome: true }, minute: 67 };
+  const assists = [8, 9, 10].map((id, i) => ({
+    eventId: 1, type: 'assist', ts: `2026-09-16T20:1${i + 1}:00Z`, seq: i + 2,
+    sourceId: `a${id}`, playerId: id, payload: { asistencias: 1 },
+  }));
+  const players = [7, 8, 9, 10].map((id, i) => ({
+    id, nombre: ['Mbappé', 'Vini Jr.', 'Bellingham', 'Rodrygo'][i], posicion: 'F', equipo: 1,
+  }));
+  const state = {
+    matches: [{ id: 1, homeTeamId: 1, awayTeamId: 2 }],
+    allPlayers: players,
+    allPredictions: { ana: { 1: { home: 1, away: 0 } } },
+    squadsCache: { ana: players.map(p => ({ id: p.id, posicion: p.posicion, equipo: p.equipo })) },
+    matchStats: [],
+    liveV2: { events: [liveStatusEvent(), goal, ...assists] },
+  };
+  initMoverUi(state);
+  const rows = moverRows();
+  rows[0].livePoints = 22;
+  const mover = liveV2Ui.liveV2MoverReason(rows, moverPrev(), [goal, ...assists]);
+  assert.equal(mover.name, 'ana');
+  assert.equal(mover.lines.length, 3);
+  assert.match(mover.lines[0].text, /Gol de Mbappé/);
+  assert.equal(mover.lines[0].delta, 9);
+  assert.deepEqual(mover.lines.slice(1).map(l => l.delta), [1, 1]);
+  assert.equal(mover.total, 12);
+  assert.equal(mover.pointsDelta, 12);
+  assert.equal(mover.more, 1);
+});
+
+test('motivo no se muestra si todos los eventos son de partidos ya finalizados', () => {
+  const goal = { eventId: 1, type: 'goal', ts: '2026-09-16T20:10:00Z', seq: 0, sourceId: 'g', playerId: 7, payload: { scorerId: 7, isHome: true }, minute: 67 };
+  const state = {
+    matches: [{ id: 1, homeTeamId: 1, awayTeamId: 2 }],
+    allPlayers: [{ id: 7, nombre: 'Mbappé', posicion: 'F', equipo: 1 }],
+    allPredictions: { ana: { 1: { home: 1, away: 0 } } },
+    squadsCache: { ana: [{ id: 7, posicion: 'F', equipo: 1 }] },
+    matchStats: [{ eventId: 1 }],
+    liveV2: { events: [liveStatusEvent(), goal] },
+  };
+  initMoverUi(state);
+  const rows = moverRows();
+  rows[0].livePoints = 19;
+  const mover = liveV2Ui.liveV2MoverReason(rows, moverPrev(), [goal]);
+  assert.equal(mover, null);
 });
 
 // ── Revisión final (reloj servidor, resync, expulsados, motivos) ──────
@@ -424,9 +513,10 @@ test('reasonLabel cubre score, match_final y substitution', () => {
 });
 
 test('reasonLabel cubre tarjeta', () => {
-  const label = liveV2.reasonLabel({ type: 'card', minute: 80, payload: { cardType: 'red' } }, { delta: -2 });
-  assert.ok(label);
-  assert.equal(label.delta, -2);
+  const red = liveV2.reasonLabel({ type: 'card', minute: 80, payload: { cardType: 'red' } }, { delta: -2 });
+  assert.deepEqual(red, { icon: '🟥', text: "80' Roja", delta: -2 });
+  const yellow = liveV2.reasonLabel({ type: 'card', minute: 12, payload: {} }, { delta: -1 });
+  assert.deepEqual(yellow, { icon: '🟨', text: "12' Tarjeta", delta: -1 });
 });
 
 test('match_final fija lastMinute y ftTs si faltan', () => {

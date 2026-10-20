@@ -243,10 +243,18 @@ test('el motivo del cambio usa aria-live polite', () => {
   global.requestAnimationFrame = fn => fn();
   global.setTimeout = () => 0;
   try {
+    ui.init({ AppState: { liveV2: null }, liveV2Api: { escapeHtml: s => String(s) } });
     const container = { querySelectorAll: () => [], appendChild: () => {} };
-    ui.liveV2ShowReason(container, { offsetTop: 10, offsetHeight: 44 }, { icon: '⚽', text: 'Gol', delta: 1 });
+    ui.liveV2ShowReason(container, { offsetTop: 10, offsetHeight: 44 }, {
+      lines: [{ icon: '⚽', text: 'Gol de X', delta: 3 }],
+      total: 3,
+      more: 1,
+    });
     assert.equal(created.length, 1);
     assert.equal(created[0].getAttribute('aria-live'), 'polite');
+    assert.match(created[0].innerHTML, /Gol de X/);
+    assert.match(created[0].innerHTML, /\+1 más/);
+    assert.match(created[0].innerHTML, /Total/);
   } finally {
     if (prevDoc === undefined) delete global.document; else global.document = prevDoc;
     if (prevRaf === undefined) delete global.requestAnimationFrame; else global.requestAnimationFrame = prevRaf;
@@ -579,8 +587,8 @@ test('liveV2EventDeltas no atribuye delta al evento status LIVE', () => {
   assert.deepEqual(res.events, []);
 });
 
-test('liveV2TopContributions ordena por impacto y limita a 3', () => {
-  const list = [{ delta: 1 }, { delta: -5 }, { delta: 3 }, { delta: 2 }];
+test('liveV2TopContributions ordena por impacto, descarta ceros y limita a 3', () => {
+  const list = [{ delta: 1 }, { delta: -5 }, { delta: 0 }, { delta: 3 }, { delta: 2 }];
   assert.deepEqual(liveV2TopContributions(list, 3).map(x => x.delta), [-5, 3, 2]);
 });
 
