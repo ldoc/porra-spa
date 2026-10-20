@@ -15,6 +15,8 @@ const {
   liveV2CacheKey,
   liveV2CacheIsFresh,
   purgeLiveV2Caches,
+  liveV2SoundQuality,
+  liveV2EventDeltas,
 } = require('../js/live-v2-ui.js');
 
 test('liveV2ChipLabel sin estado devuelve NS', () => {
@@ -450,4 +452,42 @@ test('purgeLiveV2Caches elimina solo las claves del live', () => {
   };
   assert.equal(purgeLiveV2Caches(storage), 2);
   assert.deepEqual(Object.keys(store), ['a', 'other']);
+});
+
+test('liveV2SoundQuality good/bad/neutral/null', () => {
+  assert.equal(liveV2SoundQuality(2, true), 'good');
+  assert.equal(liveV2SoundQuality(-1, true), 'bad');
+  assert.equal(liveV2SoundQuality(0, true), 'neutral');
+  assert.equal(liveV2SoundQuality(0, false), null);
+});
+
+test('liveV2EventDeltas atribuye gol (+8 pronóstico +1 plantilla) y asistencia (+1)', () => {
+  const liveV2 = require('../js/liveV2.js');
+  const AppState = {
+    liveV2: null,
+    matches: [{ id: 1, homeTeamId: 1, awayTeamId: 2 }],
+    allPlayers: [
+      { id: 13, nombre: 'F', posicion: 'F', equipo: 1 },
+      { id: 12, nombre: 'M', posicion: 'M', equipo: 1 }
+    ],
+    allPredictions: { me: { 1: { home: 1, away: 0 } } },
+    squadsCache: { me: [{ id: 13, posicion: 'F', equipo: 1 }, { id: 12, posicion: 'M', equipo: 1 }] },
+    matchStats: []
+  };
+  init({
+    AppState,
+    liveV2Api: liveV2,
+    calculateMatchPoints: (pred, ms) => ({ points: Number(ms.stats[1]?.goles) === 1 ? 8 : 0 }),
+    calculatePlayerMatchPoints: (jd) => ({ total: (jd.goles || 0) + (jd.asistencias || 0) })
+  });
+  const t = '2026-09-16T20:30:00.000Z';
+  const goal = { eventId: 1, type: 'goal', minute: 30, ts: t, ingestedAt: t, seq: 0, sourceId: 'g', payload: { scorerId: 13, isHome: true } };
+  const assist = { eventId: 1, type: 'assist', minute: 30, ts: t, ingestedAt: t, seq: 1, sourceId: 'a', playerId: 12, payload: { asistencias: 1 } };
+  const res = liveV2EventDeltas('me', 1, [goal, assist], [goal, assist],
+    { homeTeamId: 1, awayTeamId: 2 },
+    { 13: { nombre: 'F', posicion: 'F', equipo: 1 }, 12: { nombre: 'M', posicion: 'M', equipo: 1 } },
+    null);
+  assert.equal(res.before, 0);
+  assert.equal(res.after, 10);
+  assert.deepEqual(res.events.map(d => d.delta), [9, 1]);
 });

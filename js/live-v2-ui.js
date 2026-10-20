@@ -217,38 +217,61 @@ function liveV2SoundDeps() {
   return { enabled, ctx: _liveAudioCtx, navigatorRef: (typeof navigator !== 'undefined' ? navigator : null) };
 }
 
-/** Traduce un evento live a la forma que entiende soundApi.eventToTone (o null si no suena). */
-function liveV2ToneEventFor(ev) {
-  if (!ev) return null;
-  if (ev.type === 'goal') return { type: 'goal' };
-  if (ev.type === 'status') {
-    const status = ev.payload && ev.payload.status;
-    return status === 'FT' ? { type: 'end' } : { type: 'status' };
+/** Delta de puntos del usuario por evento nuevo de un partido, antes/después del poll. */
+function liveV2EventDeltas(username, eventId, newEvents, allEvents, ctx, playersById, serverNow) {
+  const id = String(eventId);
+  const newFor = (newEvents || []).filter(e => String(e.eventId) === id);
+  if (!newFor.length) return { events: [], before: 0, after: 0 };
+  const newKeys = new Set(newFor.map(e => liveV2Api.eventKey(e)));
+  const allFor = (allEvents || []).filter(e => String(e.eventId) === id);
+  const beforeEvents = allFor.filter(e => !newKeys.has(liveV2Api.eventKey(e)));
+  const state = liveV2Api.foldMatch(beforeEvents, ctx || {});
+  const meta = liveMatchMeta({ eventId: id });
+  const fullCtx = { ...(ctx || {}), playersById };
+  const pointsOf = (s) => liveUserMatchPoints(username, {
+    eventId: id,
+    stats: liveV2Api.matchStateToStats(s, fullCtx, serverNow)
+  }, meta).total;
+  const before = pointsOf(state);
+  let prev = before;
+  const out = [];
+  for (const ev of newFor) {
+    liveV2Api.applyEvent(state, ev, ctx || {});
+    const now = pointsOf(state);
+    if (now !== prev) out.push({ event: ev, delta: now - prev });
+    prev = now;
   }
+  return { events: out, before, after: prev };
+}
+
+function liveV2SoundQuality(delta, hasGoal) {
+  if (delta > 0) return 'good';
+  if (delta < 0) return 'bad';
+  if (hasGoal) return 'neutral';
   return null;
 }
 
-/** true si el goleador pertenece a mi plantilla (AppState.squadsCache[yo]). */
-function liveV2GoalIsMine(ev) {
-  const me = AppState.currentUser && AppState.currentUser.name;
-  if (!me) return false;
-  const squad = (AppState.squadsCache || {})[me];
-  if (!Array.isArray(squad) || !squad.length) return false;
-  const p = (ev && ev.payload) || {};
-  const id = p.scorerId != null ? p.scorerId : (p.playerId != null ? p.playerId : ev.playerId);
-  if (id == null) return false;
-  return squad.some(sp => String(sp.id) === String(id));
-}
-
-/** Suena cada evento nuevo con tono (solo si el sonido está activo). */
+/** Un sonido por partido/poll según el efecto neto en mis puntos (solo si el sonido está activo). */
 function liveV2PlayNewEventSounds(newEvents) {
+  if (!newEvents || !newEvents.length) return;
+  if (typeof liveV2Api === 'undefined') return;
+  const me = AppState.currentUser && AppState.currentUser.name;
+  if (!me) return;
   const deps = liveV2SoundDeps();
   if (!deps) return;
-  for (const ev of newEvents || []) {
-    const tone = liveV2ToneEventFor(ev);
-    if (!tone) continue;
-    const isMine = tone.type === 'goal' ? liveV2GoalIsMine(ev) : false;
-    soundApi.playLiveEvent(tone, isMine, deps);
+  const st = liveV2State();
+  const ctxById = liveV2CtxById();
+  const playersById = liveV2PlayersById();
+  const serverNow = liveV2PlayheadMs(st);
+  const finalized = new Set((AppState.matchStats || []).map(ms => String(ms.eventId)));
+  const byMatch = {};
+  for (const ev of newEvents) (byMatch[String(ev.eventId)] = byMatch[String(ev.eventId)] || []).push(ev);
+  for (const [id, events] of Object.entries(byMatch)) {
+    if (finalized.has(id)) continue;
+    const res = liveV2EventDeltas(me, id, events, st.events, ctxById[id] || {}, playersById, serverNow);
+    const quality = liveV2SoundQuality(res.after - res.before, events.some(e => e.type === 'goal'));
+    if (!quality) continue;
+    soundApi.playLiveEvent({ type: 'goal' }, quality, deps);
   }
 }
 
@@ -267,7 +290,7 @@ function liveState() {
 
 /** Metadatos de un liveMatch: equipos desde AppState.matches o fallback a stats */
 function liveMatchMeta(lm) {
-  const m = (AppState.matches || []).find(x => x.id === lm.eventId);
+  const m = (AppState.matches || []).find(x => String(x.id) === String(lm.eventId));
   if (m) {
     return { homeTeamId: m.homeTeamId, awayTeamId: m.awayTeamId, homeTeam: m.homeTeam, awayTeam: m.awayTeam, homeBadgeExt: m.homeBadgeExt, awayBadgeExt: m.awayBadgeExt, fase: m.fase, ronda: m.ronda };
   }
@@ -1425,6 +1448,8 @@ async function renderLiveV2Tab() {
     liveV2CacheDay,
     liveV2CacheIsFresh,
     purgeLiveV2Caches,
+    liveV2EventDeltas,
+    liveV2SoundQuality,
   };
 
   global.liveV2Ui = api;
