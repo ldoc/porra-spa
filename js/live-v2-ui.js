@@ -1393,6 +1393,11 @@ const LIVEV2_KICKOFF_WINDOW_MS = 3.5 * 60 * 60 * 1000;
 
 /** true si hay que sondear: full pendiente, partido en juego o kickoff en ventana. */
 function liveV2ShouldPoll(folded, now) {
+  // Solo en local con ?liveSim=1: el simulador no está en la ventana del calendario,
+  // así que se permite el poll continuo para poder probar el Live.
+  if (typeof window !== 'undefined' && window.location
+    && liveV2Api && typeof liveV2Api.wantSimSource === 'function'
+    && liveV2Api.wantSimSource(window.location.search, window.location.hostname)) return true;
   if (liveV2State()._needFull) return true;
   if (liveV2HasInPlay(folded)) return true;
   const at = now == null ? Date.now() : now;

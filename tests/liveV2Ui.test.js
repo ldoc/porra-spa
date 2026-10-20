@@ -331,6 +331,23 @@ test('liveV2ShouldPoll devuelve true mientras hay que forzar un full', () => {
   assert.equal(ui.liveV2ShouldPoll({ states: {} }, now), false);
 });
 
+test('liveV2ShouldPoll activo con liveSim en localhost', () => {
+  const ui = freshUi();
+  const now = Date.now();
+  const AppState = { liveRefreshSecs: 30, matches: [], liveV2: { events: [], serverTime: null, _needFull: false } };
+  ui.init({
+    AppState,
+    liveV2Api: { eventKey: e => e.id, wantSimSource: (search, host) => host === 'localhost' && search === '?liveSim=1' }
+  });
+  const prev = global.window;
+  global.window = { location: { search: '?liveSim=1', hostname: 'localhost' } };
+  try {
+    assert.equal(ui.liveV2ShouldPoll({ states: {} }, now), true);
+  } finally {
+    if (prev === undefined) delete global.window; else global.window = prev;
+  }
+});
+
 function jsonResponse(payload, serverTime) {
   return {
     ok: true,

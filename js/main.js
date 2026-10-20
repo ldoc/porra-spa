@@ -6,7 +6,8 @@
 // ============================================================
 // ESTADO GLOBAL
 // ============================================================
-const API_BASE = window.location.hostname === 'localhost'
+const _isLocalHost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+const API_BASE = _isLocalHost
   ? 'http://localhost:3000'
   : 'https://api-porra.vercel.app';
 
