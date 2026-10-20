@@ -997,3 +997,18 @@ test('liveV2MatchModalHtml pinta pronostico, plantilla, total y aviso NS', () =>
   assert.match(html, /Plantilla/);
   assert.match(html, /El partido aún no ha empezado/);
 });
+
+test('liveV2MatchModalHtml muestra un solo total y ninguno sin sesion', () => {
+  const ui = freshUi();
+  ui.init({ AppState: {}, liveV2Api: { escapeHtml: s => String(s) } });
+  const base = {
+    meta: { homeTeam: 'A', awayTeam: 'B', homeTeamId: 1, awayTeamId: 2, homeBadgeExt: 'webp', awayBadgeExt: 'webp' },
+    status: 'LIVE', label: "LIVE 60'", score: { home: 1, away: 0 }, loggedIn: true,
+    prediction: { home: 1, away: 0 }, predictionPts: 8, predictionBreakdown: [], squadPts: 3, squadDetail: [], total: 11,
+  };
+  const html = ui.liveV2MatchModalHtml(base);
+  assert.equal((html.match(/Total:/g) || []).length, 1);
+  const loggedOut = ui.liveV2MatchModalHtml({ ...base, loggedIn: false });
+  assert.doesNotMatch(loggedOut, /Total:/);
+  assert.match(loggedOut, /Inicia sesión para ver tu desglose/);
+});

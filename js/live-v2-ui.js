@@ -692,7 +692,6 @@ function liveV2MatchModalHtml(d) {
     + `<span class="livev2-modal-state">${liveV2Esc(d.label)}</span>${badge(awayBadge, 'away')}</div>`
     + note
     + body
-    + `<div class="livev2-modal-total">Total: <b>${d.total > 0 ? '+' : ''}${d.total} pts</b></div>`
     + `</div>`
     + `</div>`;
 }
