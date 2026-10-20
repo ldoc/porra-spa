@@ -1440,7 +1440,7 @@ function liveV2UpdateCountdown() {
   const st = liveV2State();
   const intervalMs = (AppState.liveRefreshSecs || 30) * 1000;
   const state = liveV2CountdownState(Date.now() - _liveV2CountdownStart, intervalMs,
-    { polling: st.polling, paused: _liveV2CountdownPaused });
+    { polling: st.polling, paused: _liveV2CountdownPaused || !!st.error });
   const num = el.querySelector('.livev2-countdown-num');
   const prog = el.querySelector('.livev2-countdown-progress');
   if (num) num.textContent = state.label;
