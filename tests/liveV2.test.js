@@ -460,6 +460,30 @@ test('un expulsado a los 80 cobra la portería a cero si jugó >70 min', () => {
   assert.equal(playerPoints.cleanSheetBonus('D', 70, 0), 0);
 });
 
+test('goles encajados se reparten entre porteros según el minuto del gol', () => {
+  const st = createMatchState();
+  const ctx = { homeTeamId: 1, awayTeamId: 2, playersById: {
+    10: { nombre: 'GK1', posicion: 'G', equipo: 1 },
+    15: { nombre: 'GK2', posicion: 'G', equipo: 1 },
+    20: { nombre: 'GK A', posicion: 'G', equipo: 2 },
+    23: { nombre: 'F A', posicion: 'F', equipo: 2 }
+  } };
+  applyEvent(st, { type: 'status', minute: 0, ts: '2026-09-16T20:00:00Z',
+    payload: { status: 'LIVE', period: 'period1', kickoffTs: '2026-09-16T20:00:00Z' } }, ctx);
+  applyEvent(st, { type: 'lineup', minute: 0, payload: { starters: [10, 20, 23] } }, ctx);
+  applyEvent(st, { type: 'goal', minute: 20, ts: '2026-09-16T20:20:00Z',
+    payload: { isHome: false, scorerId: 23 } }, ctx);
+  applyEvent(st, { type: 'substitution', minute: 60, ts: '2026-09-16T21:00:00Z',
+    payload: { inId: 15, outId: 10 } }, ctx);
+  applyEvent(st, { type: 'goal', minute: 70, ts: '2026-09-16T21:10:00Z',
+    payload: { isHome: false, scorerId: 23 } }, ctx);
+  const stats = matchStateToStats(st, ctx, Date.parse('2026-09-16T21:45:00Z'));
+  const gk1 = stats.jugadores.find(j => String(j.id) === '10');
+  const gk2 = stats.jugadores.find(j => String(j.id) === '15');
+  assert.equal(gk1.golesRecibidos, 1);
+  assert.equal(gk2.golesRecibidos, 1);
+});
+
 test('foldMatch ordena sourceId por code unit (Z antes que a)', () => {
   const t = '2026-09-16T20:30:00.000Z';
   const events = [

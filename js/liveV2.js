@@ -3,7 +3,7 @@
 
   function newPlayer(id) {
     return { id, equipo: null, rating: 6, goals: 0, assists: 0, penaltyScored: 0,
-      penaltySaved: 0, cards: [], onPitch: false, entryMinute: 0, exitMinute: null, goalsReceived: 0 };
+      penaltySaved: 0, cards: [], onPitch: false, entered: false, entryMinute: 0, exitMinute: null, goalsReceived: 0 };
   }
 
   function createMatchState() {
@@ -26,7 +26,7 @@
     const p = ev.payload || {};
     switch (ev.type) {
       case 'lineup':
-        for (const id of p.starters || []) { const pl = ensure(state, id); pl.onPitch = true; pl.entryMinute = 0; }
+        for (const id of p.starters || []) { const pl = ensure(state, id); pl.onPitch = true; pl.entered = true; pl.entryMinute = 0; }
         break;
       case 'status':
         state.status = p.status || state.status;
@@ -42,7 +42,7 @@
         const scorer = ensure(state, p.scorerId);
         if (scorer && !p.isOwnGoal) scorer.goals += 1;
         if (p.isPenalty && scorer && !p.isOwnGoal) scorer.penaltyScored += 1;
-        state.goals.push({ sourceId: ev.sourceId, home, scorerId: p.scorerId ?? null, penalty: !!p.isPenalty, cancelled: false });
+        state.goals.push({ sourceId: ev.sourceId, home, scorerId: p.scorerId ?? null, penalty: !!p.isPenalty, cancelled: false, minute: ev.minute ?? null });
         if (home) state.score.home += 1; else state.score.away += 1;
         break;
       }
@@ -76,7 +76,7 @@
       }
       case 'substitution': {
         const out = ensure(state, p.outId); if (out) { out.onPitch = false; out.exitMinute = ev.minute ?? null; }
-        const inn = ensure(state, p.inId); if (inn) { inn.onPitch = true; inn.entryMinute = ev.minute ?? 0; }
+        const inn = ensure(state, p.inId); if (inn) { inn.onPitch = true; inn.entered = true; inn.entryMinute = ev.minute ?? 0; }
         break;
       }
       case 'rating': { const pl = ensure(state, ev.playerId); if (pl) pl.rating = p.rating; break; }
@@ -207,18 +207,57 @@
     }
     const gkIdByTeam = {};
     for (const [team, gk] of Object.entries(gkByTeam)) gkIdByTeam[team] = gk.id;
+
+    // Goles encajados por cada portero según quién estaba en el campo en el minuto
+    // del gol. Así un cambio de portero reparte los goles como lo hace matchStats.
+    const concededByGk = {};
+    const gkAtMinute = (teamId, minute) => {
+      if (minute == null) return null;
+      const cands = [];
+      for (const pl of Object.values(state.players)) {
+        const meta = (ctx.playersById && ctx.playersById[String(pl.id)]) || {};
+        if (meta.posicion !== 'G' || meta.equipo == null) continue;
+        if (String(meta.equipo) !== String(teamId)) continue;
+        if (!pl.entered) continue;
+        const start = pl.entryMinute || 0;
+        const end = pl.exitMinute == null ? Infinity : pl.exitMinute;
+        if (minute < start || minute > end) continue;
+        cands.push({ id: pl.id, start });
+      }
+      if (!cands.length) return null;
+      cands.sort((a, b) => b.start - a.start);
+      return cands[0].id;
+    };
+    for (const g of state.goals) {
+      if (g.cancelled) continue;
+      const team = g.home ? ctx.awayTeamId : ctx.homeTeamId; // equipo que encaja
+      const gkId = gkAtMinute(team, g.minute);
+      if (gkId != null) {
+        const k = String(gkId);
+        concededByGk[k] = (concededByGk[k] || 0) + 1;
+      }
+    }
+    const attributedByTeam = {};
+    for (const pl of Object.values(state.players)) {
+      const meta = (ctx.playersById && ctx.playersById[String(pl.id)]) || {};
+      if (meta.posicion !== 'G' || meta.equipo == null) continue;
+      const team = String(meta.equipo);
+      attributedByTeam[team] = (attributedByTeam[team] || 0) + (concededByGk[String(pl.id)] || 0);
+    }
+    const unattributedByTeam = {};
+    for (const team of Object.keys(concededByTeam)) {
+      unattributedByTeam[team] = Math.max(0, (concededByTeam[team] || 0) - (attributedByTeam[team] || 0));
+    }
     const jugadores = Object.values(state.players).map(pl => {
       const meta = (ctx.playersById && ctx.playersById[pl.id]) || {};
       const esPortero = meta.posicion === 'G';
       let golesRecibidos = pl.goalsReceived;
       if (esPortero && meta.equipo != null) {
         const team = String(meta.equipo);
+        const own = concededByGk[String(pl.id)] || 0;
         const responsible = gkIdByTeam[team];
-        if (responsible != null) {
-          golesRecibidos = String(responsible) === String(pl.id)
-            ? (concededByTeam[team] ?? golesRecibidos)
-            : 0;
-        }
+        const extra = String(responsible) === String(pl.id) ? (unattributedByTeam[team] || 0) : 0;
+        golesRecibidos = own + extra;
       }
       return {
         id: String(pl.id),
