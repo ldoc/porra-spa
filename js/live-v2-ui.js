@@ -842,7 +842,7 @@ function liveV2FeedItems() {
   const playersById = liveV2PlayersById();
   const events = (st.events || [])
     .filter(e => isFinite(new Date(e.ts).getTime()))
-    .filter(e => !['lineup', 'status'].includes(e.type))
+    .filter(e => !['lineup', 'status', 'rating'].includes(e.type))
     .sort((a, b) => new Date(a.ts) - new Date(b.ts) || ((a.seq || 0) - (b.seq || 0)))
     .slice(-4)
     .reverse();

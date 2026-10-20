@@ -756,3 +756,25 @@ test('liveV2PlayNewEventSounds: status FT emite el tono end', () => {
   });
   assert.deepEqual(calls, [{ event: { type: 'end' }, quality: true }]);
 });
+
+test('liveV2FeedItems omite los eventos de nota', () => {
+  const ui = freshUi();
+  const liveV2 = require('../js/liveV2.js');
+  const t = '2026-09-16T20:30:00.000Z';
+  const base = { eventId: 1, ts: t, ingestedAt: t, minute: 30, sourceId: 'x' };
+  ui.init({
+    AppState: {
+      liveV2: {
+        events: [
+          { ...base, type: 'goal', payload: { scorerId: 13 } },
+          { ...base, type: 'rating', playerId: 13, payload: { rating: 7.5 } },
+        ],
+      },
+      allPlayers: [{ id: 13, nombre: 'F', posicion: 'F', equipo: 1 }],
+    },
+    liveV2Api: liveV2,
+  });
+  const items = ui.liveV2FeedItems();
+  assert.equal(items.length, 1);
+  assert.match(items[0].text, /Gol/);
+});
