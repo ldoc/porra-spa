@@ -164,9 +164,11 @@
     return sa < sb ? -1 : sa > sb ? 1 : 0;
   }
 
+  function sortEvents(events) { return [...(events || [])].sort(byTs); }
+
   function foldMatch(events, ctx) {
     const state = createMatchState();
-    for (const ev of [...events].sort(byTs)) applyEvent(state, ev, ctx);
+    for (const ev of sortEvents(events)) applyEvent(state, ev, ctx);
     return state;
   }
 
@@ -399,7 +401,7 @@
       c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   }
 
-  const liveV2Api = { createMatchState, applyEvent, escapeHtml, newPlayer, matchClockAt, minutesOf, foldMatch, foldAll, stateAt, eventKey, wantSimSource, matchStateToStats, rankRows, reasonLabel, liveV2ReasonForEvent, feedLabel, flipDelta };
+  const liveV2Api = { createMatchState, applyEvent, escapeHtml, newPlayer, matchClockAt, minutesOf, sortEvents, foldMatch, foldAll, stateAt, eventKey, wantSimSource, matchStateToStats, rankRows, reasonLabel, liveV2ReasonForEvent, feedLabel, flipDelta };
   global.liveV2Api = liveV2Api;
   if (typeof module !== 'undefined' && module.exports) module.exports = liveV2Api;
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -230,12 +230,13 @@ function liveV2EventDeltas(username, eventId, newEvents, allEvents, ctx, players
   const fullCtx = { ...(ctx || {}), playersById };
   const pointsOf = (s) => liveUserMatchPoints(username, {
     eventId: id,
+    status: s.status,
     stats: liveV2Api.matchStateToStats(s, fullCtx, serverNow)
   }, meta).total;
   const before = pointsOf(state);
   let prev = before;
   const out = [];
-  for (const ev of newFor) {
+  for (const ev of liveV2Api.sortEvents(newFor)) {
     liveV2Api.applyEvent(state, ev, ctx || {});
     const now = pointsOf(state);
     if (now !== prev) out.push({ event: ev, delta: now - prev });
@@ -259,6 +260,11 @@ function liveV2PlayNewEventSounds(newEvents) {
   if (!me) return;
   const deps = liveV2SoundDeps();
   if (!deps) return;
+  for (const ev of newEvents) {
+    if (ev.type !== 'status' || !ev.payload) continue;
+    const type = ev.payload.status === 'FT' ? 'end' : 'status';
+    soundApi.playLiveEvent({ type }, true, deps);
+  }
   const st = liveV2State();
   const ctxById = liveV2CtxById();
   const playersById = liveV2PlayersById();

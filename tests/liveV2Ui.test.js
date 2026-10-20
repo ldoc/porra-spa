@@ -481,13 +481,71 @@ test('liveV2EventDeltas atribuye gol (+8 pronóstico +1 plantilla) y asistencia 
     calculatePlayerMatchPoints: (jd) => ({ total: (jd.goles || 0) + (jd.asistencias || 0) })
   });
   const t = '2026-09-16T20:30:00.000Z';
+  const live = { eventId: 1, type: 'status', minute: 0, ts: '2026-09-16T20:00:00.000Z', ingestedAt: '2026-09-16T20:00:00.000Z', seq: 0, sourceId: 's', payload: { status: 'LIVE', period: 'period1', kickoffTs: '2026-09-16T20:00:00.000Z' } };
   const goal = { eventId: 1, type: 'goal', minute: 30, ts: t, ingestedAt: t, seq: 0, sourceId: 'g', payload: { scorerId: 13, isHome: true } };
   const assist = { eventId: 1, type: 'assist', minute: 30, ts: t, ingestedAt: t, seq: 1, sourceId: 'a', playerId: 12, payload: { asistencias: 1 } };
-  const res = liveV2EventDeltas('me', 1, [goal, assist], [goal, assist],
+  const res = liveV2EventDeltas('me', 1, [goal, assist], [live, goal, assist],
     { homeTeamId: 1, awayTeamId: 2 },
     { 13: { nombre: 'F', posicion: 'F', equipo: 1 }, 12: { nombre: 'M', posicion: 'M', equipo: 1 } },
     null);
   assert.equal(res.before, 0);
+  assert.equal(res.after, 10);
+  assert.deepEqual(res.events.map(d => d.delta), [9, 1]);
+});
+
+test('liveV2EventDeltas no atribuye puntos si el estado previo es NS', () => {
+  const liveV2 = require('../js/liveV2.js');
+  const AppState = {
+    liveV2: null,
+    matches: [{ id: 1, homeTeamId: 1, awayTeamId: 2 }],
+    allPlayers: [{ id: 13, nombre: 'F', posicion: 'F', equipo: 1 }],
+    allPredictions: { me: { 1: { home: 0, away: 0 } } },
+    squadsCache: { me: [{ id: 13, posicion: 'F', equipo: 1 }] },
+    matchStats: []
+  };
+  init({
+    AppState,
+    liveV2Api: liveV2,
+    calculateMatchPoints: (pred, ms) => ({ points: Number(ms.stats[1]?.goles) === 0 ? 15 : 3 }),
+    calculatePlayerMatchPoints: () => ({ total: 0 })
+  });
+  const t = '2026-09-16T20:30:00.000Z';
+  const goal = { eventId: 1, type: 'goal', minute: 30, ts: t, ingestedAt: t, seq: 0, sourceId: 'g', payload: { scorerId: 13, isHome: true } };
+  const res = liveV2EventDeltas('me', 1, [goal], [goal],
+    { homeTeamId: 1, awayTeamId: 2 },
+    { 13: { nombre: 'F', posicion: 'F', equipo: 1 } },
+    null);
+  assert.equal(res.before, 0);
+  assert.equal(res.after, 0);
+});
+
+test('liveV2EventDeltas aplica los eventos en orden canónico', () => {
+  const liveV2 = require('../js/liveV2.js');
+  const AppState = {
+    liveV2: null,
+    matches: [{ id: 1, homeTeamId: 1, awayTeamId: 2 }],
+    allPlayers: [
+      { id: 13, nombre: 'F', posicion: 'F', equipo: 1 },
+      { id: 12, nombre: 'M', posicion: 'M', equipo: 1 }
+    ],
+    allPredictions: { me: { 1: { home: 1, away: 0 } } },
+    squadsCache: { me: [{ id: 13, posicion: 'F', equipo: 1 }, { id: 12, posicion: 'M', equipo: 1 }] },
+    matchStats: []
+  };
+  init({
+    AppState,
+    liveV2Api: liveV2,
+    calculateMatchPoints: (pred, ms) => ({ points: Number(ms.stats[1]?.goles) === 1 ? 8 : 0 }),
+    calculatePlayerMatchPoints: (jd) => ({ total: (jd.goles || 0) + (jd.asistencias || 0) })
+  });
+  const t = '2026-09-16T20:30:00.000Z';
+  const live = { eventId: 1, type: 'status', minute: 0, ts: '2026-09-16T20:00:00.000Z', ingestedAt: '2026-09-16T20:00:00.000Z', seq: 0, sourceId: 's', payload: { status: 'LIVE', period: 'period1', kickoffTs: '2026-09-16T20:00:00.000Z' } };
+  const goal = { eventId: 1, type: 'goal', minute: 30, ts: t, ingestedAt: t, seq: 0, sourceId: 'g', payload: { scorerId: 13, isHome: true } };
+  const assist = { eventId: 1, type: 'assist', minute: 30, ts: t, ingestedAt: t, seq: 1, sourceId: 'a', playerId: 12, payload: { asistencias: 1 } };
+  const res = liveV2EventDeltas('me', 1, [assist, goal], [live, assist, goal],
+    { homeTeamId: 1, awayTeamId: 2 },
+    { 13: { nombre: 'F', posicion: 'F', equipo: 1 }, 12: { nombre: 'M', posicion: 'M', equipo: 1 } },
+    null);
   assert.equal(res.after, 10);
   assert.deepEqual(res.events.map(d => d.delta), [9, 1]);
 });
