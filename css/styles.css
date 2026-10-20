@@ -6815,10 +6815,17 @@ body.live-fs .resultados-scroll {
   padding: 5px 10px;
   font-size: 10px;
   font-weight: 800;
-  white-space: nowrap;
+  white-space: normal;
+  max-width: min(320px, calc(100vw - 32px));
+  line-height: 1.35;
   z-index: 12;
   box-shadow: 0 10px 24px rgba(0, 0, 0, 0.45);
 }
+
+.livev2-reason-line { display: flex; gap: 4px; align-items: center; }
+.livev2-reason-line b { margin-left: auto; }
+.livev2-reason-more { font-size: 9px; opacity: 0.75; }
+.livev2-reason-total { margin-top: 2px; border-top: 1px solid var(--border-color); padding-top: 2px; font-weight: 700; }
 
 /* Flecha apuntando hacia arriba (a la fila protagonista) */
 .livev2-reason::before {

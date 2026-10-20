@@ -308,6 +308,11 @@
       case 'score': return { icon: '🔧', text: `${min}Corrección de marcador`, delta: d };
       case 'match_final': return { icon: '🏁', text: `${min}Final del partido`, delta: d };
       case 'substitution': return { icon: '🔁', text: `${min}Cambio`, delta: d };
+      case 'card': return {
+        icon: (event.payload?.cardType === 'red' || event.payload?.cardType === 'yellowRed') ? '🟥' : '🟨',
+        text: `${min}${(event.payload?.cardType === 'red' || event.payload?.cardType === 'yellowRed') ? 'Roja' : 'Tarjeta'}`,
+        delta: d
+      };
       default: return null;
     }
   }

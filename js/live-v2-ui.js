@@ -1061,12 +1061,35 @@ function liveV2UsersAffectedBy(ev) {
   return out;
 }
 
+/** Eventos con delta != 0 ordenados por impacto absoluto y limitados a `limit`. */
+function liveV2TopContributions(list, limit = 3) {
+  return [...(list || [])].sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta)).slice(0, limit);
+}
+
+/** Línea de motivo de un evento con su delta; null si el evento no tiene etiqueta. */
+function liveV2ReasonLine(ev, delta) {
+  const label = liveV2Api.liveV2ReasonForEvent
+    ? liveV2Api.liveV2ReasonForEvent(ev, liveV2PlayersById(), delta)
+    : liveV2Api.reasonLabel(ev, { delta });
+  return label ? { icon: label.icon, text: label.text, delta } : null;
+}
+
+/** HTML del cartel de motivo: líneas, "+N más" y total. */
+function liveV2ReasonHtml(reason) {
+  const lines = (reason.lines || []).map(l =>
+    `<div class="livev2-reason-line">${l.icon} ${liveV2Esc(l.text)} <b>${liveV2DeltaText(l.delta)}</b></div>`
+  ).join('');
+  const more = reason.more ? `<div class="livev2-reason-more">+${reason.more} más</div>` : '';
+  const total = `<div class="livev2-reason-total">Total <b>${liveV2DeltaText(reason.total)}</b></div>`;
+  return lines + more + total;
+}
+
 /**
  * Elige la fila "protagonista" y su motivo a partir de las filas que cambiaron
  * (puesto y/o puntos) y de los eventos nuevos del último poll.
  * Mapeo: evento→usuario por plantilla (squadsCache); si no hay datos de plantilla
  * se cae al evento relevante más reciente. Prioriza siempre la fila propia.
- * Devuelve `{ name, rankDelta, pointsDelta, label }` o `null`.
+ * Devuelve `{ name, rankDelta, pointsDelta, lines, total, more }` o `null`.
  */
 function liveV2MoverReason(rows, prevByName, newEvents) {
   if (typeof liveV2Api === 'undefined') return null;
@@ -1100,6 +1123,31 @@ function liveV2MoverReason(rows, prevByName, newEvents) {
   const newestRelevant = relevant.length
     ? relevant.reduce((a, b) => (new Date(a.ts).getTime() >= new Date(b.ts).getTime() ? a : b))
     : null;
+
+  const st = liveV2State();
+  const ctxById = liveV2CtxById();
+  const playersById = liveV2PlayersById();
+  const serverNow = liveV2PlayheadMs(st);
+  const finalized = new Set((AppState.matchStats || []).map(ms => String(ms.eventId)));
+  const byMatch = {};
+  for (const ev of newEvents || []) (byMatch[String(ev.eventId)] = byMatch[String(ev.eventId)] || []).push(ev);
+  const contributions = [];
+  if (typeof calculateMatchPoints === 'function' && typeof calculatePlayerMatchPoints === 'function') {
+    for (const [id, events] of Object.entries(byMatch)) {
+      if (finalized.has(id)) continue;
+      const res = liveV2EventDeltas(pick.name, id, events, st.events, ctxById[id] || {}, playersById, serverNow);
+      for (const d of res.events) contributions.push(d);
+    }
+  }
+  if (contributions.length) {
+    const top = liveV2TopContributions(contributions, 3);
+    const lines = top.map(d => liveV2ReasonLine(d.event, d.delta)).filter(Boolean);
+    if (lines.length) {
+      return { name: pick.name, rankDelta: pick.rankDelta, pointsDelta: pick.pointsDelta,
+        lines, total: pick.pointsDelta, more: Math.max(0, contributions.length - top.length) };
+    }
+  }
+
   const ev = evByUser[pick.name] || newestRelevant;
   if (!ev) return null;
   // Solo se puede atribuir el delta del poll a un evento cuando es el único del
@@ -1110,17 +1158,18 @@ function liveV2MoverReason(rows, prevByName, newEvents) {
     ? liveV2Api.liveV2ReasonForEvent(ev, liveV2PlayersById(), attributableDelta)
     : liveV2Api.reasonLabel(ev, { delta: attributableDelta });
   if (!label) return null;
-  return { name: pick.name, rankDelta: pick.rankDelta, pointsDelta: attributableDelta, label };
+  return { name: pick.name, rankDelta: pick.rankDelta, pointsDelta: attributableDelta,
+    lines: [label], total: attributableDelta, more: 0 };
 }
 
 /** Etiqueta flotante del motivo sobre la fila indicada; se retira tras ~2.5 s */
-function liveV2ShowReason(container, rowEl, label) {
-  if (!container || !rowEl || !label) return;
+function liveV2ShowReason(container, rowEl, reason) {
+  if (!container || !rowEl || !reason) return;
   container.querySelectorAll('.livev2-reason').forEach(el => el.remove());
   const el = document.createElement('div');
-  el.className = 'livev2-reason' + (label.delta < 0 ? ' neg' : '');
+  el.className = 'livev2-reason' + (reason.total < 0 ? ' neg' : '');
   el.setAttribute('aria-live', 'polite');
-  el.textContent = `${label.icon} ${label.text}` + (label.delta ? ` · ${label.delta > 0 ? '+' : ''}${label.delta} pts` : '');
+  el.innerHTML = liveV2ReasonHtml(reason);
   // Se coloca DEBAJO de la fila para no quedar oculto por la cabecera fija (.livev2-fixed, z-index 20)
   el.style.top = (rowEl.offsetTop + rowEl.offsetHeight + 4) + 'px';
   container.appendChild(el);
@@ -1317,7 +1366,7 @@ function updateLiveV2Dom(rows, folded) {
     container.querySelectorAll('[data-livev2-row]').forEach(el => {
       if (el.getAttribute('data-livev2-row') === mover.name) rowEl = el;
     });
-    liveV2ShowReason(container, rowEl, mover.label);
+    liveV2ShowReason(container, rowEl, mover);
   }
 
   st._lastRows = liveV2Snapshot(rows);
@@ -1458,6 +1507,9 @@ async function renderLiveV2Tab() {
     purgeLiveV2Caches,
     liveV2EventDeltas,
     liveV2SoundQuality,
+    liveV2TopContributions,
+    liveV2ReasonLine,
+    liveV2ReasonHtml,
   };
 
   global.liveV2Ui = api;

@@ -17,6 +17,9 @@ const {
   purgeLiveV2Caches,
   liveV2SoundQuality,
   liveV2EventDeltas,
+  liveV2TopContributions,
+  liveV2ReasonLine,
+  liveV2ReasonHtml,
 } = require('../js/live-v2-ui.js');
 
 test('liveV2ChipLabel sin estado devuelve NS', () => {
@@ -574,6 +577,26 @@ test('liveV2EventDeltas no atribuye delta al evento status LIVE', () => {
   assert.equal(res.before, 0);
   assert.equal(res.after, 8);
   assert.deepEqual(res.events, []);
+});
+
+test('liveV2TopContributions ordena por impacto y limita a 3', () => {
+  const list = [{ delta: 1 }, { delta: -5 }, { delta: 3 }, { delta: 2 }];
+  assert.deepEqual(liveV2TopContributions(list, 3).map(x => x.delta), [-5, 3, 2]);
+});
+
+test('liveV2ReasonHtml pinta varias lineas, +N mas y total', () => {
+  const html = liveV2ReasonHtml({
+    lines: [
+      { icon: '⚽', text: 'Gol de X', delta: 8 },
+      { icon: '🅰️', text: 'Asistencia de Y', delta: 1 }
+    ],
+    more: 2,
+    total: 9
+  });
+  assert.match(html, /Gol de X/);
+  assert.match(html, /Asistencia de Y/);
+  assert.match(html, /\+2 más/);
+  assert.match(html, /Total/);
 });
 
 test('liveV2EventDeltas no deja que status LIVE tape el delta del gol', () => {

@@ -369,7 +369,8 @@ test('motivo atribuye el delta del poll cuando hay un único evento relevante', 
     { type: 'goal', ts: '2026-09-16T20:10:00Z', playerId: 7, payload: { scorerId: 7 }, minute: 67 },
   ]);
   assert.equal(mover.name, 'ana');
-  assert.equal(mover.label.delta, 5);
+  assert.equal(mover.lines[0].delta, 5);
+  assert.equal(mover.total, 5);
   assert.equal(mover.pointsDelta, 5);
 });
 
@@ -386,8 +387,8 @@ test('motivo no atribuye el delta si el poll trae goal + match_final', () => {
     { type: 'match_final', ts: '2026-09-16T21:50:00Z', seq: 2, payload: {} },
   ]);
   assert.equal(mover.name, 'ana');
-  assert.match(mover.label.text, /Gol de Mbappé/);
-  assert.equal(mover.label.delta, 0);
+  assert.match(mover.lines[0].text, /Gol de Mbappé/);
+  assert.equal(mover.lines[0].delta, 0);
   assert.equal(mover.pointsDelta, 0);
 });
 
@@ -404,9 +405,9 @@ test('motivo con varios eventos no inventa atribución (delta 0)', () => {
     { type: 'assist', ts: '2026-09-16T20:11:00Z', seq: 2, playerId: 8, payload: {} },
   ]);
   assert.equal(mover.name, 'ana');
-  assert.equal(mover.label.delta, 0);
+  assert.equal(mover.lines[0].delta, 0);
   assert.equal(mover.pointsDelta, 0);
-  assert.match(mover.label.text, /Asistencia|Gol/);
+  assert.match(mover.lines[0].text, /Asistencia|Gol/);
 });
 
 // ── Revisión final (reloj servidor, resync, expulsados, motivos) ──────
@@ -420,6 +421,12 @@ test('reasonLabel cubre score, match_final y substitution', () => {
     { icon: '🏁', text: "90' Final del partido", delta: 0 });
   assert.deepEqual(reasonLabel({ type: 'substitution', minute: 60, payload: {} }, { delta: 0 }),
     { icon: '🔁', text: "60' Cambio", delta: 0 });
+});
+
+test('reasonLabel cubre tarjeta', () => {
+  const label = liveV2.reasonLabel({ type: 'card', minute: 80, payload: { cardType: 'red' } }, { delta: -2 });
+  assert.ok(label);
+  assert.equal(label.delta, -2);
 });
 
 test('match_final fija lastMinute y ftTs si faltan', () => {
