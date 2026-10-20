@@ -1674,6 +1674,7 @@ async function renderLiveV2Tab() {
     liveV2RankMoveView,
     liveV2RowHtml,
     liveV2PointsDiffClass,
+    liveV2RowPointsClass,
     liveV2PointsDiffText,
     liveV2PointsDiffLabel,
   };

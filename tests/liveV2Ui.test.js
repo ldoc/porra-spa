@@ -827,3 +827,10 @@ test('liveV2RowHtml pinta puesto, movimiento y diferencial sin flecha', () => {
   assert.match(html, /points-up/);
   assert.doesNotMatch(html, /livev2-arrow/);
 });
+
+test('liveV2RowPointsClass marca la fila según el diferencial', () => {
+  const ui = freshUi();
+  assert.equal(ui.liveV2RowPointsClass(3), ' points-up');
+  assert.equal(ui.liveV2RowPointsClass(-2), ' points-down');
+  assert.equal(ui.liveV2RowPointsClass(0), '');
+});
