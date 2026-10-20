@@ -249,6 +249,21 @@ test('Escape y popstate salen de pantalla completa', () => {
   });
 });
 
+test('Escape con el popup de partido abierto no sale de pantalla completa', () => {
+  const ui = freshUi();
+  ui.init({ AppState: { liveV2: { _openMatchModal: '1' } }, liveV2Api: {} });
+  const dom = setupDom();
+  const hist = setupHistory();
+  withFullscreenGlobals(dom, hist, () => {
+    ui.bindLiveV2Fullscreen();
+    ui.enterLiveV2Fullscreen();
+    let prevented = false;
+    dom.listeners.keydown({ key: 'Escape', preventDefault() { prevented = true; } });
+    assert.ok(dom.bodyClasses.has('live-fs'));
+    assert.equal(prevented, false);
+  });
+});
+
 test('el motivo del cambio usa aria-live polite', () => {
   const ui = freshUi();
   const created = [];
@@ -443,6 +458,48 @@ test('un full con serverTime null resetea el cursor', async () => {
   assert.equal(AppState.liveV2.serverTime, null);
   assert.equal(AppState.liveV2._needFull, false);
   assert.equal(AppState.liveV2.serverNow, '2026-10-19T10:05:00Z');
+});
+
+test('un full conserva el marcador previo y el pulso de cambio', async () => {
+  const ui = freshUi();
+  const liveV2 = require('../js/liveV2.js');
+  const AppState = {
+    currentUser: { name: 'me' },
+    liveV2: {
+      events: [], serverTime: '2026-09-16T20:00:00Z', prevRanks: null, polling: false,
+      _lastRows: [], _fullAt: 1, _needFull: false, lastFetchAt: null, error: null,
+      _chipScores: { 1: '0-0' }, _chipChanged: { 1: 123 }, _chipPulse: {},
+      _chipUserPoints: { 1: 0 }, _rankMoves: {},
+    },
+    matches: [{ id: 1, homeTeamId: 1, awayTeamId: 2 }],
+    allPlayers: [],
+    allPredictions: { me: { 1: { home: 1, away: 0 } } },
+    squadsCache: { me: [] },
+    matchStats: [],
+  };
+  const events = [
+    { eventId: 1, type: 'status', ts: '2026-09-16T20:00:00Z', sourceId: 's', payload: { status: 'LIVE', period: 'period1', kickoffTs: '2026-09-16T20:00:00Z' } },
+    { eventId: 1, type: 'goal', ts: '2026-09-16T20:30:00Z', sourceId: 'g', payload: { isHome: true, scorerId: 11 } },
+  ];
+  ui.init({
+    AppState,
+    API_BASE: 'https://api.test',
+    fetchWithPhase: async () => jsonResponse({ ok: true, serverTime: '2026-09-16T20:30:00Z', events }, '2026-09-16T20:30:00Z'),
+    liveV2Api: liveV2,
+    calculateMatchPoints: () => ({ points: 5, breakdown: [] }),
+    calculatePlayerMatchPoints: () => ({ total: 0, desglose: [] }),
+  });
+
+  await ui.fetchLiveEvents(true);
+  const folded = {
+    states: liveV2.foldAll(AppState.liveV2.events, { 1: { homeTeamId: 1, awayTeamId: 2 } }),
+    statsById: {},
+  };
+  assert.deepEqual(folded.states[1].score, { home: 1, away: 0 });
+  ui.liveV2DetectChipChanges(folded);
+  assert.equal(AppState.liveV2._chipPulse['1'].state, 'fav');
+  assert.equal(AppState.liveV2._chipScores['1'], '1-0');
+  assert.notEqual(AppState.liveV2._chipChanged['1'], undefined);
 });
 
 test('liveV2CacheKey incluye día local y usuario', () => {
@@ -812,6 +869,38 @@ test('liveV2RankMoveView pinta el cambio y caduca a los 30 s', () => {
   });
 });
 
+test('renderLiveV2Tab conserva el movimiento de puesto de los últimos 30 s', async () => {
+  const ui = freshUi();
+  const liveV2 = require('../js/liveV2.js');
+  const now = Date.now();
+  const AppState = {
+    currentUser: { name: 'me' },
+    resultadosTab: 'jornadas',
+    liveV2: {
+      events: [], serverTime: '2026-09-16T20:00:00Z', prevRanks: null, polling: false,
+      _lastRows: [], _fullAt: 1, _needFull: false, lastFetchAt: null, error: null,
+      _chipScores: {}, _chipChanged: {}, _chipPulse: {}, _chipUserPoints: {},
+      _rankMoves: { me: { delta: 2, at: now } },
+    },
+    matches: [], allPlayers: [], allPredictions: { me: {} }, squadsCache: { me: [] },
+    matchStats: [], liveRefreshSecs: 30,
+  };
+  ui.init({
+    AppState,
+    API_BASE: 'https://api.test',
+    fetchWithPhase: async () => jsonResponse({ ok: true, serverTime: '2026-09-16T20:00:00Z', events: [] }),
+    liveV2Api: liveV2,
+    visiblePlayers: () => [{ name: 'me', avatar: '⚽' }],
+    getUserTotalRealPoints: () => 0,
+    calculateMatchPoints: () => ({ points: 0, breakdown: [] }),
+    calculatePlayerMatchPoints: () => ({ total: 0, desglose: [] }),
+  });
+  const html = await ui.renderLiveV2Tab();
+  assert.match(html, /livev2-rank-move up/);
+  assert.match(html, /▲2/);
+  assert.match(html, /0pts/);
+});
+
 test('liveV2RowHtml pinta puesto, movimiento y diferencial sin flecha', () => {
   const ui = freshUi();
   ui.init({ AppState: { liveV2: null }, liveV2Api: { escapeHtml: s => String(s) } });
@@ -976,6 +1065,28 @@ test('liveV2MatchBreakdown en NS no da puntos pero conserva el pronostico', () =
   assert.equal(d.label, 'NS');
 });
 
+test('liveV2MatchBreakdown incluye a un jugador de plantilla que jugó con 0 puntos', () => {
+  const ui = freshUi();
+  const AppState = liveMatchFixture();
+  ui.init({
+    AppState,
+    liveV2Api: {
+      matchStateToStats: () => ({
+        1: { goles: 0 }, 2: { goles: 0 },
+        jugadores: [{ id: '13', nombre: 'F', posicion: 'F', equipo: 1, minutos: 60 }],
+      }),
+      escapeHtml: s => String(s),
+    },
+    calculateMatchPoints: () => ({ points: 0, breakdown: [] }),
+    calculatePlayerMatchPoints: () => ({ total: 0, desglose: [] }),
+  });
+  const d = ui.liveV2MatchBreakdown(1, { status: 'LIVE', score: { home: 0, away: 0 } });
+  assert.equal(d.squadDetail.length, 1);
+  assert.equal(d.squadDetail[0].puntos, 0);
+  assert.equal(d.squadPts, 0);
+  assert.equal(d.total, 0);
+});
+
 test('liveV2MatchModalHtml pinta pronostico, plantilla, total y aviso NS', () => {
   const ui = freshUi();
   ui.init({ AppState: {}, liveV2Api: { escapeHtml: s => String(s) } });
@@ -996,6 +1107,7 @@ test('liveV2MatchModalHtml pinta pronostico, plantilla, total y aviso NS', () =>
   assert.match(html, /Pronóstico/);
   assert.match(html, /Plantilla/);
   assert.match(html, /El partido aún no ha empezado/);
+  assert.doesNotMatch(html, /Ningún jugador de tu plantilla/);
 });
 
 test('liveV2MatchModalHtml muestra un solo total y ninguno sin sesion', () => {
@@ -1011,6 +1123,68 @@ test('liveV2MatchModalHtml muestra un solo total y ninguno sin sesion', () => {
   const loggedOut = ui.liveV2MatchModalHtml({ ...base, loggedIn: false });
   assert.doesNotMatch(loggedOut, /Total:/);
   assert.match(loggedOut, /Inicia sesión para ver tu desglose/);
+});
+
+test('refreshLiveV2MatchModal conserva el scroll y devuelve el foco al cerrar', () => {
+  const ui = freshUi();
+  const state = { active: { id: 'inside-modal' } };
+  const content = { scrollTop: 0 };
+  const close = { focused: 0, focus() { this.focused++; } };
+  const host = {
+    _html: '',
+    contains(node) { return node === state.active; },
+    querySelector(sel) {
+      if (sel === '.livev2-match-content') return content;
+      if (sel === '.breakdown-modal-close') return close;
+      return null;
+    },
+    set innerHTML(v) {
+      this._html = v;
+      content.scrollTop = 0;
+      close.focused = 0;
+    },
+    get innerHTML() { return this._html; },
+  };
+  const doc = {
+    getElementById: id => (id === 'livev2-match-modal' ? host : null),
+    get activeElement() { return state.active; },
+    createElement: () => makeElement(),
+  };
+  const AppState = {
+    currentUser: { name: 'me' },
+    liveV2: {
+      events: [], _openMatchModal: '1', _chipScores: {}, _chipChanged: {},
+      _chipUserPoints: {}, _chipPulse: {}, _rankMoves: {},
+    },
+    matches: [{
+      id: 1, homeTeamId: 1, awayTeamId: 2, homeTeam: 'A', awayTeam: 'B',
+      homeBadgeExt: 'webp', awayBadgeExt: 'webp',
+    }],
+    allPlayers: [],
+    allPredictions: { me: {} },
+    squadsCache: { me: [] },
+    matchStats: [],
+  };
+  ui.init({
+    AppState,
+    liveV2Api: {
+      foldAll: () => ({ 1: { status: 'LIVE', score: { home: 1, away: 0 } } }),
+      matchStateToStats: () => ({ 1: { goles: 1 }, 2: { goles: 0 }, jugadores: [] }),
+      escapeHtml: s => String(s),
+    },
+    calculateMatchPoints: () => ({ points: 0, breakdown: [] }),
+    calculatePlayerMatchPoints: () => ({ total: 0, desglose: [] }),
+  });
+  content.scrollTop = 120;
+  const prevDoc = global.document;
+  global.document = doc;
+  try {
+    ui.refreshLiveV2MatchModal();
+  } finally {
+    if (prevDoc === undefined) delete global.document; else global.document = prevDoc;
+  }
+  assert.equal(content.scrollTop, 120);
+  assert.equal(close.focused, 1);
 });
 
 test('liveV2ChipEventId resuelve el chip desde el target', () => {
@@ -1106,6 +1280,38 @@ test('liveV2DetectChipChanges calcula el pulso y lo retira sin cambio', () => {
 
   ui.liveV2DetectChipChanges(folded);
   assert.equal(AppState.liveV2._chipPulse['1'], undefined);
+});
+
+test('liveV2DetectChipChanges no pulsa un partido ya finalizado', () => {
+  const ui = freshUi();
+  const liveV2 = require('../js/liveV2.js');
+  const AppState = {
+    currentUser: { name: 'me' },
+    liveV2: {
+      _chipScores: { 1: '0-0' },
+      _chipUserPoints: { 1: 0 },
+      _chipPulse: {},
+      _chipChanged: {},
+    },
+    matches: [{ id: 1, homeTeamId: 1, awayTeamId: 2 }],
+    allPlayers: [],
+    allPredictions: { me: { 1: { home: 1, away: 0 } } },
+    squadsCache: { me: [] },
+    matchStats: [{ eventId: 1 }],
+  };
+  ui.init({
+    AppState,
+    liveV2Api: liveV2,
+    calculateMatchPoints: () => ({ points: 5, breakdown: [] }),
+    calculatePlayerMatchPoints: () => ({ total: 0, desglose: [] }),
+  });
+  const folded = {
+    states: { 1: { status: 'FT', score: { home: 1, away: 0 }, players: {} } },
+    statsById: { 1: { 1: { goles: 1 }, 2: { goles: 0 }, jugadores: [] } },
+  };
+  ui.liveV2DetectChipChanges(folded);
+  assert.equal(AppState.liveV2._chipPulse['1'], undefined);
+  assert.equal(AppState.liveV2._chipScores['1'], '1-0');
 });
 
 test('el chip aplica la clase de pulso', () => {

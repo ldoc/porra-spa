@@ -194,6 +194,8 @@ function bindLiveV2Fullscreen(root) {
     });
     document.addEventListener('keydown', (e) => {
       if (e.key !== 'Escape' || !liveV2FsActive()) return;
+      // El modal gestiona su propio Escape (y puede no haber AppState en tests aislados).
+      if (AppState && liveV2State()._openMatchModal != null) return;
       e.preventDefault();
       exitLiveV2Fullscreen();
     });
@@ -329,11 +331,12 @@ function liveUserMatchPoints(username, lm, meta) {
       const jd = jugadores.find(j => String(j.id) === String(sp.id));
       if (!jd) continue;
       const r = calculatePlayerMatchPoints(jd, sp, pseudoMs);
-      if (r.total !== 0 || r.desglose.length) {
+      const desglose = r.desglose || [];
+      if (r.total !== 0 || desglose.length || Number(jd.minutos) > 0) {
         squadPts += r.total;
-        const desglose = (r.desglose || []).map(d => (d.concepto === 'Portería a cero' && lm.status !== 'FT')
+        const detail = desglose.map(d => (d.concepto === 'Portería a cero' && lm.status !== 'FT')
           ? { ...d, concepto: d.concepto + ' (provisional)' } : d);
-        squadDetail.push({ nombre: sp.nombre, puntos: r.total, desglose });
+        squadDetail.push({ nombre: sp.nombre, puntos: r.total, desglose: detail });
       }
     }
   }
@@ -448,7 +451,7 @@ function liveV2State() {
     AppState.liveV2 = {
       events: [], serverTime: null, prevRanks: null, polling: false, _lastRows: [], _seenEventIds: null,
       _fullAt: 0, _needFull: false, lastFetchAt: null, error: null,
-      _chipChanged: {}, // eventId -> ts del último cambio de marcador (para glow + orden)
+      _chipChanged: {}, // eventId -> ts del último cambio de marcador (para pulso + orden)
       _chipScores: {},  // eventId -> "home-away" del poll anterior (detección de cambios)
       _chipUserPoints: {}, _chipPulse: {},
       _rankMoves: {},
@@ -493,7 +496,17 @@ function refreshLiveV2MatchModal() {
   const folded = liveV2Folded();
   const state = folded.states[String(st._openMatchModal)];
   if (!state) { closeLiveV2MatchModal(); return; }
+  const content = host.querySelector('.livev2-match-content');
+  const scrollTop = content ? content.scrollTop : null;
+  const active = document.activeElement;
+  const hadFocus = !!(active && typeof host.contains === 'function' && host.contains(active));
   host.innerHTML = liveV2MatchModalHtml(liveV2MatchBreakdown(st._openMatchModal, state));
+  const nextContent = host.querySelector('.livev2-match-content');
+  if (nextContent && scrollTop != null) nextContent.scrollTop = scrollTop;
+  if (hadFocus) {
+    const close = host.querySelector('.breakdown-modal-close');
+    if (close && typeof close.focus === 'function') close.focus();
+  }
 }
 
 function openLiveV2MatchModal(eventId) {
@@ -571,11 +584,10 @@ async function fetchLiveEvents(forceFull, _resyncGuard) {
     return fetchLiveEvents(true, true);
   }
   if (forceFull) {
-    // Un full es autoritativo: reemplaza eventos y resetea el estado derivado.
+    // Un full es autoritativo: reemplaza eventos y resetea el estado derivado,
+    // pero conserva el marcador/pulso previo de los chips para detectar cambios.
     st.events = incoming;
     st._seenEventIds = new Set(incoming.map(keyOf));
-    st._chipChanged = {};
-    st._chipScores = {};
     st.prevRanks = null;
     // Si el full no trae cursor, se invalida el delta (no se conserva el anterior).
     st.serverTime = payload.serverTime || null;
@@ -708,14 +720,14 @@ function liveV2MatchBreakdown(eventId, state) {
 }
 
 function liveV2MatchModalHtml(d) {
-  const score = d.score ? `${d.score.home}-${d.score.away}` : '–';
+  const score = d.score ? `${liveV2Esc(d.score.home)}-${liveV2Esc(d.score.away)}` : '–';
   const homeBadge = liveV2BadgeSrc(d.meta.homeTeamId, d.meta.homeBadgeExt);
   const awayBadge = liveV2BadgeSrc(d.meta.awayTeamId, d.meta.awayBadgeExt);
   const badge = (src, cls) => src
     ? `<img class="livev2-modal-badge ${cls}" src="${liveV2Esc(src)}" alt="" loading="lazy">`
     : '';
   const predScore = d.prediction
-    ? `<div class="livev2-modal-pred-score">Tú ${d.prediction.home}-${d.prediction.away}</div>`
+    ? `<div class="livev2-modal-pred-score">Tú ${liveV2Esc(d.prediction.home)}-${liveV2Esc(d.prediction.away)}</div>`
     : `<div class="livev2-modal-empty">Sin pronóstico</div>`;
   const predPts = d.prediction
     ? `<div class="livev2-modal-subtotal">${d.predictionPts > 0 ? '+' : ''}${d.predictionPts} pts</div>`
@@ -730,7 +742,9 @@ function liveV2MatchModalHtml(d) {
           <b class="${p.puntos >= 0 ? 'positive' : 'negative'}">${p.puntos > 0 ? '+' : ''}${p.puntos} pts</b>
           <small>${p.desglose.map(x => liveV2Esc(x.concepto)).join(' · ')}</small>
         </div>`).join('')}</div>`
-    : `<div class="livev2-modal-empty">Ningún jugador de tu plantilla en este partido</div>`;
+    : d.status === 'NS'
+      ? `<div class="livev2-modal-note">El partido aún no ha empezado</div>`
+      : `<div class="livev2-modal-empty">Ningún jugador de tu plantilla en este partido</div>`;
   const note = d.status === 'NS'
     ? `<div class="livev2-modal-note">El partido aún no ha empezado</div>`
     : '';
@@ -765,7 +779,8 @@ function liveV2ChipData(eventId, state) {
   const pred = preds[matchId] != null ? preds[matchId] : preds[String(matchId)];
   const hasPred = pred && pred.home != null && pred.away != null;
   const predictionText = hasPred ? `Tú ${pred.home}-${pred.away}` : 'S/P';
-  const pulse = liveV2State()._chipPulse && liveV2State()._chipPulse[String(eventId)];
+  const st = liveV2State();
+  const pulse = st._chipPulse && st._chipPulse[String(eventId)];
   const pulseCls = pulse ? ` score-${pulse.state}` : '';
   const pulseTitle = pulse
     ? pulse.state === 'fav' ? ' · marcador cambiado, sumas puntos'
@@ -941,12 +956,13 @@ function liveV2ChipPulseState(delta) {
 
 /**
  * Detecta cambios de marcador entre polls comparando el `score` plegado.
- * Al cambiar, guarda `changedAt` (para glow + salto al frente). Puro sobre AppState.
+ * Al cambiar, guarda `changedAt` (para pulso + salto al frente). Puro sobre AppState.
  */
 function liveV2DetectChipChanges(folded) {
   const st = liveV2State();
   const now = Date.now();
   const me = AppState.currentUser && AppState.currentUser.name;
+  const finalized = liveV2FinalizedIds();
   const prevPoints = st._chipUserPoints || {};
   const nextPoints = {};
   for (const [id, s] of Object.entries((folded && folded.states) || {})) {
@@ -960,7 +976,7 @@ function liveV2DetectChipChanges(folded) {
       total = liveUserMatchPoints(me, lm, liveMatchMeta(lm)).total;
     }
     nextPoints[key] = total;
-    if (prev != null && cur != null && prev !== cur) {
+    if (prev != null && cur != null && prev !== cur && !finalized.has(key)) {
       st._chipChanged[key] = now;
       const before = prevPoints[key];
       const delta = before != null ? total - before : 0;
@@ -1587,10 +1603,14 @@ function liveV2ScheduleRankMoveExpiry() {
   }
   const st = liveV2State();
   const now = Date.now();
+  const moves = st._rankMoves || {};
   let soonest = Infinity;
-  for (const move of Object.values(st._rankMoves || {})) {
-    const remaining = (move.at + LIVEV2_RANK_MOVE_MS) - now;
-    if (remaining <= 0) continue;
+  for (const name of Object.keys(moves)) {
+    const remaining = (moves[name].at + LIVEV2_RANK_MOVE_MS) - now;
+    if (remaining <= 0) {
+      delete moves[name];
+      continue;
+    }
     if (remaining < soonest) soonest = remaining;
   }
   if (!Number.isFinite(soonest)) return;
@@ -1633,7 +1653,7 @@ function updateLiveV2Dom(rows, folded) {
     r.rankMove = liveV2RankMoveView(r.name, st._rankMoves, now);
   }
 
-  // Detectar cambios de marcador (glow + salto al frente) antes de reconstruir chips
+  // Detectar cambios de marcador (pulso + salto al frente) antes de reconstruir chips
   liveV2DetectChipChanges(folded);
 
   // Eventos aparecidos desde el último render (para la etiqueta de motivo)
@@ -1916,6 +1936,11 @@ async function renderLiveV2Tab() {
   liveV2DetectChipChanges(folded);
   st.prevRanks = null;
   const rows = liveV2Rows(folded);
+  const now = Date.now();
+  for (const r of rows) {
+    r.pointsDiff = 0;
+    r.rankMove = liveV2RankMoveView(r.name, st._rankMoves, now);
+  }
   st._lastRows = liveV2Snapshot(rows);
   st._seenEventIds = new Set((st.events || []).map(e => liveV2Api.eventKey(e)));
   if (AppState.resultadosTab === 'live') startLiveV2Polling(folded);

@@ -2652,6 +2652,12 @@ html, body {
 .livev2-match-modal { max-height: 82vh; }
 .livev2-match-content { padding: 0; }
 
+.livev2-match-modal .breakdown-modal-close {
+  width: 44px;
+  height: 44px;
+  flex: 0 0 44px;
+}
+
 .livev2-modal-score {
   display: flex;
   align-items: center;
@@ -6686,7 +6692,8 @@ body.live-fs .resultados-scroll {
   background: var(--ucl-card);
   border: 1px solid var(--border-color);
   border-radius: 7px;
-  padding: 3px 4px;
+  padding: 6px 4px;
+  min-height: 44px;
   font-size: var(--font-size-xs);
   min-width: 0;
   overflow: hidden;
@@ -6765,6 +6772,7 @@ body.live-fs .resultados-scroll {
   justify-content: center;
   gap: 4px;
   min-width: 0;
+  overflow: hidden;
   white-space: nowrap;
 }
 
@@ -6776,6 +6784,7 @@ body.live-fs .resultados-scroll {
 }
 
 .livev2-cell-pred {
+  min-width: 0;
   font-size: 9px;
   font-weight: 800;
   color: var(--text-secondary);

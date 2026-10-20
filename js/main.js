@@ -1997,7 +1997,7 @@ async function renderResultadosTab() {
     <div class="resultados-scroll">${scrollHtml}</div>
   `;
 
-  // Render inicial del Live: retirar el glow de los chips cambiados tras 10 s (no solo en el poll)
+  // Render inicial del Live: retirar el pulso de los chips cambiados tras el intervalo (no solo en el poll)
   if (isLiveTab) liveV2Ui.liveV2ScheduleChipGlowTimers(container);
 
   // Auto-scroll al último partido disputado cuando la jornada se auto-seleccionó
