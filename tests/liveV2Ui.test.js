@@ -92,6 +92,20 @@ test('liveV2ChipData usa el minuto del snapshot de livematches', () => {
   assert.equal(d.label, "LIVE 63'");
 });
 
+test('liveV2OrderedStateEntries mantiene el orden por kickoff aunque cambie el marcador', () => {
+  const ui = freshUi();
+  const liveV2 = require('../js/liveV2.js');
+  ui.init({
+    AppState: {
+      liveV2: { _chipChanged: { 1: 200, 2: 100 } },
+      matches: [{ id: 1, fechaTs: 200 }, { id: 2, fechaTs: 100 }],
+    },
+    liveV2Api: liveV2,
+  });
+  const out = ui.liveV2OrderedStateEntries({ states: { 1: {}, 2: {} } });
+  assert.deepEqual(out.map(([id]) => id), ['2', '1']);
+});
+
 test('liveV2StatusBadge marca error y deja el título con la última actualización', () => {
   const badge = liveV2StatusBadge({ error: true, lastFetchAt: Date.now() - 42000 });
   assert.equal(badge.text, '⚠️ Sin conexión');

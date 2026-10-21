@@ -1087,19 +1087,15 @@ function liveV2DetectChipChanges(folded) {
 }
 
 /**
- * Orden de los chips (regla aprobada):
- * - Los partidos cuyo marcador cambió van al frente, más reciente primero.
- * - El resto, por hora de kickoff ascendente.
+ * Orden fijo de los chips: hora de kickoff ascendente y, a igualdad, id.
+ * El cambio de marcador solo pulsa la caja; ya no la mueve de sitio.
  */
 function liveV2OrderedStateEntries(folded) {
-  const st = liveV2State();
-  const changed = st._chipChanged || {};
-  const entries = Object.entries((folded && folded.states) || {});
-  const changedEntries = entries.filter(([id]) => changed[String(id)]);
-  const unchanged = entries.filter(([id]) => !changed[String(id)]);
-  changedEntries.sort((a, b) => (changed[String(b[0])] || 0) - (changed[String(a[0])] || 0));
-  unchanged.sort((a, b) => liveV2KickoffTs(a[0]) - liveV2KickoffTs(b[0]));
-  return [...changedEntries, ...unchanged];
+  return Object.entries((folded && folded.states) || {}).sort((a, b) => {
+    const byKickoff = liveV2KickoffTs(a[0]) - liveV2KickoffTs(b[0]);
+    if (byKickoff) return byKickoff;
+    return String(a[0]).localeCompare(String(b[0]), undefined, { numeric: true });
+  });
 }
 
 /** Texto del delta de puntos: ▲ +N / ▼ N / +0 */
@@ -2142,6 +2138,7 @@ async function renderLiveV2Tab() {
     liveV2ShowReason,
     liveV2State,
     liveV2ChipLabel,
+    liveV2OrderedStateEntries,
     liveV2HasInPlay,
     liveV2ShouldPoll,
     liveV2FeedCtxById,
