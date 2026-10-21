@@ -325,6 +325,47 @@ function liveUserMatchPoints(username, lm, meta) {
   return { matchPts: mp.points, breakdown: mp.breakdown, squadPts, squadDetail, total: mp.points + squadPts };
 }
 
+/** Partidos Live de un jugador (LIVE/HT/FT) con pronóstico y desglose de plantilla. */
+function liveV2PlayerMatches(username, folded) {
+  const preds = (AppState.allPredictions || {})[username] || {};
+  const out = [];
+  for (const [id, state] of liveV2OrderedStateEntries(folded)) {
+    if (!state || state.status === 'NS') continue;
+    const match = (AppState.matches || []).find(m => String(m.id) === String(id));
+    const matchId = match ? match.id : id;
+    const lm = { eventId: matchId, stats: (folded.statsById || {})[id], status: state.status };
+    const meta = liveMatchMeta(lm);
+    const r = liveUserMatchPoints(username, lm, meta);
+    const pred = preds[matchId] != null ? preds[matchId] : preds[String(matchId)];
+    const hasPred = pred && pred.home != null && pred.away != null;
+    out.push({
+      eventId: matchId,
+      meta,
+      status: state.status,
+      label: liveV2ChipLabel(state, null, liveV2ObservedMinute(id)),
+      score: state.score ? { ...state.score } : null,
+      prediction: hasPred ? { home: pred.home, away: pred.away } : null,
+      predictionPts: r.matchPts,
+      predictionBreakdown: r.breakdown || [],
+      squadPts: r.squadPts,
+      squadDetail: r.squadDetail || [],
+      total: r.total,
+    });
+  }
+  return out;
+}
+
+/** Suma pronóstico, plantilla y total de los partidos de un jugador. */
+function liveV2PlayerSummary(matches) {
+  const out = { predictionPts: 0, squadPts: 0, total: 0 };
+  for (const m of matches || []) {
+    out.predictionPts += m.predictionPts || 0;
+    out.squadPts += m.squadPts || 0;
+    out.total += m.total || 0;
+  }
+  return out;
+}
+
 /** Clasificación oficial (puntos reales) con caché mientras no cambien los matchStats */
 function liveOfficialRows() {
   const st = liveState();
@@ -2268,6 +2309,8 @@ async function renderLiveV2Tab() {
     liveV2PointsDiffLabel,
     liveV2ApplyPointsClass,
     liveV2HeaderBreakdown,
+    liveV2PlayerMatches,
+    liveV2PlayerSummary,
     liveV2HeaderBreakdownHtml,
     liveV2MatchBreakdown,
     liveV2MatchModalHtml,

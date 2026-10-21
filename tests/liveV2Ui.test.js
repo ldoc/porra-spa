@@ -2250,3 +2250,57 @@ test('un partido solo en livematches cuenta en filas, chip y modal sin estar en 
   assert.equal(modal.total, 15);
   assert.deepEqual(modal.predictionBreakdown, ['15 por marcador exacto']);
 });
+
+test('liveV2PlayerMatches incluye solo partidos empezados y suma pronóstico y plantilla', () => {
+  const ui = freshUi();
+  const liveV2 = require('../js/liveV2.js');
+  const stats2 = { jugadores: [{ id: 7, minutos: 90 }] };
+  const stats3 = { jugadores: [] };
+  const AppState = {
+    matches: [
+      { id: 1, fechaTs: 100, homeTeamId: 10, awayTeamId: 20, homeTeam: 'Local', awayTeam: 'Visita' },
+      { id: 2, fechaTs: 200, homeTeamId: 10, awayTeamId: 20, homeTeam: 'Local', awayTeam: 'Visita' },
+      { id: 3, fechaTs: 300, homeTeamId: 30, awayTeamId: 40, homeTeam: 'Otro', awayTeam: 'Rival' },
+    ],
+    allPredictions: {
+      rival: {
+        1: { home: 1, away: 0 },
+        2: { home: 2, away: 1 },
+      },
+    },
+    squadsCache: { rival: [{ id: 7, nombre: 'Delantero' }] },
+    allPlayers: [],
+    liveV2: null,
+  };
+  ui.init({
+    AppState,
+    liveV2Api: liveV2,
+    calculateMatchPoints: (pred) => pred
+      ? { points: 10, breakdown: ['10 por acierto'] }
+      : { points: 0, breakdown: ['Partido no pronosticado'] },
+    calculatePlayerMatchPoints: () => ({
+      total: 4,
+      desglose: [{ concepto: 'Gol' }, { concepto: 'Asistencia' }],
+    }),
+  });
+  const folded = {
+    states: {
+      3: { status: 'FT', score: { home: 0, away: 0 } },
+      1: { status: 'NS', score: null },
+      2: { status: 'LIVE', score: { home: 2, away: 1 } },
+    },
+    statsById: { 2: stats2, 3: stats3 },
+  };
+  const matches = ui.liveV2PlayerMatches('rival', folded);
+  assert.deepEqual(matches.map(m => m.eventId), [2, 3]);
+  assert.deepEqual(matches[0].prediction, { home: 2, away: 1 });
+  assert.equal(matches[0].predictionPts, 10);
+  assert.deepEqual(matches[0].predictionBreakdown, ['10 por acierto']);
+  assert.equal(matches[0].squadPts, 4);
+  assert.deepEqual(matches[0].squadDetail[0].desglose.map(d => d.concepto), ['Gol', 'Asistencia']);
+  assert.equal(matches[0].total, 14);
+  assert.equal(matches[1].prediction, null);
+  assert.equal(matches[1].predictionPts, 0);
+  assert.equal(matches[1].total, 0);
+  assert.deepEqual(ui.liveV2PlayerSummary(matches), { predictionPts: 10, squadPts: 4, total: 14 });
+});
