@@ -2304,3 +2304,73 @@ test('liveV2PlayerMatches incluye solo partidos empezados y suma pronóstico y p
   assert.equal(matches[1].total, 0);
   assert.deepEqual(ui.liveV2PlayerSummary(matches), { predictionPts: 10, squadPts: 4, total: 14 });
 });
+
+test('liveV2PlayerModalHtml pinta resumen, pronóstico, motivos y plantilla', () => {
+  const ui = freshUi();
+  ui.init({ AppState: { liveV2: null }, liveV2Api: { escapeHtml: s => String(s) } });
+  const html = ui.liveV2PlayerModalHtml({
+    username: 'Ana',
+    avatar: '⚽',
+    summary: { predictionPts: 10, squadPts: 4, total: 14 },
+    matches: [{
+      eventId: 2,
+      meta: { homeTeam: 'Local', awayTeam: 'Visita', homeTeamId: 10, awayTeamId: 20 },
+      status: 'LIVE',
+      label: "EN JUEGO 63'",
+      score: { home: 2, away: 1 },
+      prediction: { home: 2, away: 1 },
+      predictionPts: 10,
+      predictionBreakdown: ['10 por acierto'],
+      squadPts: 4,
+      squadDetail: [{ nombre: 'Delantero', puntos: 4, desglose: [{ concepto: 'Gol' }] }],
+      total: 14,
+    }],
+  });
+  assert.match(html, /Ana/);
+  assert.match(html, /Total Live/);
+  assert.match(html, /Pronóstico 2-1/);
+  assert.match(html, /10 por acierto/);
+  assert.match(html, /Delantero/);
+  assert.match(html, /Gol/);
+  assert.match(html, /role="dialog"/);
+  assert.match(html, /aria-labelledby="livev2-player-modal-title"/);
+});
+
+test('liveV2PlayerModalHtml muestra avisos de vacío y escapa el nombre', () => {
+  const ui = freshUi();
+  ui.init({
+    AppState: { liveV2: null },
+    liveV2Api: {
+      escapeHtml: s => String(s).replace(/[&<>"']/g, c => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+      }[c])),
+    },
+  });
+  const html = ui.liveV2PlayerModalHtml({
+    username: '<b>Ana</b>',
+    avatar: '⚽',
+    summary: { predictionPts: 0, squadPts: 0, total: 0 },
+    matches: [{
+      eventId: 3,
+      meta: { homeTeam: 'A', awayTeam: 'B' },
+      status: 'FT',
+      label: 'FINAL',
+      score: { home: 0, away: 0 },
+      prediction: null,
+      predictionPts: 0,
+      predictionBreakdown: [],
+      squadPts: 0,
+      squadDetail: [],
+      total: 0,
+    }],
+  });
+  assert.match(html, /&lt;b&gt;Ana&lt;\/b&gt;/);
+  assert.match(html, /Sin pronóstico/);
+  assert.match(html, /Ningún jugador de su plantilla en este partido/);
+
+  const empty = ui.liveV2PlayerModalHtml({
+    username: 'Ana', avatar: '⚽',
+    summary: { predictionPts: 0, squadPts: 0, total: 0 }, matches: [],
+  });
+  assert.match(empty, /Sin partidos en directo/);
+});
