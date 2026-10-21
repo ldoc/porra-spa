@@ -577,6 +577,12 @@ async function fetchLiveEvents(forceFull, _resyncGuard) {
 
   const keyOf = e => liveV2Api.eventKey(e);
   const incoming = payload.events || [];
+  const previousEvents = st.events || [];
+  const previousKeys = new Set(previousEvents.map(keyOf));
+  const previousSeen = st._seenEventIds instanceof Set
+    ? new Set(st._seenEventIds)
+    : new Set(previousKeys);
+  const seedOnFull = !!st._seedOnFull;
   if (!forceFull && payload.resync && !_resyncGuard) {
     // Delta truncado/cursor inválido: NO se anexa nada; full inmediato y autoritativo.
     st._needFull = true;
@@ -585,8 +591,20 @@ async function fetchLiveEvents(forceFull, _resyncGuard) {
   if (forceFull) {
     // Un full es autoritativo: reemplaza eventos y resetea el estado derivado,
     // pero conserva el marcador/pulso previo de los chips para detectar cambios.
+    // Los eventos que ya existían siguen vistos; los nuevos del full no, para
+    // que el carrusel/sonido no se los coma el full periódico.
     st.events = incoming;
-    st._seenEventIds = new Set(incoming.map(keyOf));
+    if (!previousKeys.size || seedOnFull) {
+      st._seenEventIds = new Set(incoming.map(keyOf));
+    } else {
+      const seen = new Set();
+      for (const e of incoming) {
+        const k = keyOf(e);
+        if (previousKeys.has(k) || previousSeen.has(k)) seen.add(k);
+      }
+      st._seenEventIds = seen;
+    }
+    st._seedOnFull = false;
     st.prevRanks = null;
     // Si el full no trae cursor, se invalida el delta (no se conserva el anterior).
     st.serverTime = payload.serverTime || null;
@@ -1989,6 +2007,7 @@ function startLiveV2Polling(folded) {
         liveV2UpdateCountdown();
         const st = liveV2State();
         st._seenEventIds = new Set((st.events || []).map(e => liveV2Api.eventKey(e)));
+        st._seedOnFull = true;
         st._needFull = true; // al volver a visible se resincroniza con un full
         pollLiveV2();
       }

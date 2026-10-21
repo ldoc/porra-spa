@@ -566,6 +566,76 @@ test('fetchLiveEvents guarda X-Server-Time y el reloj avanza entre eventos', asy
   assert.equal(liveV2.matchClockAt(fold2[100], Date.parse(st.serverNow)), 63);
 });
 
+test('fetchLiveEvents full conserva los vistos y deja los nuevos para el carrusel', async () => {
+  const old = { eventId: 1, sourceId: 'old', type: 'goal', ts: '2026-10-21T14:00:00Z', payload: {} };
+  const fresh = { eventId: 1, sourceId: 'new', type: 'goal', ts: '2026-10-21T14:10:00Z', payload: {} };
+  const AppState = {
+    liveV2: {
+      events: [old], _seenEventIds: new Set(['1|old']), serverTime: '2026-10-21T14:00:00Z',
+      prevRanks: null, polling: false, _lastRows: [], _fullAt: 1, _needFull: false,
+      lastFetchAt: null, error: null,
+    },
+    matches: [], allPlayers: [],
+  };
+  init({
+    AppState, API_BASE: 'https://api.test',
+    fetchWithPhase: async () => jsonResponse({
+      ok: true, serverTime: '2026-10-21T14:10:00Z', events: [old, fresh],
+    }, '2026-10-21T14:10:00Z'),
+    liveV2Api: { eventKey: e => `${e.eventId}|${e.sourceId}` },
+  });
+  await fetchLiveEvents(true);
+  assert.deepEqual(AppState.liveV2.events.map(e => e.sourceId), ['old', 'new']);
+  assert.ok(AppState.liveV2._seenEventIds.has('1|old'));
+  assert.equal(AppState.liveV2._seenEventIds.has('1|new'), false);
+});
+
+test('fetchLiveEvents full inicial marca todo como visto (sin carrusel de backlog)', async () => {
+  const a = { eventId: 1, sourceId: 'a', type: 'goal', ts: '2026-10-21T14:00:00Z', payload: {} };
+  const b = { eventId: 1, sourceId: 'b', type: 'goal', ts: '2026-10-21T14:01:00Z', payload: {} };
+  const AppState = {
+    liveV2: {
+      events: [], _seenEventIds: null, serverTime: null,
+      prevRanks: null, polling: false, _lastRows: [], _fullAt: 0, _needFull: false,
+      lastFetchAt: null, error: null,
+    },
+    matches: [], allPlayers: [],
+  };
+  init({
+    AppState, API_BASE: 'https://api.test',
+    fetchWithPhase: async () => jsonResponse({
+      ok: true, serverTime: '2026-10-21T14:01:00Z', events: [a, b],
+    }, '2026-10-21T14:01:00Z'),
+    liveV2Api: { eventKey: e => `${e.eventId}|${e.sourceId}` },
+  });
+  await fetchLiveEvents(true);
+  assert.ok(AppState.liveV2._seenEventIds.has('1|a'));
+  assert.ok(AppState.liveV2._seenEventIds.has('1|b'));
+});
+
+test('un full al volver visible siembra los eventos ocultos (_seedOnFull)', async () => {
+  const old = { eventId: 1, sourceId: 'old', type: 'goal', ts: '2026-10-21T14:00:00Z', payload: {} };
+  const hidden = { eventId: 1, sourceId: 'hidden', type: 'goal', ts: '2026-10-21T14:05:00Z', payload: {} };
+  const AppState = {
+    liveV2: {
+      events: [old], _seenEventIds: new Set(['1|old']), _seedOnFull: true,
+      serverTime: '2026-10-21T14:00:00Z', prevRanks: null, polling: false,
+      _lastRows: [], _fullAt: 1, _needFull: true, lastFetchAt: null, error: null,
+    },
+    matches: [], allPlayers: [],
+  };
+  init({
+    AppState, API_BASE: 'https://api.test',
+    fetchWithPhase: async () => jsonResponse({
+      ok: true, serverTime: '2026-10-21T14:05:00Z', events: [old, hidden],
+    }, '2026-10-21T14:05:00Z'),
+    liveV2Api: { eventKey: e => `${e.eventId}|${e.sourceId}` },
+  });
+  await fetchLiveEvents(true);
+  assert.ok(AppState.liveV2._seenEventIds.has('1|hidden'));
+  assert.equal(AppState.liveV2._seedOnFull, false);
+});
+
 test('fetchLiveEvents ejecuta el resync al momento y reemplaza con el full', async () => {
   const AppState = {
     currentUser: { name: 'juan' },
