@@ -716,13 +716,13 @@ function liveV2Esc(s) {
 
 /** Etiqueta de estado del chip: NS, LIVE 63', HT o FT (LIVE si no hay minuto). */
 function liveV2ChipLabel(state, playheadTs, observedMinute) {
-  if (!state) return 'NS';
-  if (state.status === 'NS') return 'NS';
-  if (state.status === 'HT') return 'HT';
-  if (state.status === 'FT') return 'FT';
+  if (!state) return 'SIN EMPEZAR';
+  if (state.status === 'NS') return 'SIN EMPEZAR';
+  if (state.status === 'HT') return 'DESCANSO';
+  if (state.status === 'FT') return 'FINAL';
   if (state.status === 'LIVE' && observedMinute != null) {
     const observed = Number(observedMinute);
-    if (Number.isFinite(observed)) return `LIVE ${observed}'`;
+    if (Number.isFinite(observed)) return `EN JUEGO ${observed}'`;
   }
   const ts = playheadTs != null
     ? playheadTs
@@ -733,8 +733,8 @@ function liveV2ChipLabel(state, playheadTs, observedMinute) {
     minute = api.matchClockAt(state, ts);
   }
   if (minute == null) minute = state.lastMinute;
-  if (minute == null) return 'LIVE';
-  return `LIVE ${minute}'`;
+  if (minute == null) return 'EN JUEGO';
+  return `EN JUEGO ${minute}'`;
 }
 
 /** true si hay al menos un partido en juego (LIVE o descanso HT). */

@@ -39,21 +39,21 @@ test('liveV2CountdownHtml incluye anillo y numero', () => {
   assert.match(html, /livev2-countdown-num/);
 });
 
-test('liveV2ChipLabel sin estado devuelve NS', () => {
-  assert.equal(liveV2ChipLabel(null), 'NS');
-  assert.equal(liveV2ChipLabel(undefined), 'NS');
+test('liveV2ChipLabel sin estado devuelve SIN EMPEZAR', () => {
+  assert.equal(liveV2ChipLabel(null), 'SIN EMPEZAR');
+  assert.equal(liveV2ChipLabel(undefined), 'SIN EMPEZAR');
 });
 
-test('liveV2ChipLabel devuelve NS, HT y FT', () => {
-  assert.equal(liveV2ChipLabel({ status: 'NS' }), 'NS');
-  assert.equal(liveV2ChipLabel({ status: 'HT' }), 'HT');
-  assert.equal(liveV2ChipLabel({ status: 'FT' }), 'FT');
+test('liveV2ChipLabel devuelve SIN EMPEZAR, DESCANSO y FINAL', () => {
+  assert.equal(liveV2ChipLabel({ status: 'NS' }), 'SIN EMPEZAR');
+  assert.equal(liveV2ChipLabel({ status: 'HT' }), 'DESCANSO');
+  assert.equal(liveV2ChipLabel({ status: 'FT' }), 'FINAL');
 });
 
 test('liveV2ChipLabel en LIVE usa el minuto y cae a LIVE sin minuto', () => {
-  assert.equal(liveV2ChipLabel({ status: 'LIVE', lastMinute: 63 }), "LIVE 63'");
-  assert.equal(liveV2ChipLabel({ status: 'LIVE', lastMinute: 0 }), "LIVE 0'");
-  assert.equal(liveV2ChipLabel({ status: 'LIVE', lastMinute: null }), 'LIVE');
+  assert.equal(liveV2ChipLabel({ status: 'LIVE', lastMinute: 63 }), "EN JUEGO 63'");
+  assert.equal(liveV2ChipLabel({ status: 'LIVE', lastMinute: 0 }), "EN JUEGO 0'");
+  assert.equal(liveV2ChipLabel({ status: 'LIVE', lastMinute: null }), 'EN JUEGO');
 });
 
 test('liveV2ChipLabel calcula el minuto con el reloj del servidor', () => {
@@ -62,7 +62,7 @@ test('liveV2ChipLabel calcula el minuto con el reloj del servidor', () => {
   const state = {
     status: 'LIVE', kickoffTs: '2026-09-16T20:00:00Z', period: 'period1', lastMinute: 0,
   };
-  assert.equal(liveV2ChipLabel(state, Date.parse('2026-09-16T21:03:00Z')), "LIVE 63'");
+  assert.equal(liveV2ChipLabel(state, Date.parse('2026-09-16T21:03:00Z')), "EN JUEGO 63'");
 });
 
 test('liveV2ChipLabel prefiere el minuto observado de livematches', () => {
@@ -70,7 +70,7 @@ test('liveV2ChipLabel prefiere el minuto observado de livematches', () => {
   const liveV2 = require('../js/liveV2.js');
   ui.init({ AppState: { liveV2: null }, liveV2Api: liveV2 });
   const state = { status: 'LIVE', kickoffTs: '2026-09-16T20:00:00Z', period: 'period1' };
-  assert.equal(ui.liveV2ChipLabel(state, Date.parse('2026-09-16T20:30:00Z'), 63), "LIVE 63'");
+  assert.equal(ui.liveV2ChipLabel(state, Date.parse('2026-09-16T20:30:00Z'), 63), "EN JUEGO 63'");
 });
 
 test('liveV2ChipData usa el minuto del snapshot de livematches', () => {
@@ -90,7 +90,7 @@ test('liveV2ChipData usa el minuto del snapshot de livematches', () => {
   const d = ui.liveV2ChipData(1, {
     status: 'LIVE', kickoffTs: '2026-09-16T20:00:00Z', period: 'period1',
   });
-  assert.equal(d.label, "LIVE 63'");
+  assert.equal(d.label, "EN JUEGO 63'");
 });
 
 test('liveV2OrderedStateEntries mantiene el orden por kickoff aunque cambie el marcador', () => {
@@ -1327,7 +1327,7 @@ test('liveV2MatchBreakdown en NS no da puntos pero conserva el pronostico', () =
   assert.equal(d.predictionPts, 0);
   assert.equal(d.squadPts, 0);
   assert.equal(d.total, 0);
-  assert.equal(d.label, 'NS');
+  assert.equal(d.label, 'SIN EMPEZAR');
 });
 
 test('liveV2MatchBreakdown incluye a un jugador de plantilla que jugó con 0 puntos', () => {
