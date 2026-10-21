@@ -883,3 +883,82 @@ test('feedEventsForMatch resuelve una anulación con el historial del partido', 
   assert.equal(views[0].text, 'Gol anulado a Ana');
   assert.equal(views[0].detail, 'VAR');
 });
+
+const { fillSnapshotGaps } = liveV2;
+
+test('fillSnapshotGaps añade un partido fresco que solo está en livematches', () => {
+  const now = 1_000_000;
+  const stats = { 10: { goles: 2 }, 20: { goles: 1 }, jugadores: [{ id: 7 }] };
+  const folded = {
+    states: { 1: { status: 'LIVE', score: { home: 1, away: 0 } } },
+    statsById: { 1: { 10: { goles: 1 }, 20: { goles: 0 } } },
+  };
+  const snapshots = {
+    2: { eventId: 2, status: 'LIVE', minute: 33, lastUpdated: new Date(now - 1000).toISOString(), stats },
+  };
+  const out = fillSnapshotGaps(folded, snapshots, { 2: { homeTeamId: 10, awayTeamId: 20 } }, now);
+  assert.deepEqual(out.states[1], folded.states[1], 'no pisa el partido con eventos');
+  assert.equal(out.states[2].status, 'LIVE');
+  assert.deepEqual(out.states[2].score, { home: 2, away: 1 });
+  assert.equal(out.states[2].lastMinute, 33);
+  assert.equal(out.statsById[2], stats);
+});
+
+test('fillSnapshotGaps ignora snapshots viejos o sin stats', () => {
+  const now = 1_000_000;
+  const fresh = { eventId: 2, status: 'LIVE', lastUpdated: new Date(now - 1000).toISOString(), stats: { 10: { goles: 1 }, 20: { goles: 0 } } };
+  const old = { ...fresh, lastUpdated: new Date(now - 181000).toISOString() };
+  const noStats = { ...fresh, stats: null };
+  const out = fillSnapshotGaps({ states: {}, statsById: {} }, { 2: old, 3: noStats }, {}, now);
+  assert.deepEqual(out.states, {});
+  assert.deepEqual(out.statsById, {});
+});
+
+test('fillSnapshotGaps usa las claves de stats si falta contexto', () => {
+  const now = 1_000_000;
+  const stats = { 10: { goles: 0 }, 20: { goles: 3 }, jugadores: [] };
+  const out = fillSnapshotGaps({ states: {}, statsById: {} }, {
+    2: { eventId: 2, status: 'FT', minute: 90, lastUpdated: new Date(now).toISOString(), stats },
+  }, {}, now);
+  assert.deepEqual(out.states[2].score, { home: 0, away: 3 });
+});
+
+test('fillSnapshotGaps mantiene null el minuto si el snapshot no lo trae', () => {
+  const now = 1_000_000;
+  const stats = { 10: { goles: 0 }, 20: { goles: 0 }, jugadores: [] };
+  const out = fillSnapshotGaps({ states: {}, statsById: {} }, {
+    2: { eventId: 2, status: 'LIVE', minute: null, lastUpdated: new Date(now).toISOString(), stats },
+  }, {}, now);
+  assert.equal(out.states[2].lastMinute, null);
+});
+
+test('fillSnapshotGaps ignora stats parciales en vez de fabricar 0-0', () => {
+  const now = 1_000_000;
+  const missingAway = { 10: { goles: 1 }, 20: {}, jugadores: [] };
+  const missingHome = { 10: null, 20: { goles: 2 }, jugadores: [] };
+  const out = fillSnapshotGaps({ states: {}, statsById: {} }, {
+    2: { eventId: 2, status: 'LIVE', minute: 10, lastUpdated: new Date(now).toISOString(), stats: missingAway },
+    3: { eventId: 3, status: 'LIVE', minute: 20, lastUpdated: new Date(now).toISOString(), stats: missingHome },
+  }, { 2: { homeTeamId: 10, awayTeamId: 20 }, 3: { homeTeamId: 10, awayTeamId: 20 } }, now);
+  assert.deepEqual(out.states, {});
+  assert.deepEqual(out.statsById, {});
+});
+
+test('fillSnapshotGaps no muta folded, snapshots ni ctx', () => {
+  const now = 1_000_000;
+  const stats = { 10: { goles: 2 }, 20: { goles: 1 }, jugadores: [{ id: 7 }] };
+  const folded = {
+    states: { 1: { status: 'LIVE', score: { home: 1, away: 0 } } },
+    statsById: { 1: { 10: { goles: 1 }, 20: { goles: 0 } } },
+  };
+  const snapshots = {
+    2: { eventId: 2, status: 'LIVE', minute: 33, lastUpdated: new Date(now).toISOString(), stats },
+  };
+  const ctx = { 2: { homeTeamId: 10, awayTeamId: 20 } };
+  const before = JSON.parse(JSON.stringify({ folded, snapshots, ctx }));
+  const out = fillSnapshotGaps(folded, snapshots, ctx, now);
+  assert.deepEqual({ folded, snapshots, ctx }, before);
+  assert.notStrictEqual(out.states, folded.states);
+  assert.notStrictEqual(out.statsById, folded.statsById);
+  assert.notStrictEqual(out.states[2], folded.states[1]);
+});

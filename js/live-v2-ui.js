@@ -344,7 +344,10 @@ function liveOfficialRows() {
 // Layout A: estado (badge + puntos inline + sonido) + grid de partidos + clasificación general.
 // ============================================================
 
-const LIVEV2_CACHE_KEY = 'porra_live_events_v1';
+const LIVEV2_CACHE_PREFIX = 'porra_live_events_';
+const LIVEV2_CACHE_KEY = `${LIVEV2_CACHE_PREFIX}v2`;
+const LIVEV2_CACHE_VERSION = 2;
+const LIVEV2_CACHE_MAX_EVENTS = 6000;
 const LIVEV2_FULL_ON_ENTRY_MS = 60 * 1000;
 let _liveV2CacheRestored = false;
 
@@ -374,57 +377,47 @@ function liveV2CacheDay(now) {
   return `${y}-${m}-${day}`;
 }
 
-/** Clave de caché acotada a día local + usuario (null si no hay usuario). */
-function liveV2CacheKey(username, now) {
-  if (!username) return null;
-  return `${LIVEV2_CACHE_KEY}:${liveV2CacheDay(now)}:${username}`;
+/** `real` salvo que estemos en local con `?liveSim=1`. */
+function liveV2CacheSource() {
+  try {
+    if (typeof window !== 'undefined' && window.location && liveV2Api
+      && typeof liveV2Api.wantSimSource === 'function'
+      && liveV2Api.wantSimSource(window.location.search, window.location.hostname)) return 'sim';
+  } catch (e) { /* sin window */ }
+  return 'real';
 }
 
-/** Un full cacheado solo sirve si trae eventos, cursor y sello fullAt. */
-function liveV2CacheIsFresh(cached) {
+function liveV2CachePhase() {
+  try {
+    return (AppState && AppState.appConfig && AppState.appConfig.faseJuego) || 'unknown';
+  } catch (e) { return 'unknown'; }
+}
+
+/** Clave de caché acotada a día local + usuario + source + fase (null si no hay usuario). */
+function liveV2CacheKey(username, now, opts) {
+  if (!username) return null;
+  const o = opts || {};
+  const source = o.source || liveV2CacheSource();
+  const phase = o.phase || liveV2CachePhase();
+  return `${LIVEV2_CACHE_KEY}:${liveV2CacheDay(now)}:${username}:${source}:${phase}`;
+}
+
+/** Un full cacheado solo sirve si versión, source, fase, eventos, cursor y sello fullAt coinciden. */
+function liveV2CacheIsFresh(cached, opts) {
+  const o = opts || {};
+  const source = o.source || liveV2CacheSource();
+  const phase = o.phase || liveV2CachePhase();
   return !!cached
+    && cached.version === LIVEV2_CACHE_VERSION
+    && cached.source === source
+    && cached.phase === phase
     && Array.isArray(cached.events)
     && typeof cached.serverTime === 'string' && !!cached.serverTime
     && Number.isFinite(cached.fullAt);
 }
 
-/** Restaura el último full cacheado de hoy/usuario una sola vez por carga de página. */
-function restoreLiveV2Cache(st) {
-  if (_liveV2CacheRestored) return;
-  const username = AppState && AppState.currentUser && AppState.currentUser.name;
-  const key = liveV2CacheKey(username);
-  if (!key) return; // aún sin sesión: se intentará al entrar en Live
-  _liveV2CacheRestored = true;
-  const storage = liveV2CacheStorage();
-  if (!storage) return;
-  try {
-    const cached = JSON.parse(storage.getItem(key) || 'null');
-    if (!liveV2CacheIsFresh(cached)) return; // sin fullAt o clave ajena → full
-    st.events = cached.events;
-    st.serverTime = cached.serverTime;
-    st.serverNow = cached.serverTime;
-    st._fullAt = cached.fullAt;
-  } catch (e) { /* caché ausente, corrupta o sin storage */ }
-}
-
-/** Guarda el último full (eventos + cursor) para reutilizarlo como delta al recargar. */
-function saveLiveV2Cache(st) {
-  const username = AppState && AppState.currentUser && AppState.currentUser.name;
-  const key = liveV2CacheKey(username);
-  if (!key) return;
-  const storage = liveV2CacheStorage();
-  if (!storage) return;
-  try {
-    storage.setItem(key, JSON.stringify({
-      events: st.events || [],
-      serverTime: st.serverTime || null,
-      fullAt: st._fullAt || Date.now(),
-    }));
-  } catch (e) { /* sin espacio o storage no disponible */ }
-}
-
-/** Elimina todas las claves porra_live_events_v1* (logout). Devuelve cuántas borró. */
-function purgeLiveV2Caches(storage) {
+/** Borra las claves del Live salvo `keepKey`. Devuelve cuántas borró. */
+function purgeLiveV2CacheKeys(storage, keepKey) {
   const s = storage || liveV2CacheStorage();
   if (!s) return 0;
   let removed = 0;
@@ -432,11 +425,82 @@ function purgeLiveV2Caches(storage) {
     const keys = [];
     for (let i = 0; i < s.length; i++) {
       const k = s.key(i);
-      if (k && k.indexOf(LIVEV2_CACHE_KEY) === 0) keys.push(k);
+      if (k && k.indexOf(LIVEV2_CACHE_PREFIX) === 0 && k !== keepKey) keys.push(k);
     }
     for (const k of keys) { s.removeItem(k); removed++; }
   } catch (e) { /* storage no disponible */ }
   return removed;
+}
+
+function purgeLiveV2Caches(storage) {
+  return purgeLiveV2CacheKeys(storage, null);
+}
+
+/** Restaura el último full cacheado de hoy/usuario/source/fase una sola vez por carga de página. */
+function restoreLiveV2Cache(st) {
+  if (_liveV2CacheRestored) return;
+  const username = AppState && AppState.currentUser && AppState.currentUser.name;
+  const opts = { source: liveV2CacheSource(), phase: liveV2CachePhase() };
+  const key = liveV2CacheKey(username, null, opts);
+  if (!key) return;
+  _liveV2CacheRestored = true;
+  const storage = liveV2CacheStorage();
+  if (!storage) return;
+  try {
+    purgeLiveV2CacheKeys(storage, key);
+    const cached = JSON.parse(storage.getItem(key) || 'null');
+    if (!liveV2CacheIsFresh(cached, opts)) return;
+    st.events = cached.events;
+    st.serverTime = cached.serverTime;
+    st.serverNow = cached.serverTime;
+    st._fullAt = cached.fullAt;
+    st._needFull = !!cached.truncated;
+  } catch (e) { /* caché ausente, corrupta o sin storage */ }
+}
+
+/** Ordena por ingestedAt/ts descendente y recorta a `max` eventos. */
+function liveV2TrimCacheEvents(events, max = LIVEV2_CACHE_MAX_EVENTS) {
+  const list = Array.isArray(events) ? events : [];
+  const cap = Number.isInteger(max) && max > 0 ? max : LIVEV2_CACHE_MAX_EVENTS;
+  if (list.length <= cap) return { events: list, truncated: false };
+  const sorted = [...list].sort((a, b) => {
+    const byIngested = new Date(b && b.ingestedAt || 0).getTime() - new Date(a && a.ingestedAt || 0).getTime();
+    if (byIngested) return byIngested;
+    return new Date(b && b.ts || 0).getTime() - new Date(a && a.ts || 0).getTime();
+  });
+  return { events: sorted.slice(0, cap), truncated: true };
+}
+
+/** Guarda el último full (eventos + cursor) para reutilizarlo como delta al recargar. */
+function saveLiveV2Cache(st) {
+  const username = AppState && AppState.currentUser && AppState.currentUser.name;
+  const opts = { source: liveV2CacheSource(), phase: liveV2CachePhase() };
+  const key = liveV2CacheKey(username, null, opts);
+  if (!key) return;
+  const storage = liveV2CacheStorage();
+  if (!storage) return;
+  const { events, truncated } = liveV2TrimCacheEvents(st.events);
+  const payload = {
+    version: LIVEV2_CACHE_VERSION,
+    source: opts.source,
+    phase: opts.phase,
+    events,
+    serverTime: st.serverTime || null,
+    fullAt: st._fullAt || Date.now(),
+    truncated,
+  };
+  const write = () => storage.setItem(key, JSON.stringify(payload));
+  try {
+    purgeLiveV2CacheKeys(storage, key);
+    write();
+  } catch (e) {
+    purgeLiveV2CacheKeys(storage, null);
+    try {
+      write();
+    } catch (e2) {
+      try { storage.removeItem(key); } catch (e3) { /* sin storage */ }
+    }
+  }
 }
 
 function liveV2State() {
@@ -673,7 +737,10 @@ function liveV2Folded() {
     const ctx = { ...(ctxById[id] || {}), playersById };
     statsById[id] = liveV2Api.matchStateToStats(s, ctx, playhead);
   }
-  return { states, statsById };
+  const folded = { states, statsById };
+  return typeof liveV2Api.fillSnapshotGaps === 'function'
+    ? liveV2Api.fillSnapshotGaps(folded, st._liveSnapshots || {}, ctxById, Date.now())
+    : folded;
 }
 
 /** eventIds ya finalizados (tienen matchstat) para no duplicar con los puntos oficiales */
@@ -697,11 +764,10 @@ function liveV2Rows(folded) {
     for (const id of Object.keys(folded.statsById || {})) {
       if (finalized.has(String(id))) continue; // ya cuenta en los puntos oficiales
       const match = (AppState.matches || []).find(m => String(m.id) === String(id));
-      if (!match) continue;
       const state = folded.states[id];
       const status = state?.status || 'NS';
       if (status === 'NS') continue;
-      const lm = { eventId: match.id, stats: folded.statsById[id], status };
+      const lm = { eventId: match ? match.id : id, stats: folded.statsById[id], status };
       delta += liveUserMatchPoints(pl.name, lm, liveMatchMeta(lm)).total;
     }
     const officialPoints = officialByName[pl.name] || 0;
@@ -750,13 +816,16 @@ function liveV2MatchBreakdown(eventId, state) {
   const me = AppState.currentUser && AppState.currentUser.name;
   const match = (AppState.matches || []).find(m => String(m.id) === String(eventId));
   const id = match ? match.id : eventId;
-  const meta = liveMatchMeta({ eventId: id });
   const status = (state && state.status) || 'NS';
-  let stats = null;
-  if (status !== 'NS' && state && typeof liveV2Api !== 'undefined' && liveV2Api.matchStateToStats) {
+  const folded = (typeof liveV2Api !== 'undefined' && typeof liveV2Api.foldAll === 'function')
+    ? liveV2Folded()
+    : { states: {}, statsById: {} };
+  let stats = (folded.statsById && folded.statsById[id]) || null;
+  if (!stats && status !== 'NS' && state && typeof liveV2Api !== 'undefined' && liveV2Api.matchStateToStats) {
     const ctx = { ...(liveV2CtxById()[id] || {}), playersById: liveV2PlayersById() };
     stats = liveV2Api.matchStateToStats(state, ctx, liveV2PlayheadMs(liveV2State()));
   }
+  const meta = liveMatchMeta({ eventId: id, stats });
   const lm = { eventId: id, stats, status };
   const r = liveUserMatchPoints(me, lm, meta);
   const preds = me ? ((AppState.allPredictions || {})[me] || {}) : {};
@@ -765,7 +834,7 @@ function liveV2MatchBreakdown(eventId, state) {
   const events = (typeof liveV2Api !== 'undefined' && liveV2Api.feedEventsForMatch)
     ? liveV2Api.feedEventsForMatch(
         liveV2State().events || [], id,
-        liveV2FeedCtxById(liveV2Folded()),
+        liveV2FeedCtxById(folded),
         liveV2PlayersById(), { includeSeed: true })
     : [];
   return {
@@ -876,14 +945,15 @@ function liveV2MatchModalHtml(d) {
 function liveV2ChipData(eventId, state) {
   // foldAll usa claves string (ids de partido); normaliza a match.id (number) para liveMatchMeta
   const match = (AppState.matches || []).find(m => String(m.id) === String(eventId));
-  const meta = liveMatchMeta({ eventId: match ? match.id : eventId });
+  const st = liveV2State();
+  const snap = st._liveSnapshots && st._liveSnapshots[String(eventId)];
+  const meta = liveMatchMeta({ eventId: match ? match.id : eventId, stats: snap && snap.stats });
   const me = AppState.currentUser && AppState.currentUser.name;
   const preds = me ? ((AppState.allPredictions || {})[me] || {}) : {};
   const matchId = match ? match.id : eventId;
   const pred = preds[matchId] != null ? preds[matchId] : preds[String(matchId)];
   const hasPred = pred && pred.home != null && pred.away != null;
   const predictionText = hasPred ? `Tú ${pred.home}-${pred.away}` : 'S/P';
-  const st = liveV2State();
   const pulse = st._chipPulse && st._chipPulse[String(eventId)];
   const pulseCls = pulse ? ` score-${pulse.state}` : '';
   const pulseTitle = pulse
@@ -2146,6 +2216,8 @@ async function renderLiveV2Tab() {
     liveV2SkeletonHtml,
     liveV2ShowReason,
     liveV2State,
+    liveV2Folded,
+    liveV2Rows,
     liveV2ChipLabel,
     liveV2OrderedStateEntries,
     liveV2HasInPlay,
@@ -2169,6 +2241,9 @@ async function renderLiveV2Tab() {
     liveV2CacheDay,
     liveV2CacheIsFresh,
     purgeLiveV2Caches,
+    purgeLiveV2CacheKeys,
+    liveV2TrimCacheEvents,
+    saveLiveV2Cache,
     liveV2EventDeltas,
     liveV2StatusWhistleCount,
     liveV2PlayNewEventSounds,

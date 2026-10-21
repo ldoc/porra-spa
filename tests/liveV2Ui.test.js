@@ -17,6 +17,7 @@ const {
   liveV2CacheKey,
   liveV2CacheIsFresh,
   purgeLiveV2Caches,
+  liveV2TrimCacheEvents,
   liveV2StatusWhistleCount,
   liveV2EventDeltas,
   liveV2TopContributions,
@@ -806,24 +807,40 @@ test('liveV2ShouldFullOnEntry exige full si el full es viejo o falta', () => {
   assert.equal(liveV2ShouldFullOnEntry({ serverTime: 'T', events: [{}] }, now), true);
 });
 
-test('liveV2CacheKey incluye día local y usuario', () => {
+test('liveV2CacheKey incluye source y fase', () => {
   const now = new Date(2026, 9, 19, 12, 0, 0).getTime();
-  assert.equal(liveV2CacheKey('juan', now), 'porra_live_events_v1:2026-10-19:juan');
+  assert.equal(
+    liveV2CacheKey('juan', now, { source: 'real', phase: 'FASE_LIGA' }),
+    'porra_live_events_v2:2026-10-19:juan:real:FASE_LIGA'
+  );
+  assert.equal(
+    liveV2CacheKey('juan', now, { source: 'sim', phase: 'FASE_8' }),
+    'porra_live_events_v2:2026-10-19:juan:sim:FASE_8'
+  );
+  assert.equal(liveV2CacheKey(null, now, { source: 'real', phase: 'FASE_LIGA' }), null);
 });
 
-test('liveV2CacheIsFresh exige eventos, cursor y fullAt', () => {
-  assert.equal(liveV2CacheIsFresh({ events: [], serverTime: 'T', fullAt: 1 }), true);
-  assert.equal(liveV2CacheIsFresh({ events: [], serverTime: 'T' }), false);
-  assert.equal(liveV2CacheIsFresh({ events: [], serverTime: null, fullAt: 1 }), false);
-  assert.equal(liveV2CacheIsFresh(null), false);
+test('liveV2CacheIsFresh exige versión, source, fase, eventos, cursor y fullAt', () => {
+  const opts = { source: 'real', phase: 'FASE_LIGA' };
+  const ok = { version: 2, source: 'real', phase: 'FASE_LIGA', events: [], serverTime: 'T', fullAt: 1 };
+  assert.equal(liveV2CacheIsFresh(ok, opts), true);
+  assert.equal(liveV2CacheIsFresh({ ...ok, version: 1 }, opts), false);
+  assert.equal(liveV2CacheIsFresh({ ...ok, source: 'sim' }, opts), false);
+  assert.equal(liveV2CacheIsFresh({ ...ok, phase: 'FASE_8' }, opts), false);
+  assert.equal(liveV2CacheIsFresh({ ...ok, events: null }, opts), false);
+  assert.equal(liveV2CacheIsFresh({ ...ok, serverTime: null }, opts), false);
+  assert.equal(liveV2CacheIsFresh({ ...ok, fullAt: null }, opts), false);
+  assert.equal(liveV2CacheIsFresh(null, opts), false);
 });
 
-test('restoreLiveV2Cache ignora claves de otro día', () => {
+test('restoreLiveV2Cache ignora una caché de otro source', () => {
   const ui = freshUi();
+  const day = ui.liveV2CacheDay();
   const saved = JSON.stringify({
-    events: [{ eventId: 1, sourceId: 'a' }], serverTime: '2026-10-18T10:00:00Z', fullAt: 1,
+    version: 2, source: 'sim', phase: 'FASE_LIGA',
+    events: [{ eventId: 1, sourceId: 'a' }], serverTime: '2026-10-21T10:00:00Z', fullAt: 1,
   });
-  const store = { 'porra_live_events_v1:2026-10-18:juan': saved };
+  const store = { [`porra_live_events_v2:${day}:juan:sim:FASE_LIGA`]: saved };
   const prev = global.localStorage;
   global.localStorage = {
     getItem: k => (k in store ? store[k] : null),
@@ -833,21 +850,26 @@ test('restoreLiveV2Cache ignora claves de otro día', () => {
     key: i => Object.keys(store)[i],
   };
   try {
-    const AppState = { currentUser: { name: 'juan' }, liveV2: null };
+    const AppState = {
+      currentUser: { name: 'juan' },
+      appConfig: { faseJuego: 'FASE_LIGA' },
+      liveV2: null,
+    };
     ui.init({ AppState, liveV2Api: {} });
     const st = ui.liveV2State();
-    assert.equal(st.serverTime, null, 'la caché de ayer no se restaura');
+    assert.equal(st.serverTime, null, 'la caché sim no se restaura en real');
     assert.deepEqual(st.events, []);
   } finally {
     if (prev === undefined) delete global.localStorage; else global.localStorage = prev;
   }
 });
 
-test('purgeLiveV2Caches elimina solo las claves del live', () => {
+test('purgeLiveV2Caches elimina todas las versiones del live', () => {
   const store = {
     a: 'x',
     'porra_live_events_v1:2026-10-19:juan': '{}',
-    'porra_live_events_v1:2026-10-18:ana': '{}',
+    'porra_live_events_v2:2026-10-19:juan:real:FASE_LIGA': '{}',
+    'porra_live_events_v2:2026-10-18:ana:sim:FASE_8': '{}',
     other: 'y',
   };
   const storage = {
@@ -855,7 +877,7 @@ test('purgeLiveV2Caches elimina solo las claves del live', () => {
     key: i => Object.keys(store)[i],
     removeItem: k => { delete store[k]; },
   };
-  assert.equal(purgeLiveV2Caches(storage), 2);
+  assert.equal(purgeLiveV2Caches(storage), 3);
   assert.deepEqual(Object.keys(store), ['a', 'other']);
 });
 
@@ -1987,4 +2009,244 @@ test('liveV2EnqueueChipEvents encola FIFO, excluye seed y no interrumpe el activ
     assert.match(layer.textContent, /Amarilla · Beto/);
     assert.deepEqual(ui.liveV2State()._chipEventQueue['1'].map(v => v.key), ['1|s3']);
   });
+});
+
+test('liveV2TrimCacheEvents limita y marca truncated', () => {
+  const events = Array.from({ length: 5 }, (_, i) => ({
+    eventId: i,
+    ingestedAt: new Date(1000 + i).toISOString(),
+    ts: new Date(1000 + i).toISOString(),
+  }));
+  const out = liveV2TrimCacheEvents(events, 3);
+  assert.equal(out.truncated, true);
+  assert.deepEqual(out.events.map(e => e.eventId), [4, 3, 2]);
+  assert.equal(liveV2TrimCacheEvents(events, 5).truncated, false);
+});
+
+test('liveV2TrimCacheEvents desempata por ts cuando ingestedAt coincide', () => {
+  const ingestedAt = '2026-10-21T10:00:00.000Z';
+  const events = [
+    { eventId: 'a', ingestedAt, ts: '2026-10-21T09:00:00.000Z' },
+    { eventId: 'b', ingestedAt, ts: '2026-10-21T09:05:00.000Z' },
+    { eventId: 'c', ingestedAt, ts: '2026-10-21T09:02:00.000Z' },
+  ];
+  const out = liveV2TrimCacheEvents(events, 2);
+  assert.equal(out.truncated, true);
+  assert.deepEqual(out.events.map(e => e.eventId), ['b', 'c']);
+});
+
+test('saveLiveV2Cache purga claves viejas y reintenta si falla la cuota', () => {
+  const ui = freshUi();
+  const day = ui.liveV2CacheDay();
+  const staleKey = `porra_live_events_v2:${day}:ana:real:FASE_LIGA`;
+  const store = { [staleKey]: '{}' };
+  let writes = 0;
+  const storage = {
+    getItem: k => (k in store ? store[k] : null),
+    setItem: (k, v) => {
+      writes++;
+      if (writes === 1) throw new Error('QuotaExceededError');
+      store[k] = String(v);
+    },
+    removeItem: k => { delete store[k]; },
+    get length() { return Object.keys(store).length; },
+    key: i => Object.keys(store)[i],
+  };
+  const prev = global.localStorage;
+  global.localStorage = storage;
+  try {
+    const AppState = {
+      currentUser: { name: 'juan' },
+      appConfig: { faseJuego: 'FASE_LIGA' },
+      liveV2: {
+        events: [{ eventId: 1, sourceId: 'a', ingestedAt: '2026-10-21T10:00:00Z', ts: '2026-10-21T10:00:00Z' }],
+        serverTime: '2026-10-21T10:00:00Z',
+        _fullAt: 1,
+      },
+    };
+    ui.init({ AppState, liveV2Api: {} });
+    ui.saveLiveV2Cache(AppState.liveV2);
+    const key = ui.liveV2CacheKey('juan', null, { source: 'real', phase: 'FASE_LIGA' });
+    assert.equal(writes, 2, 'reintenta una vez');
+    assert.equal(staleKey in store, false, 'purga claves antiguas');
+    const saved = JSON.parse(store[key]);
+    assert.equal(saved.version, 2);
+    assert.equal(saved.source, 'real');
+    assert.equal(saved.phase, 'FASE_LIGA');
+    assert.equal(saved.serverTime, '2026-10-21T10:00:00Z');
+    assert.equal(saved.fullAt, 1);
+    assert.equal(saved.truncated, false);
+    assert.equal(saved.events.length, 1);
+  } finally {
+    if (prev === undefined) delete global.localStorage; else global.localStorage = prev;
+  }
+});
+
+test('saveLiveV2Cache purga claves antiguas tras un guardado correcto', () => {
+  const ui = freshUi();
+  const day = ui.liveV2CacheDay();
+  const staleKeys = [
+    'porra_live_events_v2:2026-10-20:ana:real:FASE_LIGA',
+    `porra_live_events_v2:${day}:juan:sim:FASE_8`,
+    `porra_live_events_v1:${day}:juan`,
+  ];
+  const store = { unrelated: 'x' };
+  for (const k of staleKeys) store[k] = '{}';
+  let writes = 0;
+  const storage = {
+    getItem: k => (k in store ? store[k] : null),
+    setItem: (k, v) => { writes++; store[k] = String(v); },
+    removeItem: k => { delete store[k]; },
+    get length() { return Object.keys(store).length; },
+    key: i => Object.keys(store)[i],
+  };
+  const prev = global.localStorage;
+  global.localStorage = storage;
+  try {
+    const AppState = {
+      currentUser: { name: 'juan' },
+      appConfig: { faseJuego: 'FASE_LIGA' },
+      liveV2: {
+        events: [{ eventId: 1, sourceId: 'a', ingestedAt: '2026-10-21T10:00:00Z', ts: '2026-10-21T10:00:00Z' }],
+        serverTime: '2026-10-21T10:00:00Z',
+        _fullAt: 1,
+      },
+    };
+    ui.init({ AppState, liveV2Api: {} });
+    ui.saveLiveV2Cache(AppState.liveV2);
+    const key = ui.liveV2CacheKey('juan', null, { source: 'real', phase: 'FASE_LIGA' });
+    assert.equal(writes, 1, 'no necesita reintento');
+    for (const k of staleKeys) assert.equal(k in store, false, `purga ${k}`);
+    assert.equal(store.unrelated, 'x', 'no toca claves ajenas');
+    assert.ok(key in store, 'guarda la clave actual');
+    const saved = JSON.parse(store[key]);
+    assert.equal(saved.serverTime, '2026-10-21T10:00:00Z');
+    assert.equal(saved.fullAt, 1);
+    assert.equal(saved.truncated, false);
+  } finally {
+    if (prev === undefined) delete global.localStorage; else global.localStorage = prev;
+  }
+});
+
+test('saveLiveV2Cache no lanza si fallan dos escrituras y borra la clave actual', () => {
+  const ui = freshUi();
+  const key = ui.liveV2CacheKey('juan', null, { source: 'real', phase: 'FASE_LIGA' });
+  const staleKey = 'porra_live_events_v2:2026-10-20:ana:real:FASE_LIGA';
+  const store = { [key]: 'old', [staleKey]: '{}' };
+  let writes = 0;
+  const storage = {
+    getItem: k => (k in store ? store[k] : null),
+    setItem: () => { writes++; throw new Error('QuotaExceededError'); },
+    removeItem: k => { delete store[k]; },
+    get length() { return Object.keys(store).length; },
+    key: i => Object.keys(store)[i],
+  };
+  const prev = global.localStorage;
+  global.localStorage = storage;
+  try {
+    const AppState = {
+      currentUser: { name: 'juan' },
+      appConfig: { faseJuego: 'FASE_LIGA' },
+      liveV2: {
+        events: [{ eventId: 1, sourceId: 'a', ingestedAt: '2026-10-21T10:00:00Z', ts: '2026-10-21T10:00:00Z' }],
+        serverTime: '2026-10-21T10:00:00Z',
+        _fullAt: 1,
+      },
+    };
+    ui.init({ AppState, liveV2Api: {} });
+    assert.doesNotThrow(() => ui.saveLiveV2Cache(AppState.liveV2));
+    assert.equal(writes, 2, 'reintenta una sola vez');
+    assert.equal(key in store, false, 'elimina la clave actual');
+    assert.equal(staleKey in store, false, 'la purga previa elimina claves viejas');
+  } finally {
+    if (prev === undefined) delete global.localStorage; else global.localStorage = prev;
+  }
+});
+
+test('liveV2Folded rellena un partido que solo está en livematches', () => {
+  const ui = freshUi();
+  const liveV2 = require('../js/liveV2.js');
+  const now = Date.now();
+  const stats = { 10: { goles: 2 }, 20: { goles: 1 }, jugadores: [] };
+  const AppState = {
+    currentUser: { name: 'me' },
+    appConfig: { faseJuego: 'FASE_LIGA' },
+    liveV2: {
+      events: [],
+      _liveSnapshots: {
+        2: { eventId: 2, status: 'LIVE', minute: 33, lastUpdated: new Date(now).toISOString(), stats },
+      },
+    },
+    matches: [{ id: 2, homeTeamId: 10, awayTeamId: 20 }],
+    allPlayers: [],
+  };
+  ui.init({ AppState, liveV2Api: liveV2 });
+  const folded = ui.liveV2Folded();
+  assert.equal(folded.states[2].status, 'LIVE');
+  assert.deepEqual(folded.states[2].score, { home: 2, away: 1 });
+  assert.equal(folded.statsById[2], stats);
+});
+
+test('un partido solo en livematches cuenta en filas, chip y modal sin estar en matches', () => {
+  const ui = freshUi();
+  const liveV2 = require('../js/liveV2.js');
+  const liveApi = require('../js/live.js');
+  const now = Date.now();
+  const stats = { 10: { goles: 2 }, 20: { goles: 1 }, jugadores: [] };
+  const AppState = {
+    currentUser: { name: 'me' },
+    appConfig: { faseJuego: 'FASE_LIGA' },
+    liveV2: {
+      events: [],
+      _liveSnapshots: {
+        2: { eventId: 2, status: 'LIVE', minute: 33, lastUpdated: new Date(now).toISOString(), stats },
+      },
+    },
+    matches: [],
+    teamsMap: { 10: { name: 'Local' }, 20: { name: 'Visitante' } },
+    allPredictions: { me: { 2: { home: 2, away: 1 } } },
+    squadsCache: { me: [] },
+    matchStats: [],
+    allPlayers: [],
+  };
+  ui.init({
+    AppState,
+    liveV2Api: liveV2,
+    liveApi,
+    liveV2Abbr: s => String(s).slice(0, 3),
+    visiblePlayers: () => [{ name: 'me', avatar: '⚽' }],
+    getUserTotalRealPoints: () => 0,
+    calculateMatchPoints: (pred, ms, lm) => {
+      const home = Number(ms.stats[lm.homeTeamId] && ms.stats[lm.homeTeamId].goles);
+      const away = Number(ms.stats[lm.awayTeamId] && ms.stats[lm.awayTeamId].goles);
+      return { points: home === 2 && away === 1 ? 15 : 0, breakdown: ['15 por marcador exacto'] };
+    },
+    calculatePlayerMatchPoints: () => ({ total: 0, desglose: [] }),
+  });
+
+  const folded = ui.liveV2Folded();
+  const rows = ui.liveV2Rows(folded);
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0].livePoints, 15);
+  assert.equal(rows[0].pointsDelta, 15);
+  assert.equal(rows[0].officialPoints, 0);
+
+  const chip = ui.liveV2ChipData(2, folded.states[2]);
+  assert.equal(chip.meta.homeTeamId, '10');
+  assert.equal(chip.meta.awayTeamId, '20');
+  assert.equal(chip.meta.homeTeam, 'Local');
+  assert.equal(chip.meta.awayTeam, 'Visitante');
+  assert.equal(chip.score, '2-1');
+  assert.equal(chip.homeBadge, 'data/imgEquipos/10.webp');
+  assert.equal(chip.awayBadge, 'data/imgEquipos/20.webp');
+
+  const modal = ui.liveV2MatchBreakdown(2, folded.states[2]);
+  assert.equal(modal.meta.homeTeamId, '10');
+  assert.equal(modal.meta.awayTeamId, '20');
+  assert.equal(modal.meta.homeTeam, 'Local');
+  assert.equal(modal.meta.awayTeam, 'Visitante');
+  assert.deepEqual(modal.score, { home: 2, away: 1 });
+  assert.equal(modal.predictionPts, 15);
+  assert.equal(modal.total, 15);
+  assert.deepEqual(modal.predictionBreakdown, ['15 por marcador exacto']);
 });

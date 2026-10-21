@@ -617,7 +617,64 @@
     return feedEvents(visible, ctxById, playersById, all);
   }
 
-  const liveV2Api = { createMatchState, applyEvent, escapeHtml, newPlayer, matchClockAt, minutesOf, sortEvents, foldMatch, foldAll, stateAt, eventKey, wantSimSource, matchStateToStats, rankRows, reasonLabel, liveV2ReasonForEvent, feedLabel, flipDelta, FEED_TYPES, formatMinute, feedEventView, feedEvents, feedEventsForMatch };
+  const SNAPSHOT_STALE_MS = 3 * 60 * 1000;
+  const SNAPSHOT_STATUSES = new Set(['NS', 'LIVE', 'HT', 'FT']);
+
+  function snapshotSideIds(snap, ctx) {
+    const home = ctx && ctx.homeTeamId != null ? String(ctx.homeTeamId) : null;
+    const away = ctx && ctx.awayTeamId != null ? String(ctx.awayTeamId) : null;
+    if (home != null && away != null) return { homeId: home, awayId: away };
+    const ids = Object.keys(snap.stats || {}).filter(k => k !== 'jugadores');
+    return { homeId: ids[0] == null ? null : ids[0], awayId: ids[1] == null ? null : ids[1] };
+  }
+
+  function snapshotGoals(stats, teamId) {
+    const raw = stats && stats[teamId] && stats[teamId].goles;
+    const n = Number(raw);
+    return raw != null && Number.isFinite(n) ? n : null;
+  }
+
+  function snapshotGapState(snap, ctx) {
+    if (!snap || !snap.stats || typeof snap.stats !== 'object') return null;
+    if (!SNAPSHOT_STATUSES.has(snap.status)) return null;
+    const { homeId, awayId } = snapshotSideIds(snap, ctx);
+    if (homeId == null || awayId == null) return null;
+    const home = snapshotGoals(snap.stats, homeId);
+    const away = snapshotGoals(snap.stats, awayId);
+    if (home == null || away == null) return null;
+    const state = createMatchState();
+    state.status = snap.status;
+    state.score = { home, away };
+    state.lastMinute = snap.minute == null ? null : (Number.isFinite(Number(snap.minute)) ? Number(snap.minute) : null);
+    return state;
+  }
+
+  /**
+   * Añade snapshots frescos solo para partidos sin eventos. No modifica los
+   * estados existentes: `livematches` nunca pisa un partido que ya tiene log.
+   */
+  function fillSnapshotGaps(folded, snapshots, ctxById, now, staleMs) {
+    const base = folded || { states: {}, statsById: {} };
+    const out = {
+      states: { ...(base.states || {}) },
+      statsById: { ...(base.statsById || {}) },
+    };
+    const at = now == null ? Date.now() : now;
+    const maxAge = staleMs == null ? SNAPSHOT_STALE_MS : staleMs;
+    for (const [id, snap] of Object.entries(snapshots || {})) {
+      if (Object.prototype.hasOwnProperty.call(out.states, id)) continue;
+      if (!snap || !snap.stats) continue;
+      const updated = new Date(snap.lastUpdated || 0).getTime();
+      if (!Number.isFinite(updated) || at - updated > maxAge) continue;
+      const state = snapshotGapState(snap, (ctxById || {})[id]);
+      if (!state) continue;
+      out.states[id] = state;
+      out.statsById[id] = snap.stats;
+    }
+    return out;
+  }
+
+  const liveV2Api = { createMatchState, applyEvent, escapeHtml, newPlayer, matchClockAt, minutesOf, sortEvents, foldMatch, foldAll, stateAt, eventKey, wantSimSource, matchStateToStats, fillSnapshotGaps, rankRows, reasonLabel, liveV2ReasonForEvent, feedLabel, flipDelta, FEED_TYPES, formatMinute, feedEventView, feedEvents, feedEventsForMatch };
   global.liveV2Api = liveV2Api;
   if (typeof module !== 'undefined' && module.exports) module.exports = liveV2Api;
 })(typeof window !== 'undefined' ? window : globalThis);
