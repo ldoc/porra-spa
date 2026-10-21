@@ -622,6 +622,35 @@ async function fetchLiveEvents(forceFull, _resyncGuard) {
   st.lastFetchAt = Date.now();
 }
 
+/** Snapshots consolidados de `livematches` (minuto/resultado de Sofascore). */
+async function fetchLiveSnapshots() {
+  const st = liveV2State();
+  try {
+    const res = await fetchWithPhase(API_BASE + '/api/live');
+    if (!res || !res.ok) return;
+    const payload = await res.json();
+    if (!payload || !payload.ok || !Array.isArray(payload.liveMatches)) return;
+    const map = {};
+    for (const m of payload.liveMatches) {
+      if (m && m.eventId != null) map[String(m.eventId)] = m;
+    }
+    st._liveSnapshots = map;
+    st._snapshotsAt = Date.now();
+  } catch (e) { /* sin snapshots: se usa el reloj calculado */ }
+}
+
+/** Minuto observado en `livematches`, si el snapshot está fresco. */
+function liveV2ObservedMinute(eventId) {
+  const st = liveV2State();
+  const snap = st._liveSnapshots && st._liveSnapshots[String(eventId)];
+  if (!snap || snap.minute == null) return null;
+  const minute = Number(snap.minute);
+  if (!Number.isFinite(minute)) return null;
+  const updated = new Date(snap.lastUpdated || 0).getTime();
+  if (!Number.isFinite(updated) || Date.now() - updated > 3 * 60 * 1000) return null;
+  return minute;
+}
+
 /** Pliega todos los eventos (presente) → { states, statsById } */
 function liveV2Folded() {
   if (typeof liveV2Api === 'undefined') return { states: {}, statsById: {} };
@@ -677,11 +706,15 @@ function liveV2Esc(s) {
 }
 
 /** Etiqueta de estado del chip: NS, LIVE 63', HT o FT (LIVE si no hay minuto). */
-function liveV2ChipLabel(state, playheadTs) {
+function liveV2ChipLabel(state, playheadTs, observedMinute) {
   if (!state) return 'NS';
   if (state.status === 'NS') return 'NS';
   if (state.status === 'HT') return 'HT';
   if (state.status === 'FT') return 'FT';
+  if (state.status === 'LIVE' && observedMinute != null) {
+    const observed = Number(observedMinute);
+    if (Number.isFinite(observed)) return `LIVE ${observed}'`;
+  }
   const ts = playheadTs != null
     ? playheadTs
     : (typeof AppState !== 'undefined' && AppState ? liveV2PlayheadMs(liveV2State()) : null);
@@ -730,7 +763,7 @@ function liveV2MatchBreakdown(eventId, state) {
     eventId: id,
     meta,
     status,
-    label: liveV2ChipLabel(state),
+    label: liveV2ChipLabel(state, null, liveV2ObservedMinute(id)),
     score: state && state.score ? { ...state.score } : null,
     loggedIn: !!me,
     prediction: hasPred ? { home: pred.home, away: pred.away } : null,
@@ -849,17 +882,18 @@ function liveV2ChipData(eventId, state) {
       : pulse.state === 'hurt' ? ' · marcador cambiado, restas puntos'
       : ' · marcador cambiado, sin efecto en tus puntos'
     : '';
+  const label = liveV2ChipLabel(state, null, liveV2ObservedMinute(eventId));
   return {
     meta,
     score: state && state.score ? `${state.score.home}-${state.score.away}` : '–',
-    label: liveV2ChipLabel(state),
+    label,
     chipCls: ((state && state.status) || 'NS').toLowerCase(),
     cls: `livev2-cell${state && (state.status === 'LIVE' || state.status === 'HT') ? ' live' : ''}`
       + `${state && state.status === 'FT' ? ' ft' : ''}`
       + pulseCls,
     predictionText,
-    chipMetaText: `${liveV2ChipLabel(state)} · ${predictionText}`,
-    fullTitle: `${meta.homeTeam} ${state && state.score ? `${state.score.home}-${state.score.away}` : '–'} ${meta.awayTeam} · ${liveV2ChipLabel(state)} · ${predictionText}${pulseTitle}`,
+    chipMetaText: `${label} · ${predictionText}`,
+    fullTitle: `${meta.homeTeam} ${state && state.score ? `${state.score.home}-${state.score.away}` : '–'} ${meta.awayTeam} · ${label} · ${predictionText}${pulseTitle}`,
     homeBadge: liveV2BadgeSrc(meta.homeTeamId, meta.homeBadgeExt),
     awayBadge: liveV2BadgeSrc(meta.awayTeamId, meta.awayBadgeExt),
     homeAbbr: liveV2Abbr(meta.homeTeam),
@@ -2049,6 +2083,7 @@ async function pollLiveV2() {
     const forceFull = !st.serverTime || !st.events.length || !!st._needFull
       || (Date.now() - (st._fullAt || 0) > 10 * 60 * 1000);
     await fetchLiveEvents(forceFull);
+    await fetchLiveSnapshots();
     // Estado antes del render: el badge debe reflejar ya este poll, no el anterior.
     Object.assign(st, liveV2NextPollState(st, true, Date.now()));
     const folded = liveV2Folded();
@@ -2075,6 +2110,7 @@ async function renderLiveV2Tab() {
     await fetchLiveEvents(forceFull);
     st.error = null;
   } catch (e) { st.error = true; /* sin eventos disponibles */ }
+  await fetchLiveSnapshots();
   const folded = liveV2Folded();
   liveV2DetectChipChanges(folded);
   st.prevRanks = null;
@@ -2114,6 +2150,9 @@ async function renderLiveV2Tab() {
     liveV2StatusBadge,
     liveV2NextPollState,
     fetchLiveEvents,
+    fetchLiveSnapshots,
+    liveV2ObservedMinute,
+    liveV2ChipData,
     retryLiveV2,
     liveV2ScheduleChipGlowTimers,
     liveV2ChipPulseState,

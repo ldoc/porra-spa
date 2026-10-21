@@ -5,6 +5,7 @@ const {
   liveV2StatusBadge,
   liveV2NextPollState,
   fetchLiveEvents,
+  fetchLiveSnapshots,
   init,
   enterLiveV2Fullscreen,
   exitLiveV2Fullscreen,
@@ -61,6 +62,34 @@ test('liveV2ChipLabel calcula el minuto con el reloj del servidor', () => {
     status: 'LIVE', kickoffTs: '2026-09-16T20:00:00Z', period: 'period1', lastMinute: 0,
   };
   assert.equal(liveV2ChipLabel(state, Date.parse('2026-09-16T21:03:00Z')), "LIVE 63'");
+});
+
+test('liveV2ChipLabel prefiere el minuto observado de livematches', () => {
+  const ui = freshUi();
+  const liveV2 = require('../js/liveV2.js');
+  ui.init({ AppState: { liveV2: null }, liveV2Api: liveV2 });
+  const state = { status: 'LIVE', kickoffTs: '2026-09-16T20:00:00Z', period: 'period1' };
+  assert.equal(ui.liveV2ChipLabel(state, Date.parse('2026-09-16T20:30:00Z'), 63), "LIVE 63'");
+});
+
+test('liveV2ChipData usa el minuto del snapshot de livematches', () => {
+  const ui = freshUi();
+  const liveV2 = require('../js/liveV2.js');
+  ui.init({
+    AppState: {
+      currentUser: { name: 'me' },
+      liveV2: { _liveSnapshots: { 1: { minute: 63, lastUpdated: new Date().toISOString() } } },
+      matches: [{ id: 1, homeTeamId: 1, awayTeamId: 2, homeTeam: 'Local', awayTeam: 'Visitante' }],
+      allPredictions: { me: { 1: { home: 1, away: 0 } } },
+      allPlayers: [],
+    },
+    liveV2Api: liveV2,
+    liveV2Abbr: s => String(s).slice(0, 3),
+  });
+  const d = ui.liveV2ChipData(1, {
+    status: 'LIVE', kickoffTs: '2026-09-16T20:00:00Z', period: 'period1',
+  });
+  assert.equal(d.label, "LIVE 63'");
 });
 
 test('liveV2StatusBadge marca error y deja el título con la última actualización', () => {
@@ -634,6 +663,21 @@ test('un full al volver visible siembra los eventos ocultos (_seedOnFull)', asyn
   await fetchLiveEvents(true);
   assert.ok(AppState.liveV2._seenEventIds.has('1|hidden'));
   assert.equal(AppState.liveV2._seedOnFull, false);
+});
+
+test('fetchLiveSnapshots guarda el minuto/estado de livematches', async () => {
+  const AppState = { liveV2: {} };
+  init({
+    AppState, API_BASE: 'https://api.test',
+    fetchWithPhase: async () => jsonResponse({
+      ok: true,
+      liveMatches: [{ eventId: 1, minute: 63, status: 'LIVE', lastUpdated: '2026-09-16T21:03:00Z' }],
+    }),
+    liveV2Api: { eventKey: e => `${e.eventId}|${e.sourceId}` },
+  });
+  await fetchLiveSnapshots();
+  assert.equal(AppState.liveV2._liveSnapshots['1'].minute, 63);
+  assert.equal(AppState.liveV2._liveSnapshots['1'].status, 'LIVE');
 });
 
 test('fetchLiveEvents ejecuta el resync al momento y reemplaza con el full', async () => {
