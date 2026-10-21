@@ -1245,7 +1245,7 @@ function updateLiveV2Feed(root, newEvents) {
   const countEl = feedEl.querySelector('#livev2-events-count');
   if (countEl) countEl.textContent = views.length ? ` (${views.length})` : '';
   if (liveV2State()._openEventsModal) {
-    if (typeof refreshLiveV2EventsModal === 'function') refreshLiveV2EventsModal(views);
+    if (typeof global.refreshLiveV2EventsModal === 'function') global.refreshLiveV2EventsModal(views);
     return;
   }
   if (!newEvents || !newEvents.length) return;
@@ -1257,6 +1257,97 @@ function updateLiveV2Feed(root, newEvents) {
   liveV2ShowToasts(liveV2Api.feedToastPlan(newViews, 3));
 }
 
+function liveV2EventsModalHtml(views) {
+  const list = Array.isArray(views) ? views : [];
+  const rows = list.length
+    ? list.map(v => `<div class="livev2-events-row">${liveV2FeedRowBodyHtml(v)}</div>`).join('')
+    : `<div class="livev2-events-empty">Aún no hay eventos en los partidos de hoy.</div>`;
+  return `<div id="livev2-events-modal" class="livev2-events-modal" role="dialog" `
+    + `aria-modal="true" aria-labelledby="livev2-events-title">`
+    + `<div class="livev2-events-head">`
+    + `<span id="livev2-events-title">Últimos eventos · ${list.length}</span>`
+    + `<button type="button" class="breakdown-modal-close" data-livev2-events-close aria-label="Cerrar">✕</button>`
+    + `</div>`
+    + `<div class="livev2-events-list">${rows}</div>`
+    + `</div>`;
+}
+
+function closeLiveV2EventsModal() {
+  if (typeof document === 'undefined') return;
+  const st = liveV2State();
+  st._openEventsModal = false;
+  const overlay = document.getElementById('livev2-events-modal-overlay');
+  if (overlay) overlay.remove();
+  if (st._eventsModalKeyHandler) document.removeEventListener('keydown', st._eventsModalKeyHandler);
+  st._eventsModalKeyHandler = null;
+  document.body.style.overflow = st._eventsModalPrevOverflow || '';
+  st._eventsModalPrevOverflow = null;
+  const focus = st._eventsModalReturnFocus;
+  st._eventsModalReturnFocus = null;
+  if (focus && focus.focus) {
+    try { focus.focus(); } catch (e) { /* sin foco */ }
+  }
+}
+
+function refreshLiveV2EventsModal(views) {
+  const st = liveV2State();
+  if (!st._openEventsModal || typeof document === 'undefined') return;
+  const host = document.getElementById('livev2-events-modal');
+  if (!host) return;
+  const list = host.querySelector('.livev2-events-list');
+  const scrollTop = list ? list.scrollTop : 0;
+  const hadFocus = document.activeElement && host.contains(document.activeElement);
+  host.innerHTML = liveV2EventsModalHtml(views || liveV2FeedViews(liveV2Folded()));
+  const next = host.querySelector('.livev2-events-list');
+  if (next) next.scrollTop = scrollTop;
+  if (hadFocus) {
+    const close = host.querySelector('[data-livev2-events-close]');
+    if (close && close.focus) close.focus();
+  }
+}
+
+function openLiveV2EventsModal() {
+  if (typeof document === 'undefined') return;
+  closeLiveV2EventsModal();
+  const st = liveV2State();
+  st._openEventsModal = true;
+  st._eventsModalReturnFocus = document.activeElement || null;
+  st._eventsModalPrevOverflow = document.body.style.overflow || '';
+  const overlay = document.createElement('div');
+  overlay.className = 'breakdown-modal-overlay livev2-events-overlay';
+  overlay.id = 'livev2-events-modal-overlay';
+  overlay.innerHTML = liveV2EventsModalHtml(liveV2FeedViews(liveV2Folded()));
+  document.body.appendChild(overlay);
+  document.body.style.overflow = 'hidden';
+  const close = overlay.querySelector('[data-livev2-events-close]');
+  if (close && close.focus) close.focus();
+  const onKey = (e) => {
+    if (e.key === 'Escape') { closeLiveV2EventsModal(); return; }
+    if (e.key !== 'Tab') return;
+    const focusables = overlay.querySelectorAll(
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+    if (!focusables.length) return;
+    const first = focusables[0];
+    const last = focusables[focusables.length - 1];
+    if (!overlay.contains(document.activeElement)) {
+      e.preventDefault();
+      first.focus();
+    } else if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault();
+      first.focus();
+    }
+  };
+  st._eventsModalKeyHandler = onKey;
+  document.addEventListener('keydown', onKey);
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) closeLiveV2EventsModal();
+    else if (e.target.closest && e.target.closest('[data-livev2-events-close]')) closeLiveV2EventsModal();
+  });
+}
+
 function bindLiveV2EventsButton(root) {
   const scope = root || document;
   const feed = scope.querySelector('#livev2-feed');
@@ -1266,7 +1357,7 @@ function bindLiveV2EventsButton(root) {
     const t = e.target;
     if (!t || !t.closest) return;
     if (t.closest('#livev2-events-open') || t.closest('[data-livev2-toast-more]')) {
-      if (typeof openLiveV2EventsModal === 'function') openLiveV2EventsModal();
+      if (typeof global.openLiveV2EventsModal === 'function') global.openLiveV2EventsModal();
       return;
     }
     const toast = t.closest('.livev2-toast[data-key]');
@@ -1919,6 +2010,7 @@ function stopLiveV2Polling() {
   }
   closeLiveV2MatchModal();
   liveV2ClearToasts();
+  closeLiveV2EventsModal();
 }
 
 function startLiveV2Polling(folded) {
@@ -2056,6 +2148,10 @@ async function renderLiveV2Tab() {
     liveV2ShowToasts,
     liveV2DismissToast,
     liveV2ClearToasts,
+    liveV2EventsModalHtml,
+    openLiveV2EventsModal,
+    closeLiveV2EventsModal,
+    refreshLiveV2EventsModal,
     bindLiveV2EventsButton,
     updateLiveV2Chips,
     updateLiveV2Feed,
@@ -2100,5 +2196,9 @@ async function renderLiveV2Tab() {
   };
 
   global.liveV2Ui = api;
+  global.liveV2EventsModalHtml = liveV2EventsModalHtml;
+  global.openLiveV2EventsModal = openLiveV2EventsModal;
+  global.closeLiveV2EventsModal = closeLiveV2EventsModal;
+  global.refreshLiveV2EventsModal = refreshLiveV2EventsModal;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })(typeof window !== 'undefined' ? window : globalThis);
