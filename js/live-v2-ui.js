@@ -518,6 +518,7 @@ function openLiveV2MatchModal(eventId) {
   closeLiveV2MatchModal();
   const st = liveV2State();
   st._openMatchModal = String(eventId);
+  st._matchEventsOpen = false;
   st._modalReturnFocus = document.activeElement || null;
   st._modalPrevOverflow = document.body.style.overflow || '';
   const overlay = document.createElement('div');
@@ -531,6 +532,10 @@ function openLiveV2MatchModal(eventId) {
   document.addEventListener('keydown', onKey);
   overlay.addEventListener('click', (e) => {
     if (e.target === overlay) closeLiveV2MatchModal();
+    else if (e.target.closest && e.target.closest('[data-livev2-events-toggle]')) {
+      liveV2ToggleMatchEvents(st);
+      refreshLiveV2MatchModal();
+    }
     else if (e.target.closest && e.target.closest('[data-livev2-modal-close]')) closeLiveV2MatchModal();
   });
   refreshLiveV2MatchModal();
@@ -707,6 +712,12 @@ function liveV2MatchBreakdown(eventId, state) {
   const preds = me ? ((AppState.allPredictions || {})[me] || {}) : {};
   const pred = preds[id] != null ? preds[id] : preds[String(id)];
   const hasPred = pred && pred.home != null && pred.away != null;
+  const events = (typeof liveV2Api !== 'undefined' && liveV2Api.feedEventsForMatch)
+    ? liveV2Api.feedEventsForMatch(
+        liveV2State().events || [], id,
+        liveV2FeedCtxById(liveV2Folded()),
+        liveV2PlayersById(), { includeSeed: true })
+    : [];
   return {
     eventId: id,
     meta,
@@ -720,7 +731,28 @@ function liveV2MatchBreakdown(eventId, state) {
     squadPts: r.squadPts,
     squadDetail: r.squadDetail || [],
     total: r.total,
+    events,
+    eventsCount: events.length,
   };
+}
+
+function liveV2ToggleMatchEvents(st) {
+  st._matchEventsOpen = !st._matchEventsOpen;
+  return st._matchEventsOpen;
+}
+
+function liveV2EventRowBodyHtml(v) {
+  const minute = v.minuteText
+    ? `<span class="livev2-event-min">${liveV2Esc(v.minuteText)}</span>` : '';
+  const team = v.teamName
+    ? `<span class="livev2-event-team">${liveV2Esc(v.teamName)}</span>` : '';
+  const detail = v.detail
+    ? `<span class="livev2-event-detail">· ${liveV2Esc(v.detail)}</span>` : '';
+  return `<div class="livev2-event-line1">`
+    + `<span class="livev2-event-icon">${v.icon}</span>${minute}`
+    + `<span class="livev2-event-text" title="${liveV2Esc(v.text)}">${liveV2Esc(v.text)}</span>`
+    + `</div>`
+    + `<div class="livev2-event-line2">${team}${detail}</div>`;
 }
 
 function liveV2MatchModalHtml(d) {
@@ -758,6 +790,22 @@ function liveV2MatchModalHtml(d) {
       + `<div class="livev2-modal-section"><h4>👥 Plantilla</h4>${squad}</div>`
       + `<div class="livev2-modal-total">Total: <b>${d.total > 0 ? '+' : ''}${d.total} pts</b></div>`
     : loggedOut;
+  const eventViews = Array.isArray(d.events) ? d.events : [];
+  const eventsOpen = !!liveV2State()._matchEventsOpen;
+  const eventsSection = d.eventsCount > 0
+    ? `<div class="livev2-match-events">`
+      + `<button type="button" class="livev2-match-events-toggle" data-livev2-events-toggle `
+      + `aria-expanded="${eventsOpen ? 'true' : 'false'}" aria-controls="livev2-match-events-list">`
+      + `<span>📣 Eventos · ${d.eventsCount}</span>`
+      + `<span class="livev2-match-events-chev">${eventsOpen ? '▾' : '▸'}</span>`
+      + `</button>`
+      + (eventsOpen
+        ? `<div id="livev2-match-events-list" class="livev2-match-events-list">`
+          + eventViews.map(v => `<div class="livev2-match-event">${liveV2EventRowBodyHtml(v)}</div>`).join('')
+          + `</div>`
+        : '')
+      + `</div>`
+    : '';
   return `<div class="breakdown-modal livev2-match-modal" role="dialog" aria-modal="true" aria-labelledby="livev2-match-modal-title">`
     + `<div class="breakdown-modal-header">`
     + `<h3 class="breakdown-modal-title" id="livev2-match-modal-title">${liveV2Esc(d.meta.homeTeam)} - ${liveV2Esc(d.meta.awayTeam)}</h3>`
@@ -768,6 +816,7 @@ function liveV2MatchModalHtml(d) {
     + `<span class="livev2-modal-state">${liveV2Esc(d.label)}</span>${badge(awayBadge, 'away')}</div>`
     + note
     + body
+    + eventsSection
     + `</div>`
     + `</div>`;
 }
@@ -2344,6 +2393,7 @@ async function renderLiveV2Tab() {
     liveV2HeaderBreakdownHtml,
     liveV2MatchBreakdown,
     liveV2MatchModalHtml,
+    liveV2ToggleMatchEvents,
     liveV2ChipEventId,
     bindLiveV2Chips,
     openLiveV2MatchModal,

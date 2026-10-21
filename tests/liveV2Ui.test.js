@@ -1669,6 +1669,54 @@ test('liveV2MatchModalHtml muestra un solo total y ninguno sin sesion', () => {
   assert.match(loggedOut, /Inicia sesión para ver tu desglose/);
 });
 
+function modalEventView() {
+  return {
+    key: '1|goal|1', type: 'goal', icon: '⚽', tone: 'goal',
+    minuteText: "23'", text: 'Gol de Ana', teamName: 'Local', detail: 'asistencia de Beto',
+    match: { homeTeam: 'Local', awayTeam: 'Visitante', scoreHome: 1, scoreAway: 0 },
+  };
+}
+
+test('liveV2ToggleMatchEvents alterna el estado', () => {
+  const ui = freshUi();
+  const st = { _matchEventsOpen: false };
+  assert.equal(ui.liveV2ToggleMatchEvents(st), true);
+  assert.equal(st._matchEventsOpen, true);
+  assert.equal(ui.liveV2ToggleMatchEvents(st), false);
+});
+
+test('liveV2MatchModalHtml pinta Eventos plegado por defecto y lo abre con el estado', () => {
+  const ui = freshUi();
+  const liveV2 = require('../js/liveV2.js');
+  ui.init({ AppState: { liveV2: { events: [], _matchEventsOpen: false } }, liveV2Api: liveV2 });
+  const base = {
+    meta: { homeTeam: 'Local', awayTeam: 'Visitante', homeTeamId: 1, awayTeamId: 2 },
+    score: { home: 1, away: 0 }, label: "LIVE 23'", status: 'LIVE', loggedIn: true,
+    prediction: null, predictionPts: 0, predictionBreakdown: [], squadDetail: [], total: 0,
+    events: [modalEventView()], eventsCount: 1,
+  };
+  const closed = ui.liveV2MatchModalHtml(base);
+  assert.match(closed, /Eventos · 1/);
+  assert.doesNotMatch(closed, /id="livev2-match-events-list"/);
+  ui.liveV2State()._matchEventsOpen = true;
+  const open = ui.liveV2MatchModalHtml(base);
+  assert.match(open, /id="livev2-match-events-list"/);
+  assert.match(open, /Gol de Ana/);
+});
+
+test('liveV2MatchModalHtml no pinta Eventos si no hay eventos', () => {
+  const ui = freshUi();
+  const liveV2 = require('../js/liveV2.js');
+  ui.init({ AppState: { liveV2: { events: [], _matchEventsOpen: false } }, liveV2Api: liveV2 });
+  const html = ui.liveV2MatchModalHtml({
+    meta: { homeTeam: 'Local', awayTeam: 'Visitante', homeTeamId: 1, awayTeamId: 2 },
+    score: { home: 0, away: 0 }, label: 'NS', status: 'NS', loggedIn: true,
+    prediction: null, predictionPts: 0, predictionBreakdown: [], squadDetail: [], total: 0,
+    events: [], eventsCount: 0,
+  });
+  assert.doesNotMatch(html, /Eventos ·/);
+});
+
 test('refreshLiveV2MatchModal conserva el scroll y devuelve el foco al cerrar', () => {
   const ui = freshUi();
   const state = { active: { id: 'inside-modal' } };

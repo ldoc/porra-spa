@@ -2724,6 +2724,52 @@ html, body {
 
 .livev2-modal-total b { color: var(--accent-gold); font-size: 1.1rem; }
 
+.livev2-event-line1 {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+.livev2-event-icon { flex: 0 0 auto; }
+.livev2-event-min { color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.livev2-event-text { min-width: 0; }
+.livev2-event-line2 { margin-top: 2px; font-size: 10px; color: var(--text-secondary); }
+.livev2-event-detail { color: var(--text-muted); }
+
+.livev2-match-events {
+  border-top: 1px solid var(--border-color);
+}
+
+.livev2-match-events-toggle {
+  width: 100%;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 12px 16px;
+  border: 0;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: var(--font-size-sm);
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.livev2-match-events-chev { color: var(--text-secondary); }
+
+.livev2-match-events-list { padding: 0 16px 12px; }
+
+.livev2-match-event {
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.livev2-match-event:last-child { border-bottom: 0; }
+
 @media (prefers-reduced-motion: reduce) {
   .livev2-match-overlay,
   .livev2-match-modal { animation: none; }
