@@ -268,7 +268,7 @@ function liveV2PlayNewEventSounds(newEvents) {
     if (ev.type !== 'status' || !ev.payload) continue;
     if (finalized.has(String(ev.eventId))) continue;
     const times = liveV2StatusWhistleCount(ev.payload.status, ev.payload.period);
-    if (times) soundApi.playWhistle(deps, times);
+    if (times && typeof soundApi.playWhistle === 'function') soundApi.playWhistle(deps, times);
   }
 }
 
@@ -486,12 +486,18 @@ function refreshLiveV2MatchModal() {
   const scrollTop = content ? content.scrollTop : null;
   const active = document.activeElement;
   const hadFocus = !!(active && typeof host.contains === 'function' && host.contains(active));
+  const focusKind = hadFocus && typeof active.closest === 'function'
+    ? (active.closest('[data-livev2-events-toggle]') ? 'events'
+      : active.closest('[data-livev2-modal-close]') ? 'close' : null)
+    : null;
   host.innerHTML = liveV2MatchModalHtml(liveV2MatchBreakdown(st._openMatchModal, state));
   const nextContent = host.querySelector('.livev2-match-content');
   if (nextContent && scrollTop != null) nextContent.scrollTop = scrollTop;
   if (hadFocus) {
-    const close = host.querySelector('.breakdown-modal-close');
-    if (close && typeof close.focus === 'function') close.focus();
+    const target = focusKind === 'events'
+      ? host.querySelector('[data-livev2-events-toggle]')
+      : host.querySelector('.breakdown-modal-close');
+    if (target && typeof target.focus === 'function') target.focus();
   }
 }
 
@@ -736,7 +742,7 @@ function liveV2EventRowBodyHtml(v) {
     + `<span class="livev2-event-icon">${liveV2Esc(v.icon)}</span>${minute}`
     + `<span class="livev2-event-text" title="${liveV2Esc(v.text)}">${liveV2Esc(v.text)}</span>`
     + `</div>`
-    + `<div class="livev2-event-line2">${team}${detail}</div>`;
+    + `<div class="livev2-event-line2">${[team, detail].filter(Boolean).join(' ')}</div>`;
 }
 
 function liveV2MatchModalHtml(d) {
@@ -779,7 +785,8 @@ function liveV2MatchModalHtml(d) {
   const eventsSection = d.eventsCount > 0
     ? `<div class="livev2-match-events">`
       + `<button type="button" class="livev2-match-events-toggle" data-livev2-events-toggle `
-      + `aria-expanded="${eventsOpen ? 'true' : 'false'}" aria-controls="livev2-match-events-list">`
+      + `aria-expanded="${eventsOpen ? 'true' : 'false'}"`
+      + `${eventsOpen ? ' aria-controls="livev2-match-events-list"' : ''}>`
       + `<span>📣 Eventos · ${d.eventsCount}</span>`
       + `<span class="livev2-match-events-chev">${eventsOpen ? '▾' : '▸'}</span>`
       + `</button>`
@@ -1219,7 +1226,15 @@ function liveV2StartNextChipEvent(eventId) {
 
   const text = liveV2ChipEventText(view);
   const srEvents = typeof document !== 'undefined' ? document.getElementById('livev2-sr-events') : null;
-  if (srEvents) srEvents.textContent = text;
+  if (srEvents) {
+    const announcement = document.createElement('span');
+    announcement.className = 'livev2-sr-event';
+    announcement.textContent = text;
+    srEvents.appendChild(announcement);
+    setTimeout(() => {
+      if (announcement.parentNode) announcement.parentNode.removeChild(announcement);
+    }, 2500);
+  }
   layer.className = `livev2-chip-event ${view.tone || ''}`.trim();
   layer.innerHTML = '';
   const span = document.createElement('span');
@@ -1412,7 +1427,7 @@ function renderLiveV2Html(rows, folded) {
     + `<div class="livev2-grid" id="livev2-chips-host">`
     + (chips || `<div class="livev2-empty">Sin partidos en directo ahora mismo</div>`)
     + `</div>`
-    + `<div id="livev2-sr-events" class="livev2-sr-only" aria-live="polite" aria-atomic="true"></div>`
+    + `<div id="livev2-sr-events" class="livev2-sr-only" aria-live="polite" aria-atomic="false"></div>`
     + `</div>`
     + `<div class="livev2-body">`
     + `<div class="livev2-section-title">Clasificación en vivo</div>`

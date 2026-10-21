@@ -63,19 +63,27 @@ test('playFile respeta enabled y crea un Audio', () => {
   }
 });
 
-test('playWhistle reproduce el archivo 1 o 3 veces', async () => {
-  const prev = global.Audio;
+test('playWhistle reproduce el archivo 1 o 3 veces espaciado un segundo', () => {
+  const prevAudio = global.Audio;
+  const prevSetTimeout = global.setTimeout;
   const played = [];
+  const timers = [];
   global.Audio = function (src) {
     this.play = () => { played.push(src); return Promise.resolve(); };
+  };
+  global.setTimeout = (cb, ms) => {
+    timers.push({ cb, ms });
+    return timers.length;
   };
   try {
     playWhistle({ enabled: true }, 1);
     playWhistle({ enabled: true }, 3);
-    await new Promise(r => setTimeout(r, 900));
+    assert.deepEqual(timers.map(t => t.ms), [0, 0, 1000, 2000]);
+    for (const timer of timers) timer.cb();
     assert.equal(played.filter(x => x === 'sounds/silbato.mp3').length, 4);
   } finally {
-    if (prev === undefined) delete global.Audio; else global.Audio = prev;
+    if (prevAudio === undefined) delete global.Audio; else global.Audio = prevAudio;
+    global.setTimeout = prevSetTimeout;
   }
 });
 

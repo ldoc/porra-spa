@@ -91,7 +91,7 @@
     if (!deps || !deps.enabled) return;
     const n = Math.max(1, Number(times) || 1);
     for (let i = 0; i < n; i++) {
-      setTimeout(() => playFile('sounds/silbato.mp3', deps), i * 350);
+      setTimeout(() => playFile('sounds/silbato.mp3', deps), i * 1000);
     }
   }
 

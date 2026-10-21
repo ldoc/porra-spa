@@ -462,7 +462,7 @@ test('render Live v2 anuncia eventos y filas y conserva la salida', () => {
     liveV2Api: { escapeHtml: s => String(s) },
   });
   const html = ui.renderLiveV2Html([], { states: {} });
-  assert.match(html, /id="livev2-sr-events"[^>]*aria-live="polite"[^>]*aria-atomic="true"/);
+  assert.match(html, /id="livev2-sr-events"[^>]*aria-live="polite"[^>]*aria-atomic="false"/);
   assert.match(html, /id="livev2-rows"[^>]*aria-live="polite"/);
   assert.match(html, /id="livev2-fs-toggle"/);
 });
@@ -909,6 +909,18 @@ test('liveV2PlayNewEventSounds: HT dispara 3 silbatos', () => {
   assert.deepEqual(calls, [3]);
 });
 
+test('liveV2PlayNewEventSounds: no falla si soundApi no expone playWhistle', () => {
+  const ui = freshUi();
+  const liveV2 = require('../js/liveV2.js');
+  ui.init({
+    AppState: { liveV2: { events: [] }, matchStats: [], currentUser: { name: 'me' } },
+    liveV2Api: liveV2,
+    soundApi: { loadSoundEnabled: () => true, playLiveEvent: () => {} },
+  });
+  const ht = { eventId: 1, type: 'status', minute: 45, ts: '2026-09-16T21:45:00.000Z', sourceId: 'ht', payload: { status: 'HT' } };
+  assert.doesNotThrow(() => ui.liveV2PlayNewEventSounds([ht]));
+});
+
 test('liveV2PlayNewEventSounds: un gol ya no emite tono de gol', () => {
   const calls = [];
   const ui = freshUi();
@@ -1110,6 +1122,7 @@ test('render Live v2 incluye la cabecera de desglose', () => {
   });
   const html = ui.renderLiveV2Html([], { states: {}, statsById: {} });
   assert.match(html, /id="livev2-breakdown"/);
+  assert.match(html, /id="livev2-sr-events"[^>]*aria-atomic="false"/);
 });
 
 function liveMatchFixture() {
@@ -1197,6 +1210,36 @@ test('liveV2MatchBreakdown incluye a un jugador de plantilla que jugó con 0 pun
   assert.equal(d.total, 0);
 });
 
+test('liveV2MatchBreakdown cuenta el evento seed en eventsCount', () => {
+  const ui = freshUi();
+  const liveV2 = require('../js/liveV2.js');
+  const AppState = liveMatchFixture();
+  AppState.liveV2 = {
+    events: [
+      {
+        eventId: 1, type: 'goal', minute: 0, ts: '2026-09-16T20:00:00Z',
+        ingestedAt: '2026-09-16T20:00:00Z', seq: 0, sourceId: 'seed',
+        payload: { seed: true, scorerId: 13, isHome: true },
+      },
+      {
+        eventId: 1, type: 'card', minute: 20, ts: '2026-09-16T20:20:00Z',
+        ingestedAt: '2026-09-16T20:20:00Z', seq: 1, sourceId: 'c1',
+        playerId: 13, payload: { cardType: 'yellow' },
+      },
+    ],
+  };
+  ui.init({
+    AppState,
+    liveV2Api: liveV2,
+    calculateMatchPoints: () => ({ points: 0, breakdown: [] }),
+    calculatePlayerMatchPoints: () => ({ total: 0, desglose: [] }),
+  });
+  const d = ui.liveV2MatchBreakdown(1, {
+    status: 'LIVE', score: { home: 0, away: 0 }, goals: [], players: {}, lastMinute: 0,
+  });
+  assert.equal(d.eventsCount, 2);
+});
+
 test('liveV2MatchModalHtml pinta pronostico, plantilla, total y aviso NS', () => {
   const ui = freshUi();
   ui.init({ AppState: {}, liveV2Api: { escapeHtml: s => String(s) } });
@@ -1251,6 +1294,23 @@ test('liveV2ToggleMatchEvents alterna el estado', () => {
   assert.equal(ui.liveV2ToggleMatchEvents(st), false);
 });
 
+test('openLiveV2MatchModal pliega los eventos al abrir', () => {
+  const ui = freshUi();
+  const liveV2 = require('../js/liveV2.js');
+  const AppState = liveMatchFixture();
+  AppState.liveV2 = { events: [], _matchEventsOpen: true };
+  ui.init({
+    AppState,
+    liveV2Api: liveV2,
+    calculateMatchPoints: () => ({ points: 0, breakdown: [] }),
+    calculatePlayerMatchPoints: () => ({ total: 0, desglose: [] }),
+  });
+  withFeedDom(() => {
+    ui.openLiveV2MatchModal('1');
+    assert.equal(ui.liveV2State()._matchEventsOpen, false);
+  });
+});
+
 test('liveV2MatchModalHtml pinta Eventos plegado por defecto y lo abre con el estado', () => {
   const ui = freshUi();
   const liveV2 = require('../js/liveV2.js');
@@ -1264,10 +1324,13 @@ test('liveV2MatchModalHtml pinta Eventos plegado por defecto y lo abre con el es
   const closed = ui.liveV2MatchModalHtml(base);
   assert.match(closed, /Eventos · 1/);
   assert.doesNotMatch(closed, /id="livev2-match-events-list"/);
+  assert.doesNotMatch(closed, /aria-controls=/);
   ui.liveV2State()._matchEventsOpen = true;
   const open = ui.liveV2MatchModalHtml(base);
   assert.match(open, /id="livev2-match-events-list"/);
+  assert.match(open, /aria-controls="livev2-match-events-list"/);
   assert.match(open, /Gol de Ana/);
+  assert.match(open, /Local<\/span> <span class="livev2-event-detail">· asistencia de Beto/);
 });
 
 test('liveV2MatchModalHtml no pinta Eventos si no hay eventos', () => {
@@ -1343,6 +1406,82 @@ test('refreshLiveV2MatchModal conserva el scroll y devuelve el foco al cerrar', 
   }
   assert.equal(content.scrollTop, 120);
   assert.equal(close.focused, 1);
+});
+
+test('refreshLiveV2MatchModal mantiene el foco en el toggle de eventos', () => {
+  const ui = freshUi();
+  const state = { active: null };
+  const content = { scrollTop: 0 };
+  const close = { focused: 0, focus() { this.focused++; } };
+  const prevToggle = {
+    focused: 0,
+    closest(sel) { return sel === '[data-livev2-events-toggle]' ? this : null; },
+    focus() { this.focused++; },
+  };
+  const nextToggle = {
+    focused: 0,
+    closest(sel) { return sel === '[data-livev2-events-toggle]' ? this : null; },
+    focus() { this.focused++; },
+  };
+  state.active = prevToggle;
+  const host = {
+    _html: '',
+    contains(node) { return node === state.active; },
+    querySelector(sel) {
+      if (sel === '.livev2-match-content') return content;
+      if (sel === '.breakdown-modal-close') return close;
+      if (sel === '[data-livev2-events-toggle]') return nextToggle;
+      return null;
+    },
+    set innerHTML(v) {
+      this._html = v;
+      content.scrollTop = 0;
+      close.focused = 0;
+      nextToggle.focused = 0;
+    },
+    get innerHTML() { return this._html; },
+  };
+  const doc = {
+    getElementById: id => (id === 'livev2-match-modal' ? host : null),
+    get activeElement() { return state.active; },
+    createElement: () => makeElement(),
+  };
+  const AppState = {
+    currentUser: { name: 'me' },
+    liveV2: {
+      events: [], _openMatchModal: '1', _matchEventsOpen: true, _chipScores: {}, _chipChanged: {},
+      _chipUserPoints: {}, _chipPulse: {}, _rankMoves: {},
+    },
+    matches: [{
+      id: 1, homeTeamId: 1, awayTeamId: 2, homeTeam: 'A', awayTeam: 'B',
+      homeBadgeExt: 'webp', awayBadgeExt: 'webp',
+    }],
+    allPlayers: [],
+    allPredictions: { me: {} },
+    squadsCache: { me: [] },
+    matchStats: [],
+  };
+  ui.init({
+    AppState,
+    liveV2Api: {
+      foldAll: () => ({ 1: { status: 'LIVE', score: { home: 1, away: 0 } } }),
+      matchStateToStats: () => ({ 1: { goles: 1 }, 2: { goles: 0 }, jugadores: [] }),
+      escapeHtml: s => String(s),
+    },
+    calculateMatchPoints: () => ({ points: 0, breakdown: [] }),
+    calculatePlayerMatchPoints: () => ({ total: 0, desglose: [] }),
+  });
+  content.scrollTop = 120;
+  const prevDoc = global.document;
+  global.document = doc;
+  try {
+    ui.refreshLiveV2MatchModal();
+  } finally {
+    if (prevDoc === undefined) delete global.document; else global.document = prevDoc;
+  }
+  assert.equal(content.scrollTop, 120);
+  assert.equal(nextToggle.focused, 1);
+  assert.equal(close.focused, 0);
 });
 
 test('liveV2ChipEventId resuelve el chip desde el target', () => {
@@ -1531,6 +1670,35 @@ test('liveV2PlayChipEventSound no llama a un soundApi obsoleto', () => {
   }
 });
 
+test('liveV2PlayChipEventSound usa playFile para gol y playBeep para tarjeta', () => {
+  const ui = freshUi();
+  const prevLocalStorage = globalThis.localStorage;
+  globalThis.localStorage = { getItem: () => '1' };
+  const calls = [];
+  ui.init({
+    AppState: { liveV2: null },
+    liveV2Api: require('../js/liveV2.js'),
+    soundApi: {
+      loadSoundEnabled: () => true,
+      playLiveEvent: () => {},
+      playFile: (src, deps) => calls.push(['file', src, deps]),
+      playBeep: deps => calls.push(['beep', deps]),
+    },
+  });
+  try {
+    ui.liveV2PlayChipEventSound({ type: 'goal' });
+    ui.liveV2PlayChipEventSound({ type: 'card' });
+  } finally {
+    if (prevLocalStorage === undefined) delete globalThis.localStorage;
+    else globalThis.localStorage = prevLocalStorage;
+  }
+  assert.equal(calls.length, 2);
+  assert.deepEqual(calls[0].slice(0, 2), ['file', 'sounds/gol_otro.mp3']);
+  assert.equal(calls[0][2].enabled, true);
+  assert.equal(calls[1][0], 'beep');
+  assert.equal(calls[1][1].enabled, true);
+});
+
 test('liveV2AppendChipViews deduplica y conserva el orden', () => {
   const ui = freshUi();
   const q = ui.liveV2AppendChipViews([], [{ key: 'a' }, { key: 'b' }]);
@@ -1563,11 +1731,118 @@ test('liveV2StartNextChipEvent pinta el evento y restaura la línea normal', () 
     ui.liveV2StartNextChipEvent('1');
     assert.equal(meta.classList.contains('has-event'), true);
     assert.match(layer.textContent, /Gol de Ana/);
+    assert.equal(sr.children.length, 1);
     assert.equal(sr.textContent, "⚽ 23' Gol de Ana · asistencia de Beto");
+    const srTimer = [...timers.values()].find(t => t.ms === 2500);
+    assert.ok(srTimer);
+    srTimer.cb();
+    assert.equal(sr.children.length, 0);
     const timer = [...timers.values()].find(t => t.ms === 8000);
     assert.ok(timer);
     timer.cb();
     assert.equal(meta.classList.contains('has-event'), false);
     assert.equal(layer.textContent, '');
+  });
+});
+
+test('liveV2StartNextChipEvent acumula anuncios de dos partidos en el mismo tick', () => {
+  const ui = freshUi();
+  const liveV2 = require('../js/liveV2.js');
+  ui.init({ AppState: { liveV2: { events: [], _chipEventQueue: {} }, matches: [], allPlayers: [] }, liveV2Api: liveV2 });
+  withFeedDom(dom => {
+    dom.doc.querySelectorAll = sel => dom.doc._all.filter(el => matchesSelector(el, sel));
+    const sr = dom.doc.createElement('div');
+    sr.id = 'livev2-sr-events';
+    const addChip = id => {
+      const chip = dom.doc.createElement('div');
+      chip.setAttribute('data-livev2-chip', id);
+      const meta = dom.doc.createElement('div');
+      meta.className = 'livev2-chip-meta';
+      const layer = dom.doc.createElement('span');
+      layer.className = 'livev2-chip-event';
+      meta.appendChild(layer);
+      chip.appendChild(meta);
+      chip._root = true;
+      dom.doc.register(chip);
+    };
+    addChip('1');
+    addChip('2');
+    ui.liveV2State()._chipEventQueue['1'] = [{
+      key: 'g1', type: 'goal', icon: '⚽', minuteText: "23'", text: 'Gol de Ana', tone: 'goal',
+    }];
+    ui.liveV2State()._chipEventQueue['2'] = [{
+      key: 'c2', type: 'card', icon: '🟨', minuteText: "30'", text: 'Amarilla · Beto', tone: 'card-yellow',
+    }];
+    ui.liveV2StartNextChipEvent('1');
+    ui.liveV2StartNextChipEvent('2');
+    assert.equal(sr.children.length, 2);
+    assert.match(sr.textContent, /Gol de Ana/);
+    assert.match(sr.textContent, /Amarilla · Beto/);
+  });
+});
+
+test('liveV2EnqueueChipEvents encola FIFO, excluye seed y no interrumpe el activo', () => {
+  const ui = freshUi();
+  const liveV2 = require('../js/liveV2.js');
+  const seed = {
+    eventId: 1, type: 'goal', minute: 0, ts: '2026-09-16T20:00:00Z',
+    ingestedAt: '2026-09-16T20:00:00Z', seq: 0, sourceId: 'seed',
+    payload: { seed: true, scorerId: 11, isHome: true },
+  };
+  const goal = {
+    eventId: 1, type: 'goal', minute: 10, ts: '2026-09-16T20:10:00Z',
+    ingestedAt: '2026-09-16T20:10:00Z', seq: 1, sourceId: 'g1',
+    payload: { scorerId: 11, isHome: true },
+  };
+  const card = {
+    eventId: 1, type: 'card', minute: 20, ts: '2026-09-16T20:20:00Z',
+    ingestedAt: '2026-09-16T20:20:00Z', seq: 2, sourceId: 'c2', playerId: 12,
+    payload: { cardType: 'yellow' },
+  };
+  const sub = {
+    eventId: 1, type: 'substitution', minute: 30, ts: '2026-09-16T20:30:00Z',
+    ingestedAt: '2026-09-16T20:30:00Z', seq: 3, sourceId: 's3',
+    payload: { inId: 12, outId: 11 },
+  };
+  const AppState = {
+    currentUser: { name: 'me' },
+    liveV2: { events: [seed, goal, card], _chipEventQueue: {} },
+    matches: [{ id: 1, homeTeamId: 1, awayTeamId: 2, homeTeam: 'Local', awayTeam: 'Visitante' }],
+    allPlayers: [
+      { id: 11, nombre: 'Ana', posicion: 'F', equipo: 1 },
+      { id: 12, nombre: 'Beto', posicion: 'M', equipo: 2 },
+    ],
+    allPredictions: { me: {} },
+    squadsCache: { me: [] },
+    matchStats: [],
+  };
+  ui.init({ AppState, liveV2Api: liveV2 });
+  withFeedDom((dom, timers) => {
+    dom.doc.querySelectorAll = sel => dom.doc._all.filter(el => matchesSelector(el, sel));
+    const chip = dom.doc.createElement('div');
+    chip.setAttribute('data-livev2-chip', '1');
+    const meta = dom.doc.createElement('div');
+    meta.className = 'livev2-chip-meta';
+    const layer = dom.doc.createElement('span');
+    layer.className = 'livev2-chip-event';
+    meta.appendChild(layer);
+    chip.appendChild(meta);
+    chip._root = true;
+    dom.doc.register(chip);
+
+    ui.liveV2EnqueueChipEvents([card, seed, goal]);
+    assert.match(layer.textContent, /Gol de Ana/);
+    assert.deepEqual(ui.liveV2State()._chipEventQueue['1'].map(v => v.key), ['1|c2']);
+
+    AppState.liveV2.events.push(sub);
+    ui.liveV2EnqueueChipEvents([sub]);
+    assert.match(layer.textContent, /Gol de Ana/);
+    assert.deepEqual(ui.liveV2State()._chipEventQueue['1'].map(v => v.key), ['1|c2', '1|s3']);
+
+    const timer = [...timers.values()].find(t => t.ms === 8000);
+    assert.ok(timer);
+    timer.cb();
+    assert.match(layer.textContent, /Amarilla · Beto/);
+    assert.deepEqual(ui.liveV2State()._chipEventQueue['1'].map(v => v.key), ['1|s3']);
   });
 });
