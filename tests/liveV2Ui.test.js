@@ -1000,18 +1000,6 @@ function withFeedDom(fn) {
   }
 }
 
-function makeFeedRoot(dom) {
-  const root = makeElement();
-  root._root = true;
-  const feed = dom.doc.createElement('div');
-  feed.id = 'livev2-feed';
-  const count = dom.doc.createElement('span');
-  count.id = 'livev2-events-count';
-  feed.appendChild(count);
-  root.appendChild(feed);
-  return root;
-}
-
 test('liveV2DetectRankMoves guarda subidas y bajadas', () => {
   const ui = freshUi();
   const rows = [
