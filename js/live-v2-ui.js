@@ -535,6 +535,8 @@ function openLiveV2MatchModal(eventId) {
     else if (e.target.closest && e.target.closest('[data-livev2-events-toggle]')) {
       liveV2ToggleMatchEvents(st);
       refreshLiveV2MatchModal();
+      const toggle = overlay.querySelector('[data-livev2-events-toggle]');
+      if (toggle && typeof toggle.focus === 'function') toggle.focus();
     }
     else if (e.target.closest && e.target.closest('[data-livev2-modal-close]')) closeLiveV2MatchModal();
   });
@@ -749,7 +751,7 @@ function liveV2EventRowBodyHtml(v) {
   const detail = v.detail
     ? `<span class="livev2-event-detail">· ${liveV2Esc(v.detail)}</span>` : '';
   return `<div class="livev2-event-line1">`
-    + `<span class="livev2-event-icon">${v.icon}</span>${minute}`
+    + `<span class="livev2-event-icon">${liveV2Esc(v.icon)}</span>${minute}`
     + `<span class="livev2-event-text" title="${liveV2Esc(v.text)}">${liveV2Esc(v.text)}</span>`
     + `</div>`
     + `<div class="livev2-event-line2">${team}${detail}</div>`;
@@ -1160,9 +1162,6 @@ function liveV2ChipsHtml(folded) {
   return liveV2OrderedStateEntries(folded).map(([id, s]) => liveV2ChipHtml(id, s)).join('');
 }
 
-const LIVEV2_TOAST_MS = 6000;
-const _liveV2ToastTimers = new Map();
-
 const LIVEV2_CHIP_EVENT_MS = 8000;
 const _liveV2ChipEventTimers = new Map();
 const _liveV2ChipEventActive = new Set();
@@ -1199,8 +1198,11 @@ function liveV2ChipElement(eventId) {
 function liveV2PlayChipEventSound(view) {
   const deps = liveV2SoundDeps();
   if (!deps || typeof soundApi === 'undefined') return;
-  if (liveV2ChipSoundKind(view) === 'goal') soundApi.playFile('sounds/gol_otro.mp3', deps);
-  else soundApi.playBeep(deps);
+  if (liveV2ChipSoundKind(view) === 'goal') {
+    if (typeof soundApi.playFile === 'function') soundApi.playFile('sounds/gol_otro.mp3', deps);
+  } else if (typeof soundApi.playBeep === 'function') {
+    soundApi.playBeep(deps);
+  }
 }
 
 function liveV2ClearChipEvents() {
@@ -1234,6 +1236,8 @@ function liveV2StartNextChipEvent(eventId) {
   _liveV2ChipEventActive.add(id);
 
   const text = liveV2ChipEventText(view);
+  const srEvents = typeof document !== 'undefined' ? document.getElementById('livev2-sr-events') : null;
+  if (srEvents) srEvents.textContent = text;
   layer.className = `livev2-chip-event ${view.tone || ''}`.trim();
   layer.innerHTML = '';
   const span = document.createElement('span');
@@ -1314,253 +1318,6 @@ function liveV2FeedCtxById(folded) {
   return out;
 }
 
-function liveV2FeedViews(folded) {
-  if (typeof liveV2Api === 'undefined' || !liveV2Api.feedEvents) return [];
-  const st = liveV2State();
-  return liveV2Api.feedEvents(st.events || [], liveV2FeedCtxById(folded), liveV2PlayersById());
-}
-
-function liveV2FeedBadgeHtml(src, cls) {
-  if (!src) return '';
-  return `<img class="livev2-feed-badge ${cls}" src="${liveV2Esc(src)}" alt="" loading="lazy" `
-    + `onerror="this.onerror=null;this.src='data/imgEquipos/default.webp'">`;
-}
-
-function liveV2FeedRowBodyHtml(v) {
-  const m = v.match || {};
-  const minute = v.minuteText
-    ? `<span class="livev2-feed-min">${liveV2Esc(v.minuteText)}</span>` : '';
-  const team = v.teamName
-    ? `<span class="livev2-feed-team-name">(${liveV2Esc(v.teamName)})</span>` : '';
-  const detail = v.detail
-    ? `<span class="livev2-feed-detail">· ${liveV2Esc(v.detail)}</span>` : '';
-  return `<div class="livev2-feed-line1">`
-    + liveV2FeedBadgeHtml(m.homeBadge, 'home')
-    + `<span class="livev2-feed-team">${liveV2Esc(m.homeTeam || 'Local')}</span>`
-    + `<span class="livev2-feed-score">${liveV2Esc(m.scoreHome)}-${liveV2Esc(m.scoreAway)}</span>`
-    + `<span class="livev2-feed-team">${liveV2Esc(m.awayTeam || 'Visitante')}</span>`
-    + liveV2FeedBadgeHtml(m.awayBadge, 'away')
-    + `</div>`
-    + `<div class="livev2-feed-line2">`
-    + `<span class="livev2-feed-icon">${v.icon}</span>${minute}`
-    + `<span class="livev2-feed-text" title="${liveV2Esc(v.text)}">${liveV2Esc(v.text)}</span>${team}${detail}`
-    + `</div>`;
-}
-
-function liveV2FeedShellHtml(folded) {
-  const count = liveV2FeedViews(folded).length;
-  return `<div class="livev2-feed-bar">`
-    + `<span class="livev2-feed-title">📣 Últimos eventos</span>`
-    + `<button type="button" id="livev2-events-open" class="livev2-feed-open">`
-    + `Ver todos<span id="livev2-events-count">${count ? ` (${count})` : ''}</span>`
-    + `</button>`
-    + `</div>`
-    + `<div id="livev2-toasts" class="livev2-toasts" aria-live="polite"></div>`;
-}
-
-function liveV2ToastText(v) {
-  return [v.minuteText, v.text, v.teamName ? `(${v.teamName})` : '', v.detail ? `· ${v.detail}` : '']
-    .filter(Boolean).join(' ');
-}
-
-function liveV2DismissToast(el, immediate) {
-  if (!el || !el.isConnected) return;
-  const key = el.getAttribute('data-key')
-    || (el.hasAttribute('data-livev2-toast-more') ? '__more__' : null);
-  if (key && _liveV2ToastTimers.has(key)) {
-    clearTimeout(_liveV2ToastTimers.get(key));
-    _liveV2ToastTimers.delete(key);
-  }
-  if (immediate || liveV2PrefersReducedMotion()) { el.remove(); return; }
-  el.classList.add('out');
-  setTimeout(() => el.remove(), 260);
-}
-
-function liveV2ClearToasts() {
-  for (const timer of _liveV2ToastTimers.values()) clearTimeout(timer);
-  _liveV2ToastTimers.clear();
-  const host = typeof document !== 'undefined' ? document.getElementById('livev2-toasts') : null;
-  if (host) host.innerHTML = '';
-}
-
-function liveV2ShowToasts(plan) {
-  const host = typeof document !== 'undefined' ? document.getElementById('livev2-toasts') : null;
-  if (!host || !plan || !plan.show || !plan.show.length) return;
-  const current = () => [...host.querySelectorAll('.livev2-toast[data-key]')];
-  const fragment = document.createDocumentFragment();
-  const added = new Set();
-  for (const v of plan.show) {
-    if (added.has(v.key) || current().some(el => el.getAttribute('data-key') === v.key)) continue;
-    added.add(v.key);
-    const el = document.createElement('div');
-    const text = liveV2ToastText(v);
-    el.className = `livev2-toast ${v.tone || ''}`.trim();
-    el.setAttribute('data-key', v.key);
-    el.setAttribute('role', 'button');
-    el.setAttribute('tabindex', '0');
-    el.setAttribute('aria-label', text);
-    el.setAttribute('title', text);
-    el.innerHTML = liveV2FeedRowBodyHtml(v);
-    fragment.appendChild(el);
-    _liveV2ToastTimers.set(v.key, setTimeout(() => liveV2DismissToast(el), LIVEV2_TOAST_MS));
-  }
-  host.prepend(fragment);
-  const all = current();
-  for (let i = 3; i < all.length; i++) liveV2DismissToast(all[i], true);
-  const old = host.querySelector('.livev2-toast-more');
-  if (old) liveV2DismissToast(old, true);
-  if (plan.overflow > 0) {
-    const more = document.createElement('button');
-    more.type = 'button';
-    more.className = 'livev2-toast livev2-toast-more';
-    more.setAttribute('data-livev2-toast-more', '');
-    more.textContent = `+${plan.overflow} más · Ver todos`;
-    host.appendChild(more);
-    _liveV2ToastTimers.set('__more__', setTimeout(() => liveV2DismissToast(more), LIVEV2_TOAST_MS));
-  }
-}
-
-function updateLiveV2Feed(root, newEvents) {
-  const feedEl = (root || document).querySelector('#livev2-feed');
-  if (!feedEl) return;
-  const folded = liveV2Folded();
-  const views = liveV2FeedViews(folded);
-  const countEl = feedEl.querySelector('#livev2-events-count');
-  if (countEl) countEl.textContent = views.length ? ` (${views.length})` : '';
-  if (liveV2State()._openEventsModal) {
-    refreshLiveV2EventsModal(views);
-    return;
-  }
-  if (!newEvents || !newEvents.length) return;
-  if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return;
-  if (typeof liveV2Api === 'undefined' || !liveV2Api.feedEvents || !liveV2Api.feedToastPlan) return;
-  const ctx = liveV2FeedCtxById(folded);
-  const newViews = liveV2Api.feedEvents(newEvents, ctx, liveV2PlayersById(), liveV2State().events);
-  if (!newViews.length) return;
-  liveV2ShowToasts(liveV2Api.feedToastPlan(newViews, 3));
-}
-
-function liveV2EventsModalInnerHtml(views) {
-  const list = Array.isArray(views) ? views : [];
-  const rows = list.length
-    ? list.map(v => `<div class="livev2-events-row">${liveV2FeedRowBodyHtml(v)}</div>`).join('')
-    : `<div class="livev2-events-empty">Aún no hay eventos en los partidos de hoy.</div>`;
-  return `<div class="livev2-events-head">`
-    + `<span id="livev2-events-title">Últimos eventos · ${list.length}</span>`
-    + `<button type="button" class="breakdown-modal-close" data-livev2-events-close aria-label="Cerrar">✕</button>`
-    + `</div>`
-    + `<div class="livev2-events-list">${rows}</div>`;
-}
-
-function liveV2EventsModalHtml(views) {
-  return `<div id="livev2-events-modal" class="livev2-events-modal" role="dialog" `
-    + `aria-modal="true" aria-labelledby="livev2-events-title">`
-    + liveV2EventsModalInnerHtml(views)
-    + `</div>`;
-}
-
-function closeLiveV2EventsModal() {
-  if (typeof document === 'undefined') return;
-  const st = liveV2State();
-  const overlay = document.getElementById('livev2-events-modal-overlay');
-  if (!st._openEventsModal && !overlay) return;
-  st._openEventsModal = false;
-  if (overlay) overlay.remove();
-  if (st._eventsModalKeyHandler) document.removeEventListener('keydown', st._eventsModalKeyHandler);
-  st._eventsModalKeyHandler = null;
-  document.body.style.overflow = st._eventsModalPrevOverflow || '';
-  st._eventsModalPrevOverflow = null;
-  const focus = st._eventsModalReturnFocus;
-  st._eventsModalReturnFocus = null;
-  if (focus && focus.focus) {
-    try { focus.focus(); } catch (e) { /* sin foco */ }
-  }
-}
-
-function refreshLiveV2EventsModal(views) {
-  const st = liveV2State();
-  if (!st._openEventsModal || typeof document === 'undefined') return;
-  const host = document.getElementById('livev2-events-modal');
-  if (!host) return;
-  const list = host.querySelector('.livev2-events-list');
-  const scrollTop = list ? list.scrollTop : 0;
-  const hadFocus = document.activeElement && host.contains(document.activeElement);
-  host.innerHTML = liveV2EventsModalInnerHtml(views || liveV2FeedViews(liveV2Folded()));
-  const next = host.querySelector('.livev2-events-list');
-  if (next) next.scrollTop = scrollTop;
-  if (hadFocus) {
-    const close = host.querySelector('[data-livev2-events-close]');
-    if (close && close.focus) close.focus();
-  }
-}
-
-function openLiveV2EventsModal() {
-  if (typeof document === 'undefined') return;
-  closeLiveV2EventsModal();
-  const st = liveV2State();
-  st._openEventsModal = true;
-  st._eventsModalReturnFocus = document.activeElement || null;
-  st._eventsModalPrevOverflow = document.body.style.overflow || '';
-  const overlay = document.createElement('div');
-  overlay.className = 'breakdown-modal-overlay livev2-events-overlay';
-  overlay.id = 'livev2-events-modal-overlay';
-  overlay.innerHTML = liveV2EventsModalHtml(liveV2FeedViews(liveV2Folded()));
-  document.body.appendChild(overlay);
-  document.body.style.overflow = 'hidden';
-  const close = overlay.querySelector('[data-livev2-events-close]');
-  if (close && close.focus) close.focus();
-  const onKey = (e) => {
-    if (e.key === 'Escape') { closeLiveV2EventsModal(); return; }
-    if (e.key !== 'Tab') return;
-    const focusables = overlay.querySelectorAll(
-      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
-    if (!focusables.length) return;
-    const first = focusables[0];
-    const last = focusables[focusables.length - 1];
-    if (!overlay.contains(document.activeElement)) {
-      e.preventDefault();
-      first.focus();
-    } else if (e.shiftKey && document.activeElement === first) {
-      e.preventDefault();
-      last.focus();
-    } else if (!e.shiftKey && document.activeElement === last) {
-      e.preventDefault();
-      first.focus();
-    }
-  };
-  st._eventsModalKeyHandler = onKey;
-  document.addEventListener('keydown', onKey);
-  overlay.addEventListener('click', (e) => {
-    if (e.target === overlay) closeLiveV2EventsModal();
-    else if (e.target.closest && e.target.closest('[data-livev2-events-close]')) closeLiveV2EventsModal();
-  });
-}
-
-function bindLiveV2EventsButton(root) {
-  const scope = root || document;
-  const feed = scope.querySelector('#livev2-feed');
-  if (!feed || feed.dataset.eventsBound === '1') return;
-  feed.dataset.eventsBound = '1';
-  feed.addEventListener('click', (e) => {
-    const t = e.target;
-    if (!t || !t.closest) return;
-    if (t.closest('#livev2-events-open') || t.closest('[data-livev2-toast-more]')) {
-      openLiveV2EventsModal();
-      return;
-    }
-    const toast = t.closest('.livev2-toast[data-key]');
-    if (toast) liveV2DismissToast(toast);
-  });
-  feed.addEventListener('keydown', (e) => {
-    if (e.key !== 'Enter' && e.key !== ' ') return;
-    const toast = e.target && e.target.closest
-      ? e.target.closest('.livev2-toast[data-key]') : null;
-    if (!toast) return;
-    e.preventDefault();
-    liveV2DismissToast(toast);
-  });
-}
-
 function liveV2StatusBadge(st) {
   st = st || liveV2State();
   const age = st.lastFetchAt ? Math.max(0, Math.floor((Date.now() - st.lastFetchAt) / 1000)) : null;
@@ -1621,7 +1378,6 @@ async function retryLiveV2() {
     bindLiveV2SoundToggle(target);
     bindLiveV2Fullscreen(target);
     bindLiveV2Chips(target);
-    bindLiveV2EventsButton(target);
   } finally {
     st.polling = false;
     updateLiveV2Badge(target);
@@ -1674,7 +1430,7 @@ function renderLiveV2Html(rows, folded) {
     + `<div class="livev2-grid" id="livev2-chips-host">`
     + (chips || `<div class="livev2-empty">Sin partidos en directo ahora mismo</div>`)
     + `</div>`
-    + `<div id="livev2-feed" class="livev2-feed">${liveV2FeedShellHtml(folded)}</div>`
+    + `<div id="livev2-sr-events" class="livev2-sr-only" aria-live="polite" aria-atomic="true"></div>`
     + `</div>`
     + `<div class="livev2-body">`
     + `<div class="livev2-section-title">Clasificación en vivo</div>`
@@ -2098,10 +1854,9 @@ function updateLiveV2Dom(rows, folded) {
   const breakdownEl = root.querySelector('#livev2-breakdown');
   if (breakdownEl) breakdownEl.innerHTML = liveV2HeaderBreakdownHtml(liveV2HeaderBreakdown(folded));
 
-  // Celdas y feed: parche por clave (solo se crean/eliminan nodos al cambiar el conjunto)
+  // Celdas: parche por clave (solo se crean/eliminan nodos al cambiar el conjunto)
   updateLiveV2Chips(root, folded);
   liveV2EnqueueChipEvents(newEvents);
-  updateLiveV2Feed(root, newEvents);
   updateLiveV2Badge(root);
   updateLiveV2SoundToggle(root);
 
@@ -2206,9 +1961,7 @@ function stopLiveV2Polling() {
     _liveV2VisHandler = null;
   }
   closeLiveV2MatchModal();
-  liveV2ClearToasts();
   liveV2ClearChipEvents();
-  closeLiveV2EventsModal();
 }
 
 function startLiveV2Polling(folded) {
@@ -2339,20 +2092,8 @@ async function renderLiveV2Tab() {
     liveV2ChipLabel,
     liveV2HasInPlay,
     liveV2ShouldPoll,
-    liveV2FeedShellHtml,
     liveV2FeedCtxById,
-    liveV2FeedViews,
-    liveV2FeedRowBodyHtml,
-    liveV2ShowToasts,
-    liveV2DismissToast,
-    liveV2ClearToasts,
-    liveV2EventsModalHtml,
-    openLiveV2EventsModal,
-    closeLiveV2EventsModal,
-    refreshLiveV2EventsModal,
-    bindLiveV2EventsButton,
     updateLiveV2Chips,
-    updateLiveV2Feed,
     liveV2MoverReason,
     liveV2StatusBadge,
     liveV2NextPollState,
