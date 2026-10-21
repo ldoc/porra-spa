@@ -2724,6 +2724,94 @@ html, body {
 
 .livev2-modal-total b { color: var(--accent-gold); font-size: 1.1rem; }
 
+/* Desglose de otro jugador */
+.livev2-player-overlay { z-index: 1200; }
+.livev2-player-modal { max-height: 82vh; }
+.livev2-player-modal .breakdown-modal-close {
+  width: 44px;
+  height: 44px;
+  flex: 0 0 44px;
+}
+
+.livev2-player-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px 14px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-color);
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+}
+
+.livev2-player-summary b {
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.livev2-player-summary-total b {
+  color: var(--accent-gold);
+  font-size: 1.15rem;
+}
+
+.livev2-player-match {
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.livev2-player-match:last-child { border-bottom: 0; }
+
+.livev2-player-match-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+  font-weight: 700;
+}
+
+.livev2-player-match-head b {
+  color: var(--text-primary);
+  font-size: var(--font-size-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.livev2-player-team {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.livev2-player-team.away { text-align: right; }
+
+.livev2-player-state {
+  margin-left: auto;
+  color: var(--text-muted);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.livev2-player-pred {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 6px;
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+}
+
+.livev2-player-pred b {
+  color: var(--accent-gold);
+  font-variant-numeric: tabular-nums;
+}
+
+.livev2-player-pred b.negative { color: #F87171; }
+.livev2-player-match .livev2-modal-empty { padding-left: 0; padding-right: 0; }
+.livev2-player-match .livev2-modal-list { margin-top: 2px; }
+.livev2-player-match .livev2-modal-squad { margin-top: 8px; }
+
 .livev2-event-line1 {
   display: flex;
   align-items: baseline;
@@ -6930,6 +7018,31 @@ body.live-fs .resultados-scroll {
   padding: 10px 12px;
   min-height: 44px;
   transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s, opacity 0.3s, background 0.3s;
+}
+
+.livev2-row { cursor: pointer; }
+.livev2-row:focus-visible { outline: none; }
+
+.livev2-row:hover > .livev2-inner,
+.livev2-row:focus-visible > .livev2-inner {
+  background: var(--ucl-card-hover);
+}
+
+.livev2-row:focus-visible > .livev2-inner {
+  box-shadow: 0 0 0 2px var(--accent-primary);
+}
+
+.livev2-row:active > .livev2-inner { transform: scale(0.99); }
+
+.livev2-row-chevron {
+  flex-shrink: 0;
+  color: var(--text-muted);
+  font-size: var(--font-size-lg);
+  line-height: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .livev2-row:active > .livev2-inner { transform: none; }
 }
 
 .livev2-row.me > .livev2-inner {
