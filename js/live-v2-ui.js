@@ -346,12 +346,14 @@ function liveUserMatchPoints(username, lm, meta) {
 /** Clasificación oficial (puntos reales) con caché mientras no cambien los matchStats */
 function liveOfficialRows() {
   const st = liveState();
-  if (st.officialRows && st.officialStatsRef === AppState.matchStats) return st.officialRows;
+  if (st.officialRows && st.officialStatsRef === AppState.matchStats
+      && st.officialPredTime === AppState._allPredictionsTime) return st.officialRows;
   const rows = visiblePlayers().map(p => ({ name: p.name, officialPoints: getUserTotalRealPoints(p.name) }));
   rows.sort((a, b) => b.officialPoints - a.officialPoints || a.name.localeCompare(b.name));
   rows.forEach((r, i) => { r.officialRank = i + 1; });
   st.officialRows = rows;
   st.officialStatsRef = AppState.matchStats;
+  st.officialPredTime = AppState._allPredictionsTime;
   return rows;
 }
 

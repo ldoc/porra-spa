@@ -1265,7 +1265,11 @@ function showUserProfileModal(username, initialTab = 'predictions') {
     }
   }
 
-  const userData = AppState.userPoints[username];
+  let userData = AppState.userPoints[username];
+  if (!userData) {
+    userData = computeUserRealPoints(username).userData;
+    AppState.userPoints[username] = userData;
+  }
   if (!userData) {
     showToast('Cargando datos del usuario...');
     return;
