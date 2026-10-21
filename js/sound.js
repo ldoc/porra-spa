@@ -87,8 +87,16 @@
     deps.ctx.play({ freq: 660, durationMs: 90 });
   }
 
+  function playWhistle(deps, times) {
+    if (!deps || !deps.enabled) return;
+    const n = Math.max(1, Number(times) || 1);
+    for (let i = 0; i < n; i++) {
+      setTimeout(() => playFile('sounds/silbato.mp3', deps), i * 350);
+    }
+  }
+
   const soundApi = {
-    eventToTone, playLiveEvent, playFile, playBeep,
+    eventToTone, playLiveEvent, playFile, playBeep, playWhistle,
     loadSoundEnabled, saveSoundEnabled, realAudioContext, KEY,
   };
   global.soundApi = soundApi;

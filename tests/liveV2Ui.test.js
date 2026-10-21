@@ -15,9 +15,8 @@ const {
   liveV2CacheKey,
   liveV2CacheIsFresh,
   purgeLiveV2Caches,
-  liveV2SoundQuality,
+  liveV2StatusWhistleCount,
   liveV2EventDeltas,
-  liveV2PlayNewEventSounds,
   liveV2TopContributions,
   liveV2ReasonLine,
   liveV2ReasonHtml,
@@ -718,11 +717,12 @@ test('purgeLiveV2Caches elimina solo las claves del live', () => {
   assert.deepEqual(Object.keys(store), ['a', 'other']);
 });
 
-test('liveV2SoundQuality good/bad/neutral/null', () => {
-  assert.equal(liveV2SoundQuality(2, true), 'good');
-  assert.equal(liveV2SoundQuality(-1, true), 'bad');
-  assert.equal(liveV2SoundQuality(0, true), 'neutral');
-  assert.equal(liveV2SoundQuality(0, false), null);
+test('liveV2StatusWhistleCount mapea inicio, descanso y final', () => {
+  assert.equal(liveV2StatusWhistleCount('LIVE', 'period1'), 1);
+  assert.equal(liveV2StatusWhistleCount('LIVE', 'period2'), 1);
+  assert.equal(liveV2StatusWhistleCount('HT', null), 3);
+  assert.equal(liveV2StatusWhistleCount('FT', null), 3);
+  assert.equal(liveV2StatusWhistleCount('NS', null), 0);
 });
 
 test('liveV2EventDeltas atribuye gol (+8 pronóstico +1 plantilla) y asistencia (+1)', () => {
@@ -889,92 +889,38 @@ test('liveV2EventDeltas no deja que status LIVE tape el delta del gol', () => {
 
 // ── Sonido integrado por partido/poll ────────────────────────────────
 
-function withSoundApp({ newEvents, matchStats = [], matchPoints, playerPoints, allPredictions = {}, squadsCache = {} }) {
-  const liveV2 = require('../js/liveV2.js');
+test('liveV2PlayNewEventSounds: HT dispara 3 silbatos', () => {
   const calls = [];
-  const prevLocalStorage = globalThis.localStorage;
-  globalThis.localStorage = { getItem: () => '1' };
-  const live = { eventId: 1, type: 'status', minute: 0, ts: '2026-09-16T20:00:00.000Z', ingestedAt: '2026-09-16T20:00:00.000Z', seq: 0, sourceId: 's', payload: { status: 'LIVE', period: 'period1', kickoffTs: '2026-09-16T20:00:00.000Z' } };
-  const AppState = {
-    currentUser: { name: 'me' },
-    liveV2: { events: [live, ...newEvents] },
-    matches: [{ id: 1, homeTeamId: 1, awayTeamId: 2 }],
-    allPlayers: [
-      { id: 13, nombre: 'F', posicion: 'F', equipo: 1 },
-      { id: 12, nombre: 'M', posicion: 'M', equipo: 1 },
-    ],
-    allPredictions,
-    squadsCache,
-    matchStats,
-  };
-  init({
-    AppState,
+  const ui = freshUi();
+  const liveV2 = require('../js/liveV2.js');
+  ui.init({
+    AppState: { liveV2: { events: [] }, matchStats: [], currentUser: { name: 'me' } },
     liveV2Api: liveV2,
     soundApi: {
       loadSoundEnabled: () => true,
-      playLiveEvent: (event, quality) => calls.push({ event, quality }),
+      playWhistle: (_deps, times) => calls.push(times),
+      playFile: () => {},
+      playBeep: () => {},
+      playLiveEvent: () => {},
     },
-    calculateMatchPoints: matchPoints,
-    calculatePlayerMatchPoints: playerPoints,
   });
-  try {
-    liveV2PlayNewEventSounds(newEvents);
-  } finally {
-    if (prevLocalStorage === undefined) delete globalThis.localStorage;
-    else globalThis.localStorage = prevLocalStorage;
-  }
-  return calls;
-}
-
-function soundGoal() {
-  const t = '2026-09-16T20:30:00.000Z';
-  return { eventId: 1, type: 'goal', minute: 30, ts: t, ingestedAt: t, seq: 0, sourceId: 'g', payload: { scorerId: 13, isHome: true } };
-}
-
-function soundAssist() {
-  const t = '2026-09-16T20:30:00.000Z';
-  return { eventId: 1, type: 'assist', minute: 30, ts: t, ingestedAt: t, seq: 1, sourceId: 'a', playerId: 12, payload: { asistencias: 1 } };
-}
-
-test('liveV2PlayNewEventSounds: dos eventos con puntos producen un solo tono bueno', () => {
-  const calls = withSoundApp({
-    newEvents: [soundGoal(), soundAssist()],
-    allPredictions: { me: { 1: { home: 1, away: 0 } } },
-    squadsCache: { me: [{ id: 13, posicion: 'F', equipo: 1 }, { id: 12, posicion: 'M', equipo: 1 }] },
-    matchPoints: (pred, ms) => ({ points: Number(ms.stats[1]?.goles) === 1 ? 8 : 0, breakdown: [] }),
-    playerPoints: (jd) => ({ total: (jd.goles || 0) + (jd.asistencias || 0), desglose: [] }),
-  });
-  assert.deepEqual(calls, [{ event: { type: 'goal' }, quality: 'good' }]);
+  const ht = { eventId: 1, type: 'status', minute: 45, ts: '2026-09-16T21:45:00.000Z', sourceId: 'ht', payload: { status: 'HT' } };
+  ui.liveV2PlayNewEventSounds([ht]);
+  assert.deepEqual(calls, [3]);
 });
 
-test('liveV2PlayNewEventSounds: partido finalizado no suena (ni puntos ni FT)', () => {
-  const ft = { eventId: 1, type: 'status', minute: 90, ts: '2026-09-16T21:50:00.000Z', ingestedAt: '2026-09-16T21:50:00.000Z', seq: 2, sourceId: 'ft', payload: { status: 'FT' } };
-  const calls = withSoundApp({
-    newEvents: [ft, soundGoal()],
-    matchStats: [{ eventId: 1 }],
-    matchPoints: () => ({ points: 8, breakdown: [] }),
-    playerPoints: () => ({ total: 1, desglose: [] }),
+test('liveV2PlayNewEventSounds: un gol ya no emite tono de gol', () => {
+  const calls = [];
+  const ui = freshUi();
+  const liveV2 = require('../js/liveV2.js');
+  ui.init({
+    AppState: { liveV2: { events: [] }, matchStats: [], currentUser: { name: 'me' } },
+    liveV2Api: liveV2,
+    soundApi: { loadSoundEnabled: () => true, playWhistle: () => calls.push('w'), playLiveEvent: () => calls.push('tone'), playFile: () => {}, playBeep: () => {} },
   });
+  const goal = { eventId: 1, type: 'goal', minute: 10, ts: '2026-09-16T20:10:00.000Z', sourceId: 'g', payload: { scorerId: 11 } };
+  ui.liveV2PlayNewEventSounds([goal]);
   assert.deepEqual(calls, []);
-});
-
-test('liveV2PlayNewEventSounds: gol neutro usa el tono neutro', () => {
-  const calls = withSoundApp({
-    newEvents: [soundGoal()],
-    matchPoints: () => ({ points: 0, breakdown: [] }),
-    playerPoints: () => ({ total: 0, desglose: [] }),
-  });
-  assert.deepEqual(calls, [{ event: { type: 'goal' }, quality: 'neutral' }]);
-});
-
-test('liveV2PlayNewEventSounds: status FT emite el tono end', () => {
-  const ft = { eventId: 1, type: 'status', minute: 90, ts: '2026-09-16T21:50:00.000Z', ingestedAt: '2026-09-16T21:50:00.000Z', seq: 2, sourceId: 'ft', payload: { status: 'FT' } };
-  const calls = withSoundApp({
-    newEvents: [ft],
-    matchPoints: () => ({ points: 0, breakdown: [] }),
-    playerPoints: () => ({ total: 0, desglose: [] }),
-  });
-  assert.deepEqual(calls, [{ event: { type: 'end' }, quality: true }]);
 });
 
 function withFeedDom(fn) {

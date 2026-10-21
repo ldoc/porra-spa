@@ -1,6 +1,6 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { eventToTone, playLiveEvent, playFile, playBeep, loadSoundEnabled, saveSoundEnabled } = require('../js/sound.js');
+const { eventToTone, playLiveEvent, playFile, playBeep, playWhistle, loadSoundEnabled, saveSoundEnabled } = require('../js/sound.js');
 
 function memStore(initial) {
   const map = new Map(Object.entries(initial || {}));
@@ -58,6 +58,22 @@ test('playFile respeta enabled y crea un Audio', () => {
     playFile('sounds/gol_otro.mp3', { enabled: true });
     playFile('sounds/gol_otro.mp3', { enabled: false });
     assert.deepEqual(played, ['sounds/gol_otro.mp3']);
+  } finally {
+    if (prev === undefined) delete global.Audio; else global.Audio = prev;
+  }
+});
+
+test('playWhistle reproduce el archivo 1 o 3 veces', async () => {
+  const prev = global.Audio;
+  const played = [];
+  global.Audio = function (src) {
+    this.play = () => { played.push(src); return Promise.resolve(); };
+  };
+  try {
+    playWhistle({ enabled: true }, 1);
+    playWhistle({ enabled: true }, 3);
+    await new Promise(r => setTimeout(r, 900));
+    assert.equal(played.filter(x => x === 'sounds/silbato.mp3').length, 4);
   } finally {
     if (prev === undefined) delete global.Audio; else global.Audio = prev;
   }

@@ -252,41 +252,23 @@ function liveV2EventDeltas(username, eventId, newEvents, allEvents, ctx, players
   return { events: out, before, after: prev };
 }
 
-function liveV2SoundQuality(delta, hasGoal) {
-  if (delta > 0) return 'good';
-  if (delta < 0) return 'bad';
-  if (hasGoal) return 'neutral';
-  return null;
+function liveV2StatusWhistleCount(status, period) {
+  if (status === 'HT' || status === 'FT') return 3;
+  if (status === 'LIVE' && (!period || period === 'period1' || period === 'period2')) return 1;
+  return 0;
 }
 
-/** Un sonido por partido/poll según el efecto neto en mis puntos (solo si el sonido está activo). */
+/** Silbatos de inicio/descanso/final por evento nuevo de estado (solo si el sonido está activo). */
 function liveV2PlayNewEventSounds(newEvents) {
   if (!newEvents || !newEvents.length) return;
-  if (typeof liveV2Api === 'undefined') return;
-  const me = AppState.currentUser && AppState.currentUser.name;
-  if (!me) return;
   const deps = liveV2SoundDeps();
   if (!deps) return;
   const finalized = new Set((AppState.matchStats || []).map(ms => String(ms.eventId)));
   for (const ev of newEvents) {
     if (ev.type !== 'status' || !ev.payload) continue;
     if (finalized.has(String(ev.eventId))) continue;
-    const type = ev.payload.status === 'FT' ? 'end' : 'status';
-    soundApi.playLiveEvent({ type }, true, deps);
-  }
-  const st = liveV2State();
-  const ctxById = liveV2CtxById();
-  const playersById = liveV2PlayersById();
-  const serverNow = liveV2PlayheadMs(st);
-  const byMatch = {};
-  for (const ev of newEvents) (byMatch[String(ev.eventId)] = byMatch[String(ev.eventId)] || []).push(ev);
-  for (const [id, events] of Object.entries(byMatch)) {
-    if (finalized.has(id)) continue;
-    const res = liveV2EventDeltas(me, id, events, st.events, ctxById[id] || {}, playersById, serverNow);
-    const net = res.events.reduce((s, d) => s + d.delta, 0);
-    const quality = liveV2SoundQuality(net, events.some(e => e.type === 'goal'));
-    if (!quality) continue;
-    soundApi.playLiveEvent({ type: 'goal' }, quality, deps);
+    const times = liveV2StatusWhistleCount(ev.payload.status, ev.payload.period);
+    if (times) soundApi.playWhistle(deps, times);
   }
 }
 
@@ -2108,7 +2090,7 @@ async function renderLiveV2Tab() {
     liveV2CacheIsFresh,
     purgeLiveV2Caches,
     liveV2EventDeltas,
-    liveV2SoundQuality,
+    liveV2StatusWhistleCount,
     liveV2PlayNewEventSounds,
     liveV2ChipEventText,
     liveV2ChipSoundKind,
