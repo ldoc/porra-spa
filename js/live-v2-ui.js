@@ -618,6 +618,7 @@ function refreshLiveV2MatchModal() {
 function openLiveV2MatchModal(eventId) {
   if (typeof document === 'undefined') return;
   closeLiveV2MatchModal();
+  closeLiveV2PlayerModal();
   const st = liveV2State();
   st._openMatchModal = String(eventId);
   st._matchEventsOpen = false;
@@ -643,6 +644,80 @@ function openLiveV2MatchModal(eventId) {
     else if (e.target.closest && e.target.closest('[data-livev2-modal-close]')) closeLiveV2MatchModal();
   });
   refreshLiveV2MatchModal();
+}
+
+function closeLiveV2PlayerModal() {
+  const st = liveV2State();
+  const overlay = typeof document !== 'undefined' ? document.getElementById('livev2-player-modal-overlay') : null;
+  if (overlay) overlay.remove();
+  if (st._playerModalKeyHandler && typeof document !== 'undefined') {
+    document.removeEventListener('keydown', st._playerModalKeyHandler);
+  }
+  st._playerModalKeyHandler = null;
+  if (typeof document !== 'undefined' && document.body) {
+    document.body.style.overflow = st._playerModalPrevOverflow || '';
+  }
+  st._playerModalPrevOverflow = null;
+  st._openPlayerModal = null;
+  const focus = st._playerModalReturnFocus;
+  st._playerModalReturnFocus = null;
+  if (focus && focus.focus) {
+    try { focus.focus(); } catch (e) { /* sin foco */ }
+  }
+}
+
+function refreshLiveV2PlayerModal() {
+  const st = liveV2State();
+  const username = st._openPlayerModal;
+  if (!username || typeof document === 'undefined') return;
+  const host = document.getElementById('livev2-player-modal');
+  if (!host) return;
+  const players = typeof visiblePlayers === 'function' ? visiblePlayers() : [];
+  const player = players.find(p => p.name === username);
+  if (!player) { closeLiveV2PlayerModal(); return; }
+  const matches = liveV2PlayerMatches(username, liveV2Folded());
+  if (!matches.length) { closeLiveV2PlayerModal(); return; }
+  const content = host.querySelector('.livev2-match-content');
+  const scrollTop = content ? content.scrollTop : null;
+  host.innerHTML = liveV2PlayerModalHtml({
+    username,
+    avatar: player.avatar,
+    matches,
+    summary: liveV2PlayerSummary(matches),
+  });
+  const nextContent = host.querySelector('.livev2-match-content');
+  if (nextContent && scrollTop != null) nextContent.scrollTop = scrollTop;
+}
+
+function openLiveV2PlayerModal(username, returnFocusEl) {
+  if (typeof document === 'undefined' || !username) return;
+  const matches = liveV2PlayerMatches(username, liveV2Folded());
+  if (!matches.length) return;
+  const returnFocus = returnFocusEl || document.activeElement || null;
+  closeLiveV2MatchModal();
+  closeLiveV2PlayerModal();
+  const st = liveV2State();
+  st._openPlayerModal = username;
+  st._playerModalReturnFocus = returnFocus;
+  st._playerModalPrevOverflow = document.body.style.overflow || '';
+  const overlay = document.createElement('div');
+  overlay.className = 'breakdown-modal-overlay livev2-player-overlay';
+  overlay.id = 'livev2-player-modal-overlay';
+  overlay.innerHTML = `<div id="livev2-player-modal"></div>`;
+  document.body.appendChild(overlay);
+  document.body.style.overflow = 'hidden';
+  const onKey = (e) => { if (e.key === 'Escape') closeLiveV2PlayerModal(); };
+  st._playerModalKeyHandler = onKey;
+  document.addEventListener('keydown', onKey);
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) closeLiveV2PlayerModal();
+    else if (e.target.closest && e.target.closest('[data-livev2-player-close]')) closeLiveV2PlayerModal();
+  });
+  refreshLiveV2PlayerModal();
+  const closeBtn = overlay.querySelector('[data-livev2-player-close]');
+  if (closeBtn && closeBtn.focus) {
+    try { closeBtn.focus(); } catch (e) { /* sin foco */ }
+  }
 }
 
 /** playerId -> { nombre, posicion, equipo } desde AppState.allPlayers */
@@ -2102,6 +2177,7 @@ function updateLiveV2Dom(rows, folded) {
   liveV2ScheduleRankMoveExpiry();
   st._lastRows = liveV2Snapshot(rows);
   refreshLiveV2MatchModal();
+  refreshLiveV2PlayerModal();
 }
 
 // Fuera de la ventana de un partido no se pide nada al servidor. Dentro de la
@@ -2382,6 +2458,9 @@ async function renderLiveV2Tab() {
     openLiveV2MatchModal,
     closeLiveV2MatchModal,
     refreshLiveV2MatchModal,
+    openLiveV2PlayerModal,
+    closeLiveV2PlayerModal,
+    refreshLiveV2PlayerModal,
   };
 
   global.liveV2Ui = api;

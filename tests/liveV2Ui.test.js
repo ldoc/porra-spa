@@ -2374,3 +2374,44 @@ test('liveV2PlayerModalHtml muestra avisos de vacío y escapa el nombre', () => 
   });
   assert.match(empty, /Sin partidos en directo/);
 });
+
+test('openLiveV2PlayerModal no abre nada si no hay partidos en el Live', () => {
+  const ui = freshUi();
+  const liveV2 = require('../js/liveV2.js');
+  const AppState = {
+    liveV2: { events: [] }, matches: [], allPredictions: {}, squadsCache: {},
+    allPlayers: [], matchStats: [],
+  };
+  ui.init({ AppState, liveV2Api: liveV2, visiblePlayers: () => [] });
+  const prevDoc = global.document;
+  let created = 0;
+  global.document = { createElement: () => { created++; return {}; } };
+  try {
+    ui.openLiveV2PlayerModal('Ana');
+    assert.equal(created, 0);
+    assert.equal(AppState.liveV2._openPlayerModal, undefined);
+  } finally {
+    if (prevDoc === undefined) delete global.document; else global.document = prevDoc;
+  }
+});
+
+test('refreshLiveV2PlayerModal cierra el modal si el jugador ya no está visible', () => {
+  const ui = freshUi();
+  const liveV2 = require('../js/liveV2.js');
+  const AppState = {
+    liveV2: { _openPlayerModal: 'Fantasma' }, matches: [], allPredictions: {},
+    squadsCache: {}, allPlayers: [], matchStats: [],
+  };
+  ui.init({ AppState, liveV2Api: liveV2, visiblePlayers: () => [{ name: 'Ana' }] });
+  const prevDoc = global.document;
+  global.document = {
+    getElementById: id => (id === 'livev2-player-modal' ? {} : null),
+    removeEventListener: () => {},
+  };
+  try {
+    ui.refreshLiveV2PlayerModal();
+    assert.equal(AppState.liveV2._openPlayerModal, null);
+  } finally {
+    if (prevDoc === undefined) delete global.document; else global.document = prevDoc;
+  }
+});
