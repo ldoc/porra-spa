@@ -195,8 +195,10 @@ function bindLiveV2Fullscreen(root) {
     document.addEventListener('keydown', (e) => {
       if (e.key !== 'Escape' || !liveV2FsActive()) return;
       // El modal gestiona su propio Escape (y puede no haber AppState en tests aislados).
-      if (AppState && (liveV2State()._openMatchModal != null
-        || liveV2State()._openPlayerModal != null)) return;
+      if (AppState) {
+        const st = liveV2State();
+        if (st._openMatchModal != null || st._openPlayerModal != null) return;
+      }
       e.preventDefault();
       exitLiveV2Fullscreen();
     });
@@ -556,6 +558,8 @@ function liveV2State() {
       _chipEventQueue: {},
       _rankMoves: {},
       _openMatchModal: null, _modalReturnFocus: null, _modalPrevOverflow: null, _modalKeyHandler: null,
+      _openPlayerModal: null, _playerModalReturnFocus: null, _playerModalPrevOverflow: null,
+      _playerModalKeyHandler: null,
     };
     restoreLiveV2Cache(AppState.liveV2);
   }
@@ -1458,12 +1462,16 @@ function liveV2PointsDiffLabel(d) {
   return 'Sin cambios de puntos';
 }
 
+function liveV2RowAriaLabel(r) {
+  return `Ver desglose de ${r.name}, puesto ${r.rank}, ${r.livePoints} puntos`;
+}
+
 function liveV2RowHtml(r) {
   const move = r.rankMove || { text: '=', cls: 'eq', label: 'Sin cambios' };
   const diff = r.pointsDiff || 0;
   return `<div class="livev2-row${r.isMe ? ' me' : ''}${liveV2RowPointsClass(diff)}"`
     + ` data-livev2-row="${liveV2Esc(r.name)}" role="button" tabindex="0"`
-    + ` aria-label="${liveV2Esc('Ver desglose de ' + r.name)}">`
+    + ` aria-label="${liveV2Esc(liveV2RowAriaLabel(r))}">`
     + `<div class="livev2-inner">`
     + `<span class="livev2-rank-group">`
     + `<span class="livev2-rank">${r.rank}</span>`
@@ -2170,6 +2178,7 @@ function updateLiveV2Dom(rows, folded) {
       }
       liveV2ApplyPointsClass(el, r.pointsDiff);
       el.classList.toggle('me', !!r.isMe);
+      el.setAttribute('aria-label', liveV2RowAriaLabel(r));
     }
     if (prev) {
       if (prev.nextElementSibling !== el) container.insertBefore(el, prev.nextElementSibling);
@@ -2468,6 +2477,7 @@ async function renderLiveV2Tab() {
     liveV2DetectRankMoves,
     liveV2RankMoveView,
     liveV2RowHtml,
+    liveV2RowAriaLabel,
     liveV2PointsDiffClass,
     liveV2RowPointsClass,
     liveV2PointsDiffText,

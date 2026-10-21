@@ -2305,6 +2305,35 @@ test('liveV2PlayerMatches incluye solo partidos empezados y suma pronóstico y p
   assert.deepEqual(ui.liveV2PlayerSummary(matches), { predictionPts: 10, squadPts: 4, total: 14 });
 });
 
+test('liveV2PlayerMatches mantiene un FT ya finalizado en matchStats y lo suma al resumen', () => {
+  const ui = freshUi();
+  const liveV2 = require('../js/liveV2.js');
+  const AppState = {
+    matches: [
+      { id: 3, fechaTs: 300, homeTeamId: 30, awayTeamId: 40, homeTeam: 'Otro', awayTeam: 'Rival' },
+    ],
+    allPredictions: { rival: { 3: { home: 1, away: 0 } } },
+    squadsCache: { rival: [{ id: 7, nombre: 'Delantero' }] },
+    allPlayers: [],
+    matchStats: [{ eventId: 3, stats: { 30: { goles: 1 }, 40: { goles: 0 } } }],
+    liveV2: null,
+  };
+  ui.init({
+    AppState,
+    liveV2Api: liveV2,
+    calculateMatchPoints: () => ({ points: 8, breakdown: ['8 por acertar resultado'] }),
+    calculatePlayerMatchPoints: () => ({ total: 2, desglose: [{ concepto: 'Gol' }] }),
+  });
+  const folded = {
+    states: { 3: { status: 'FT', score: { home: 1, away: 0 } } },
+    statsById: { 3: { jugadores: [{ id: 7, minutos: 90 }] } },
+  };
+  const matches = ui.liveV2PlayerMatches('rival', folded);
+  assert.deepEqual(matches.map(m => m.eventId), [3]);
+  assert.equal(matches[0].status, 'FT');
+  assert.deepEqual(ui.liveV2PlayerSummary(matches), { predictionPts: 8, squadPts: 2, total: 10 });
+});
+
 test('liveV2PlayerModalHtml pinta resumen, pronóstico, motivos y plantilla', () => {
   const ui = freshUi();
   ui.init({ AppState: { liveV2: null }, liveV2Api: { escapeHtml: s => String(s) } });
@@ -2468,7 +2497,11 @@ test('liveV2RowHtml marca la fila como botón accesible con chevron', () => {
   });
   assert.match(html, /role="button"/);
   assert.match(html, /tabindex="0"/);
-  assert.match(html, /aria-label="Ver desglose de Ana"/);
+  assert.match(html, /aria-label="Ver desglose de Ana, puesto 2, 30 puntos"/);
+  assert.equal(
+    ui.liveV2RowAriaLabel({ name: 'Ana', rank: 2, livePoints: 30 }),
+    'Ver desglose de Ana, puesto 2, 30 puntos',
+  );
   assert.match(html, /livev2-row-chevron/);
   assert.match(html, />›<\/span>/);
 });

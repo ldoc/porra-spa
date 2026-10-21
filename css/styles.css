@@ -2860,7 +2860,9 @@ html, body {
 
 @media (prefers-reduced-motion: reduce) {
   .livev2-match-overlay,
-  .livev2-match-modal { animation: none; }
+  .livev2-match-modal,
+  .livev2-player-overlay,
+  .livev2-player-modal { animation: none; }
 }
 
 .breakdown-journey {
