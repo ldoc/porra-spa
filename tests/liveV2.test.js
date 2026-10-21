@@ -43,6 +43,21 @@ test('goal_cancelled revierte el marcador', () => {
   assert.equal(s.players[11].goals, 0);
 });
 
+test('goal_cancelled de un gol en propia no resta goles al jugador', () => {
+  const s = createMatchState();
+  applyEvent(s, { type: 'goal', sourceId: 'goal|normal', playerId: 22,
+    payload: { scorerId: 22, isHome: false, isOwnGoal: false } }, CTX);
+  applyEvent(s, { type: 'goal', sourceId: 'goal|own', playerId: 22,
+    payload: { scorerId: 22, isHome: false, isOwnGoal: true } }, CTX);
+  assert.equal(s.players[22].goals, 1);
+  assert.deepEqual(s.score, { home: 1, away: 1 });
+
+  applyEvent(s, { type: 'goal_cancelled', sourceId: 'cancel|own',
+    payload: { ofSourceId: 'goal|own' } }, CTX);
+  assert.equal(s.players[22].goals, 1);
+  assert.deepEqual(s.score, { home: 0, away: 1 });
+});
+
 test('rating actualiza la nota', () => {
   const s = createMatchState();
   applyEvent(s, { type: 'rating', playerId: 11, payload: { rating: 7.4 } }, CTX);

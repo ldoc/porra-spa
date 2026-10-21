@@ -42,7 +42,7 @@
         const scorer = ensure(state, p.scorerId);
         if (scorer && !p.isOwnGoal) scorer.goals += 1;
         if (p.isPenalty && scorer && !p.isOwnGoal) scorer.penaltyScored += 1;
-        state.goals.push({ sourceId: ev.sourceId, home, scorerId: p.scorerId ?? null, penalty: !!p.isPenalty, cancelled: false, minute: ev.minute ?? null });
+        state.goals.push({ sourceId: ev.sourceId, home, scorerId: p.scorerId ?? null, penalty: !!p.isPenalty, ownGoal: !!p.isOwnGoal, cancelled: false, minute: ev.minute ?? null });
         if (home) state.score.home += 1; else state.score.away += 1;
         break;
       }
@@ -53,7 +53,7 @@
           if (g.home) state.score.home = Math.max(0, state.score.home - 1);
           else state.score.away = Math.max(0, state.score.away - 1);
           const scorer = g.scorerId != null ? state.players[g.scorerId] : null;
-          if (scorer) {
+          if (scorer && !g.ownGoal) {
             scorer.goals = Math.max(0, scorer.goals - 1);
             if (g.penalty && scorer.penaltyScored > 0) scorer.penaltyScored -= 1;
           }

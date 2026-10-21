@@ -345,7 +345,16 @@ function liveOfficialRows() {
 // ============================================================
 
 const LIVEV2_CACHE_KEY = 'porra_live_events_v1';
+const LIVEV2_FULL_ON_ENTRY_MS = 60 * 1000;
 let _liveV2CacheRestored = false;
+
+/** Al entrar en Live: full si falta, está pendiente o el último full tiene más de 60 s. */
+function liveV2ShouldFullOnEntry(st, now) {
+  const at = now == null ? Date.now() : now;
+  if (!st || !st.serverTime || !Array.isArray(st.events) || !st.events.length || st._needFull) return true;
+  const fullAt = Number(st._fullAt);
+  return !Number.isFinite(fullAt) || at - fullAt > LIVEV2_FULL_ON_ENTRY_MS;
+}
 
 /** localStorage del Live (datos públicos) o null si no está disponible (modo privado). */
 function liveV2CacheStorage() {
@@ -2099,9 +2108,9 @@ async function pollLiveV2() {
 async function renderLiveV2Tab() {
   stopLiveV2Polling();
   const st = liveV2State();
-  // Con eventos y cursor en memoria (visita anterior o caché de sesión) se entra
-  // con delta: el full solo se fuerza en resync/retry, nunca por entrar a Live.
-  const forceFull = !st.serverTime || !st.events.length || !!st._needFull;
+  // La entrada es autoritativa si el full es viejo (o falta): así se descartan
+  // eventos de ejecuciones anteriores aunque el delta no los elimine.
+  const forceFull = liveV2ShouldFullOnEntry(st);
   try {
     await fetchLiveEvents(forceFull);
     st.error = null;
@@ -2147,6 +2156,7 @@ async function renderLiveV2Tab() {
     liveV2StatusBadge,
     liveV2NextPollState,
     fetchLiveEvents,
+    liveV2ShouldFullOnEntry,
     fetchLiveSnapshots,
     liveV2ObservedMinute,
     liveV2ChipData,

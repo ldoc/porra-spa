@@ -4,6 +4,7 @@ const {
   liveV2ChipLabel,
   liveV2StatusBadge,
   liveV2NextPollState,
+  liveV2ShouldFullOnEntry,
   fetchLiveEvents,
   fetchLiveSnapshots,
   init,
@@ -790,6 +791,19 @@ test('un full conserva el marcador previo y el pulso de cambio', async () => {
   assert.equal(AppState.liveV2._chipPulse['1'].state, 'fav');
   assert.equal(AppState.liveV2._chipScores['1'], '1-0');
   assert.notEqual(AppState.liveV2._chipChanged['1'], undefined);
+});
+
+test('liveV2ShouldFullOnEntry exige full si el full es viejo o falta', () => {
+  const now = 1_000_000;
+  const fresh = { serverTime: '2026-10-21T20:00:00Z', events: [{}], _fullAt: now - 59_000 };
+  assert.equal(liveV2ShouldFullOnEntry(fresh, now), false);
+
+  assert.equal(liveV2ShouldFullOnEntry({ ...fresh, _fullAt: now - 60_001 }, now), true);
+  assert.equal(liveV2ShouldFullOnEntry({ ...fresh, serverTime: null }, now), true);
+  assert.equal(liveV2ShouldFullOnEntry({ ...fresh, events: [] }, now), true);
+  assert.equal(liveV2ShouldFullOnEntry({ ...fresh, _needFull: true }, now), true);
+  assert.equal(liveV2ShouldFullOnEntry({ ...fresh, _fullAt: 0 }, now), true);
+  assert.equal(liveV2ShouldFullOnEntry({ serverTime: 'T', events: [{}] }, now), true);
 });
 
 test('liveV2CacheKey incluye día local y usuario', () => {
