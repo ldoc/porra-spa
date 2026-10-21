@@ -2415,3 +2415,46 @@ test('refreshLiveV2PlayerModal cierra el modal si el jugador ya no está visible
     if (prevDoc === undefined) delete global.document; else global.document = prevDoc;
   }
 });
+
+test('refreshLiveV2PlayerModal conserva el foco dentro del modal', () => {
+  const ui = freshUi();
+  const liveV2Api = {
+    foldAll: () => ({ 2: { status: 'LIVE', score: { home: 1, away: 0 } } }),
+    matchStateToStats: () => ({ jugadores: [] }),
+    escapeHtml: s => String(s),
+  };
+  const AppState = {
+    liveV2: { events: [], _openPlayerModal: 'Ana' },
+    matches: [{
+      id: 2, fechaTs: 200, homeTeamId: 10, awayTeamId: 20,
+      homeTeam: 'Local', awayTeam: 'Visita',
+    }],
+    allPredictions: {}, squadsCache: {}, allPlayers: [], matchStats: [],
+  };
+  ui.init({
+    AppState,
+    liveV2Api,
+    visiblePlayers: () => [{ name: 'Ana', avatar: '⚽' }],
+    calculateMatchPoints: () => ({ points: 0, breakdown: [] }),
+  });
+  const focused = [];
+  const closeOld = { focus() { focused.push('old'); } };
+  const closeNew = { focus() { focused.push('new'); } };
+  const host = {
+    contains: el => el === closeOld,
+    querySelector: sel => (sel === '.breakdown-modal-close' ? closeNew : null),
+    innerHTML: '',
+  };
+  const prevDoc = global.document;
+  global.document = {
+    getElementById: id => (id === 'livev2-player-modal' ? host : null),
+    activeElement: closeOld,
+    removeEventListener: () => {},
+  };
+  try {
+    ui.refreshLiveV2PlayerModal();
+  } finally {
+    if (prevDoc === undefined) delete global.document; else global.document = prevDoc;
+  }
+  assert.deepEqual(focused, ['new']);
+});

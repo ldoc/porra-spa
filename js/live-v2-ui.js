@@ -649,12 +649,13 @@ function openLiveV2MatchModal(eventId) {
 function closeLiveV2PlayerModal() {
   const st = liveV2State();
   const overlay = typeof document !== 'undefined' ? document.getElementById('livev2-player-modal-overlay') : null;
+  const hadModal = !!(overlay || st._openPlayerModal != null || st._playerModalPrevOverflow != null);
   if (overlay) overlay.remove();
   if (st._playerModalKeyHandler && typeof document !== 'undefined') {
     document.removeEventListener('keydown', st._playerModalKeyHandler);
   }
   st._playerModalKeyHandler = null;
-  if (typeof document !== 'undefined' && document.body) {
+  if (hadModal && typeof document !== 'undefined' && document.body) {
     document.body.style.overflow = st._playerModalPrevOverflow || '';
   }
   st._playerModalPrevOverflow = null;
@@ -679,6 +680,8 @@ function refreshLiveV2PlayerModal() {
   if (!matches.length) { closeLiveV2PlayerModal(); return; }
   const content = host.querySelector('.livev2-match-content');
   const scrollTop = content ? content.scrollTop : null;
+  const active = document.activeElement;
+  const hadFocus = !!(active && typeof host.contains === 'function' && host.contains(active));
   host.innerHTML = liveV2PlayerModalHtml({
     username,
     avatar: player.avatar,
@@ -687,6 +690,10 @@ function refreshLiveV2PlayerModal() {
   });
   const nextContent = host.querySelector('.livev2-match-content');
   if (nextContent && scrollTop != null) nextContent.scrollTop = scrollTop;
+  if (hadFocus) {
+    const target = host.querySelector('.breakdown-modal-close');
+    if (target && typeof target.focus === 'function') target.focus();
+  }
 }
 
 function openLiveV2PlayerModal(username, returnFocusEl) {
