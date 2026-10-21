@@ -1121,7 +1121,7 @@ function liveV2RowPointsClass(d) {
 }
 
 function liveV2PointsDiffText(d) {
-  return d > 0 ? `+${d}pts` : d < 0 ? `${d}pts` : '0pts';
+  return d > 0 ? `+${d}pts` : d < 0 ? `${d}pts` : '';
 }
 
 function liveV2PointsDiffLabel(d) {

@@ -1020,7 +1020,7 @@ test('renderLiveV2Tab conserva el movimiento de puesto de los últimos 30 s', as
   const html = await ui.renderLiveV2Tab();
   assert.match(html, /livev2-rank-move up/);
   assert.match(html, /▲2/);
-  assert.match(html, /0pts/);
+  assert.doesNotMatch(html, /0pts/);
 });
 
 test('liveV2RowHtml pinta puesto, movimiento y diferencial sin flecha', () => {
@@ -1069,7 +1069,7 @@ test('liveV2PointsDiffText, clase y etiqueta', () => {
   const ui = freshUi();
   assert.equal(ui.liveV2PointsDiffText(5), '+5pts');
   assert.equal(ui.liveV2PointsDiffText(-2), '-2pts');
-  assert.equal(ui.liveV2PointsDiffText(0), '0pts');
+  assert.equal(ui.liveV2PointsDiffText(0), '');
   assert.equal(ui.liveV2PointsDiffClass(5), 'up');
   assert.equal(ui.liveV2PointsDiffClass(-2), 'down');
   assert.equal(ui.liveV2PointsDiffClass(0), 'eq');
