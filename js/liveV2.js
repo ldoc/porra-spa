@@ -410,7 +410,169 @@
       c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   }
 
-  const liveV2Api = { createMatchState, applyEvent, escapeHtml, newPlayer, matchClockAt, minutesOf, sortEvents, foldMatch, foldAll, stateAt, eventKey, wantSimSource, matchStateToStats, rankRows, reasonLabel, liveV2ReasonForEvent, feedLabel, flipDelta };
+  const FEED_TYPES = new Set([
+    'goal', 'goal_cancelled', 'card',
+    'penalty_saved', 'penalty_missed', 'substitution',
+  ]);
+
+  function formatMinute(minute, addedTime) {
+    if (minute == null) return '';
+    return `${minute}${addedTime ? `+${addedTime}` : ''}'`;
+  }
+
+  function playerName(id, playersById) {
+    const meta = id != null && playersById ? playersById[String(id)] : null;
+    return meta && meta.nombre ? meta.nombre : (id != null ? `Jugador #${id}` : null);
+  }
+
+  function feedTeamName(ev, playerId, playersById, ctx, preferPlayerTeam) {
+    if (!ctx) return null;
+    const meta = playerId != null && playersById ? playersById[String(playerId)] : null;
+    const teamId = preferPlayerTeam && meta && meta.equipo != null
+      ? meta.equipo
+      : (ev.teamId != null ? ev.teamId : (meta ? meta.equipo : null));
+    if (teamId == null) return null;
+    if (String(teamId) === String(ctx.homeTeamId)) return ctx.homeTeam || null;
+    if (String(teamId) === String(ctx.awayTeamId)) return ctx.awayTeam || null;
+    return null;
+  }
+
+  function feedScore(ev, ctx, useGoalScore) {
+    const p = ev.payload || {};
+    const scoreHome = useGoalScore && p.scoreHome != null ? p.scoreHome : (ctx ? ctx.scoreHome : 0);
+    const scoreAway = useGoalScore && p.scoreAway != null ? p.scoreAway : (ctx ? ctx.scoreAway : 0);
+    return { scoreHome, scoreAway };
+  }
+
+  function assistText(ids, playersById) {
+    if (!Array.isArray(ids)) return null;
+    const names = ids.map(id => playerName(id, playersById)).filter(Boolean);
+    if (!names.length) return null;
+    if (names.length === 1) return `asistencia de ${names[0]}`;
+    if (names.length === 2) return `asistencias de ${names[0]} y ${names[1]}`;
+    return `asistencias de ${names[0]}, ${names[1]} y ${names.length - 2} más`;
+  }
+
+  function feedBase(ev, ctx, useGoalScore) {
+    return {
+      key: eventKey(ev),
+      type: ev.type,
+      minuteText: formatMinute(ev.minute, ev.addedTime),
+      match: {
+        eventId: ev.eventId,
+        homeTeam: ctx ? ctx.homeTeam || null : null,
+        awayTeam: ctx ? ctx.awayTeam || null : null,
+        homeBadge: ctx ? ctx.homeBadge || null : null,
+        awayBadge: ctx ? ctx.awayBadge || null : null,
+        ...feedScore(ev, ctx, useGoalScore),
+      },
+    };
+  }
+
+  function feedEventView(ev, ctx, playersById, bySourceId) {
+    if (!ev || !FEED_TYPES.has(ev.type) || !isFinite(new Date(ev.ts).getTime())) return null;
+    const p = ev.payload || {};
+    const base = feedBase(ev, ctx, ev.type === 'goal');
+
+    if (ev.type === 'goal') {
+      const scorerId = p.scorerId != null ? p.scorerId : ev.playerId;
+      const own = !!p.isOwnGoal;
+      const details = [];
+      const assist = own ? null : assistText(p.assistPlayerIds, playersById);
+      if (assist) details.push(assist);
+      if (p.isPenalty) details.push('penalti');
+      return {
+        ...base, icon: '⚽', tone: 'goal', playerId: scorerId,
+        text: `${own ? 'Gol en propia de' : 'Gol de'} ${playerName(scorerId, playersById) || 'un jugador'}`,
+        teamName: feedTeamName(ev, scorerId, playersById, ctx, true),
+        detail: details.length ? details.join(' · ') : null,
+      };
+    }
+
+    if (ev.type === 'goal_cancelled') {
+      const orig = p.ofSourceId != null && bySourceId ? bySourceId.get(p.ofSourceId) : null;
+      const scorerId = orig ? (orig.payload?.scorerId ?? orig.playerId) : ev.playerId;
+      return {
+        ...base, icon: '↩️', tone: 'cancelled', playerId: scorerId,
+        text: orig ? `Gol anulado a ${playerName(scorerId, playersById) || 'un jugador'}` : 'Gol anulado',
+        teamName: orig ? feedTeamName(orig, scorerId, playersById, ctx, true) : null,
+        detail: 'VAR',
+      };
+    }
+
+    if (ev.type === 'card') {
+      const ct = p.cardType || 'yellow';
+      const double = ct === 'yellowRed' || ct === 'secondYellow';
+      const red = ct === 'red' || double;
+      return {
+        ...base, icon: double ? '🟨🟥' : red ? '🟥' : '🟨',
+        tone: red ? 'card-red' : 'card-yellow', playerId: ev.playerId,
+        text: `${double ? 'Doble amarilla' : red ? 'Roja' : 'Amarilla'} · ${playerName(ev.playerId, playersById) || 'un jugador'}`,
+        teamName: feedTeamName(ev, ev.playerId, playersById, ctx, false),
+        detail: null,
+      };
+    }
+
+    if (ev.type === 'penalty_saved') {
+      return {
+        ...base, icon: '🧤', tone: 'penalty', playerId: p.keeperId,
+        text: `Penalti parado por ${playerName(p.keeperId, playersById) || 'un jugador'}`,
+        teamName: feedTeamName(ev, p.keeperId, playersById, ctx, false),
+        detail: null,
+      };
+    }
+
+    if (ev.type === 'penalty_missed') {
+      return {
+        ...base, icon: '❌', tone: 'penalty', playerId: p.takerId,
+        text: `Penalti fallado · ${playerName(p.takerId, playersById) || 'un jugador'}`,
+        teamName: feedTeamName(ev, p.takerId, playersById, ctx, false),
+        detail: null,
+      };
+    }
+
+    if (ev.type === 'substitution') {
+      const inName = playerName(p.inId, playersById);
+      const outName = playerName(p.outId, playersById);
+      let text = 'Cambio';
+      if (inName && outName) text = `Entra ${inName} · Sale ${outName}`;
+      else if (inName) text = `Entra ${inName}`;
+      else if (outName) text = `Sale ${outName}`;
+      return {
+        ...base, icon: '🔁', tone: 'sub', playerId: p.inId != null ? p.inId : p.outId,
+        text, teamName: feedTeamName(ev, p.inId != null ? p.inId : p.outId, playersById, ctx, false),
+        detail: null,
+      };
+    }
+
+    return null;
+  }
+
+  function feedEvents(events, ctxById, playersById) {
+    const list = Array.isArray(events) ? events : [];
+    const bySourceId = new Map();
+    for (const e of list) if (e && e.sourceId != null) bySourceId.set(e.sourceId, e);
+    const seen = new Set();
+    return sortEvents(list)
+      .filter(e => e && FEED_TYPES.has(e.type) && isFinite(new Date(e.ts).getTime()))
+      .filter(e => {
+        const key = eventKey(e);
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      })
+      .map(e => feedEventView(e, ctxById && ctxById[String(e.eventId)], playersById, bySourceId))
+      .filter(Boolean)
+      .reverse();
+  }
+
+  function feedToastPlan(views, max = 3) {
+    const list = Array.isArray(views) ? views : [];
+    const show = list.slice(0, Math.max(0, max));
+    return { show, overflow: Math.max(0, list.length - show.length) };
+  }
+
+  const liveV2Api = { createMatchState, applyEvent, escapeHtml, newPlayer, matchClockAt, minutesOf, sortEvents, foldMatch, foldAll, stateAt, eventKey, wantSimSource, matchStateToStats, rankRows, reasonLabel, liveV2ReasonForEvent, feedLabel, flipDelta, FEED_TYPES, formatMinute, feedEventView, feedEvents, feedToastPlan };
   global.liveV2Api = liveV2Api;
   if (typeof module !== 'undefined' && module.exports) module.exports = liveV2Api;
 })(typeof window !== 'undefined' ? window : globalThis);

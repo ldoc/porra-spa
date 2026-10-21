@@ -632,3 +632,159 @@ test('wantSimSource solo en localhost/127.0.0.1 con liveSim=1', () => {
   assert.equal(liveV2.wantSimSource('', 'localhost'), false);
   assert.equal(liveV2.wantSimSource('?liveSim=0', 'localhost'), false);
 });
+
+const FEED_CTX = {
+  eventId: 100, homeTeamId: 1, awayTeamId: 2,
+  homeTeam: 'Local', awayTeam: 'Visitante',
+  homeBadge: 'data/imgEquipos/1.webp', awayBadge: 'data/imgEquipos/2.webp',
+  scoreHome: 1, scoreAway: 0,
+};
+const FEED_PLAYERS = {
+  11: { nombre: 'Ana', equipo: 1 },
+  22: { nombre: 'Beto', equipo: 2 },
+  33: { nombre: 'Carla', equipo: 1 },
+  44: { nombre: 'Dani', equipo: 2 },
+};
+function feedEv(overrides = {}) {
+  return {
+    eventId: 100,
+    sourceId: 'ev|1',
+    type: 'goal',
+    ts: '2026-10-21T19:00:00.000Z',
+    minute: 10,
+    addedTime: null,
+    teamId: 1,
+    playerId: 11,
+    payload: {},
+    ...overrides,
+  };
+}
+
+test('formatMinute formatea normal, añadido y vacío', () => {
+  assert.equal(liveV2.formatMinute(23, null), "23'");
+  assert.equal(liveV2.formatMinute(45, 2), "45+2'");
+  assert.equal(liveV2.formatMinute(null, null), '');
+});
+
+test('feedEventView resuelve gol con asistencia y marcador del gol', () => {
+  const ev = feedEv({
+    payload: { scorerId: 11, isHome: true, scoreHome: 2, scoreAway: 1, assistPlayerIds: [22] },
+  });
+  const v = liveV2.feedEventView(ev, FEED_CTX, FEED_PLAYERS, new Map());
+  assert.equal(v.icon, '⚽');
+  assert.equal(v.text, 'Gol de Ana');
+  assert.equal(v.teamName, 'Local');
+  assert.equal(v.detail, 'asistencia de Beto');
+  assert.deepEqual([v.match.scoreHome, v.match.scoreAway], [2, 1]);
+});
+
+test('feedEventView resuelve gol en propia con el equipo del jugador', () => {
+  const ev = feedEv({
+    payload: { scorerId: 11, isOwnGoal: true, isHome: true, scoreHome: 0, scoreAway: 1 },
+  });
+  const v = liveV2.feedEventView(ev, FEED_CTX, FEED_PLAYERS, new Map());
+  assert.equal(v.text, 'Gol en propia de Ana');
+  assert.equal(v.teamName, 'Local');
+  assert.deepEqual([v.match.scoreHome, v.match.scoreAway], [0, 1]);
+});
+
+test('feedEventView etiqueta tarjetas amarilla, roja y doble', () => {
+  const yellow = liveV2.feedEventView(
+    feedEv({ type: 'card', payload: { cardType: 'yellow' } }), FEED_CTX, FEED_PLAYERS, new Map());
+  const red = liveV2.feedEventView(
+    feedEv({ type: 'card', payload: { cardType: 'red' } }), FEED_CTX, FEED_PLAYERS, new Map());
+  const double = liveV2.feedEventView(
+    feedEv({ type: 'card', payload: { cardType: 'yellowRed' } }), FEED_CTX, FEED_PLAYERS, new Map());
+  assert.equal(yellow.text, 'Amarilla · Ana');
+  assert.equal(yellow.icon, '🟨');
+  assert.equal(red.text, 'Roja · Ana');
+  assert.equal(red.icon, '🟥');
+  assert.equal(double.text, 'Doble amarilla · Ana');
+  assert.equal(double.icon, '🟨🟥');
+});
+
+test('feedEventView etiqueta penalti parado y fallado', () => {
+  const saved = liveV2.feedEventView(
+    feedEv({ type: 'penalty_saved', teamId: 2, playerId: 22, payload: { keeperId: 22 } }),
+    FEED_CTX, FEED_PLAYERS, new Map());
+  const missed = liveV2.feedEventView(
+    feedEv({ type: 'penalty_missed', payload: { takerId: 11 } }),
+    FEED_CTX, FEED_PLAYERS, new Map());
+  assert.equal(saved.text, 'Penalti parado por Beto');
+  assert.equal(saved.teamName, 'Visitante');
+  assert.equal(missed.text, 'Penalti fallado · Ana');
+});
+
+test('feedEventView etiqueta cambios con nombres', () => {
+  const v = liveV2.feedEventView(
+    feedEv({ type: 'substitution', playerId: null, payload: { inId: 33, outId: 11 } }),
+    FEED_CTX, FEED_PLAYERS, new Map());
+  assert.equal(v.text, 'Entra Carla · Sale Ana');
+  assert.equal(v.teamName, 'Local');
+});
+
+test('feedEventView resuelve el gol original de un anulado', () => {
+  const goal = feedEv({ sourceId: 'goal|1', payload: { scorerId: 11, isHome: true } });
+  const cancelled = feedEv({
+    sourceId: 'cancel|1', type: 'goal_cancelled', ts: '2026-10-21T19:05:00.000Z',
+    playerId: null, payload: { ofSourceId: 'goal|1' },
+  });
+  const bySourceId = new Map([[goal.sourceId, goal]]);
+  const v = liveV2.feedEventView(cancelled, FEED_CTX, FEED_PLAYERS, bySourceId);
+  assert.equal(v.text, 'Gol anulado a Ana');
+  assert.equal(v.detail, 'VAR');
+  assert.equal(v.teamName, 'Local');
+});
+
+test('feedEventView usa el marcador actual en tarjetas y el del gol en goles', () => {
+  const currentCtx = { ...FEED_CTX, scoreHome: 3, scoreAway: 2 };
+  const card = liveV2.feedEventView(
+    feedEv({ type: 'card', payload: { cardType: 'yellow' } }), currentCtx, FEED_PLAYERS, new Map());
+  const goal = liveV2.feedEventView(
+    feedEv({ payload: { scorerId: 11, isHome: true, scoreHome: 2, scoreAway: 1 } }),
+    currentCtx, FEED_PLAYERS, new Map());
+  assert.deepEqual([card.match.scoreHome, card.match.scoreAway], [3, 2]);
+  assert.deepEqual([goal.match.scoreHome, goal.match.scoreAway], [2, 1]);
+});
+
+test('feedEvents filtra tipos no incluidos y ordena de más reciente a más antiguo', () => {
+  const goal = feedEv({ ts: '2026-10-21T19:00:00.000Z' });
+  const card = feedEv({
+    sourceId: 'card|1', type: 'card', ts: '2026-10-21T19:01:00.000Z',
+    payload: { cardType: 'yellow' },
+  });
+  const rating = feedEv({ sourceId: 'rating|1', type: 'rating', ts: '2026-10-21T19:02:00.000Z' });
+  const assist = feedEv({ sourceId: 'assist|1', type: 'assist', ts: '2026-10-21T19:03:00.000Z' });
+  const views = liveV2.feedEvents([goal, card, rating, assist], { 100: FEED_CTX }, FEED_PLAYERS);
+  assert.deepEqual(views.map(v => v.type), ['card', 'goal']);
+});
+
+test('feedEvents deduplica por eventId|sourceId', () => {
+  const a = feedEv({ ts: '2026-10-21T19:00:00.000Z' });
+  const b = feedEv({ ts: '2026-10-21T19:00:01.000Z' });
+  const views = liveV2.feedEvents([a, b], { 100: FEED_CTX }, FEED_PLAYERS);
+  assert.equal(views.length, 1);
+});
+
+test('feedEventView usa fallbacks si faltan jugador y equipo', () => {
+  const v = liveV2.feedEventView(
+    feedEv({ playerId: 99, teamId: null, payload: { scorerId: 99 } }),
+    FEED_CTX, {}, new Map());
+  assert.equal(v.text, 'Gol de Jugador #99');
+  assert.equal(v.teamName, null);
+});
+
+test('feedEventView resume más de dos asistencias', () => {
+  const v = liveV2.feedEventView(
+    feedEv({ payload: { scorerId: 11, isHome: true, assistPlayerIds: [22, 33, 44] } }),
+    FEED_CTX, FEED_PLAYERS, new Map());
+  assert.equal(v.detail, 'asistencias de Beto, Carla y 1 más');
+});
+
+test('feedToastPlan recorta a 3 y calcula el overflow', () => {
+  const views = [{ key: 'a' }, { key: 'b' }, { key: 'c' }, { key: 'd' }, { key: 'e' }];
+  const plan = liveV2.feedToastPlan(views, 3);
+  assert.equal(plan.show.length, 3);
+  assert.equal(plan.overflow, 2);
+  assert.deepEqual(plan.show.map(v => v.key), ['a', 'b', 'c']);
+});
