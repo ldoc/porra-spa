@@ -2458,3 +2458,32 @@ test('refreshLiveV2PlayerModal conserva el foco dentro del modal', () => {
   }
   assert.deepEqual(focused, ['new']);
 });
+
+test('liveV2RowHtml marca la fila como botón accesible con chevron', () => {
+  const ui = freshUi();
+  ui.init({ AppState: { liveV2: null }, liveV2Api: { escapeHtml: s => String(s) } });
+  const html = ui.liveV2RowHtml({
+    name: 'Ana', avatar: '⚽', rank: 2, livePoints: 30, pointsDiff: 0, isMe: false,
+    rankMove: { text: '=', cls: 'eq', label: 'Sin cambios' },
+  });
+  assert.match(html, /role="button"/);
+  assert.match(html, /tabindex="0"/);
+  assert.match(html, /aria-label="Ver desglose de Ana"/);
+  assert.match(html, /livev2-row-chevron/);
+  assert.match(html, />›<\/span>/);
+});
+
+test('Escape con el modal de jugador abierto no sale de pantalla completa', () => {
+  const ui = freshUi();
+  ui.init({ AppState: { liveV2: { _openPlayerModal: 'Ana' } }, liveV2Api: {} });
+  const dom = setupDom();
+  const hist = setupHistory();
+  withFullscreenGlobals(dom, hist, () => {
+    ui.bindLiveV2Fullscreen();
+    ui.enterLiveV2Fullscreen();
+    let prevented = false;
+    dom.doc.dispatch('keydown', { key: 'Escape', preventDefault() { prevented = true; } });
+    assert.ok(dom.bodyClasses.has('live-fs'));
+    assert.equal(prevented, false);
+  });
+});

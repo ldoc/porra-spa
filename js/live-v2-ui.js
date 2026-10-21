@@ -195,7 +195,8 @@ function bindLiveV2Fullscreen(root) {
     document.addEventListener('keydown', (e) => {
       if (e.key !== 'Escape' || !liveV2FsActive()) return;
       // El modal gestiona su propio Escape (y puede no haber AppState en tests aislados).
-      if (AppState && liveV2State()._openMatchModal != null) return;
+      if (AppState && (liveV2State()._openMatchModal != null
+        || liveV2State()._openPlayerModal != null)) return;
       e.preventDefault();
       exitLiveV2Fullscreen();
     });
@@ -1186,6 +1187,23 @@ function bindLiveV2Chips(root) {
   });
 }
 
+function bindLiveV2Rows(root) {
+  const host = (root || document).querySelector('#livev2-rows');
+  if (!host || host.dataset.bound === '1') return;
+  host.dataset.bound = '1';
+  const openFromEvent = (e) => {
+    const row = e.target.closest ? e.target.closest('[data-livev2-row]') : null;
+    if (!row) return;
+    e.preventDefault();
+    openLiveV2PlayerModal(row.getAttribute('data-livev2-row'), row);
+  };
+  host.addEventListener('click', openFromEvent);
+  host.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    openFromEvent(e);
+  });
+}
+
 function liveV2ChipHtml(eventId, state) {
   const d = liveV2ChipData(eventId, state);
   const hb = d.homeBadge
@@ -1443,7 +1461,9 @@ function liveV2PointsDiffLabel(d) {
 function liveV2RowHtml(r) {
   const move = r.rankMove || { text: '=', cls: 'eq', label: 'Sin cambios' };
   const diff = r.pointsDiff || 0;
-  return `<div class="livev2-row${r.isMe ? ' me' : ''}${liveV2RowPointsClass(diff)}" data-livev2-row="${liveV2Esc(r.name)}">`
+  return `<div class="livev2-row${r.isMe ? ' me' : ''}${liveV2RowPointsClass(diff)}"`
+    + ` data-livev2-row="${liveV2Esc(r.name)}" role="button" tabindex="0"`
+    + ` aria-label="${liveV2Esc('Ver desglose de ' + r.name)}">`
     + `<div class="livev2-inner">`
     + `<span class="livev2-rank-group">`
     + `<span class="livev2-rank">${r.rank}</span>`
@@ -1453,6 +1473,7 @@ function liveV2RowHtml(r) {
     + `<span class="livev2-name">${liveV2Esc(r.name)}</span>`
     + `<span class="livev2-pts">${r.livePoints}</span>`
     + `<span class="livev2-pts-diff ${liveV2PointsDiffClass(diff)}" aria-label="${liveV2Esc(liveV2PointsDiffLabel(diff))}">${liveV2PointsDiffText(diff)}</span>`
+    + `<span class="livev2-row-chevron" aria-hidden="true">›</span>`
     + `</div></div>`;
 }
 
@@ -1685,6 +1706,7 @@ async function retryLiveV2() {
     bindLiveV2SoundToggle(target);
     bindLiveV2Fullscreen(target);
     bindLiveV2Chips(target);
+    bindLiveV2Rows(target);
   } finally {
     st.polling = false;
     updateLiveV2Badge(target);
@@ -2462,6 +2484,7 @@ async function renderLiveV2Tab() {
     liveV2ToggleMatchEvents,
     liveV2ChipEventId,
     bindLiveV2Chips,
+    bindLiveV2Rows,
     openLiveV2MatchModal,
     closeLiveV2MatchModal,
     refreshLiveV2MatchModal,
