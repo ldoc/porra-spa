@@ -7065,7 +7065,8 @@ body.live-fs .resultados-scroll {
 }
 
 .livev2-feed-open {
-  min-height: 32px;
+  min-height: 44px;
+  min-width: 44px;
   padding: 4px 10px;
   border: 1px solid var(--border-color);
   border-radius: 999px;
@@ -7160,7 +7161,8 @@ body.live-fs .resultados-scroll {
 
 .livev2-toast-more {
   align-self: flex-start;
-  min-height: 32px;
+  min-height: 44px;
+  min-width: 44px;
   padding: 4px 10px;
   border-radius: 999px;
   border: 1px solid var(--border-color);

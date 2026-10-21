@@ -147,7 +147,10 @@ function setupDom() {
     setAttribute: (k, v) => { toggleAttrs[k] = v; },
     addEventListener: (type, fn) => { toggle[`on${type}`] = fn; },
   };
+  const all = [];
   const doc = {
+    visibilityState: 'visible',
+    _all: all,
     body: { classList: makeClassList(bodyClasses) },
     documentElement: {
       requestFullscreen: () => {
@@ -158,25 +161,145 @@ function setupDom() {
     get fullscreenElement() { return fullscreenEl; },
     set fullscreenElement(v) { fullscreenEl = v; },
     exitFullscreen: () => { fullscreenEl = null; return Promise.resolve(); },
-    querySelector: sel => (sel === '#livev2-fs-toggle' ? toggle : null),
+    register: el => { all.push(el); return el; },
+    getElementById: id => all.find(el => el.id === id) || null,
+    querySelector: sel => {
+      if (sel === '#livev2-fs-toggle') return toggle;
+      return all.find(el => matchesSelector(el, sel)) || null;
+    },
     addEventListener: (type, fn) => { listeners[type] = fn; },
     removeEventListener: () => {},
-    createElement: () => makeElement(),
+    createElement: tag => {
+      const el = makeElement(tag);
+      all.push(el);
+      return el;
+    },
+    createDocumentFragment: () => {
+      const fragment = makeElement('#fragment');
+      fragment._fragment = true;
+      return fragment;
+    },
   };
   return { doc, bodyClasses, toggleClasses, toggleAttrs, listeners, toggle };
 }
 
-function makeElement() {
+function matchesSelector(el, sel) {
+  if (!el || !sel) return false;
+  if (sel[0] === '#') return el.id === sel.slice(1);
+  if (sel[0] === '.') {
+    const m = sel.slice(1).match(/^([\w-]+)(?:\[([\w-]+)\])?$/);
+    if (!m) return false;
+    if (!el.classList.contains(m[1])) return false;
+    return !m[2] || el.hasAttribute(m[2]);
+  }
+  if (sel[0] === '[') return el.hasAttribute(sel.slice(1, -1).split('=')[0]);
+  return el.tagName === sel;
+}
+
+function makeElement(tag) {
   const attrs = {};
-  return {
-    className: '',
-    textContent: '',
+  const classes = new Set();
+  const el = {
+    tagName: tag || 'div',
+    _listeners: {},
+    _fragment: false,
+    _root: false,
+    _text: null,
+    _html: '',
+    children: [],
+    parentNode: null,
     style: {},
-    classList: { add() {}, remove() {}, contains() { return false; } },
-    setAttribute(k, v) { attrs[k] = v; },
-    getAttribute(k) { return attrs[k]; },
-    remove() {},
+    dataset: {},
+    get className() { return [...classes].join(' '); },
+    set className(v) {
+      classes.clear();
+      String(v == null ? '' : v).split(/\s+/).filter(Boolean).forEach(c => classes.add(c));
+    },
+    classList: {
+      add: (...cs) => cs.forEach(c => classes.add(c)),
+      remove: (...cs) => cs.forEach(c => classes.delete(c)),
+      toggle: (c, on) => { if (on) classes.add(c); else classes.delete(c); },
+      contains: c => classes.has(c),
+    },
+    get textContent() {
+      if (this._text != null) return this._text;
+      return this.children.map(c => c.textContent).join('');
+    },
+    set textContent(v) { this._text = String(v); this.children = []; this._html = ''; },
+    get innerHTML() { return this._html; },
+    set innerHTML(v) { this._html = String(v); this.children = []; this._text = null; },
+    setAttribute(k, v) { attrs[k] = String(v); if (k === 'id') this.id = String(v); },
+    getAttribute(k) { return attrs[k] == null ? null : attrs[k]; },
+    hasAttribute(k) { return Object.prototype.hasOwnProperty.call(attrs, k); },
+    removeChild(child) {
+      const i = this.children.indexOf(child);
+      if (i >= 0) this.children.splice(i, 1);
+      if (child) child.parentNode = null;
+      return child;
+    },
+    appendChild(child) {
+      if (!child) return child;
+      if (child._fragment) {
+        for (const c of child.children.slice()) this.appendChild(c);
+        child.children = [];
+        return child;
+      }
+      if (child.parentNode) child.parentNode.removeChild(child);
+      child.parentNode = this;
+      this.children.push(child);
+      return child;
+    },
+    prepend(child) {
+      if (!child) return child;
+      if (child._fragment) {
+        const kids = child.children.slice();
+        child.children = [];
+        for (const c of kids) {
+          if (c.parentNode) c.parentNode.removeChild(c);
+          c.parentNode = this;
+        }
+        this.children = kids.concat(this.children);
+        return child;
+      }
+      if (child.parentNode) child.parentNode.removeChild(child);
+      child.parentNode = this;
+      this.children.unshift(child);
+      return child;
+    },
+    remove() { if (this.parentNode) this.parentNode.removeChild(this); },
+    addEventListener(type, fn) { (this._listeners[type] = this._listeners[type] || []).push(fn); },
+    _emit(type, ev) { for (const fn of (this._listeners[type] || [])) fn(ev); },
+    querySelectorAll(sel) {
+      const out = [];
+      const walk = node => {
+        for (const c of node.children) {
+          if (matchesSelector(c, sel)) out.push(c);
+          walk(c);
+        }
+      };
+      walk(this);
+      return out;
+    },
+    querySelector(sel) { return this.querySelectorAll(sel)[0] || null; },
+    closest(sel) {
+      let node = this;
+      while (node) {
+        if (matchesSelector(node, sel)) return node;
+        node = node.parentNode;
+      }
+      return null;
+    },
+    get isConnected() {
+      let node = this;
+      while (node) { if (node._root) return true; node = node.parentNode; }
+      return false;
+    },
   };
+  Object.defineProperty(el, 'id', {
+    get() { return attrs.id || ''; },
+    set(v) { attrs.id = String(v); },
+  });
+  return el;
 }
 
 function setupHistory() {
@@ -834,6 +957,199 @@ test('liveV2FeedViews omite los eventos de nota', () => {
   const views = ui.liveV2FeedViews({ states: {} });
   assert.equal(views.length, 1);
   assert.match(views[0].text, /Gol/);
+});
+
+function toastView(key, overrides = {}) {
+  return {
+    key,
+    tone: 'goal',
+    icon: '⚽',
+    minuteText: "12'",
+    text: `Gol ${key}`,
+    teamName: 'Equipo A',
+    detail: null,
+    match: { homeTeam: 'Local', awayTeam: 'Visitante', scoreHome: 1, scoreAway: 0 },
+    ...overrides,
+  };
+}
+
+function withFeedDom(fn) {
+  const prevDoc = global.document;
+  const prevSetTimeout = global.setTimeout;
+  const prevClearTimeout = global.clearTimeout;
+  const timers = new Map();
+  let nextId = 1;
+  global.setTimeout = (cb, ms) => {
+    const id = nextId++;
+    timers.set(id, { cb, ms });
+    return id;
+  };
+  global.clearTimeout = id => { timers.delete(id); };
+  const dom = setupDom();
+  global.document = dom.doc;
+  try {
+    return fn(dom, timers);
+  } finally {
+    global.setTimeout = prevSetTimeout;
+    global.clearTimeout = prevClearTimeout;
+    if (prevDoc === undefined) delete global.document; else global.document = prevDoc;
+  }
+}
+
+function makeFeedRoot(dom) {
+  const root = makeElement();
+  root._root = true;
+  const feed = dom.doc.createElement('div');
+  feed.id = 'livev2-feed';
+  const count = dom.doc.createElement('span');
+  count.id = 'livev2-events-count';
+  feed.appendChild(count);
+  root.appendChild(feed);
+  return root;
+}
+
+test('liveV2ShowToasts muestra 3 avisos y el desbordamiento', () => {
+  const ui = freshUi();
+  const liveV2 = require('../js/liveV2.js');
+  ui.init({ AppState: { liveV2: null }, liveV2Api: liveV2 });
+  withFeedDom(dom => {
+    const host = makeElement();
+    host._root = true;
+    host.id = 'livev2-toasts';
+    dom.doc.register(host);
+    const views = ['a', 'b', 'c', 'd'].map(k => toastView(k));
+    ui.liveV2ShowToasts(liveV2.feedToastPlan(views, 3));
+    assert.equal(host.querySelectorAll('.livev2-toast[data-key]').length, 3);
+    const more = host.querySelector('.livev2-toast-more');
+    assert.ok(more);
+    assert.match(more.textContent, /\+1 más · Ver todos/);
+  });
+});
+
+test('liveV2ShowToasts deduplica dos vistas con la misma key', () => {
+  const ui = freshUi();
+  const liveV2 = require('../js/liveV2.js');
+  ui.init({ AppState: { liveV2: null }, liveV2Api: liveV2 });
+  withFeedDom(dom => {
+    const host = makeElement();
+    host._root = true;
+    host.id = 'livev2-toasts';
+    dom.doc.register(host);
+    ui.liveV2ShowToasts({ show: [toastView('same'), toastView('same')], overflow: 0 });
+    assert.equal(host.querySelectorAll('.livev2-toast[data-key]').length, 1);
+  });
+});
+
+test('liveV2DismissToast elimina el nodo con immediate', () => {
+  const ui = freshUi();
+  const liveV2 = require('../js/liveV2.js');
+  ui.init({ AppState: { liveV2: null }, liveV2Api: liveV2 });
+  withFeedDom(dom => {
+    const host = makeElement();
+    host._root = true;
+    host.id = 'livev2-toasts';
+    dom.doc.register(host);
+    ui.liveV2ShowToasts({ show: [toastView('one')], overflow: 0 });
+    const el = host.querySelector('.livev2-toast[data-key]');
+    assert.ok(el.isConnected);
+    ui.liveV2DismissToast(el, true);
+    assert.equal(el.parentNode, null);
+    assert.equal(el.isConnected, false);
+    assert.equal(host.querySelectorAll('.livev2-toast[data-key]').length, 0);
+  });
+});
+
+test('liveV2ClearToasts vacía el host y limpia los timers', () => {
+  const ui = freshUi();
+  const liveV2 = require('../js/liveV2.js');
+  ui.init({ AppState: { liveV2: null }, liveV2Api: liveV2 });
+  withFeedDom((dom, timers) => {
+    const host = makeElement();
+    host._root = true;
+    host.id = 'livev2-toasts';
+    dom.doc.register(host);
+    const views = ['a', 'b', 'c', 'd'].map(k => toastView(k));
+    ui.liveV2ShowToasts(liveV2.feedToastPlan(views, 3));
+    assert.ok(timers.size > 0);
+    ui.liveV2ClearToasts();
+    assert.equal(host.children.length, 0);
+    assert.equal(host.innerHTML, '');
+    assert.equal(timers.size, 0);
+  });
+});
+
+test('updateLiveV2Feed no muestra avisos con la pestaña oculta', () => {
+  const ui = freshUi();
+  const liveV2 = require('../js/liveV2.js');
+  let toastCalls = 0;
+  const event = { eventId: 1, sourceId: 'g1', type: 'goal', ts: '2026-09-16T20:01:00Z', minute: 1, payload: {} };
+  const AppState = { liveV2: { events: [event] }, matches: [], allPlayers: [] };
+  const api = { ...liveV2, feedToastPlan: () => { toastCalls++; return { show: [], overflow: 0 }; } };
+  ui.init({ AppState, liveV2Api: api });
+  withFeedDom(dom => {
+    dom.doc.visibilityState = 'hidden';
+    const root = makeFeedRoot(dom);
+    ui.updateLiveV2Feed(root, [event]);
+    assert.equal(toastCalls, 0);
+  });
+});
+
+test('updateLiveV2Feed refresca el modal abierto y no muestra avisos', () => {
+  const ui = freshUi();
+  const liveV2 = require('../js/liveV2.js');
+  let toastCalls = 0;
+  let refreshed = null;
+  const prevRefresh = global.refreshLiveV2EventsModal;
+  const event = { eventId: 1, sourceId: 'g1', type: 'goal', ts: '2026-09-16T20:01:00Z', minute: 1, payload: {} };
+  const AppState = { liveV2: { events: [event], _openEventsModal: true }, matches: [], allPlayers: [] };
+  const api = { ...liveV2, feedToastPlan: () => { toastCalls++; return { show: [], overflow: 0 }; } };
+  ui.init({ AppState, liveV2Api: api });
+  global.refreshLiveV2EventsModal = views => { refreshed = views; };
+  try {
+    withFeedDom(dom => {
+      const root = makeFeedRoot(dom);
+      ui.updateLiveV2Feed(root, [event]);
+      assert.ok(Array.isArray(refreshed));
+      assert.equal(refreshed.length, 1);
+      assert.equal(toastCalls, 0);
+    });
+  } finally {
+    if (prevRefresh === undefined) delete global.refreshLiveV2EventsModal;
+    else global.refreshLiveV2EventsModal = prevRefresh;
+  }
+});
+
+test('bindLiveV2EventsButton abre el modal y cierra el toast', () => {
+  const ui = freshUi();
+  const prevOpen = global.openLiveV2EventsModal;
+  const prevWindow = global.window;
+  let opened = 0;
+  global.openLiveV2EventsModal = () => { opened++; };
+  global.window = { matchMedia: () => ({ matches: true }) };
+  try {
+    withFeedDom(dom => {
+      const root = makeFeedRoot(dom);
+      const feed = root.querySelector('#livev2-feed');
+      const openBtn = dom.doc.createElement('button');
+      openBtn.id = 'livev2-events-open';
+      const toast = dom.doc.createElement('div');
+      toast.className = 'livev2-toast goal';
+      toast.setAttribute('data-key', 'k1');
+      feed.appendChild(openBtn);
+      feed.appendChild(toast);
+      ui.bindLiveV2EventsButton(root);
+      feed._emit('click', { target: openBtn });
+      assert.equal(opened, 1);
+      feed._emit('click', { target: toast });
+      assert.equal(toast.parentNode, null);
+      assert.equal(toast.isConnected, false);
+    });
+  } finally {
+    if (prevOpen === undefined) delete global.openLiveV2EventsModal;
+    else global.openLiveV2EventsModal = prevOpen;
+    if (prevWindow === undefined) delete global.window;
+    else global.window = prevWindow;
+  }
 });
 
 test('liveV2DetectRankMoves guarda subidas y bajadas', () => {

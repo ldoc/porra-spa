@@ -1108,7 +1108,6 @@ function liveV2ChipsHtml(folded) {
   return liveV2OrderedStateEntries(folded).map(([id, s]) => liveV2ChipHtml(id, s)).join('');
 }
 
-let _feedWatchFrom = 0;
 const LIVEV2_TOAST_MS = 6000;
 const _liveV2ToastTimers = new Map();
 
@@ -1210,8 +1209,10 @@ function liveV2ShowToasts(plan) {
   if (!host || !plan || !plan.show || !plan.show.length) return;
   const current = () => [...host.querySelectorAll('.livev2-toast[data-key]')];
   const fragment = document.createDocumentFragment();
+  const added = new Set();
   for (const v of plan.show) {
-    if (current().some(el => el.getAttribute('data-key') === v.key)) continue;
+    if (added.has(v.key) || current().some(el => el.getAttribute('data-key') === v.key)) continue;
+    added.add(v.key);
     const el = document.createElement('div');
     el.className = `livev2-toast ${v.tone || ''}`.trim();
     el.setAttribute('data-key', v.key);
@@ -1249,13 +1250,9 @@ function updateLiveV2Feed(root, newEvents) {
   }
   if (!newEvents || !newEvents.length) return;
   if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return;
-  const fresh = newEvents.filter(e => {
-    const t = new Date(e.ingestedAt || e.ts).getTime();
-    return isFinite(t) && t >= _feedWatchFrom;
-  });
-  if (!fresh.length) return;
+  if (typeof liveV2Api === 'undefined' || !liveV2Api.feedEvents || !liveV2Api.feedToastPlan) return;
   const ctx = liveV2FeedCtxById(folded);
-  const newViews = liveV2Api.feedEvents(fresh, ctx, liveV2PlayersById());
+  const newViews = liveV2Api.feedEvents(newEvents, ctx, liveV2PlayersById());
   if (!newViews.length) return;
   liveV2ShowToasts(liveV2Api.feedToastPlan(newViews, 3));
 }
@@ -1950,7 +1947,9 @@ function startLiveV2Polling(folded) {
           return;
         }
         liveV2UpdateCountdown();
-        liveV2State()._needFull = true; // al volver a visible se resincroniza con un full
+        const st = liveV2State();
+        st._seenEventIds = new Set((st.events || []).map(e => liveV2Api.eventKey(e)));
+        st._needFull = true; // al volver a visible se resincroniza con un full
         pollLiveV2();
       }
     };
@@ -2028,7 +2027,6 @@ async function renderLiveV2Tab() {
   }
   st._lastRows = liveV2Snapshot(rows);
   st._seenEventIds = new Set((st.events || []).map(e => liveV2Api.eventKey(e)));
-  _feedWatchFrom = Date.now();
   if (AppState.resultadosTab === 'live') startLiveV2Polling(folded);
   return renderLiveV2Html(rows, folded);
 }
