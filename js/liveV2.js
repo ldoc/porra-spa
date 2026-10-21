@@ -607,13 +607,23 @@
       .reverse();
   }
 
+  function feedEventsForMatch(events, eventId, ctxById, playersById, opts = {}) {
+    const includeSeed = !!(opts && opts.includeSeed);
+    const all = (Array.isArray(events) ? events : [])
+      .filter(e => e && String(e.eventId) === String(eventId));
+    const visible = includeSeed
+      ? all
+      : all.filter(e => !(e.payload && e.payload.seed));
+    return feedEvents(visible, ctxById, playersById, all);
+  }
+
   function feedToastPlan(views, max = 3) {
     const list = Array.isArray(views) ? views : [];
     const show = list.slice(0, Math.max(0, max));
     return { show, overflow: Math.max(0, list.length - show.length) };
   }
 
-  const liveV2Api = { createMatchState, applyEvent, escapeHtml, newPlayer, matchClockAt, minutesOf, sortEvents, foldMatch, foldAll, stateAt, eventKey, wantSimSource, matchStateToStats, rankRows, reasonLabel, liveV2ReasonForEvent, feedLabel, flipDelta, FEED_TYPES, formatMinute, feedEventView, feedEvents, feedToastPlan };
+  const liveV2Api = { createMatchState, applyEvent, escapeHtml, newPlayer, matchClockAt, minutesOf, sortEvents, foldMatch, foldAll, stateAt, eventKey, wantSimSource, matchStateToStats, rankRows, reasonLabel, liveV2ReasonForEvent, feedLabel, flipDelta, FEED_TYPES, formatMinute, feedEventView, feedEvents, feedEventsForMatch, feedToastPlan };
   global.liveV2Api = liveV2Api;
   if (typeof module !== 'undefined' && module.exports) module.exports = liveV2Api;
 })(typeof window !== 'undefined' ? window : globalThis);

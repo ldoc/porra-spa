@@ -873,3 +873,33 @@ test('feedToastPlan recorta a 3 y calcula el overflow', () => {
   assert.equal(plan.overflow, 2);
   assert.deepEqual(plan.show.map(v => v.key), ['a', 'b', 'c']);
 });
+
+test('feedEventsForMatch filtra por partido y excluye seed por defecto', () => {
+  const seed = feedEv({ eventId: 100, sourceId: 'goal|seed', payload: { scorerId: 11, seed: true } });
+  const live = feedEv({ eventId: 100, sourceId: 'goal|live', ts: '2026-10-21T19:01:00.000Z', payload: { scorerId: 11 } });
+  const other = feedEv({ eventId: 200, sourceId: 'goal|other', payload: { scorerId: 11 } });
+  const views = liveV2.feedEventsForMatch(
+    [seed, live, other], 100, { 100: FEED_CTX, 200: FEED_CTX }, FEED_PLAYERS);
+  assert.equal(views.length, 1);
+  assert.equal(views[0].key, '100|goal|live');
+});
+
+test('feedEventsForMatch incluye seed con includeSeed', () => {
+  const seed = feedEv({ eventId: 100, sourceId: 'goal|seed', payload: { scorerId: 11, seed: true } });
+  const live = feedEv({ eventId: 100, sourceId: 'goal|live', payload: { scorerId: 11 } });
+  const views = liveV2.feedEventsForMatch(
+    [seed, live], 100, { 100: FEED_CTX }, FEED_PLAYERS, { includeSeed: true });
+  assert.equal(views.length, 2);
+});
+
+test('feedEventsForMatch resuelve una anulación con el historial del partido', () => {
+  const goal = feedEv({ eventId: 100, sourceId: 'goal|1', payload: { scorerId: 11, isHome: true } });
+  const cancelled = feedEv({
+    eventId: 100, sourceId: 'cancel|1', type: 'goal_cancelled',
+    ts: '2026-10-21T19:05:00.000Z', playerId: null, payload: { ofSourceId: 'goal|1' },
+  });
+  const views = liveV2.feedEventsForMatch(
+    [goal, cancelled], 100, { 100: FEED_CTX }, FEED_PLAYERS, { includeSeed: true });
+  assert.equal(views[0].text, 'Gol anulado a Ana');
+  assert.equal(views[0].detail, 'VAR');
+});
