@@ -72,7 +72,25 @@
     };
   }
 
-  const soundApi = { eventToTone, playLiveEvent, loadSoundEnabled, saveSoundEnabled, realAudioContext, KEY };
+  function playFile(src, deps) {
+    if (!deps || !deps.enabled || typeof Audio === 'undefined') return;
+    try {
+      const audio = new Audio(src);
+      audio.volume = 0.7;
+      const p = audio.play();
+      if (p && typeof p.catch === 'function') p.catch(() => {});
+    } catch (e) { /* sin audio o autoplay bloqueado */ }
+  }
+
+  function playBeep(deps) {
+    if (!deps || !deps.enabled || !deps.ctx || typeof deps.ctx.play !== 'function') return;
+    deps.ctx.play({ freq: 660, durationMs: 90 });
+  }
+
+  const soundApi = {
+    eventToTone, playLiveEvent, playFile, playBeep,
+    loadSoundEnabled, saveSoundEnabled, realAudioContext, KEY,
+  };
   global.soundApi = soundApi;
   if (typeof module !== 'undefined' && module.exports) {
     module.exports = soundApi;

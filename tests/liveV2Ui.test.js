@@ -1879,3 +1879,55 @@ test('el chip aplica la clase de pulso', () => {
   const html = ui.renderLiveV2Html([], { states: { 1: { status: 'LIVE', lastMinute: 20, score: { home: 1, away: 0 } } }, statsById: {} });
   assert.match(html, /score-hurt/);
 });
+
+test('liveV2ChipEventText compone el texto completo', () => {
+  const ui = freshUi();
+  assert.equal(
+    ui.liveV2ChipEventText({ icon: '⚽', minuteText: "23'", text: 'Gol de Ana', detail: 'asistencia de Beto' }),
+    "⚽ 23' Gol de Ana · asistencia de Beto");
+});
+
+test('liveV2ChipSoundKind distingue gol del resto', () => {
+  const ui = freshUi();
+  assert.equal(ui.liveV2ChipSoundKind({ type: 'goal' }), 'goal');
+  assert.equal(ui.liveV2ChipSoundKind({ type: 'card' }), 'beep');
+  assert.equal(ui.liveV2ChipSoundKind({ type: 'goal_cancelled' }), 'beep');
+});
+
+test('liveV2AppendChipViews deduplica y conserva el orden', () => {
+  const ui = freshUi();
+  const q = ui.liveV2AppendChipViews([], [{ key: 'a' }, { key: 'b' }]);
+  const next = ui.liveV2AppendChipViews(q, [{ key: 'b' }, { key: 'c' }]);
+  assert.deepEqual(next.map(v => v.key), ['a', 'b', 'c']);
+});
+
+test('liveV2StartNextChipEvent pinta el evento y restaura la línea normal', () => {
+  const ui = freshUi();
+  const liveV2 = require('../js/liveV2.js');
+  ui.init({ AppState: { liveV2: { events: [], _chipEventQueue: {} }, matches: [], allPlayers: [] }, liveV2Api: liveV2 });
+  withFeedDom((dom, timers) => {
+    dom.doc.querySelectorAll = sel => dom.doc._all.filter(el => matchesSelector(el, sel));
+    const chip = dom.doc.createElement('div');
+    chip.setAttribute('data-livev2-chip', '1');
+    const meta = dom.doc.createElement('div');
+    meta.className = 'livev2-chip-meta';
+    const layer = dom.doc.createElement('span');
+    layer.className = 'livev2-chip-event';
+    meta.appendChild(layer);
+    chip.appendChild(meta);
+    chip._root = true;
+    dom.doc.register(chip);
+    ui.liveV2State()._chipEventQueue['1'] = [{
+      key: 'g1', type: 'goal', icon: '⚽', minuteText: "23'",
+      text: 'Gol de Ana', detail: 'asistencia de Beto', tone: 'goal',
+    }];
+    ui.liveV2StartNextChipEvent('1');
+    assert.equal(meta.classList.contains('has-event'), true);
+    assert.match(layer.textContent, /Gol de Ana/);
+    const timer = [...timers.values()].find(t => t.ms === 8000);
+    assert.ok(timer);
+    timer.cb();
+    assert.equal(meta.classList.contains('has-event'), false);
+    assert.equal(layer.textContent, '');
+  });
+});

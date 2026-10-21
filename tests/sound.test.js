@@ -1,6 +1,6 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { eventToTone, playLiveEvent, loadSoundEnabled, saveSoundEnabled } = require('../js/sound.js');
+const { eventToTone, playLiveEvent, playFile, playBeep, loadSoundEnabled, saveSoundEnabled } = require('../js/sound.js');
 
 function memStore(initial) {
   const map = new Map(Object.entries(initial || {}));
@@ -46,6 +46,28 @@ test('toggle persiste en storage', () => {
   assert.equal(loadSoundEnabled(s), true);
   saveSoundEnabled(s, false);
   assert.equal(loadSoundEnabled(s), false);
+});
+
+test('playFile respeta enabled y crea un Audio', () => {
+  const prev = global.Audio;
+  const played = [];
+  global.Audio = function (src) {
+    this.play = () => { played.push(src); return Promise.resolve(); };
+  };
+  try {
+    playFile('sounds/gol_otro.mp3', { enabled: true });
+    playFile('sounds/gol_otro.mp3', { enabled: false });
+    assert.deepEqual(played, ['sounds/gol_otro.mp3']);
+  } finally {
+    if (prev === undefined) delete global.Audio; else global.Audio = prev;
+  }
+});
+
+test('playBeep usa el AudioContext y respeta enabled', () => {
+  const played = [];
+  playBeep({ enabled: true, ctx: { play: p => played.push(p) } });
+  playBeep({ enabled: false, ctx: { play: p => played.push(p) } });
+  assert.deepEqual(played, [{ freq: 660, durationMs: 90 }]);
 });
 
 test('eventToTone goal good/bad/neutral', () => {

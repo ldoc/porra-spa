@@ -6776,6 +6776,47 @@ body.live-fs .resultados-scroll {
   white-space: nowrap;
 }
 
+.livev2-chip-meta { position: relative; }
+
+.livev2-chip-event {
+  position: absolute;
+  inset: 0;
+  display: none;
+  overflow: hidden;
+  background: var(--ucl-card);
+  z-index: 1;
+}
+
+.livev2-chip-meta.has-event .livev2-chip-event { display: block; }
+
+.livev2-chip-event span {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+  font-size: 9px;
+  font-weight: 800;
+  color: var(--text-primary);
+  will-change: transform;
+}
+
+.livev2-chip-event span.static {
+  position: static;
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.livev2-chip-event.goal span { color: var(--accent-green); }
+.livev2-chip-event.card-yellow span { color: var(--accent-gold); }
+.livev2-chip-event.card-red span { color: #f87171; }
+.livev2-chip-event.penalty span { color: var(--accent-cyan); }
+.livev2-chip-event.sub span { color: #93c5fd; }
+.livev2-chip-event.cancelled span { color: var(--text-muted); }
+
 .livev2-chip-state {
   font-size: 9px;
   font-weight: 700;

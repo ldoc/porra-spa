@@ -456,6 +456,7 @@ function liveV2State() {
       _chipChanged: {}, // eventId -> ts del último cambio de marcador (para pulso + orden)
       _chipScores: {},  // eventId -> "home-away" del poll anterior (detección de cambios)
       _chipUserPoints: {}, _chipPulse: {},
+      _chipEventQueue: {},
       _rankMoves: {},
       _openMatchModal: null, _modalReturnFocus: null, _modalPrevOverflow: null, _modalKeyHandler: null,
     };
@@ -465,6 +466,7 @@ function liveV2State() {
   if (!AppState.liveV2._chipScores) AppState.liveV2._chipScores = {};
   if (!AppState.liveV2._chipPulse) AppState.liveV2._chipPulse = {};
   if (!AppState.liveV2._chipUserPoints) AppState.liveV2._chipUserPoints = {};
+  if (!AppState.liveV2._chipEventQueue) AppState.liveV2._chipEventQueue = {};
   if (!AppState.liveV2._rankMoves) AppState.liveV2._rankMoves = {};
   return AppState.liveV2;
 }
@@ -845,6 +847,7 @@ function liveV2ChipHtml(eventId, state) {
     + `<span class="livev2-chip-meta">`
     + `<span class="livev2-chip-state ${liveV2Esc(d.chipCls)}">${liveV2Esc(d.label)}</span>`
     + `<span class="livev2-cell-pred">${liveV2Esc(d.predictionText)}</span>`
+    + `<span class="livev2-chip-event" aria-hidden="true"></span>`
     + `</span>`
     + `<span class="livev2-cell-team">${liveV2Esc(d.awayAbbr)}</span>`
     + ub
@@ -1110,6 +1113,133 @@ function liveV2ChipsHtml(folded) {
 
 const LIVEV2_TOAST_MS = 6000;
 const _liveV2ToastTimers = new Map();
+
+const LIVEV2_CHIP_EVENT_MS = 8000;
+const _liveV2ChipEventTimers = new Map();
+const _liveV2ChipEventActive = new Set();
+
+function liveV2ChipEventText(view) {
+  return [view.icon, view.minuteText, view.text, view.detail ? `· ${view.detail}` : '']
+    .filter(Boolean).join(' ');
+}
+
+function liveV2ChipSoundKind(view) {
+  return view && view.type === 'goal' ? 'goal' : 'beep';
+}
+
+function liveV2AppendChipViews(queue, views) {
+  const out = Array.isArray(queue) ? queue : [];
+  const seen = new Set(out.map(v => v.key));
+  for (const v of (views || [])) {
+    if (!v || seen.has(v.key)) continue;
+    out.push(v);
+    seen.add(v.key);
+  }
+  return out;
+}
+
+function liveV2ChipElement(eventId) {
+  if (typeof document === 'undefined') return null;
+  const chips = document.querySelectorAll('[data-livev2-chip]');
+  for (const el of chips) {
+    if (el.getAttribute('data-livev2-chip') === String(eventId)) return el;
+  }
+  return null;
+}
+
+function liveV2PlayChipEventSound(view) {
+  const deps = liveV2SoundDeps();
+  if (!deps || typeof soundApi === 'undefined') return;
+  if (liveV2ChipSoundKind(view) === 'goal') soundApi.playFile('sounds/gol_otro.mp3', deps);
+  else soundApi.playBeep(deps);
+}
+
+function liveV2ClearChipEvents() {
+  for (const timer of _liveV2ChipEventTimers.values()) clearTimeout(timer);
+  _liveV2ChipEventTimers.clear();
+  _liveV2ChipEventActive.clear();
+  liveV2State()._chipEventQueue = {};
+  if (typeof document === 'undefined') return;
+  document.querySelectorAll('[data-livev2-chip]').forEach(el => {
+    const meta = el.querySelector('.livev2-chip-meta');
+    if (meta) meta.classList.remove('has-event');
+    const layer = el.querySelector('.livev2-chip-event');
+    if (layer) layer.innerHTML = '';
+  });
+}
+
+function liveV2StartNextChipEvent(eventId) {
+  const st = liveV2State();
+  const id = String(eventId);
+  if (_liveV2ChipEventActive.has(id)) return;
+  const queue = st._chipEventQueue && st._chipEventQueue[id];
+  if (!queue || !queue.length) return;
+  const el = liveV2ChipElement(id);
+  if (!el) { delete st._chipEventQueue[id]; return; }
+  const meta = el.querySelector('.livev2-chip-meta');
+  const layer = el.querySelector('.livev2-chip-event');
+  if (!meta || !layer) return;
+
+  const view = queue.shift();
+  if (!queue.length) delete st._chipEventQueue[id];
+  _liveV2ChipEventActive.add(id);
+
+  const text = liveV2ChipEventText(view);
+  layer.className = `livev2-chip-event ${view.tone || ''}`.trim();
+  layer.innerHTML = '';
+  const span = document.createElement('span');
+  span.textContent = text;
+  span.title = text;
+  layer.appendChild(span);
+  meta.classList.add('has-event');
+  liveV2PlayChipEventSound(view);
+
+  if (!liveV2PrefersReducedMotion() && typeof span.animate === 'function') {
+    const width = layer.clientWidth || 100;
+    const track = span.scrollWidth || width;
+    span.animate(
+      [{ transform: `translateX(${width}px)` }, { transform: `translateX(${-track}px)` }],
+      { duration: LIVEV2_CHIP_EVENT_MS, easing: 'linear', fill: 'forwards' }
+    );
+  } else {
+    span.classList.add('static');
+  }
+
+  const timer = setTimeout(() => {
+    meta.classList.remove('has-event');
+    layer.innerHTML = '';
+    _liveV2ChipEventActive.delete(id);
+    _liveV2ChipEventTimers.delete(id);
+    liveV2StartNextChipEvent(id);
+  }, LIVEV2_CHIP_EVENT_MS);
+  _liveV2ChipEventTimers.set(id, timer);
+}
+
+function liveV2EnqueueChipEvents(newEvents) {
+  if (!newEvents || !newEvents.length) return;
+  if (typeof liveV2Api === 'undefined'
+    || !liveV2Api.FEED_TYPES || !liveV2Api.feedEventsForMatch) return;
+  const st = liveV2State();
+  if (!st._chipEventQueue) st._chipEventQueue = {};
+  const ctx = liveV2FeedCtxById(liveV2Folded());
+  const players = liveV2PlayersById();
+  const byMatch = new Map();
+  for (const ev of newEvents) {
+    if (!ev || !liveV2Api.FEED_TYPES.has(ev.type)) continue;
+    if (ev.payload && ev.payload.seed) continue;
+    const id = String(ev.eventId);
+    if (!byMatch.has(id)) byMatch.set(id, new Set());
+    byMatch.get(id).add(liveV2Api.eventKey(ev));
+  }
+  for (const [id, keys] of byMatch) {
+    const views = liveV2Api.feedEventsForMatch(st.events, id, ctx, players, { includeSeed: false })
+      .filter(v => keys.has(v.key))
+      .reverse();
+    if (!views.length) continue;
+    st._chipEventQueue[id] = liveV2AppendChipViews(st._chipEventQueue[id] || [], views);
+    liveV2StartNextChipEvent(id);
+  }
+}
 
 function liveV2TeamName(teamId) {
   const t = AppState.teamsMap && AppState.teamsMap[teamId];
@@ -1921,6 +2051,7 @@ function updateLiveV2Dom(rows, folded) {
 
   // Celdas y feed: parche por clave (solo se crean/eliminan nodos al cambiar el conjunto)
   updateLiveV2Chips(root, folded);
+  liveV2EnqueueChipEvents(newEvents);
   updateLiveV2Feed(root, newEvents);
   updateLiveV2Badge(root);
   updateLiveV2SoundToggle(root);
@@ -2027,6 +2158,7 @@ function stopLiveV2Polling() {
   }
   closeLiveV2MatchModal();
   liveV2ClearToasts();
+  liveV2ClearChipEvents();
   closeLiveV2EventsModal();
 }
 
@@ -2188,6 +2320,13 @@ async function renderLiveV2Tab() {
     liveV2EventDeltas,
     liveV2SoundQuality,
     liveV2PlayNewEventSounds,
+    liveV2ChipEventText,
+    liveV2ChipSoundKind,
+    liveV2AppendChipViews,
+    liveV2EnqueueChipEvents,
+    liveV2StartNextChipEvent,
+    liveV2ClearChipEvents,
+    liveV2PlayChipEventSound,
     liveV2TopContributions,
     liveV2ReasonLine,
     liveV2ReasonHtml,
