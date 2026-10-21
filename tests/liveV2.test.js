@@ -332,32 +332,29 @@ const liveV2Ui = require('../js/live-v2-ui.js');
 const uiState = { allPlayers: [], liveV2: null };
 liveV2Ui.init({ AppState: uiState, liveV2Api: liveV2 });
 
-test('feed filtra lineup/status antes de recortar y ordena por (ts, seq)', () => {
+test('feed shell cuenta eventos válidos y ya no pinta el ticker antiguo', () => {
   uiState.liveV2 = { events: [
-    { type: 'goal', ts: '2026-09-16T20:01:00Z', seq: 1, minute: 1, payload: {} },
-    { type: 'goal', ts: '2026-09-16T20:02:00Z', seq: 1, minute: 2, payload: {} },
-    { type: 'status', ts: '2026-09-16T20:02:30Z', seq: 1, payload: { status: 'LIVE' } },
-    { type: 'goal', ts: '2026-09-16T20:03:00Z', seq: 1, minute: 4, payload: {} },
-    { type: 'lineup', ts: '2026-09-16T20:03:30Z', seq: 1, payload: {} },
-    { type: 'goal', ts: '2026-09-16T20:03:00Z', seq: 2, minute: 3, payload: {} },
-    { type: 'goal', ts: '2026-09-16T20:04:00Z', seq: 1, minute: 5, payload: {} },
+    { eventId: 1, sourceId: 'g1', type: 'goal', ts: '2026-09-16T20:01:00Z', seq: 1, minute: 1, payload: {} },
+    { eventId: 1, sourceId: 'g2', type: 'goal', ts: '2026-09-16T20:02:00Z', seq: 1, minute: 2, payload: {} },
+    { eventId: 1, sourceId: 's1', type: 'status', ts: '2026-09-16T20:02:30Z', seq: 1, payload: { status: 'LIVE' } },
+    { eventId: 1, sourceId: 'g3', type: 'goal', ts: '2026-09-16T20:03:00Z', seq: 1, minute: 4, payload: {} },
+    { eventId: 1, sourceId: 'l1', type: 'lineup', ts: '2026-09-16T20:03:30Z', seq: 1, payload: {} },
+    { eventId: 1, sourceId: 'g4', type: 'goal', ts: '2026-09-16T20:03:00Z', seq: 2, minute: 3, payload: {} },
+    { eventId: 1, sourceId: 'g5', type: 'goal', ts: '2026-09-16T20:04:00Z', seq: 1, minute: 5, payload: {} },
   ] };
-  const html = liveV2Ui.liveV2FeedHtml();
-  assert.equal((html.match(/livev2-ticker-item/g) || []).length, 4);
-  assert.equal((html.match(/data-livev2-key=/g) || []).length, 4, 'items keyed para parchear sin recrear');
-  const pos = [5, 3, 4, 2].map(m => html.indexOf(`${m}&#39; Gol`));
-  assert.ok(pos.every(p => p >= 0), 'muestra los cuatro goles útiles');
-  assert.deepEqual(pos.slice().sort((a, b) => a - b), pos, 'más reciente primero');
+  const html = liveV2Ui.liveV2FeedShellHtml({ states: {} });
+  assert.match(html, /livev2-feed-bar/);
+  assert.match(html, /\(5\)/);
+  assert.equal((html.match(/livev2-ticker-item/g) || []).length, 0);
 });
 
-test('feed descarta eventos con ts inválido', () => {
+test('feed shell ignora eventos con ts inválido', () => {
   uiState.liveV2 = { events: [
-    { type: 'goal', ts: 'no-es-fecha', seq: 1, minute: 9, payload: {} },
-    { type: 'goal', ts: '2026-09-16T20:01:00Z', seq: 1, minute: 1, payload: {} },
+    { eventId: 1, sourceId: 'g0', type: 'goal', ts: 'no-es-fecha', seq: 1, minute: 9, payload: {} },
+    { eventId: 1, sourceId: 'g1', type: 'goal', ts: '2026-09-16T20:01:00Z', seq: 1, minute: 1, payload: {} },
   ] };
-  const html = liveV2Ui.liveV2FeedHtml();
-  assert.equal((html.match(/livev2-ticker-item/g) || []).length, 1);
-  assert.ok(html.includes("1&#39; Gol"));
+  const html = liveV2Ui.liveV2FeedShellHtml({ states: {} });
+  assert.match(html, /\(1\)/);
 });
 
 function initMoverUi(state) {

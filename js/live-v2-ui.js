@@ -1108,92 +1108,173 @@ function liveV2ChipsHtml(folded) {
   return liveV2OrderedStateEntries(folded).map(([id, s]) => liveV2ChipHtml(id, s)).join('');
 }
 
-/** Clave estable de un evento para parchear el feed sin duplicar nodos. */
-function liveV2FeedKey(ev) {
-  if (typeof liveV2Api !== 'undefined' && liveV2Api.eventKey) return liveV2Api.eventKey(ev);
-  return `${ev.eventId || ''}|${ev.sourceId || ''}|${ev.ts || ''}|${ev.type || ''}`;
+let _feedWatchFrom = 0;
+const LIVEV2_TOAST_MS = 6000;
+const _liveV2ToastTimers = new Map();
+
+function liveV2TeamName(teamId) {
+  const t = AppState.teamsMap && AppState.teamsMap[teamId];
+  return t && t.name ? t.name : `Equipo ${teamId}`;
 }
 
-/** Items visibles del ticker (más recientes primero). */
-function liveV2FeedItems() {
-  const st = liveV2State();
-  const playersById = liveV2PlayersById();
-  const events = (st.events || [])
-    .filter(e => isFinite(new Date(e.ts).getTime()))
-    .filter(e => !['lineup', 'status', 'rating'].includes(e.type))
-    .sort((a, b) => new Date(a.ts) - new Date(b.ts) || ((a.seq || 0) - (b.seq || 0)))
-    .slice(-4)
-    .reverse();
-  const items = [];
-  for (const e of events) {
-    const l = (typeof liveV2Api !== 'undefined' && liveV2Api.feedLabel) ? liveV2Api.feedLabel(e, playersById) : null;
-    if (!l) continue;
-    items.push({ key: liveV2FeedKey(e), icon: l.icon, text: l.text });
+function liveV2FeedCtxById(folded) {
+  const out = {};
+  for (const m of AppState.matches || []) {
+    const s = folded && folded.states ? folded.states[String(m.id)] : null;
+    out[String(m.id)] = {
+      eventId: m.id,
+      homeTeamId: m.homeTeamId,
+      awayTeamId: m.awayTeamId,
+      homeTeam: m.homeTeam || liveV2TeamName(m.homeTeamId),
+      awayTeam: m.awayTeam || liveV2TeamName(m.awayTeamId),
+      homeBadge: liveV2BadgeSrc(m.homeTeamId, m.homeBadgeExt),
+      awayBadge: liveV2BadgeSrc(m.awayTeamId, m.awayBadgeExt),
+      scoreHome: s && s.score ? s.score.home : 0,
+      scoreAway: s && s.score ? s.score.away : 0,
+    };
   }
-  return items;
+  return out;
 }
 
-/** Ticker compacto (3–4 líneas) con los eventos útiles más recientes del presente. */
-function liveV2FeedHtml() {
-  const items = liveV2FeedItems().map(i =>
-    `<span class="livev2-ticker-item" data-livev2-key="${liveV2Esc(i.key)}">${i.icon} ${liveV2Esc(i.text)}</span>`
-  ).join('');
-  return `<div class="livev2-ticker-head">📣 Últimos eventos</div>`
-    + `<div class="livev2-ticker-body">${items || `<span class="livev2-ticker-empty">Aún no hay eventos.</span>`}</div>`;
+function liveV2FeedViews(folded) {
+  if (typeof liveV2Api === 'undefined' || !liveV2Api.feedEvents) return [];
+  const st = liveV2State();
+  return liveV2Api.feedEvents(st.events || [], liveV2FeedCtxById(folded), liveV2PlayersById());
 }
 
-/** Parchea el feed por `data-livev2-key`: texto en sitio y sin recrear nodos. */
-function updateLiveV2Feed(root) {
+function liveV2FeedBadgeHtml(src, cls) {
+  if (!src) return '';
+  return `<img class="livev2-feed-badge ${cls}" src="${liveV2Esc(src)}" alt="" loading="lazy" `
+    + `onerror="this.onerror=null;this.src='data/imgEquipos/default.webp'">`;
+}
+
+function liveV2FeedRowBodyHtml(v) {
+  const m = v.match || {};
+  const minute = v.minuteText
+    ? `<span class="livev2-feed-min">${liveV2Esc(v.minuteText)}</span>` : '';
+  const team = v.teamName
+    ? `<span class="livev2-feed-team-name">(${liveV2Esc(v.teamName)})</span>` : '';
+  const detail = v.detail
+    ? `<span class="livev2-feed-detail">· ${liveV2Esc(v.detail)}</span>` : '';
+  return `<div class="livev2-feed-line1">`
+    + liveV2FeedBadgeHtml(m.homeBadge, 'home')
+    + `<span class="livev2-feed-team">${liveV2Esc(m.homeTeam || 'Local')}</span>`
+    + `<span class="livev2-feed-score">${liveV2Esc(m.scoreHome)}-${liveV2Esc(m.scoreAway)}</span>`
+    + `<span class="livev2-feed-team">${liveV2Esc(m.awayTeam || 'Visitante')}</span>`
+    + liveV2FeedBadgeHtml(m.awayBadge, 'away')
+    + `</div>`
+    + `<div class="livev2-feed-line2">`
+    + `<span class="livev2-feed-icon">${v.icon}</span>${minute}`
+    + `<span class="livev2-feed-text">${liveV2Esc(v.text)}</span>${team}${detail}`
+    + `</div>`;
+}
+
+function liveV2FeedShellHtml(folded) {
+  const count = liveV2FeedViews(folded).length;
+  return `<div class="livev2-feed-bar">`
+    + `<span class="livev2-feed-title">📣 Últimos eventos</span>`
+    + `<button type="button" id="livev2-events-open" class="livev2-feed-open">`
+    + `Ver todos<span id="livev2-events-count">${count ? ` (${count})` : ''}</span>`
+    + `</button>`
+    + `</div>`
+    + `<div id="livev2-toasts" class="livev2-toasts" aria-live="polite"></div>`;
+}
+
+function liveV2ToastText(v) {
+  return [v.minuteText, v.text, v.teamName ? `(${v.teamName})` : '', v.detail ? `· ${v.detail}` : '']
+    .filter(Boolean).join(' ');
+}
+
+function liveV2DismissToast(el, immediate) {
+  if (!el || !el.isConnected) return;
+  const key = el.getAttribute('data-key')
+    || (el.hasAttribute('data-livev2-toast-more') ? '__more__' : null);
+  if (key && _liveV2ToastTimers.has(key)) {
+    clearTimeout(_liveV2ToastTimers.get(key));
+    _liveV2ToastTimers.delete(key);
+  }
+  if (immediate || liveV2PrefersReducedMotion()) { el.remove(); return; }
+  el.classList.add('out');
+  setTimeout(() => el.remove(), 260);
+}
+
+function liveV2ClearToasts() {
+  for (const timer of _liveV2ToastTimers.values()) clearTimeout(timer);
+  _liveV2ToastTimers.clear();
+  const host = typeof document !== 'undefined' ? document.getElementById('livev2-toasts') : null;
+  if (host) host.innerHTML = '';
+}
+
+function liveV2ShowToasts(plan) {
+  const host = typeof document !== 'undefined' ? document.getElementById('livev2-toasts') : null;
+  if (!host || !plan || !plan.show || !plan.show.length) return;
+  const current = () => [...host.querySelectorAll('.livev2-toast[data-key]')];
+  const fragment = document.createDocumentFragment();
+  for (const v of plan.show) {
+    if (current().some(el => el.getAttribute('data-key') === v.key)) continue;
+    const el = document.createElement('div');
+    el.className = `livev2-toast ${v.tone || ''}`.trim();
+    el.setAttribute('data-key', v.key);
+    el.title = liveV2ToastText(v);
+    el.innerHTML = liveV2FeedRowBodyHtml(v);
+    fragment.appendChild(el);
+    _liveV2ToastTimers.set(v.key, setTimeout(() => liveV2DismissToast(el), LIVEV2_TOAST_MS));
+  }
+  host.prepend(fragment);
+  const all = current();
+  for (let i = 3; i < all.length; i++) liveV2DismissToast(all[i], true);
+  if (plan.overflow > 0) {
+    const old = host.querySelector('.livev2-toast-more');
+    if (old) liveV2DismissToast(old, true);
+    const more = document.createElement('button');
+    more.type = 'button';
+    more.className = 'livev2-toast livev2-toast-more';
+    more.setAttribute('data-livev2-toast-more', '');
+    more.textContent = `+${plan.overflow} más · Ver todos`;
+    host.appendChild(more);
+    _liveV2ToastTimers.set('__more__', setTimeout(() => liveV2DismissToast(more), LIVEV2_TOAST_MS));
+  }
+}
+
+function updateLiveV2Feed(root, newEvents) {
   const feedEl = (root || document).querySelector('#livev2-feed');
   if (!feedEl) return;
-  const body = feedEl.querySelector('.livev2-ticker-body');
-  if (!body) { feedEl.innerHTML = liveV2FeedHtml(); return; }
-
-  const items = liveV2FeedItems();
-  const desired = new Set(items.map(i => i.key));
-  const existing = new Map();
-  body.querySelectorAll('[data-livev2-key]').forEach(el => {
-    existing.set(el.getAttribute('data-livev2-key'), el);
-  });
-  for (const [key, el] of existing) {
-    if (!desired.has(key)) { el.remove(); existing.delete(key); }
-  }
-
-  if (!items.length) {
-    if (!body.querySelector('.livev2-ticker-empty')) {
-      const empty = document.createElement('span');
-      empty.className = 'livev2-ticker-empty';
-      empty.textContent = 'Aún no hay eventos.';
-      body.appendChild(empty);
-    }
+  const folded = liveV2Folded();
+  const views = liveV2FeedViews(folded);
+  const countEl = feedEl.querySelector('#livev2-events-count');
+  if (countEl) countEl.textContent = views.length ? ` (${views.length})` : '';
+  if (liveV2State()._openEventsModal) {
+    if (typeof refreshLiveV2EventsModal === 'function') refreshLiveV2EventsModal(views);
     return;
   }
-  body.querySelectorAll('.livev2-ticker-empty').forEach(el => el.remove());
+  if (!newEvents || !newEvents.length) return;
+  if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return;
+  const fresh = newEvents.filter(e => {
+    const t = new Date(e.ingestedAt || e.ts).getTime();
+    return isFinite(t) && t >= _feedWatchFrom;
+  });
+  if (!fresh.length) return;
+  const ctx = liveV2FeedCtxById(folded);
+  const newViews = liveV2Api.feedEvents(fresh, ctx, liveV2PlayersById());
+  if (!newViews.length) return;
+  liveV2ShowToasts(liveV2Api.feedToastPlan(newViews, 3));
+}
 
-  for (const item of items) {
-    let el = existing.get(item.key);
-    if (!el) {
-      el = document.createElement('span');
-      el.className = 'livev2-ticker-item';
-      el.setAttribute('data-livev2-key', item.key);
-      body.appendChild(el);
-      existing.set(item.key, el);
+function bindLiveV2EventsButton(root) {
+  const scope = root || document;
+  const feed = scope.querySelector('#livev2-feed');
+  if (!feed || feed.dataset.eventsBound === '1') return;
+  feed.dataset.eventsBound = '1';
+  feed.addEventListener('click', (e) => {
+    const t = e.target;
+    if (!t || !t.closest) return;
+    if (t.closest('#livev2-events-open') || t.closest('[data-livev2-toast-more]')) {
+      if (typeof openLiveV2EventsModal === 'function') openLiveV2EventsModal();
+      return;
     }
-    const text = `${item.icon} ${item.text}`;
-    if (el.textContent !== text) el.textContent = text;
-  }
-
-  let prev = null;
-  for (const item of items) {
-    const el = existing.get(item.key);
-    if (!el) continue;
-    if (prev) {
-      if (prev.nextElementSibling !== el) body.insertBefore(el, prev.nextElementSibling);
-    } else if (body.firstElementChild !== el) {
-      body.insertBefore(el, body.firstElementChild);
-    }
-    prev = el;
-  }
+    const toast = t.closest('.livev2-toast[data-key]');
+    if (toast) liveV2DismissToast(toast);
+  });
 }
 
 function liveV2StatusBadge(st) {
@@ -1256,6 +1337,7 @@ async function retryLiveV2() {
     bindLiveV2SoundToggle(target);
     bindLiveV2Fullscreen(target);
     bindLiveV2Chips(target);
+    bindLiveV2EventsButton(target);
   } finally {
     st.polling = false;
     updateLiveV2Badge(target);
@@ -1308,7 +1390,7 @@ function renderLiveV2Html(rows, folded) {
     + `<div class="livev2-grid" id="livev2-chips-host">`
     + (chips || `<div class="livev2-empty">Sin partidos en directo ahora mismo</div>`)
     + `</div>`
-    + `<div id="livev2-feed" class="livev2-feed" aria-live="polite">${liveV2FeedHtml()}</div>`
+    + `<div id="livev2-feed" class="livev2-feed">${liveV2FeedShellHtml(folded)}</div>`
     + `</div>`
     + `<div class="livev2-body">`
     + `<div class="livev2-section-title">Clasificación en vivo</div>`
@@ -1734,7 +1816,7 @@ function updateLiveV2Dom(rows, folded) {
 
   // Celdas y feed: parche por clave (solo se crean/eliminan nodos al cambiar el conjunto)
   updateLiveV2Chips(root, folded);
-  updateLiveV2Feed(root);
+  updateLiveV2Feed(root, newEvents);
   updateLiveV2Badge(root);
   updateLiveV2SoundToggle(root);
 
@@ -1839,6 +1921,7 @@ function stopLiveV2Polling() {
     _liveV2VisHandler = null;
   }
   closeLiveV2MatchModal();
+  liveV2ClearToasts();
 }
 
 function startLiveV2Polling(folded) {
@@ -1945,6 +2028,7 @@ async function renderLiveV2Tab() {
   }
   st._lastRows = liveV2Snapshot(rows);
   st._seenEventIds = new Set((st.events || []).map(e => liveV2Api.eventKey(e)));
+  _feedWatchFrom = Date.now();
   if (AppState.resultadosTab === 'live') startLiveV2Polling(folded);
   return renderLiveV2Html(rows, folded);
 }
@@ -1967,8 +2051,14 @@ async function renderLiveV2Tab() {
     liveV2ChipLabel,
     liveV2HasInPlay,
     liveV2ShouldPoll,
-    liveV2FeedHtml,
-    liveV2FeedItems,
+    liveV2FeedShellHtml,
+    liveV2FeedCtxById,
+    liveV2FeedViews,
+    liveV2FeedRowBodyHtml,
+    liveV2ShowToasts,
+    liveV2DismissToast,
+    liveV2ClearToasts,
+    bindLiveV2EventsButton,
     updateLiveV2Chips,
     updateLiveV2Feed,
     liveV2MoverReason,

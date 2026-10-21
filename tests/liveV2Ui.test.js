@@ -300,7 +300,7 @@ test('render Live v2 anuncia filas/feed y conserva la salida', () => {
     liveV2Api: { escapeHtml: s => String(s) },
   });
   const html = ui.renderLiveV2Html([], { states: {} });
-  assert.match(html, /id="livev2-feed"[^>]*aria-live="polite"/);
+  assert.match(html, /id="livev2-toasts"[^>]*aria-live="polite"/);
   assert.match(html, /id="livev2-rows"[^>]*aria-live="polite"/);
   assert.match(html, /id="livev2-fs-toggle"/);
 });
@@ -814,7 +814,7 @@ test('liveV2PlayNewEventSounds: status FT emite el tono end', () => {
   assert.deepEqual(calls, [{ event: { type: 'end' }, quality: true }]);
 });
 
-test('liveV2FeedItems omite los eventos de nota', () => {
+test('liveV2FeedViews omite los eventos de nota', () => {
   const ui = freshUi();
   const liveV2 = require('../js/liveV2.js');
   const t = '2026-09-16T20:30:00.000Z';
@@ -831,9 +831,9 @@ test('liveV2FeedItems omite los eventos de nota', () => {
     },
     liveV2Api: liveV2,
   });
-  const items = ui.liveV2FeedItems();
-  assert.equal(items.length, 1);
-  assert.match(items[0].text, /Gol/);
+  const views = ui.liveV2FeedViews({ states: {} });
+  assert.equal(views.length, 1);
+  assert.match(views[0].text, /Gol/);
 });
 
 test('liveV2DetectRankMoves guarda subidas y bajadas', () => {
