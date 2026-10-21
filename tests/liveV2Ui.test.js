@@ -148,10 +148,13 @@ function setupDom() {
     addEventListener: (type, fn) => { toggle[`on${type}`] = fn; },
   };
   const all = [];
+  const body = makeElement('body');
+  body._root = true;
+  body.classList = makeClassList(bodyClasses);
   const doc = {
     visibilityState: 'visible',
     _all: all,
-    body: { classList: makeClassList(bodyClasses) },
+    body,
     documentElement: {
       requestFullscreen: () => {
         fullscreenEl = doc.documentElement;
@@ -1098,58 +1101,63 @@ test('updateLiveV2Feed refresca el modal abierto y no muestra avisos', () => {
   const ui = freshUi();
   const liveV2 = require('../js/liveV2.js');
   let toastCalls = 0;
-  let refreshed = null;
-  const prevRefresh = global.refreshLiveV2EventsModal;
   const event = { eventId: 1, sourceId: 'g1', type: 'goal', ts: '2026-09-16T20:01:00Z', minute: 1, payload: {} };
   const AppState = { liveV2: { events: [event], _openEventsModal: true }, matches: [], allPlayers: [] };
   const api = { ...liveV2, feedToastPlan: () => { toastCalls++; return { show: [], overflow: 0 }; } };
   ui.init({ AppState, liveV2Api: api });
-  global.refreshLiveV2EventsModal = views => { refreshed = views; };
-  try {
-    withFeedDom(dom => {
-      const root = makeFeedRoot(dom);
-      ui.updateLiveV2Feed(root, [event]);
-      assert.ok(Array.isArray(refreshed));
-      assert.equal(refreshed.length, 1);
-      assert.equal(toastCalls, 0);
-    });
-  } finally {
-    if (prevRefresh === undefined) delete global.refreshLiveV2EventsModal;
-    else global.refreshLiveV2EventsModal = prevRefresh;
-  }
+  withFeedDom(dom => {
+    const host = makeElement();
+    host._root = true;
+    host.id = 'livev2-events-modal';
+    dom.doc.register(host);
+    const root = makeFeedRoot(dom);
+    ui.updateLiveV2Feed(root, [event]);
+    assert.match(host.innerHTML, /Últimos eventos/);
+    assert.equal(toastCalls, 0);
+  });
+});
+
+test('updateLiveV2Feed refresca el modal sin anidar el root', () => {
+  const ui = freshUi();
+  const liveV2 = require('../js/liveV2.js');
+  const event = { eventId: 1, sourceId: 'g1', type: 'goal', ts: '2026-09-16T20:01:00Z', minute: 1, payload: {} };
+  const AppState = { liveV2: { events: [event], _openEventsModal: true }, matches: [], allPlayers: [] };
+  ui.init({ AppState, liveV2Api: liveV2 });
+  withFeedDom(dom => {
+    const host = makeElement();
+    host._root = true;
+    host.id = 'livev2-events-modal';
+    dom.doc.register(host);
+    const root = makeFeedRoot(dom);
+    ui.updateLiveV2Feed(root, [event]);
+    assert.match(host.innerHTML, /Últimos eventos/);
+    assert.doesNotMatch(host.innerHTML, /id="livev2-events-modal"/);
+  });
 });
 
 test('bindLiveV2EventsButton abre el modal y cierra el toast', () => {
   const ui = freshUi();
-  const prevOpen = global.openLiveV2EventsModal;
-  const prevWindow = global.window;
-  let opened = 0;
-  global.openLiveV2EventsModal = () => { opened++; };
-  global.window = { matchMedia: () => ({ matches: true }) };
-  try {
-    withFeedDom(dom => {
-      const root = makeFeedRoot(dom);
-      const feed = root.querySelector('#livev2-feed');
-      const openBtn = dom.doc.createElement('button');
-      openBtn.id = 'livev2-events-open';
-      const toast = dom.doc.createElement('div');
-      toast.className = 'livev2-toast goal';
-      toast.setAttribute('data-key', 'k1');
-      feed.appendChild(openBtn);
-      feed.appendChild(toast);
-      ui.bindLiveV2EventsButton(root);
-      feed._emit('click', { target: openBtn });
-      assert.equal(opened, 1);
-      feed._emit('click', { target: toast });
-      assert.equal(toast.parentNode, null);
-      assert.equal(toast.isConnected, false);
-    });
-  } finally {
-    if (prevOpen === undefined) delete global.openLiveV2EventsModal;
-    else global.openLiveV2EventsModal = prevOpen;
-    if (prevWindow === undefined) delete global.window;
-    else global.window = prevWindow;
-  }
+  const liveV2 = require('../js/liveV2.js');
+  ui.init({ AppState: { liveV2: { events: [] }, matches: [], allPlayers: [] }, liveV2Api: liveV2 });
+  withFeedDom((dom, timers) => {
+    const root = makeFeedRoot(dom);
+    const feed = root.querySelector('#livev2-feed');
+    const openBtn = dom.doc.createElement('button');
+    openBtn.id = 'livev2-events-open';
+    const toast = dom.doc.createElement('div');
+    toast.className = 'livev2-toast goal';
+    toast.setAttribute('data-key', 'k1');
+    feed.appendChild(openBtn);
+    feed.appendChild(toast);
+    ui.bindLiveV2EventsButton(root);
+    feed._emit('click', { target: openBtn });
+    assert.ok(dom.doc.getElementById('livev2-events-modal-overlay'));
+    feed._emit('click', { target: toast });
+    assert.ok(toast.classList.contains('out'));
+    for (const { cb } of timers.values()) cb();
+    assert.equal(toast.parentNode, null);
+    assert.equal(toast.isConnected, false);
+  });
 });
 
 test('liveV2DetectRankMoves guarda subidas y bajadas', () => {

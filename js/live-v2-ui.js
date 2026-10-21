@@ -1245,7 +1245,7 @@ function updateLiveV2Feed(root, newEvents) {
   const countEl = feedEl.querySelector('#livev2-events-count');
   if (countEl) countEl.textContent = views.length ? ` (${views.length})` : '';
   if (liveV2State()._openEventsModal) {
-    if (typeof global.refreshLiveV2EventsModal === 'function') global.refreshLiveV2EventsModal(views);
+    refreshLiveV2EventsModal(views);
     return;
   }
   if (!newEvents || !newEvents.length) return;
@@ -1257,26 +1257,31 @@ function updateLiveV2Feed(root, newEvents) {
   liveV2ShowToasts(liveV2Api.feedToastPlan(newViews, 3));
 }
 
-function liveV2EventsModalHtml(views) {
+function liveV2EventsModalInnerHtml(views) {
   const list = Array.isArray(views) ? views : [];
   const rows = list.length
     ? list.map(v => `<div class="livev2-events-row">${liveV2FeedRowBodyHtml(v)}</div>`).join('')
     : `<div class="livev2-events-empty">Aún no hay eventos en los partidos de hoy.</div>`;
-  return `<div id="livev2-events-modal" class="livev2-events-modal" role="dialog" `
-    + `aria-modal="true" aria-labelledby="livev2-events-title">`
-    + `<div class="livev2-events-head">`
+  return `<div class="livev2-events-head">`
     + `<span id="livev2-events-title">Últimos eventos · ${list.length}</span>`
     + `<button type="button" class="breakdown-modal-close" data-livev2-events-close aria-label="Cerrar">✕</button>`
     + `</div>`
-    + `<div class="livev2-events-list">${rows}</div>`
+    + `<div class="livev2-events-list">${rows}</div>`;
+}
+
+function liveV2EventsModalHtml(views) {
+  return `<div id="livev2-events-modal" class="livev2-events-modal" role="dialog" `
+    + `aria-modal="true" aria-labelledby="livev2-events-title">`
+    + liveV2EventsModalInnerHtml(views)
     + `</div>`;
 }
 
 function closeLiveV2EventsModal() {
   if (typeof document === 'undefined') return;
   const st = liveV2State();
-  st._openEventsModal = false;
   const overlay = document.getElementById('livev2-events-modal-overlay');
+  if (!st._openEventsModal && !overlay) return;
+  st._openEventsModal = false;
   if (overlay) overlay.remove();
   if (st._eventsModalKeyHandler) document.removeEventListener('keydown', st._eventsModalKeyHandler);
   st._eventsModalKeyHandler = null;
@@ -1297,7 +1302,7 @@ function refreshLiveV2EventsModal(views) {
   const list = host.querySelector('.livev2-events-list');
   const scrollTop = list ? list.scrollTop : 0;
   const hadFocus = document.activeElement && host.contains(document.activeElement);
-  host.innerHTML = liveV2EventsModalHtml(views || liveV2FeedViews(liveV2Folded()));
+  host.innerHTML = liveV2EventsModalInnerHtml(views || liveV2FeedViews(liveV2Folded()));
   const next = host.querySelector('.livev2-events-list');
   if (next) next.scrollTop = scrollTop;
   if (hadFocus) {
@@ -1357,7 +1362,7 @@ function bindLiveV2EventsButton(root) {
     const t = e.target;
     if (!t || !t.closest) return;
     if (t.closest('#livev2-events-open') || t.closest('[data-livev2-toast-more]')) {
-      if (typeof global.openLiveV2EventsModal === 'function') global.openLiveV2EventsModal();
+      openLiveV2EventsModal();
       return;
     }
     const toast = t.closest('.livev2-toast[data-key]');
@@ -2196,9 +2201,5 @@ async function renderLiveV2Tab() {
   };
 
   global.liveV2Ui = api;
-  global.liveV2EventsModalHtml = liveV2EventsModalHtml;
-  global.openLiveV2EventsModal = openLiveV2EventsModal;
-  global.closeLiveV2EventsModal = closeLiveV2EventsModal;
-  global.refreshLiveV2EventsModal = refreshLiveV2EventsModal;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })(typeof window !== 'undefined' ? window : globalThis);
