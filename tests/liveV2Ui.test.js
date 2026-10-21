@@ -133,7 +133,9 @@ function setupDom() {
   const toggleClasses = new Set();
   const toggleAttrs = {};
   const listeners = {};
+  const removed = [];
   let fullscreenEl = null;
+  let activeElement = null;
   const makeClassList = (set) => ({
     add: c => set.add(c),
     remove: c => set.delete(c),
@@ -164,26 +166,41 @@ function setupDom() {
     get fullscreenElement() { return fullscreenEl; },
     set fullscreenElement(v) { fullscreenEl = v; },
     exitFullscreen: () => { fullscreenEl = null; return Promise.resolve(); },
-    register: el => { all.push(el); return el; },
-    getElementById: id => all.find(el => el.id === id) || null,
+    get activeElement() { return activeElement; },
+    set activeElement(v) { activeElement = v; },
+    register: el => { el._doc = doc; all.push(el); return el; },
+    getElementById: id => all.find(el => el.id === id && !el._removed) || null,
     querySelector: sel => {
       if (sel === '#livev2-fs-toggle') return toggle;
-      return all.find(el => matchesSelector(el, sel)) || null;
+      return all.find(el => !el._removed && matchesSelector(el, sel)) || null;
     },
-    addEventListener: (type, fn) => { listeners[type] = fn; },
-    removeEventListener: () => {},
+    addEventListener: (type, fn) => {
+      (listeners[type] = listeners[type] || []).push(fn);
+    },
+    removeEventListener: (type, fn) => {
+      const list = listeners[type] || [];
+      const i = list.indexOf(fn);
+      if (i >= 0) list.splice(i, 1);
+      removed.push({ type, fn });
+    },
+    dispatch: (type, ev) => {
+      for (const fn of [...(listeners[type] || [])]) fn(ev);
+    },
     createElement: tag => {
       const el = makeElement(tag);
+      el._doc = doc;
       all.push(el);
       return el;
     },
     createDocumentFragment: () => {
       const fragment = makeElement('#fragment');
       fragment._fragment = true;
+      fragment._doc = doc;
       return fragment;
     },
   };
-  return { doc, bodyClasses, toggleClasses, toggleAttrs, listeners, toggle };
+  body._doc = doc;
+  return { doc, bodyClasses, toggleClasses, toggleAttrs, listeners, removed, toggle };
 }
 
 function matchesSelector(el, sel) {
@@ -207,6 +224,8 @@ function makeElement(tag) {
     _listeners: {},
     _fragment: false,
     _root: false,
+    _removed: false,
+    _doc: null,
     _text: null,
     _html: '',
     children: [],
@@ -249,6 +268,7 @@ function makeElement(tag) {
       }
       if (child.parentNode) child.parentNode.removeChild(child);
       child.parentNode = this;
+      child._removed = false;
       this.children.push(child);
       return child;
     },
@@ -260,16 +280,33 @@ function makeElement(tag) {
         for (const c of kids) {
           if (c.parentNode) c.parentNode.removeChild(c);
           c.parentNode = this;
+          c._removed = false;
         }
         this.children = kids.concat(this.children);
         return child;
       }
       if (child.parentNode) child.parentNode.removeChild(child);
       child.parentNode = this;
+      child._removed = false;
       this.children.unshift(child);
       return child;
     },
-    remove() { if (this.parentNode) this.parentNode.removeChild(this); },
+    remove() {
+      if (this.parentNode) this.parentNode.removeChild(this);
+      this._removed = true;
+    },
+    focus() {
+      if (this._doc) this._doc.activeElement = this;
+      this.focused = true;
+    },
+    contains(node) {
+      let cur = node;
+      while (cur) {
+        if (cur === this) return true;
+        cur = cur.parentNode;
+      }
+      return false;
+    },
     addEventListener(type, fn) { (this._listeners[type] = this._listeners[type] || []).push(fn); },
     _emit(type, ev) { for (const fn of (this._listeners[type] || [])) fn(ev); },
     querySelectorAll(sel) {
@@ -360,7 +397,7 @@ test('Escape y popstate salen de pantalla completa', () => {
     ui.bindLiveV2Fullscreen();
     ui.enterLiveV2Fullscreen();
     let prevented = false;
-    dom.listeners.keydown({ key: 'Escape', preventDefault() { prevented = true; } });
+    dom.doc.dispatch('keydown', { key: 'Escape', preventDefault() { prevented = true; } });
     assert.ok(prevented);
     assert.ok(!dom.bodyClasses.has('live-fs'));
     assert.equal(hist.backCount, 1);
@@ -368,7 +405,7 @@ test('Escape y popstate salen de pantalla completa', () => {
 
     ui.enterLiveV2Fullscreen();
     hist.back();
-    dom.listeners.popstate();
+    dom.doc.dispatch('popstate');
     assert.ok(!dom.bodyClasses.has('live-fs'));
     assert.equal(hist.backCount, 2);
     assert.equal(hist.state, null);
@@ -384,7 +421,7 @@ test('Escape con el popup de partido abierto no sale de pantalla completa', () =
     ui.bindLiveV2Fullscreen();
     ui.enterLiveV2Fullscreen();
     let prevented = false;
-    dom.listeners.keydown({ key: 'Escape', preventDefault() { prevented = true; } });
+    dom.doc.dispatch('keydown', { key: 'Escape', preventDefault() { prevented = true; } });
     assert.ok(dom.bodyClasses.has('live-fs'));
     assert.equal(prevented, false);
   });
@@ -944,13 +981,13 @@ test('liveV2FeedViews omite los eventos de nota', () => {
   const ui = freshUi();
   const liveV2 = require('../js/liveV2.js');
   const t = '2026-09-16T20:30:00.000Z';
-  const base = { eventId: 1, ts: t, ingestedAt: t, minute: 30, sourceId: 'x' };
+  const base = { eventId: 1, ts: t, ingestedAt: t, minute: 30 };
   ui.init({
     AppState: {
       liveV2: {
         events: [
-          { ...base, type: 'goal', payload: { scorerId: 13 } },
-          { ...base, type: 'rating', playerId: 13, payload: { rating: 7.5 } },
+          { ...base, sourceId: 'goal|x', type: 'goal', payload: { scorerId: 13 } },
+          { ...base, sourceId: 'rating|x', type: 'rating', playerId: 13, payload: { rating: 7.5 } },
         ],
       },
       allPlayers: [{ id: 13, nombre: 'F', posicion: 'F', equipo: 1 }],
@@ -1029,6 +1066,49 @@ test('liveV2ShowToasts muestra 3 avisos y el desbordamiento', () => {
   });
 });
 
+test('liveV2ShowToasts crea avisos enfocables con etiqueta accesible', () => {
+  const ui = freshUi();
+  const liveV2 = require('../js/liveV2.js');
+  ui.init({ AppState: { liveV2: null }, liveV2Api: liveV2 });
+  withFeedDom(dom => {
+    const host = makeElement();
+    host._root = true;
+    host.id = 'livev2-toasts';
+    dom.doc.register(host);
+    ui.liveV2ShowToasts({ show: [toastView('a')], overflow: 0 });
+    const el = host.querySelector('.livev2-toast[data-key]');
+    assert.equal(el.getAttribute('role'), 'button');
+    assert.equal(el.getAttribute('tabindex'), '0');
+    assert.equal(el.getAttribute('title'), "12' Gol a (Equipo A)");
+    assert.equal(el.getAttribute('aria-label'), "12' Gol a (Equipo A)");
+  });
+});
+
+test('liveV2ShowToasts retira el aviso de overflow en un lote posterior sin overflow', () => {
+  const ui = freshUi();
+  const liveV2 = require('../js/liveV2.js');
+  ui.init({ AppState: { liveV2: null }, liveV2Api: liveV2 });
+  withFeedDom(dom => {
+    const host = makeElement();
+    host._root = true;
+    host.id = 'livev2-toasts';
+    dom.doc.register(host);
+    const overflow = ['a', 'b', 'c', 'd'].map(k => toastView(k));
+    ui.liveV2ShowToasts(liveV2.feedToastPlan(overflow, 3));
+    assert.ok(host.querySelector('.livev2-toast-more'));
+    ui.liveV2ShowToasts({ show: [toastView('e')], overflow: 0 });
+    assert.equal(host.querySelector('.livev2-toast-more'), null);
+  });
+});
+
+test('liveV2FeedRowBodyHtml añade title con el texto completo', () => {
+  const ui = freshUi();
+  const liveV2 = require('../js/liveV2.js');
+  ui.init({ AppState: { liveV2: null }, liveV2Api: liveV2 });
+  const html = ui.liveV2FeedRowBodyHtml(toastView('a', { text: 'Gol de un jugador con nombre muy largo' }));
+  assert.match(html, /class="livev2-feed-text" title="Gol de un jugador con nombre muy largo"/);
+});
+
 test('liveV2ShowToasts deduplica dos vistas con la misma key', () => {
   const ui = freshUi();
   const liveV2 = require('../js/liveV2.js');
@@ -1097,6 +1177,36 @@ test('updateLiveV2Feed no muestra avisos con la pestaña oculta', () => {
   });
 });
 
+test('updateLiveV2Feed resuelve la anulación con el gol de un poll anterior', () => {
+  const ui = freshUi();
+  const liveV2 = require('../js/liveV2.js');
+  const goal = {
+    eventId: 100, sourceId: 'goal|1', type: 'goal', ts: '2026-10-21T19:00:00Z',
+    minute: 10, teamId: 1, playerId: 11, payload: { scorerId: 11, isHome: true },
+  };
+  const cancelled = {
+    eventId: 100, sourceId: 'cancel|1', type: 'goal_cancelled', ts: '2026-10-21T19:05:00Z',
+    minute: 11, teamId: 1, playerId: null, payload: { ofSourceId: 'goal|1' },
+  };
+  const AppState = {
+    liveV2: { events: [goal, cancelled] },
+    matches: [{ id: 100, homeTeamId: 1, awayTeamId: 2, homeTeam: 'Local', awayTeam: 'Visitante' }],
+    allPlayers: [{ id: 11, nombre: 'Ana', posicion: 'F', equipo: 1 }],
+  };
+  ui.init({ AppState, liveV2Api: liveV2 });
+  withFeedDom(dom => {
+    const host = makeElement();
+    host._root = true;
+    host.id = 'livev2-toasts';
+    dom.doc.register(host);
+    const root = makeFeedRoot(dom);
+    ui.updateLiveV2Feed(root, [cancelled]);
+    const toast = host.querySelector('.livev2-toast[data-key]');
+    assert.match(toast.innerHTML, /Gol anulado a Ana/);
+    assert.match(toast.innerHTML, /Local/);
+  });
+});
+
 test('updateLiveV2Feed refresca el modal abierto y no muestra avisos', () => {
   const ui = freshUi();
   const liveV2 = require('../js/liveV2.js');
@@ -1157,6 +1267,116 @@ test('bindLiveV2EventsButton abre el modal y cierra el toast', () => {
     for (const { cb } of timers.values()) cb();
     assert.equal(toast.parentNode, null);
     assert.equal(toast.isConnected, false);
+  });
+});
+
+test('bindLiveV2EventsButton cierra el toast con Enter desde teclado', () => {
+  const ui = freshUi();
+  const liveV2 = require('../js/liveV2.js');
+  ui.init({ AppState: { liveV2: { events: [] }, matches: [], allPlayers: [] }, liveV2Api: liveV2 });
+  withFeedDom((dom, timers) => {
+    const root = makeFeedRoot(dom);
+    const feed = root.querySelector('#livev2-feed');
+    const toast = dom.doc.createElement('div');
+    toast.className = 'livev2-toast goal';
+    toast.setAttribute('data-key', 'k1');
+    feed.appendChild(toast);
+    ui.bindLiveV2EventsButton(root);
+    let prevented = false;
+    feed._emit('keydown', {
+      key: 'Enter',
+      target: toast,
+      preventDefault() { prevented = true; },
+    });
+    assert.ok(prevented);
+    assert.ok(toast.classList.contains('out'));
+    for (const { cb } of timers.values()) cb();
+    assert.equal(toast.parentNode, null);
+  });
+});
+
+test('openLiveV2EventsModal: Escape quita el overlay, restaura overflow y el handler', () => {
+  const ui = freshUi();
+  const liveV2 = require('../js/liveV2.js');
+  const AppState = { liveV2: null, matches: [], allPlayers: [] };
+  ui.init({ AppState, liveV2Api: liveV2 });
+  withFeedDom(dom => {
+    dom.doc.body.style.overflow = 'scroll';
+    const trigger = dom.doc.createElement('button');
+    trigger.focus();
+    ui.openLiveV2EventsModal();
+    const overlay = dom.doc.getElementById('livev2-events-modal-overlay');
+    assert.ok(overlay);
+    assert.equal(dom.doc.body.style.overflow, 'hidden');
+    assert.equal((dom.listeners.keydown || []).length, 1);
+
+    dom.doc.dispatch('keydown', { key: 'Escape' });
+
+    assert.equal(overlay.parentNode, null);
+    assert.equal(dom.doc.body.style.overflow, 'scroll');
+    assert.equal((dom.listeners.keydown || []).length, 0);
+    assert.ok(dom.removed.some(r => r.type === 'keydown'));
+    assert.equal(dom.doc.activeElement, trigger);
+    assert.equal(AppState.liveV2._openEventsModal, false);
+  });
+});
+
+test('openLiveV2EventsModal: backdrop y botón X cierran el overlay', () => {
+  const ui = freshUi();
+  const liveV2 = require('../js/liveV2.js');
+  const AppState = { liveV2: null, matches: [], allPlayers: [] };
+  ui.init({ AppState, liveV2Api: liveV2 });
+  withFeedDom(dom => {
+    ui.openLiveV2EventsModal();
+    const first = dom.doc.getElementById('livev2-events-modal-overlay');
+    first._emit('click', { target: first });
+    assert.equal(first.parentNode, null);
+
+    ui.openLiveV2EventsModal();
+    const second = dom.doc.getElementById('livev2-events-modal-overlay');
+    const close = dom.doc.createElement('button');
+    close.setAttribute('data-livev2-events-close', '');
+    second.appendChild(close);
+    second._emit('click', { target: close });
+    assert.equal(second.parentNode, null);
+    assert.equal(AppState.liveV2._openEventsModal, false);
+  });
+});
+
+test('openLiveV2EventsModal devuelve el foco al elemento previo al cerrar', () => {
+  const ui = freshUi();
+  const liveV2 = require('../js/liveV2.js');
+  const AppState = { liveV2: null, matches: [], allPlayers: [] };
+  ui.init({ AppState, liveV2Api: liveV2 });
+  withFeedDom(dom => {
+    const trigger = dom.doc.createElement('button');
+    trigger.focus();
+    ui.openLiveV2EventsModal();
+    ui.closeLiveV2EventsModal();
+    assert.equal(dom.doc.activeElement, trigger);
+  });
+});
+
+test('refreshLiveV2EventsModal conserva la posición de scroll de la lista', () => {
+  const ui = freshUi();
+  const liveV2 = require('../js/liveV2.js');
+  const AppState = { liveV2: null, matches: [], allPlayers: [] };
+  ui.init({ AppState, liveV2Api: liveV2 });
+  withFeedDom(dom => {
+    ui.openLiveV2EventsModal();
+    const list = { scrollTop: 120 };
+    const host = {
+      id: 'livev2-events-modal',
+      _html: '',
+      contains: () => false,
+      querySelector: sel => (sel === '.livev2-events-list' ? list : null),
+      get innerHTML() { return this._html; },
+      set innerHTML(v) { this._html = String(v); list.scrollTop = 0; },
+    };
+    dom.doc.register(host);
+    ui.refreshLiveV2EventsModal([]);
+    assert.equal(list.scrollTop, 120);
+    assert.match(host.innerHTML, /Últimos eventos/);
   });
 });
 

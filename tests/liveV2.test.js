@@ -712,6 +712,17 @@ test('feedEventView etiqueta penalti parado y fallado', () => {
   assert.equal(missed.text, 'Penalti fallado · Ana');
 });
 
+test('feedEventView atribuye el penalti al equipo del portero/tirador, no al teamId del incidente', () => {
+  const saved = liveV2.feedEventView(
+    feedEv({ type: 'penalty_saved', teamId: 1, playerId: 11, payload: { keeperId: 22, takerId: 11 } }),
+    FEED_CTX, FEED_PLAYERS, new Map());
+  const missed = liveV2.feedEventView(
+    feedEv({ type: 'penalty_missed', teamId: 2, playerId: 22, payload: { takerId: 11 } }),
+    FEED_CTX, FEED_PLAYERS, new Map());
+  assert.equal(saved.teamName, 'Visitante');
+  assert.equal(missed.teamName, 'Local');
+});
+
 test('feedEventView etiqueta cambios con nombres', () => {
   const v = liveV2.feedEventView(
     feedEv({ type: 'substitution', playerId: null, payload: { inId: 33, outId: 11 } }),
@@ -726,11 +737,88 @@ test('feedEventView resuelve el gol original de un anulado', () => {
     sourceId: 'cancel|1', type: 'goal_cancelled', ts: '2026-10-21T19:05:00.000Z',
     playerId: null, payload: { ofSourceId: 'goal|1' },
   });
-  const bySourceId = new Map([[goal.sourceId, goal]]);
-  const v = liveV2.feedEventView(cancelled, FEED_CTX, FEED_PLAYERS, bySourceId);
+  const byKey = new Map([[liveV2.eventKey(goal), goal]]);
+  const v = liveV2.feedEventView(cancelled, FEED_CTX, FEED_PLAYERS, byKey);
   assert.equal(v.text, 'Gol anulado a Ana');
   assert.equal(v.detail, 'VAR');
   assert.equal(v.teamName, 'Local');
+});
+
+test('feedEvents resuelve una anulación cuyo gol original llegó en un poll anterior', () => {
+  const goal = feedEv({ sourceId: 'goal|1', payload: { scorerId: 11, isHome: true } });
+  const cancelled = feedEv({
+    sourceId: 'cancel|1', type: 'goal_cancelled', ts: '2026-10-21T19:05:00.000Z',
+    playerId: null, payload: { ofSourceId: 'goal|1' },
+  });
+  const views = liveV2.feedEvents([cancelled], { 100: FEED_CTX }, FEED_PLAYERS, [goal, cancelled]);
+  assert.equal(views.length, 1);
+  assert.equal(views[0].text, 'Gol anulado a Ana');
+  assert.equal(views[0].teamName, 'Local');
+});
+
+test('feedEvents distingue el mismo sourceId en partidos distintos al resolver anulaciones', () => {
+  const players = { ...FEED_PLAYERS, 55: { nombre: 'Eva', equipo: 3 } };
+  const ctxById = {
+    100: FEED_CTX,
+    200: { ...FEED_CTX, eventId: 200, homeTeamId: 3, awayTeamId: 4, homeTeam: 'Tres', awayTeam: 'Cuatro' },
+  };
+  const goalA = feedEv({ eventId: 100, sourceId: 'goal|1', payload: { scorerId: 11, isHome: true } });
+  const goalB = feedEv({
+    eventId: 200, sourceId: 'goal|1', teamId: 3,
+    payload: { scorerId: 55, isHome: true },
+  });
+  const cancelA = feedEv({
+    eventId: 100, sourceId: 'cancel|1', type: 'goal_cancelled', ts: '2026-10-21T19:05:00.000Z',
+    playerId: null, payload: { ofSourceId: 'goal|1' },
+  });
+  const cancelB = feedEv({
+    eventId: 200, sourceId: 'cancel|1', type: 'goal_cancelled', ts: '2026-10-21T19:06:00.000Z',
+    playerId: null, payload: { ofSourceId: 'goal|1' },
+  });
+  const views = liveV2.feedEvents([cancelA, cancelB], ctxById, players, [goalA, goalB, cancelA, cancelB]);
+  const byMatch = Object.fromEntries(views.map(v => [v.match.eventId, v]));
+  assert.equal(byMatch[100].text, 'Gol anulado a Ana');
+  assert.equal(byMatch[100].teamName, 'Local');
+  assert.equal(byMatch[200].text, 'Gol anulado a Eva');
+  assert.equal(byMatch[200].teamName, 'Tres');
+});
+
+test('feedEvents usa la misma entrada canónica para deduplicar y resolver la anulación', () => {
+  const older = feedEv({
+    sourceId: 'goal|1', ts: '2026-10-21T19:00:00.000Z', ingestedAt: '2026-10-21T19:01:00.000Z',
+    payload: { scorerId: 11, isHome: true },
+  });
+  const latest = feedEv({
+    sourceId: 'goal|1', ts: '2026-10-21T19:02:00.000Z', ingestedAt: '2026-10-21T19:03:00.000Z',
+    payload: { scorerId: 33, isHome: true },
+  });
+  const cancelled = feedEv({
+    sourceId: 'cancel|1', type: 'goal_cancelled', ts: '2026-10-21T19:05:00.000Z',
+    playerId: null, payload: { ofSourceId: 'goal|1' },
+  });
+  const views = liveV2.feedEvents([older, latest], { 100: FEED_CTX }, FEED_PLAYERS, [latest, older]);
+  assert.equal(views.length, 1);
+  assert.equal(views[0].text, 'Gol de Carla');
+  const reversed = liveV2.feedEvents([cancelled], { 100: FEED_CTX }, FEED_PLAYERS, [older, latest, cancelled]);
+  assert.equal(reversed[0].text, 'Gol anulado a Carla');
+});
+
+test('feedEvents/feedEventView rechazan ts null o vacío', () => {
+  const badNull = feedEv({ sourceId: 'bad|null', ts: null });
+  const badEmpty = feedEv({ sourceId: 'bad|empty', ts: '' });
+  const good = feedEv({ sourceId: 'good', ts: '2026-10-21T19:00:00.000Z' });
+  const views = liveV2.feedEvents([badNull, badEmpty, good], { 100: FEED_CTX }, FEED_PLAYERS);
+  assert.deepEqual(views.map(v => v.key), ['100|good']);
+  assert.equal(liveV2.feedEventView(badNull, FEED_CTX, FEED_PLAYERS, new Map()), null);
+  assert.equal(liveV2.feedEventView(badEmpty, FEED_CTX, FEED_PLAYERS, new Map()), null);
+});
+
+test('feedEventView usa un fallback neutro para cardType desconocido', () => {
+  const v = liveV2.feedEventView(
+    feedEv({ type: 'card', payload: { cardType: 'orange' } }), FEED_CTX, FEED_PLAYERS, new Map());
+  assert.equal(v.text, 'Tarjeta · Ana');
+  assert.equal(v.icon, '🟨');
+  assert.equal(v.tone, 'card-yellow');
 });
 
 test('feedEventView usa el marcador actual en tarjetas y el del gol en goles', () => {

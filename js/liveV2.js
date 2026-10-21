@@ -469,8 +469,47 @@
     };
   }
 
-  function feedEventView(ev, ctx, playersById, bySourceId) {
-    if (!ev || !FEED_TYPES.has(ev.type) || !isFinite(new Date(ev.ts).getTime())) return null;
+  function isValidFeedTs(ev) {
+    if (!ev || ev.ts == null) return false;
+    if (typeof ev.ts === 'string' && !ev.ts.trim()) return false;
+    return isFinite(new Date(ev.ts).getTime());
+  }
+
+  function isValidFeedEvent(ev) {
+    return !!ev && FEED_TYPES.has(ev.type) && isValidFeedTs(ev);
+  }
+
+  /** true si `a` es una versión más reciente de la misma clave que `b`. */
+  function isLaterDuplicate(a, b) {
+    const ingA = parseTs(a.ingestedAt);
+    const ingB = parseTs(b.ingestedAt);
+    if (ingA !== ingB) return ingA > ingB;
+    const tsA = parseTs(a.ts);
+    const tsB = parseTs(b.ts);
+    if (tsA !== tsB) return tsA > tsB;
+    const seqA = Number(a.seq) || 0;
+    const seqB = Number(b.seq) || 0;
+    if (seqA !== seqB) return seqA > seqB;
+    return String(a.sourceId || '') >= String(b.sourceId || '');
+  }
+
+  /**
+   * Entrada canónica única por eventId|sourceId. Dedupe y resolución de
+   * `goal_cancelled` comparten este mismo mapa para no discrepar entre polls.
+   */
+  function canonicalEventsByKey(events) {
+    const byKey = new Map();
+    for (const e of (Array.isArray(events) ? events : [])) {
+      if (!e) continue;
+      const key = eventKey(e);
+      const cur = byKey.get(key);
+      if (!cur || isLaterDuplicate(e, cur)) byKey.set(key, e);
+    }
+    return byKey;
+  }
+
+  function feedEventView(ev, ctx, playersById, byKey) {
+    if (!isValidFeedEvent(ev)) return null;
     const p = ev.payload || {};
     const base = feedBase(ev, ctx, ev.type === 'goal');
 
@@ -490,7 +529,10 @@
     }
 
     if (ev.type === 'goal_cancelled') {
-      const orig = p.ofSourceId != null && bySourceId ? bySourceId.get(p.ofSourceId) : null;
+      const origKey = p.ofSourceId != null
+        ? eventKey({ eventId: ev.eventId, sourceId: p.ofSourceId })
+        : null;
+      const orig = origKey != null && byKey ? byKey.get(origKey) : null;
       const scorerId = orig ? (orig.payload?.scorerId ?? orig.playerId) : ev.playerId;
       return {
         ...base, icon: '↩️', tone: 'cancelled', playerId: scorerId,
@@ -504,10 +546,11 @@
       const ct = p.cardType || 'yellow';
       const double = ct === 'yellowRed' || ct === 'secondYellow';
       const red = ct === 'red' || double;
+      const neutral = !red && ct !== 'yellow';
       return {
         ...base, icon: double ? '🟨🟥' : red ? '🟥' : '🟨',
         tone: red ? 'card-red' : 'card-yellow', playerId: ev.playerId,
-        text: `${double ? 'Doble amarilla' : red ? 'Roja' : 'Amarilla'} · ${playerName(ev.playerId, playersById) || 'un jugador'}`,
+        text: `${neutral ? 'Tarjeta' : double ? 'Doble amarilla' : red ? 'Roja' : 'Amarilla'} · ${playerName(ev.playerId, playersById) || 'un jugador'}`,
         teamName: feedTeamName(ev, ev.playerId, playersById, ctx, false),
         detail: null,
       };
@@ -517,7 +560,7 @@
       return {
         ...base, icon: '🧤', tone: 'penalty', playerId: p.keeperId,
         text: `Penalti parado por ${playerName(p.keeperId, playersById) || 'un jugador'}`,
-        teamName: feedTeamName(ev, p.keeperId, playersById, ctx, false),
+        teamName: feedTeamName(ev, p.keeperId, playersById, ctx, true),
         detail: null,
       };
     }
@@ -526,7 +569,7 @@
       return {
         ...base, icon: '❌', tone: 'penalty', playerId: p.takerId,
         text: `Penalti fallado · ${playerName(p.takerId, playersById) || 'un jugador'}`,
-        teamName: feedTeamName(ev, p.takerId, playersById, ctx, false),
+        teamName: feedTeamName(ev, p.takerId, playersById, ctx, true),
         detail: null,
       };
     }
@@ -548,20 +591,18 @@
     return null;
   }
 
-  function feedEvents(events, ctxById, playersById) {
+  function feedEvents(events, ctxById, playersById, allEvents = events) {
     const list = Array.isArray(events) ? events : [];
-    const bySourceId = new Map();
-    for (const e of list) if (e && e.sourceId != null) bySourceId.set(e.sourceId, e);
-    const seen = new Set();
-    return sortEvents(list)
-      .filter(e => e && FEED_TYPES.has(e.type) && isFinite(new Date(e.ts).getTime()))
-      .filter(e => {
-        const key = eventKey(e);
-        if (seen.has(key)) return false;
-        seen.add(key);
-        return true;
-      })
-      .map(e => feedEventView(e, ctxById && ctxById[String(e.eventId)], playersById, bySourceId))
+    const byKey = canonicalEventsByKey(Array.isArray(allEvents) ? allEvents : list);
+    const keys = new Set();
+    for (const e of list) {
+      if (!e) continue;
+      const key = eventKey(e);
+      if (!byKey.has(key)) byKey.set(key, e);
+      keys.add(key);
+    }
+    return sortEvents([...keys].map(k => byKey.get(k)).filter(isValidFeedEvent))
+      .map(e => feedEventView(e, ctxById && ctxById[String(e.eventId)], playersById, byKey))
       .filter(Boolean)
       .reverse();
   }

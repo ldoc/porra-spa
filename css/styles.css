@@ -7091,6 +7091,7 @@ body.live-fs .resultados-scroll {
 }
 
 .livev2-toast {
+  min-height: 44px;
   pointer-events: auto;
   background: var(--ucl-card);
   border: 1px solid var(--border-color);
@@ -7099,6 +7100,12 @@ body.live-fs .resultados-scroll {
   padding: 8px 10px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
   animation: livev2ToastIn 0.2s ease-out;
+}
+
+.livev2-toast:focus-visible,
+.livev2-toast-more:focus-visible {
+  outline: 2px solid var(--accent-cyan);
+  outline-offset: 2px;
 }
 
 .livev2-toast.out {
@@ -7155,7 +7162,12 @@ body.live-fs .resultados-scroll {
 
 .livev2-feed-icon { flex: 0 0 auto; }
 .livev2-feed-min { color: var(--text-secondary); font-variant-numeric: tabular-nums; }
-.livev2-feed-text { min-width: 0; }
+.livev2-feed-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .livev2-feed-team-name { color: var(--text-secondary); }
 .livev2-feed-detail { color: var(--text-muted); }
 

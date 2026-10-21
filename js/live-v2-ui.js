@@ -1164,7 +1164,7 @@ function liveV2FeedRowBodyHtml(v) {
     + `</div>`
     + `<div class="livev2-feed-line2">`
     + `<span class="livev2-feed-icon">${v.icon}</span>${minute}`
-    + `<span class="livev2-feed-text">${liveV2Esc(v.text)}</span>${team}${detail}`
+    + `<span class="livev2-feed-text" title="${liveV2Esc(v.text)}">${liveV2Esc(v.text)}</span>${team}${detail}`
     + `</div>`;
 }
 
@@ -1214,9 +1214,13 @@ function liveV2ShowToasts(plan) {
     if (added.has(v.key) || current().some(el => el.getAttribute('data-key') === v.key)) continue;
     added.add(v.key);
     const el = document.createElement('div');
+    const text = liveV2ToastText(v);
     el.className = `livev2-toast ${v.tone || ''}`.trim();
     el.setAttribute('data-key', v.key);
-    el.title = liveV2ToastText(v);
+    el.setAttribute('role', 'button');
+    el.setAttribute('tabindex', '0');
+    el.setAttribute('aria-label', text);
+    el.setAttribute('title', text);
     el.innerHTML = liveV2FeedRowBodyHtml(v);
     fragment.appendChild(el);
     _liveV2ToastTimers.set(v.key, setTimeout(() => liveV2DismissToast(el), LIVEV2_TOAST_MS));
@@ -1224,9 +1228,9 @@ function liveV2ShowToasts(plan) {
   host.prepend(fragment);
   const all = current();
   for (let i = 3; i < all.length; i++) liveV2DismissToast(all[i], true);
+  const old = host.querySelector('.livev2-toast-more');
+  if (old) liveV2DismissToast(old, true);
   if (plan.overflow > 0) {
-    const old = host.querySelector('.livev2-toast-more');
-    if (old) liveV2DismissToast(old, true);
     const more = document.createElement('button');
     more.type = 'button';
     more.className = 'livev2-toast livev2-toast-more';
@@ -1252,7 +1256,7 @@ function updateLiveV2Feed(root, newEvents) {
   if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return;
   if (typeof liveV2Api === 'undefined' || !liveV2Api.feedEvents || !liveV2Api.feedToastPlan) return;
   const ctx = liveV2FeedCtxById(folded);
-  const newViews = liveV2Api.feedEvents(newEvents, ctx, liveV2PlayersById());
+  const newViews = liveV2Api.feedEvents(newEvents, ctx, liveV2PlayersById(), liveV2State().events);
   if (!newViews.length) return;
   liveV2ShowToasts(liveV2Api.feedToastPlan(newViews, 3));
 }
@@ -1367,6 +1371,14 @@ function bindLiveV2EventsButton(root) {
     }
     const toast = t.closest('.livev2-toast[data-key]');
     if (toast) liveV2DismissToast(toast);
+  });
+  feed.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    const toast = e.target && e.target.closest
+      ? e.target.closest('.livev2-toast[data-key]') : null;
+    if (!toast) return;
+    e.preventDefault();
+    liveV2DismissToast(toast);
   });
 }
 
