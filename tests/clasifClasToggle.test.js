@@ -35,7 +35,8 @@ function test_toggle_en_header_no_en_tabla() {
   assert.ok(mainSrc.includes('clasif-sort-select'), 'select de orden');
   assert.ok(mainSrc.includes('function setClasifSortBy'), 'handler del combo');
   assert.ok(mainSrc.includes("class=\"clasif-clas-sort\""), 'clase del select');
-  assert.ok(mainSrc.includes("sortClasificacionJugadoresPorFuente(playersWithPoints, sortBy)"), 'sort por fuente en render');
+  assert.ok(mainSrc.includes('const sortedPlayers = (typeof clasificacionApi'), 'sort reasignado en render');
+  assert.ok(mainSrc.includes('sortedPlayers'), 'usos del array ordenado: trend + html');
   assert.ok(mainSrc.includes("sortBy === 'total'"), 'trend solo con total');
   assert.ok(mainSrc.includes('clasifSortBy = \'total\';'), 'reset del combo al salir');
 }
@@ -48,9 +49,9 @@ function test_css_compacto() {
 }
 
 function test_cache_busting() {
-  assert.ok(indexSrc.includes('styles.css?v=131'), 'css v131');
+  assert.ok(indexSrc.includes('styles.css?v=132'), 'css v132');
   assert.ok(indexSrc.includes('clasificacion.js?v=3'), 'clasificacion v3');
-  assert.ok(indexSrc.includes('main.js?v=179'), 'main v179');
+  assert.ok(indexSrc.includes('main.js?v=180'), 'main v180');
 }
 
 const tests = [

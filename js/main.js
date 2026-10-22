@@ -1225,15 +1225,13 @@ async function renderClasificacionTab() {
   });
 
   const sortBy = AppState.clasifSortBy || 'total';
-  if (typeof clasificacionApi !== 'undefined' && clasificacionApi.sortClasificacionJugadoresPorFuente) {
-    clasificacionApi.sortClasificacionJugadoresPorFuente(playersWithPoints, sortBy);
-  } else {
-    playersWithPoints.sort((a, b) => b.realPoints - a.realPoints);
-  }
+  const sortedPlayers = (typeof clasificacionApi !== 'undefined' && clasificacionApi.sortClasificacionJugadoresPorFuente)
+    ? clasificacionApi.sortClasificacionJugadoresPorFuente(playersWithPoints, sortBy)
+    : [...playersWithPoints].sort((a, b) => b.realPoints - a.realPoints);
 
   const trendOk = typeof trendApi !== 'undefined' && sortBy === 'total';
   const allIds = new Set((AppState.matchStats || []).map(ms => ms.eventId));
-  const currentRows = trendOk ? playersWithPoints.map(p => ({
+  const currentRows = trendOk ? sortedPlayers.map(p => ({
     name: p.name,
     realPoints: p.realPoints,
     predictedCount: trendApi.countUserPredictionsInSubset(
@@ -1246,7 +1244,7 @@ async function renderClasificacionTab() {
 
   container.innerHTML =
     buildClasificacionHeader() +
-    playersWithPoints.map((p, i) => {
+    sortedPlayers.map((p, i) => {
       const rank = i + 1;
       const isMe = AppState.currentUser && p.name === AppState.currentUser.name;
       return buildClasificacionRow(p, rank, isMe, withTrend ? trendApi.buildTrendCellHtml(trendMap[p.name], true) : null);
