@@ -29,7 +29,7 @@ function test_toggle_en_header_no_en_tabla() {
   assert.ok(mainSrc.includes('clasif-clas-header-toggle'), 'id del nodo header');
   assert.ok(!mainSrc.includes('toggleHtml'), 'toggle ya no se concatena en la tabla');
   assert.ok(!mainSrc.includes('<small>Los puntos por clasificación varían'), 'hint visible eliminado');
-  assert.ok(mainSrc.includes('<span>Clasif.</span>'), 'etiqueta corta');
+  assert.ok(mainSrc.includes('<span>Mostrar ptos clasif temp</span>'), 'etiqueta toggle');
   assert.ok(mainSrc.includes("querySelector('#tab-clasificacion .section-header')"), 'inyección en section-header');
 }
 
@@ -40,8 +40,8 @@ function test_css_compacto() {
 }
 
 function test_cache_busting() {
-  assert.ok(indexSrc.includes('styles.css?v=127'), 'css v127');
-  assert.ok(indexSrc.includes('main.js?v=175'), 'main v175');
+  assert.ok(indexSrc.includes('styles.css?v=128'), 'css v128');
+  assert.ok(indexSrc.includes('main.js?v=176'), 'main v176');
 }
 
 const tests = [

@@ -1264,7 +1264,7 @@ function syncClasifClasHeaderToggle() {
   }
   const html = `<label title="Los puntos por clasificación varían según la clasificación real después de cada partido">
       <input type="checkbox" id="clasif-clas-check" ${AppState.clasificacionClasOn ? 'checked' : ''} onchange="toggleClasificacionClas()">
-      <span>Clasif.</span>
+      <span>Mostrar ptos clasif temp</span>
     </label>`;
   if (existing) {
     existing.innerHTML = html;
