@@ -3698,7 +3698,7 @@ function computeRealPointsTotal(components) {
     + (components.eliminatorias || 0);
 }
 
-function computeUserRealPoints(username) {
+function computeUserRealPoints(username, includeClassification) {
   const userData = calculateUserTotalPoints(username);
   let squadPoints = 0;
   const userSquad = AppState.squadsCache?.[username];
@@ -3706,7 +3706,11 @@ function computeUserRealPoints(username) {
     squadPoints = calculateSquadPoints(userSquad, AppState.matchStats).totalPoints;
   }
   let classificationPoints = 0;
-  if (AppState.matchStats.length > 0 && isClassificationCounting()) {
+  const countsNow = isClassificationCounting();
+  const countClas = (typeof clasificacionApi !== 'undefined' && clasificacionApi.shouldCountClassification)
+    ? clasificacionApi.shouldCountClassification(countsNow, includeClassification)
+    : (countsNow ? true : includeClassification === true);
+  if (AppState.matchStats.length > 0 && countClas) {
     classificationPoints = calculateClassificationPoints(username).totalPoints;
   }
   let eliminatoriasPoints = 0;
@@ -3739,7 +3743,7 @@ function getUserTotalRealPoints(username) {
  * y de las cachés que dependen de él; restaura todo en finally.
  * No modifica ninguna función existente. Síncrono: sin riesgo de reentrada.
  */
-function computeRankingForStats(matchStatsSubset) {
+function computeRankingForStats(matchStatsSubset, includeClassification) {
   const savedMatchStats = AppState.matchStats;
   const savedStandings = AppState.realStandings;
   const savedClassPoints = AppState.classificationPoints;
@@ -3749,7 +3753,7 @@ function computeRankingForStats(matchStatsSubset) {
   try {
     const subsetIds = new Set(matchStatsSubset.map(ms => ms.eventId));
     const rows = visiblePlayers().map(p => {
-      const parts = computeUserRealPoints(p.name);
+      const parts = computeUserRealPoints(p.name, includeClassification);
       return {
         name: p.name,
         realPoints: parts.realPoints,
@@ -3776,12 +3780,12 @@ function computeRankingForStats(matchStatsSubset) {
 }
 
 /** Mapa de tendencias vs penúltimo día con partidos, o null si no procede. Fail-safe. */
-function getClasificacionTrendMap(currentRows) {
+function getClasificacionTrendMap(currentRows, includeClassification) {
   try {
     const days = trendApi.getLastTwoMatchDays(AppState.matches, AppState.matchStats);
     if (!days) return null;
     const prevSubset = trendApi.filterMatchStatsUpTo(days.prev, AppState.matches, AppState.matchStats);
-    const prevRows = computeRankingForStats(prevSubset);
+    const prevRows = computeRankingForStats(prevSubset, includeClassification);
     return trendApi.computeTrendMap(prevRows, currentRows);
   } catch (e) {
     console.error('Error calculando tendencia:', e);
