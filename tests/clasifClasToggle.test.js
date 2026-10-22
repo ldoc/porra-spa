@@ -44,11 +44,13 @@ function test_css_compacto() {
   assert.ok(cssSrc.includes('.clasif-clas-toggle'), 'clase existe');
   assert.ok(!cssSrc.includes('flex-wrap: wrap;\n  gap: 2px 10px;'), 'sin layout multi-fila previo');
   assert.ok(!cssSrc.includes('.clasif-clas-toggle small'), 'hint css eliminado');
+  assert.ok(cssSrc.includes('.clasif-clas-sort'), 'css del select');
 }
 
 function test_cache_busting() {
-  assert.ok(indexSrc.includes('styles.css?v=130'), 'css v130');
-  assert.ok(indexSrc.includes('main.js?v=178'), 'main v178');
+  assert.ok(indexSrc.includes('styles.css?v=131'), 'css v131');
+  assert.ok(indexSrc.includes('clasificacion.js?v=3'), 'clasificacion v3');
+  assert.ok(indexSrc.includes('main.js?v=179'), 'main v179');
 }
 
 const tests = [

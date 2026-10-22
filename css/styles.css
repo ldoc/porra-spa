@@ -7260,12 +7260,13 @@ body.live-fs .resultados-scroll {
   }
 }
 
-/* Toggle puntos por clasificación (fila propia bajo el título de Clasificación, solo FASE_LIGA) */
+/* Fila de controles de Clasificación (toggle clasif temporal + combo de orden) */
 .clasif-clas-toggle {
   min-height: 44px;
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 10px;
   padding: 2px 12px 4px;
 }
 .clasif-clas-toggle label {
@@ -7285,5 +7286,16 @@ body.live-fs .resultados-scroll {
   accent-color: var(--accent-primary);
   cursor: pointer;
   flex: none;
+}
+.clasif-clas-sort {
+  min-height: 40px;
+  padding: 6px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-primary);
+  background: var(--ucl-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  cursor: pointer;
 }
 
