@@ -27,7 +27,16 @@
     return [...(rows || [])].sort(compareClasificacionJugadores);
   }
 
-  const api = { compareClasificacionJugadores, sortClasificacionJugadores };
+  /**
+   * Decide si los puntos por clasificación entran en el total:
+   * en fases donde ya cuentan manda el comportamiento por fase;
+   * fuera de ellas, solo si la pantalla lo pide explícitamente (toggle).
+   */
+  function shouldCountClassification(countsNow, includeClassification) {
+    return countsNow ? true : includeClassification === true;
+  }
+
+  const api = { compareClasificacionJugadores, sortClasificacionJugadores, shouldCountClassification };
   global.clasificacionApi = api;
   if (typeof module !== 'undefined' && module.exports) {
     module.exports = api;
