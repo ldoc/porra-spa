@@ -30,7 +30,8 @@ function test_toggle_en_header_no_en_tabla() {
   assert.ok(!mainSrc.includes('toggleHtml'), 'toggle ya no se concatena en la tabla');
   assert.ok(!mainSrc.includes('<small>Los puntos por clasificación varían'), 'hint visible eliminado');
   assert.ok(mainSrc.includes('<span>Mostrar ptos clasif temp</span>'), 'etiqueta toggle');
-  assert.ok(mainSrc.includes("querySelector('#tab-clasificacion .section-header')"), 'inyección en section-header');
+  assert.ok(mainSrc.includes("querySelector('#tab-clasificacion .section-header')"), 'localiza el header');
+  assert.ok(mainSrc.includes('header.after(wrap)'), 'toggle en fila propia bajo el titulo');
 }
 
 function test_css_compacto() {
@@ -40,8 +41,8 @@ function test_css_compacto() {
 }
 
 function test_cache_busting() {
-  assert.ok(indexSrc.includes('styles.css?v=128'), 'css v128');
-  assert.ok(indexSrc.includes('main.js?v=176'), 'main v176');
+  assert.ok(indexSrc.includes('styles.css?v=129'), 'css v129');
+  assert.ok(indexSrc.includes('main.js?v=177'), 'main v177');
 }
 
 const tests = [

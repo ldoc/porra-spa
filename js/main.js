@@ -1274,7 +1274,7 @@ function syncClasifClasHeaderToggle() {
   wrap.className = 'clasif-clas-toggle';
   wrap.id = 'clasif-clas-header-toggle';
   wrap.innerHTML = html;
-  header.appendChild(wrap);
+  header.after(wrap);
 }
 
 function toggleClasificacionClas() {

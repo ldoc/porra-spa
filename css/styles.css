@@ -7260,17 +7260,19 @@ body.live-fs .resultados-scroll {
   }
 }
 
-/* Toggle puntos por clasificación (header de la tab Clasificación, solo FASE_LIGA) */
+/* Toggle puntos por clasificación (fila propia bajo el título de Clasificación, solo FASE_LIGA) */
 .clasif-clas-toggle {
   min-height: 44px;
   display: flex;
   align-items: center;
+  justify-content: flex-end;
+  padding: 2px 12px 4px;
 }
 .clasif-clas-toggle label {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 10px;
+  font-size: 10.5px;
   font-weight: 600;
   line-height: 1.2;
   text-align: right;
