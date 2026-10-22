@@ -2363,6 +2363,7 @@ test('liveV2PlayerModalHtml pinta resumen, pronóstico, motivos y plantilla', ()
   assert.match(html, /Gol/);
   assert.match(html, /role="dialog"/);
   assert.match(html, /aria-labelledby="livev2-player-modal-title"/);
+  assert.match(html, /livev2-player-match-head[\s\S]*?<\/div>\s*<div class="livev2-player-state">EN JUEGO 63'<\/div>/);
 });
 
 test('liveV2PlayerModalHtml muestra avisos de vacío y escapa el nombre', () => {

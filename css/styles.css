@@ -2725,8 +2725,8 @@ html, body {
 .livev2-modal-total b { color: var(--accent-gold); font-size: 1.1rem; }
 
 /* Desglose de otro jugador */
-.livev2-player-overlay { z-index: 1200; }
-.livev2-player-modal { max-height: 82vh; }
+.livev2-player-overlay { z-index: 1200; padding: 8px; }
+.livev2-player-modal { width: 100%; max-width: 480px; max-height: 82vh; }
 .livev2-player-modal .breakdown-modal-close {
   width: 44px;
   height: 44px;
@@ -2777,6 +2777,7 @@ html, body {
 }
 
 .livev2-player-team {
+  flex: 1 1 0;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -2786,8 +2787,10 @@ html, body {
 .livev2-player-team.away { text-align: right; }
 
 .livev2-player-state {
-  margin-left: auto;
+  margin-top: 4px;
+  text-align: center;
   color: var(--text-muted);
+  font-size: 10px;
   font-weight: 600;
   white-space: nowrap;
 }
@@ -2811,6 +2814,8 @@ html, body {
 .livev2-player-match .livev2-modal-empty { padding-left: 0; padding-right: 0; }
 .livev2-player-match .livev2-modal-list { margin-top: 2px; }
 .livev2-player-match .livev2-modal-squad { margin-top: 8px; }
+.livev2-player-match .livev2-modal-player { font-size: 12px; }
+.livev2-player-match .livev2-modal-player b { font-size: 11px; }
 
 .livev2-event-line1 {
   display: flex;

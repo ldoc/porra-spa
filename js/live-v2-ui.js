@@ -1098,10 +1098,10 @@ function liveV2PlayerMatchHtml(m) {
     + badge(homeBadge, 'home')
     + `<span class="livev2-player-team">${liveV2Esc(m.meta.homeTeam || '?')}</span>`
     + `<b>${score}</b>`
-    + `<span class="livev2-player-state">${liveV2Esc(m.label)}</span>`
     + `<span class="livev2-player-team away">${liveV2Esc(m.meta.awayTeam || '?')}</span>`
     + badge(awayBadge, 'away')
     + `</div>`
+    + `<div class="livev2-player-state">${liveV2Esc(m.label)}</div>`
     + pred
     + squad
     + `</div>`;
