@@ -1210,7 +1210,7 @@ async function renderClasificacionTab() {
   const reachedPhases = computeReachedPhases(AppState.matches, AppState.matchStats);
 
   const playersWithPoints = players.map(p => {
-    const parts = computeUserRealPoints(p.name);
+    const parts = computeUserRealPoints(p.name, AppState.clasificacionClasOn);
     AppState.userPoints[p.name] = parts.userData;
     return {
       ...p,
@@ -1239,10 +1239,20 @@ async function renderClasificacionTab() {
       allIds
     )
   })) : [];
-  const trendMap = trendOk ? getClasificacionTrendMap(currentRows) : null;
+  const trendMap = trendOk ? getClasificacionTrendMap(currentRows, AppState.clasificacionClasOn) : null;
   const withTrend = trendMap !== null;
 
+  const toggleHtml = getFaseJuego() === 'FASE_LIGA'
+    ? `<div class="clasif-clas-toggle">
+        <label>
+          <input type="checkbox" id="clasif-clas-check" ${AppState.clasificacionClasOn ? 'checked' : ''} onchange="toggleClasificacionClas()">
+          <span>Incluir puntos por clasificación</span>
+        </label>
+        <small>Los puntos por clasificación varían según la clasificación real después de cada partido</small>
+      </div>`
+    : '';
   container.innerHTML =
+    toggleHtml +
     buildClasificacionHeader() +
     playersWithPoints.map((p, i) => {
       const rank = i + 1;
@@ -1250,6 +1260,11 @@ async function renderClasificacionTab() {
       return buildClasificacionRow(p, rank, isMe, withTrend ? trendApi.buildTrendCellHtml(trendMap[p.name], true) : null);
     }).join('') +
     (withTrend ? '<div class="clasificacion-legend"><span class="trend-up">▲</span> sube · <span class="trend-down">▼</span> baja · <span class="trend-same">＝</span> igual vs día anterior con partidos</div>' : '');
+}
+
+function toggleClasificacionClas() {
+  AppState.clasificacionClasOn = !AppState.clasificacionClasOn;
+  renderClasificacionTab();
 }
 
 /** Renderiza la tab de pronósticos en el modal de perfil */
