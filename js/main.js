@@ -61,6 +61,7 @@ const AppState = {
   hasTop8InRoundOf32: false, // flag: hay equipos top-8 en deciseisavos (bloquea save)
   predictionsConfirmed: false, // flag: pronósticos confirmados (bloquea edición)
   openProfileJourney: null, // string: jornada desplegada en el modal de perfil (tab Pronósticos)
+  clasificacionClasOn: false, // toggle pantalla Clasificacion: incluir puntos por clasificacion (solo FASE_LIGA, reset al salir)
   fases: [],             // fases de la competición desde fases.json
   rulesHtml: null,         // caché del HTML de reglas cargado de reglas/UCL.html
 };
@@ -3377,6 +3378,10 @@ function navigateToTab(tabName) {
     AppState.resultadosRound = null;
     AppState.resultadosRoundKey = null;
     liveV2Ui.stopLiveV2Polling();
+  }
+
+  if (tabName !== 'clasificacion') {
+    AppState.clasificacionClasOn = false;
   }
 
   // Limpiar el intervalo del countdown del Inicio al salir de esa pestaña
