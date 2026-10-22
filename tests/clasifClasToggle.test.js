@@ -39,6 +39,8 @@ function test_toggle_en_header_no_en_tabla() {
   assert.ok(mainSrc.includes('sortedPlayers'), 'usos del array ordenado: trend + html');
   assert.ok(mainSrc.includes("sortBy === 'total'"), 'trend solo con total');
   assert.ok(mainSrc.includes('clasifSortBy = \'total\';'), 'reset del combo al salir');
+  assert.ok(mainSrc.includes('clasif-clas-sort-label'), 'span Ordenar por');
+  assert.ok(mainSrc.includes('<span class="clasif-clas-sort-label">Ordenar por:</span>'), 'copy literal del label');
 }
 
 function test_css_compacto() {
@@ -46,12 +48,14 @@ function test_css_compacto() {
   assert.ok(!cssSrc.includes('flex-wrap: wrap;\n  gap: 2px 10px;'), 'sin layout multi-fila previo');
   assert.ok(!cssSrc.includes('.clasif-clas-toggle small'), 'hint css eliminado');
   assert.ok(cssSrc.includes('.clasif-clas-sort'), 'css del select');
+  assert.ok(cssSrc.includes('.clasif-clas-sort-label'), 'css del label ordenar por');
+  assert.ok(cssSrc.includes('text-align: left'), 'label checkbox alineado izquierda');
 }
 
 function test_cache_busting() {
-  assert.ok(indexSrc.includes('styles.css?v=132'), 'css v132');
+  assert.ok(indexSrc.includes('styles.css?v=133'), 'css v133');
   assert.ok(indexSrc.includes('clasificacion.js?v=3'), 'clasificacion v3');
-  assert.ok(indexSrc.includes('main.js?v=180'), 'main v180');
+  assert.ok(indexSrc.includes('main.js?v=181'), 'main v181');
 }
 
 const tests = [

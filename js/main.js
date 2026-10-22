@@ -1275,6 +1275,7 @@ function syncClasifClasHeaderToggle() {
     ['eliminatorias', 'Eliminatorias']
   ].map(([value, label]) => `<option value="${value}"${(AppState.clasifSortBy || 'total') === value ? ' selected' : ''}>${label}</option>`).join('');
   const html = `${checkboxHtml}
+      <span class="clasif-clas-sort-label">Ordenar por:</span>
       <select id="clasif-sort-select" class="clasif-clas-sort" onchange="setClasifSortBy(this.value)">
         ${sortOptions}
       </select>`;
