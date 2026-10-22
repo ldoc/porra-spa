@@ -32,6 +32,12 @@ function test_toggle_en_header_no_en_tabla() {
   assert.ok(mainSrc.includes('<span>Mostrar ptos clasificación temporal</span>'), 'etiqueta toggle');
   assert.ok(mainSrc.includes("querySelector('#tab-clasificacion .section-header')"), 'localiza el header');
   assert.ok(mainSrc.includes('header.after(wrap)'), 'toggle en fila propia bajo el titulo');
+  assert.ok(mainSrc.includes('clasif-sort-select'), 'select de orden');
+  assert.ok(mainSrc.includes('function setClasifSortBy'), 'handler del combo');
+  assert.ok(mainSrc.includes("class=\"clasif-clas-sort\""), 'clase del select');
+  assert.ok(mainSrc.includes("sortClasificacionJugadoresPorFuente(playersWithPoints, sortBy)"), 'sort por fuente en render');
+  assert.ok(mainSrc.includes("sortBy === 'total'"), 'trend solo con total');
+  assert.ok(mainSrc.includes('clasifSortBy = \'total\';'), 'reset del combo al salir');
 }
 
 function test_css_compacto() {

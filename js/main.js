@@ -62,6 +62,7 @@ const AppState = {
   predictionsConfirmed: false, // flag: pronósticos confirmados (bloquea edición)
   openProfileJourney: null, // string: jornada desplegada en el modal de perfil (tab Pronósticos)
   clasificacionClasOn: false, // toggle pantalla Clasificacion: incluir puntos por clasificacion (solo FASE_LIGA, reset al salir)
+  clasifSortBy: 'total', // combo orden Clasificacion: total|pronosticos|plantilla|clasificacion|eliminatorias (reset al salir)
   fases: [],             // fases de la competición desde fases.json
   rulesHtml: null,         // caché del HTML de reglas cargado de reglas/UCL.html
 };
@@ -1223,14 +1224,14 @@ async function renderClasificacionTab() {
     };
   });
 
-  // Ordenar por puntos descendente + desempate de normas (reglas/UCL.html #clasificacion-final):
-  // eliminatorias > plantilla > clasificación > pronósticos
-  const cmpJugadores = (typeof clasificacionApi !== 'undefined')
-    ? clasificacionApi.compareClasificacionJugadores
-    : ((a, b) => b.realPoints - a.realPoints);
-  playersWithPoints.sort(cmpJugadores);
+  const sortBy = AppState.clasifSortBy || 'total';
+  if (typeof clasificacionApi !== 'undefined' && clasificacionApi.sortClasificacionJugadoresPorFuente) {
+    clasificacionApi.sortClasificacionJugadoresPorFuente(playersWithPoints, sortBy);
+  } else {
+    playersWithPoints.sort((a, b) => b.realPoints - a.realPoints);
+  }
 
-  const trendOk = typeof trendApi !== 'undefined';
+  const trendOk = typeof trendApi !== 'undefined' && sortBy === 'total';
   const allIds = new Set((AppState.matchStats || []).map(ms => ms.eventId));
   const currentRows = trendOk ? playersWithPoints.map(p => ({
     name: p.name,
@@ -1253,19 +1254,32 @@ async function renderClasificacionTab() {
     (withTrend ? '<div class="clasificacion-legend"><span class="trend-up">▲</span> sube · <span class="trend-down">▼</span> baja · <span class="trend-same">＝</span> igual vs día anterior con partidos</div>' : '');
 }
 
-/** Toggle de clasificacion en el header de la tab (solo FASE_LIGA); idempotente en re-renders */
+/** Fila de controles de Clasificacion (toggle clasif temporal + combo de orden); idempotente en re-renders */
 function syncClasifClasHeaderToggle() {
   const header = document.querySelector('#tab-clasificacion .section-header');
   if (!header) return;
   const existing = document.getElementById('clasif-clas-header-toggle');
-  if (getFaseJuego() !== 'FASE_LIGA') {
+  if (isFasePretemporada()) {
     if (existing) existing.remove();
     return;
   }
-  const html = `<label title="Los puntos por clasificación varían según la clasificación real después de cada partido">
-      <input type="checkbox" id="clasif-clas-check" ${AppState.clasificacionClasOn ? 'checked' : ''} onchange="toggleClasificacionClas()">
-      <span>Mostrar ptos clasificación temporal</span>
-    </label>`;
+  const checkboxHtml = getFaseJuego() === 'FASE_LIGA'
+    ? `<label title="Los puntos por clasificación varían según la clasificación real después de cada partido">
+        <input type="checkbox" id="clasif-clas-check" ${AppState.clasificacionClasOn ? 'checked' : ''} onchange="toggleClasificacionClas()">
+        <span>Mostrar ptos clasificación temporal</span>
+      </label>`
+    : '';
+  const sortOptions = [
+    ['total', 'Total'],
+    ['pronosticos', 'Pronosticos'],
+    ['plantilla', 'Plantilla'],
+    ['clasificacion', 'Clasificacion'],
+    ['eliminatorias', 'Eliminatorias']
+  ].map(([value, label]) => `<option value="${value}"${(AppState.clasifSortBy || 'total') === value ? ' selected' : ''}>${label}</option>`).join('');
+  const html = `${checkboxHtml}
+      <select id="clasif-sort-select" class="clasif-clas-sort" onchange="setClasifSortBy(this.value)">
+        ${sortOptions}
+      </select>`;
   if (existing) {
     existing.innerHTML = html;
     return;
@@ -1275,6 +1289,11 @@ function syncClasifClasHeaderToggle() {
   wrap.id = 'clasif-clas-header-toggle';
   wrap.innerHTML = html;
   header.after(wrap);
+}
+
+function setClasifSortBy(value) {
+  AppState.clasifSortBy = ['total', 'pronosticos', 'plantilla', 'clasificacion', 'eliminatorias'].includes(value) ? value : 'total';
+  renderClasificacionTab();
 }
 
 function toggleClasificacionClas() {
@@ -3412,6 +3431,7 @@ function navigateToTab(tabName) {
 
   if (tabName !== 'clasificacion') {
     AppState.clasificacionClasOn = false;
+    AppState.clasifSortBy = 'total';
   }
 
   // Limpiar el intervalo del countdown del Inicio al salir de esa pestaña
