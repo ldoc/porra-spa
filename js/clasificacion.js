@@ -23,8 +23,24 @@
     return 0;
   }
 
-  function sortClasificacionJugadores(rows) {
-    return [...(rows || [])].sort(compareClasificacionJugadores);
+  function sortClasificacionJugadores(rows, sortBy) {
+    return sortClasificacionJugadoresPorFuente(rows, sortBy);
+  }
+
+  /**
+   * Orden por fuente elegida en la tabla de Clasificacion:
+   * columna desc y, en empate, desempate de normas (total > elim > plantilla > clasif > pron).
+   */
+  function sortClasificacionJugadoresPorFuente(rows, sortBy) {
+    const keys = {
+      pronosticos: 'predictionPoints',
+      plantilla: 'squadPoints',
+      clasificacion: 'classificationPoints',
+      eliminatorias: 'eliminatoriasPoints'
+    };
+    const key = keys[sortBy];
+    if (!key) return [...(rows || [])].sort(compareClasificacionJugadores);
+    return [...(rows || [])].sort((a, b) => num(b[key]) - num(a[key]) || compareClasificacionJugadores(a, b));
   }
 
   /**
@@ -36,7 +52,7 @@
     return countsNow ? true : includeClassification === true;
   }
 
-  const api = { compareClasificacionJugadores, sortClasificacionJugadores, shouldCountClassification };
+  const api = { compareClasificacionJugadores, sortClasificacionJugadores, sortClasificacionJugadoresPorFuente, shouldCountClassification };
   global.clasificacionApi = api;
   if (typeof module !== 'undefined' && module.exports) {
     module.exports = api;
