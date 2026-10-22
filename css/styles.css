@@ -7265,7 +7265,7 @@ body.live-fs .resultados-scroll {
   min-height: 44px;
   display: flex;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: center;
   padding: 2px 12px 4px;
 }
 .clasif-clas-toggle label {
