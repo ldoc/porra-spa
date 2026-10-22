@@ -1,5 +1,10 @@
 const assert = require('assert');
 const { shouldCountClassification } = require('../js/clasificacion.js');
+const fs = require('fs');
+const path = require('path');
+const mainSrc = fs.readFileSync(path.join(__dirname, '../js/main.js'), 'utf8');
+const cssSrc = fs.readFileSync(path.join(__dirname, '../css/styles.css'), 'utf8');
+const indexSrc = fs.readFileSync(path.join(__dirname, '../index.html'), 'utf8');
 
 function test_countsnow_true_gana() {
   assert.strictEqual(shouldCountClassification(true, undefined), true, 'fase conteo -> true sin flag');
@@ -19,11 +24,34 @@ function test_countsnow_false_flag_false() {
   assert.strictEqual(shouldCountClassification(false, false), false, 'flag off -> no cuenta');
 }
 
+function test_toggle_en_header_no_en_tabla() {
+  assert.ok(mainSrc.includes('function syncClasifClasHeaderToggle()'), 'helper sync existe');
+  assert.ok(mainSrc.includes('clasif-clas-header-toggle'), 'id del nodo header');
+  assert.ok(!mainSrc.includes('toggleHtml'), 'toggle ya no se concatena en la tabla');
+  assert.ok(!mainSrc.includes('<small>Los puntos por clasificación varían'), 'hint visible eliminado');
+  assert.ok(mainSrc.includes('<span>Clasif.</span>'), 'etiqueta corta');
+  assert.ok(mainSrc.includes("querySelector('#tab-clasificacion .section-header')"), 'inyección en section-header');
+}
+
+function test_css_compacto() {
+  assert.ok(cssSrc.includes('.clasif-clas-toggle'), 'clase existe');
+  assert.ok(!cssSrc.includes('flex-wrap: wrap;\n  gap: 2px 10px;'), 'sin layout multi-fila previo');
+  assert.ok(!cssSrc.includes('.clasif-clas-toggle small'), 'hint css eliminado');
+}
+
+function test_cache_busting() {
+  assert.ok(indexSrc.includes('styles.css?v=127'), 'css v127');
+  assert.ok(indexSrc.includes('main.js?v=175'), 'main v175');
+}
+
 const tests = [
   test_countsnow_true_gana,
   test_countsnow_false_default_false,
   test_countsnow_false_flag_true,
-  test_countsnow_false_flag_false
+  test_countsnow_false_flag_false,
+  test_toggle_en_header_no_en_tabla,
+  test_css_compacto,
+  test_cache_busting
 ];
 let passed = 0, failed = 0;
 for (const t of tests) {

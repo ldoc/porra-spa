@@ -1165,6 +1165,7 @@ function buildClasificacionRow(p, rank, isMe, trendInlineHtml = null) {
 async function renderClasificacionTab() {
   const container = document.getElementById('clasificacion-container');
   if (!container) return;
+  syncClasifClasHeaderToggle();
 
   container.innerHTML = skeletonRows(8);
   await Promise.all([fetchPlayers(), fetchMatchStats(), fetchAllPredictions()]);
@@ -1242,17 +1243,7 @@ async function renderClasificacionTab() {
   const trendMap = trendOk ? getClasificacionTrendMap(currentRows, AppState.clasificacionClasOn) : null;
   const withTrend = trendMap !== null;
 
-  const toggleHtml = getFaseJuego() === 'FASE_LIGA'
-    ? `<div class="clasif-clas-toggle">
-        <label>
-          <input type="checkbox" id="clasif-clas-check" ${AppState.clasificacionClasOn ? 'checked' : ''} onchange="toggleClasificacionClas()">
-          <span>Incluir puntos por clasificación</span>
-        </label>
-        <small>Los puntos por clasificación varían según la clasificación real después de cada partido</small>
-      </div>`
-    : '';
   container.innerHTML =
-    toggleHtml +
     buildClasificacionHeader() +
     playersWithPoints.map((p, i) => {
       const rank = i + 1;
@@ -1260,6 +1251,30 @@ async function renderClasificacionTab() {
       return buildClasificacionRow(p, rank, isMe, withTrend ? trendApi.buildTrendCellHtml(trendMap[p.name], true) : null);
     }).join('') +
     (withTrend ? '<div class="clasificacion-legend"><span class="trend-up">▲</span> sube · <span class="trend-down">▼</span> baja · <span class="trend-same">＝</span> igual vs día anterior con partidos</div>' : '');
+}
+
+/** Toggle de clasificacion en el header de la tab (solo FASE_LIGA); idempotente en re-renders */
+function syncClasifClasHeaderToggle() {
+  const header = document.querySelector('#tab-clasificacion .section-header');
+  if (!header) return;
+  const existing = document.getElementById('clasif-clas-header-toggle');
+  if (getFaseJuego() !== 'FASE_LIGA') {
+    if (existing) existing.remove();
+    return;
+  }
+  const html = `<label title="Los puntos por clasificación varían según la clasificación real después de cada partido">
+      <input type="checkbox" id="clasif-clas-check" ${AppState.clasificacionClasOn ? 'checked' : ''} onchange="toggleClasificacionClas()">
+      <span>Clasif.</span>
+    </label>`;
+  if (existing) {
+    existing.innerHTML = html;
+    return;
+  }
+  const wrap = document.createElement('div');
+  wrap.className = 'clasif-clas-toggle';
+  wrap.id = 'clasif-clas-header-toggle';
+  wrap.innerHTML = html;
+  header.appendChild(wrap);
 }
 
 function toggleClasificacionClas() {
