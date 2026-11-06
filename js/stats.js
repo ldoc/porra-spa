@@ -408,6 +408,90 @@
     return Math.round(Math.sqrt(variance) * 10) / 10;
   }
 
+  function calcExactStats(username, leagueMatches, matchStatsById, allPredictions) {
+    const preds = allPredictions?.[username] || {};
+    const byRonda = new Map();
+    const played = [];
+    const totals = { played: 0, exact: 0, outcomeHits: 0, exactPct: 0 };
+
+    for (const m of leagueMatches || []) {
+      if (!m || m.fase !== 'liga') continue;
+      const ronda = Number(m.ronda);
+      if (!Number.isInteger(ronda) || ronda < 1) continue;
+      const ms = matchStatsById?.[m.id];
+      const home = ms?.stats?.[m.homeTeamId]?.goles;
+      const away = ms?.stats?.[m.awayTeamId]?.goles;
+      if (!Number.isFinite(home) || !Number.isFinite(away)) continue;
+      const pr = preds[m.id];
+      if (!pr || !Number.isFinite(pr.home) || !Number.isFinite(pr.away)) continue;
+
+      const isExact = pr.home === home && pr.away === away;
+      const isHit = matchResultOf(pr.home, pr.away) === matchResultOf(home, away);
+
+      totals.played++;
+      if (isExact) totals.exact++;
+      if (isHit) totals.outcomeHits++;
+
+      if (!byRonda.has(ronda)) {
+        byRonda.set(ronda, { ronda, played: 0, exact: 0, outcomeHits: 0, complete: false });
+      }
+      const row = byRonda.get(ronda);
+      row.played++;
+      if (isExact) row.exact++;
+      if (isHit) row.outcomeHits++;
+
+      played.push({
+        ronda,
+        matchId: m.id,
+        fechaTs: Number(m.fechaTs) || 0,
+        isExact,
+      });
+    }
+
+    const statsByRonda = new Map();
+    for (const m of leagueMatches || []) {
+      if (!m || m.fase !== 'liga') continue;
+      const ronda = Number(m.ronda);
+      if (!Number.isInteger(ronda)) continue;
+      if (!statsByRonda.has(ronda)) statsByRonda.set(ronda, { total: 0, done: 0 });
+      const entry = statsByRonda.get(ronda);
+      entry.total++;
+      const ms = matchStatsById?.[m.id];
+      const home = ms?.stats?.[m.homeTeamId]?.goles;
+      const away = ms?.stats?.[m.awayTeamId]?.goles;
+      if (Number.isFinite(home) && Number.isFinite(away)) entry.done++;
+    }
+    for (const row of byRonda.values()) {
+      const entry = statsByRonda.get(row.ronda);
+      row.complete = !!entry && entry.done === entry.total;
+    }
+
+    const chrono = played.slice().sort((a, b) =>
+      a.ronda - b.ronda
+      || a.fechaTs - b.fechaTs
+      || (Number(a.matchId) || 0) - (Number(b.matchId) || 0));
+    let bestExact = 0;
+    let currentExact = 0;
+    for (const item of chrono) {
+      if (item.isExact) {
+        currentExact++;
+        if (currentExact > bestExact) bestExact = currentExact;
+      } else {
+        currentExact = 0;
+      }
+    }
+
+    totals.exactPct = totals.played ? Math.round((totals.exact / totals.played) * 100) : 0;
+
+    return {
+      byJornada: [...byRonda.values()]
+        .filter(row => row.played > 0)
+        .sort((a, b) => a.ronda - b.ronda),
+      totals,
+      streaks: { currentExact, bestExact },
+    };
+  }
+
   function buildDonutSegments(parts) {
     const C = 2 * Math.PI * DONUT_RADIUS;
     const valid = (parts || []).filter(p => Number(p.value) > 0);
@@ -2003,6 +2087,7 @@
   global.calcTimesTopJornada = calcTimesTopJornada;
   global.calcMomentum = calcMomentum;
   global.calcConsistency = calcConsistency;
+  global.calcExactStats = calcExactStats;
   global.buildDonutSegments = buildDonutSegments;
   global.calcPredictionBias = calcPredictionBias;
   global.calcBestMatch = calcBestMatch;
@@ -2029,6 +2114,6 @@
   global.renderStatsContent = renderStatsContent;
   global.buildStatsAggregates = buildStatsAggregates;
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { emptySeries, buildTimeline, calcPredictionSeries, calcSquadSeries, calcClassificationSeries, calcEliminatoriasSeries, sumSeries, isLeagueComplete, getSeriesBySource, matchResultOf, toStagePoints, calcEvolutionPositions, calcEvolutionPositionsFromSplits, lastTimelinePoint, trimTimeline, buildEvolutionSeriesMap, buildAxisTicks, formatPointValue, buildPointTooltipText, EVO_METRIC_DEFAULT, EVO_MODE_DEFAULT, positionForMatch, extractPlayedMatches, calcReliabilityRow, buildCompletedLeagueData, calcStreaks, calcBestJornadas, calcUserBestJornada, calcPositionHistory, calcTimesTopJornada, calcMomentum, calcConsistency, buildDonutSegments, calcPredictionBias, calcBestMatch, calcBestPlayersByPosition, calcMostProfitablePlayer, sourceSplitFromUserData, tallyChampions, finalPredictionTeamIds, compareQuadroWithCommunity, aggregateSquads, calcPronosticosPartidosStats, getTeamStatsForPreds, calcPredictedStandingsForPreds, calcClasificacionPronosticosStats, calcEliminatoriasPronosticosStats, calcPlantillaPronosticosExtras, renderPronosticosBody, renderPronosticosPartidosCard, renderPronosticosClasificacionCard, renderPronosticosEliminatoriasCard, renderPronosticosPlantillaCard, renderStatsContent, buildStatsAggregates, orderIndividualPlayers, individualOverallRank };
+    module.exports = { emptySeries, buildTimeline, calcPredictionSeries, calcSquadSeries, calcClassificationSeries, calcEliminatoriasSeries, sumSeries, isLeagueComplete, getSeriesBySource, matchResultOf, toStagePoints, calcEvolutionPositions, calcEvolutionPositionsFromSplits, lastTimelinePoint, trimTimeline, buildEvolutionSeriesMap, buildAxisTicks, formatPointValue, buildPointTooltipText, EVO_METRIC_DEFAULT, EVO_MODE_DEFAULT, positionForMatch, extractPlayedMatches, calcReliabilityRow, buildCompletedLeagueData, calcStreaks, calcBestJornadas, calcUserBestJornada, calcPositionHistory, calcTimesTopJornada, calcMomentum, calcConsistency, calcExactStats, buildDonutSegments, calcPredictionBias, calcBestMatch, calcBestPlayersByPosition, calcMostProfitablePlayer, sourceSplitFromUserData, tallyChampions, finalPredictionTeamIds, compareQuadroWithCommunity, aggregateSquads, calcPronosticosPartidosStats, getTeamStatsForPreds, calcPredictedStandingsForPreds, calcClasificacionPronosticosStats, calcEliminatoriasPronosticosStats, calcPlantillaPronosticosExtras, renderPronosticosBody, renderPronosticosPartidosCard, renderPronosticosClasificacionCard, renderPronosticosEliminatoriasCard, renderPronosticosPlantillaCard, renderStatsContent, buildStatsAggregates, orderIndividualPlayers, individualOverallRank };
   }
 })(typeof window !== 'undefined' ? window : globalThis);

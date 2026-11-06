@@ -1,0 +1,53 @@
+const assert = require('assert');
+const { calcExactStats } = require('../js/stats.js');
+
+const leagueMatches = [
+  { id: 1, fase: 'liga', ronda: 1, fechaTs: 100, homeTeamId: 10, awayTeamId: 20 },
+  { id: 2, fase: 'liga', ronda: 1, fechaTs: 200, homeTeamId: 30, awayTeamId: 40 },
+  { id: 3, fase: 'liga', ronda: 2, fechaTs: 300, homeTeamId: 10, awayTeamId: 30 },
+  { id: 4, fase: 'liga', ronda: 2, fechaTs: 400, homeTeamId: 20, awayTeamId: 40 },
+  { id: 5, fase: '16', ronda: 3, fechaTs: 500, homeTeamId: 10, awayTeamId: 40 },
+];
+
+const matchStatsById = {
+  1: { stats: { 10: { goles: 2 }, 20: { goles: 1 } } },
+  2: { stats: { 30: { goles: 0 }, 40: { goles: 0 } } },
+  3: { stats: { 10: { goles: 1 }, 30: { goles: 1 } } },
+};
+
+function test_calcExactStats_por_jornada_y_totales() {
+  const allPredictions = {
+    ana: {
+      1: { home: 2, away: 1 },
+      2: { home: 0, away: 0 },
+      3: { home: 2, away: 0 },
+      4: { home: 1, away: 0 },
+      5: { home: 1, away: 0 },
+    },
+  };
+  const r = calcExactStats('ana', leagueMatches, matchStatsById, allPredictions);
+  assert.deepStrictEqual(r.totals, { played: 3, exact: 2, outcomeHits: 2, exactPct: 67 });
+  assert.deepStrictEqual(r.byJornada, [
+    { ronda: 1, played: 2, exact: 2, outcomeHits: 2, complete: true },
+    { ronda: 2, played: 1, exact: 0, outcomeHits: 0, complete: false },
+  ]);
+  assert.deepStrictEqual(r.streaks, { currentExact: 0, bestExact: 2 });
+}
+
+function test_calcExactStats_racha_actual_y_no_pronosticados() {
+  const allPredictions = {
+    bob: {
+      1: { home: 2, away: 1 },
+      2: { home: 1, away: 0 },
+      3: { home: 1, away: 1 },
+    },
+  };
+  const r = calcExactStats('bob', leagueMatches, matchStatsById, allPredictions);
+  assert.strictEqual(r.totals.played, 3);
+  assert.strictEqual(r.totals.exact, 2);
+  assert.deepStrictEqual(r.streaks, { currentExact: 1, bestExact: 1 });
+}
+
+test_calcExactStats_por_jornada_y_totales();
+test_calcExactStats_racha_actual_y_no_pronosticados();
+console.log('OK estadisticasJugadorV2 T1');
