@@ -5439,6 +5439,27 @@ html, body {
   box-shadow: 0 0 12px var(--accent-glow);
 }
 
+.stats-evo-metric-seg {
+  grid-template-columns: repeat(2, 1fr);
+  margin-bottom: 6px;
+}
+
+.stats-evo-source-seg {
+  grid-template-columns: repeat(5, 1fr);
+}
+
+.stats-evo-mode-seg {
+  grid-template-columns: repeat(2, 1fr);
+  margin-top: 6px;
+}
+
+.stats-evo-note {
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--text-muted);
+  text-align: center;
+}
+
 .stats-chips-header {
   display: flex;
   align-items: center;

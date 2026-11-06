@@ -6,6 +6,8 @@ const {
   lastTimelinePoint,
   trimTimeline,
   buildEvolutionSeriesMap,
+  EVO_METRIC_DEFAULT,
+  EVO_MODE_DEFAULT,
 } = require('../js/stats.js');
 
 function series(values) {
@@ -73,8 +75,14 @@ function test_buildEvolutionSeriesMap_puntos_y_posicion() {
   assert.deepStrictEqual(pos.get('b').series.slice(0, 2), [2, 1]);
 }
 
+function test_defaults_evolucion() {
+  assert.strictEqual(EVO_METRIC_DEFAULT, 'posicion');
+  assert.strictEqual(EVO_MODE_DEFAULT, 'acumulado');
+}
+
 test_toStagePoints_acumulado_a_etapa();
 test_calcEvolutionPositions_empates_y_varias_etapas();
 test_lastTimelinePoint_y_trim();
 test_buildEvolutionSeriesMap_puntos_y_posicion();
+test_defaults_evolucion();
 console.log('OK estadisticasEvolucion');
