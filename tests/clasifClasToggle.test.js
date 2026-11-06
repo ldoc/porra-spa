@@ -53,7 +53,7 @@ function test_css_compacto() {
 }
 
 function test_cache_busting() {
-  assert.ok(indexSrc.includes('styles.css?v=133'), 'css v133');
+  assert.ok(indexSrc.includes('styles.css?v=134'), 'css v134');
   assert.ok(indexSrc.includes('clasificacion.js?v=3'), 'clasificacion v3');
   assert.ok(indexSrc.includes('main.js?v=181'), 'main v181');
 }
