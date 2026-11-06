@@ -978,6 +978,118 @@
     };
   }
 
+  const DUEL_CATEGORIES = [
+    { key: 'points_prediction', title: 'Puntos pronósticos', desc: 'Puntos conseguidos con los marcadores de los partidos.', direction: 'higher', format: 'int' },
+    { key: 'points_squad', title: 'Puntos plantilla', desc: 'Puntos de tu plantilla ideal.', direction: 'higher', format: 'int' },
+    { key: 'points_classification', title: 'Puntos clasificación', desc: 'Puntos por acertar la clasificación final.', direction: 'higher', format: 'int' },
+    { key: 'points_eliminatorias', title: 'Puntos eliminatorias', desc: 'Puntos del cuadro de eliminatorias.', direction: 'higher', format: 'int' },
+    { key: 'points_total', title: 'Puntos totales', desc: 'Suma de las cuatro fuentes de puntos.', direction: 'higher', format: 'int' },
+    { key: 'hits_1x2', title: 'Aciertos 1X2', desc: 'Partidos en los que acertaste el resultado.', direction: 'higher', format: 'int' },
+    { key: 'exact_scores', title: 'Marcadores exactos', desc: 'Partidos en los que acertaste el marcador completo.', direction: 'higher', format: 'int' },
+    { key: 'best_match', title: 'Mejor partido', desc: 'Tu mayor puntuación en un solo partido.', direction: 'higher', format: 'int', na: c => c.left.best_match == null || c.right.best_match == null },
+    { key: 'worst_match', title: 'Peor partido', desc: 'Tu puntuación más baja; gana el que tenga la menos mala.', direction: 'higher', format: 'int', na: c => c.left.worst_match == null || c.right.worst_match == null },
+    { key: 'best_jornada', title: 'Mejor jornada', desc: 'Tu mayor puntuación en una jornada completa.', direction: 'higher', format: 'int', na: c => c.jornada_count === 0 },
+    { key: 'worst_jornada', title: 'Peor jornada', desc: 'Tu jornada más baja; gana la menos mala.', direction: 'higher', format: 'int', na: c => c.jornada_count === 0 },
+    { key: 'consistency', title: 'Regularidad', desc: 'Desviación de tus puntos por jornada; gana el más regular.', direction: 'lower', format: 'decimal1', na: c => c.left.consistency == null || c.right.consistency == null },
+    { key: 'momentum', title: 'Momentum', desc: 'Media de las últimas 3 jornadas frente a tu media de temporada.', direction: 'higher', format: 'signedDecimal1', na: c => c.left.momentum == null || c.right.momentum == null },
+    { key: 'best_exact_streak', title: 'Mejor racha de exactos', desc: 'Marcadores exactos consecutivos; gana la racha más larga.', direction: 'higher', format: 'int', na: c => c.left.played_matches === 0 || c.right.played_matches === 0 },
+    { key: 'best_player', title: 'Mejor jugador', desc: 'El jugador de tu plantilla con más puntos.', direction: 'higher', format: 'int', na: c => c.left.best_player == null || c.right.best_player == null },
+    { key: 'worst_player', title: 'Peor jugador', desc: 'El jugador con menos puntos; gana el menos malo.', direction: 'higher', format: 'int', na: c => c.left.worst_player == null || c.right.worst_player == null },
+    { key: 'robos', title: 'Robos', desc: 'Aciertos minoritarios que te dieron ventaja sobre la media.', direction: 'higher', format: 'int', na: c => c.left.analyzed_matches === 0 || c.right.analyzed_matches === 0 },
+    { key: 'faroles', title: 'Faroles', desc: 'Fallos con la opción más votada; gana quien tenga menos.', direction: 'lower', format: 'int', na: c => c.left.analyzed_matches === 0 || c.right.analyzed_matches === 0 },
+    { key: 'luck_per_match', title: 'Suerte/partido', desc: 'Puntos reales menos puntos esperados por partido.', direction: 'higher', format: 'signedDecimal1', na: c => c.left.analyzed_matches === 0 || c.right.analyzed_matches === 0 },
+    { key: 'minority_hit', title: 'Acierto en minoría', desc: 'Acierto 1X2 cuando tu opción tenía menos del 33% de apoyo.', direction: 'higher', format: 'percent', na: c => c.left.minority_matches < 3 || c.right.minority_matches < 3 },
+    { key: 'times_top_jornada', title: 'Veces mejor de la jornada', desc: 'Jornadas en las que igualaste la máxima puntuación de la porra.', direction: 'higher', format: 'int', na: c => c.jornada_count === 0 },
+    { key: 'avg_points_per_match', title: 'Media de puntos por partido', desc: 'Puntos de pronósticos divididos entre partidos jugados.', direction: 'higher', format: 'decimal1', na: c => c.left.played_matches === 0 || c.right.played_matches === 0 },
+    { key: 'h2h_jornadas_won', title: 'Jornadas ganadas', desc: 'Jornadas completas en las que superaste a tu rival.', direction: 'higher', format: 'int', na: c => c.jornada_count === 0 },
+    { key: 'h2h_partidos_won', title: 'Partidos ganados', desc: 'Partidos jugados en los que superaste a tu rival.', direction: 'higher', format: 'int', na: c => c.played_league_count === 0 },
+    { key: 'biggest_win', title: 'Mayor victoria', desc: 'Tu mayor diferencia positiva en una jornada.', direction: 'higher', format: 'signedInt', na: c => c.jornada_count === 0 },
+    { key: 'biggest_loss', title: 'Mayor derrota', desc: 'Tu mayor diferencia negativa; gana la menos abultada.', direction: 'higher', format: 'signedInt', na: c => c.jornada_count === 0 },
+    { key: 'best_rank', title: 'Mejor puesto histórico', desc: 'Tu mejor posición en la clasificación; gana el puesto más bajo.', direction: 'lower', format: 'rank', na: c => c.jornada_count === 0 },
+    { key: 'worst_rank', title: 'Peor puesto histórico', desc: 'Tu peor posición; gana el puesto más bajo (el menos malo).', direction: 'lower', format: 'rank', na: c => c.jornada_count === 0 },
+  ];
+
+  function formatDuelValue(value, format) {
+    if (value == null || !Number.isFinite(value)) return '—';
+    if (format === 'signedInt') {
+      const rounded = Math.round(value);
+      return rounded > 0 ? `+${rounded}` : String(rounded);
+    }
+    if (format === 'decimal1') return value.toFixed(1);
+    if (format === 'signedDecimal1') {
+      const text = value.toFixed(1);
+      return value > 0 ? `+${text}` : text;
+    }
+    if (format === 'percent') return `${Math.round(value)}%`;
+    if (format === 'rank') return `${value}º`;
+    return String(Math.round(value));
+  }
+
+  function calcDuelCategories(context) {
+    return DUEL_CATEGORIES.map(category => {
+      const na = typeof category.na === 'function' ? category.na(context) : false;
+      const leftNum = na ? null : context.left[category.key];
+      const rightNum = na ? null : context.right[category.key];
+      let winner = 'na';
+      if (!na && Number.isFinite(leftNum) && Number.isFinite(rightNum)) {
+        if (leftNum === rightNum) winner = 'tie';
+        else if (category.direction === 'lower') winner = leftNum < rightNum ? 'left' : 'right';
+        else winner = leftNum > rightNum ? 'left' : 'right';
+      }
+      return {
+        key: category.key,
+        title: category.title,
+        desc: category.desc,
+        direction: category.direction,
+        format: category.format,
+        leftNum: na ? null : leftNum,
+        rightNum: na ? null : rightNum,
+        leftValue: na ? '—' : formatDuelValue(leftNum, category.format),
+        rightValue: na ? '—' : formatDuelValue(rightNum, category.format),
+        winner,
+      };
+    });
+  }
+
+  function calcDuelScore(categories, context) {
+    const leftWins = categories.filter(category => category.winner === 'left').length;
+    const rightWins = categories.filter(category => category.winner === 'right').length;
+    const disputed = categories.filter(category => category.winner !== 'na').length;
+    let winner = leftWins > rightWins ? 'left' : rightWins > leftWins ? 'right' : null;
+    let tieBreak = null;
+
+    if (!winner) {
+      const order = [
+        ['points_total', 'total'],
+        ['points_squad', 'squad'],
+        ['points_prediction', 'pronósticos'],
+      ];
+      for (const [key, label] of order) {
+        const leftValue = context.left[key] || 0;
+        const rightValue = context.right[key] || 0;
+        if (leftValue > rightValue) {
+          winner = 'left';
+          tieBreak = label;
+          break;
+        }
+        if (rightValue > leftValue) {
+          winner = 'right';
+          tieBreak = label;
+          break;
+        }
+      }
+    }
+
+    return {
+      leftWins,
+      rightWins,
+      disputed,
+      na: categories.length - disputed,
+      winner: winner || 'draw',
+      tieBreak,
+    };
+  }
+
   function buildDonutSegments(parts) {
     const C = 2 * Math.PI * DONUT_RADIUS;
     const valid = (parts || []).filter(p => Number(p.value) > 0);
@@ -2817,6 +2929,8 @@
   global.calcLuckLabels = calcLuckLabels;
   global.calcPlayerExtremes = calcPlayerExtremes;
   global.buildDuelContext = buildDuelContext;
+  global.calcDuelCategories = calcDuelCategories;
+  global.calcDuelScore = calcDuelScore;
   global.buildDonutSegments = buildDonutSegments;
   global.calcPredictionBias = calcPredictionBias;
   global.calcBestMatch = calcBestMatch;
@@ -2843,6 +2957,6 @@
   global.renderStatsContent = renderStatsContent;
   global.buildStatsAggregates = buildStatsAggregates;
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { emptySeries, buildTimeline, calcPredictionSeries, calcSquadSeries, calcClassificationSeries, calcEliminatoriasSeries, sumSeries, isLeagueComplete, getSeriesBySource, matchResultOf, toStagePoints, calcEvolutionPositions, calcEvolutionPositionsFromSplits, lastTimelinePoint, trimTimeline, buildEvolutionSeriesMap, buildAxisTicks, formatPointValue, buildPointTooltipText, EVO_METRIC_DEFAULT, EVO_MODE_DEFAULT, positionForMatch, extractPlayedMatches, calcReliabilityRow, buildCompletedLeagueData, calcStreaks, calcBestJornadas, calcUserBestJornada, calcPositionHistory, calcTimesTopJornada, calcMomentum, calcConsistency, calcExactStats, calcSourceRanks, calcMatchExtremes, calcDataCoverage, buildMatchConsensus, expectedPointsForPrediction, calcStyleStats, calcLuckLabels, calcPlayerExtremes, buildDuelContext, buildDonutSegments, calcPredictionBias, calcBestMatch, calcBestPlayersByPosition, calcMostProfitablePlayer, sourceSplitFromUserData, tallyChampions, finalPredictionTeamIds, compareQuadroWithCommunity, aggregateSquads, calcPronosticosPartidosStats, getTeamStatsForPreds, calcPredictedStandingsForPreds, calcClasificacionPronosticosStats, calcEliminatoriasPronosticosStats, calcPlantillaPronosticosExtras, renderPronosticosBody, renderPronosticosPartidosCard, renderPronosticosClasificacionCard, renderPronosticosEliminatoriasCard, renderPronosticosPlantillaCard, renderStatsContent, buildStatsAggregates, orderIndividualPlayers, individualOverallRank };
+    module.exports = { emptySeries, buildTimeline, calcPredictionSeries, calcSquadSeries, calcClassificationSeries, calcEliminatoriasSeries, sumSeries, isLeagueComplete, getSeriesBySource, matchResultOf, toStagePoints, calcEvolutionPositions, calcEvolutionPositionsFromSplits, lastTimelinePoint, trimTimeline, buildEvolutionSeriesMap, buildAxisTicks, formatPointValue, buildPointTooltipText, EVO_METRIC_DEFAULT, EVO_MODE_DEFAULT, positionForMatch, extractPlayedMatches, calcReliabilityRow, buildCompletedLeagueData, calcStreaks, calcBestJornadas, calcUserBestJornada, calcPositionHistory, calcTimesTopJornada, calcMomentum, calcConsistency, calcExactStats, calcSourceRanks, calcMatchExtremes, calcDataCoverage, buildMatchConsensus, expectedPointsForPrediction, calcStyleStats, calcLuckLabels, calcPlayerExtremes, buildDuelContext, calcDuelCategories, calcDuelScore, buildDonutSegments, calcPredictionBias, calcBestMatch, calcBestPlayersByPosition, calcMostProfitablePlayer, sourceSplitFromUserData, tallyChampions, finalPredictionTeamIds, compareQuadroWithCommunity, aggregateSquads, calcPronosticosPartidosStats, getTeamStatsForPreds, calcPredictedStandingsForPreds, calcClasificacionPronosticosStats, calcEliminatoriasPronosticosStats, calcPlantillaPronosticosExtras, renderPronosticosBody, renderPronosticosPartidosCard, renderPronosticosClasificacionCard, renderPronosticosEliminatoriasCard, renderPronosticosPlantillaCard, renderStatsContent, buildStatsAggregates, orderIndividualPlayers, individualOverallRank };
   }
 })(typeof window !== 'undefined' ? window : globalThis);
