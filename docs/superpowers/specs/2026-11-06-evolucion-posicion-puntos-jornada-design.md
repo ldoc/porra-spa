@@ -34,7 +34,7 @@ Se reutilizan `buildTimeline`, `getSeriesBySource`, `sumSeries`, `buildLineChart
 
 ### Cálculos puros (`js/stats.js`)
 
-- `toStagePoints(series)`: convierte una serie acumulada de 13 posiciones en puntos por etapa. `delta[0] = serie[0]`; `delta[i] = serie[i] - serie[i-1]`. Devuelve `{ series, hasData }`.
+- `toStagePoints(series)`: convierte un array acumulado de 13 posiciones en un array de puntos por etapa. `delta[0] = serie[0]`; `delta[i] = serie[i] - serie[i-1]`. El `hasData` se conserva al construir el mapa final con `buildEvolutionSeriesMap`.
 - `calcEvolutionPositions(totalSeriesMap)`: recibe el mapa `username -> { series acumulada total, hasData }` y devuelve `username -> { series: [puestoPorEtapa], hasData }`. En cada índice el puesto es `1 + número de jugadores con más puntos acumulados`; los empates comparten puesto (misma regla que `calcPositionHistory`). El ranking se calcula sobre **todos** los `statsPlayers()`, no solo los visibles.
 - `lastTimelinePoint(matches, matchStatsById)`: devuelve el índice de la última etapa del timeline con al menos un partido con resultado, usando `positionForMatch`. Mínimo `0` (J1).
 - `trimTimeline(timeline, lastPoint)`: devuelve `timeline.slice(0, lastPoint + 1)`.
