@@ -871,6 +871,113 @@
     return styleByUser;
   }
 
+  function calcPlayerExtremes(playerDetails) {
+    let best = null;
+    let worst = null;
+    for (const detail of playerDetails || []) {
+      if (!detail?.jugador) continue;
+      if (!Array.isArray(detail.partidos) || detail.partidos.length === 0) continue;
+      const points = detail.puntosTotal || 0;
+      if (!best || points > best.puntos) best = { jugador: detail.jugador, puntos: points };
+      if (!worst || points < worst.puntos) worst = { jugador: detail.jugador, puntos: points };
+    }
+    return best ? { best, worst } : null;
+  }
+
+  function buildDuelContext(leftUser, rightUser, aggregates) {
+    const a = aggregates || {};
+
+    const buildSide = (username) => {
+      const split = a.splitByUser?.[username] || {};
+      const reliability = a.reliabilityByUser?.[username] || {};
+      const exact = a.exactStatsByUser?.[username] || {};
+      const extremes = a.matchExtremesByUser?.[username] || {};
+      const players = a.playerExtremesByUser?.[username] || null;
+      const style = a.styleByUser?.[username] || {};
+      const leaguePoints = a.leaguePoints?.[username] || [];
+      const positions = a.positionHistory?.[username] || [];
+      const played = reliability.played || 0;
+      return {
+        points_prediction: split.prediction || 0,
+        points_squad: split.squad || 0,
+        points_classification: split.classification || 0,
+        points_eliminatorias: split.eliminatorias || 0,
+        points_total: (split.prediction || 0) + (split.squad || 0) + (split.classification || 0) + (split.eliminatorias || 0),
+        hits_1x2: reliability.hits || 0,
+        exact_scores: reliability.exactScores || 0,
+        avg_points_per_match: played ? reliability.ptsPerMatch : null,
+        best_match: extremes.best?.points ?? null,
+        worst_match: extremes.worst?.points ?? null,
+        best_jornada: leaguePoints.length ? Math.max(...leaguePoints) : null,
+        worst_jornada: leaguePoints.length ? Math.min(...leaguePoints) : null,
+        consistency: leaguePoints.length >= 2 ? calcConsistency(leaguePoints) : null,
+        momentum: leaguePoints.length >= 3 ? (calcMomentum(leaguePoints)?.delta ?? null) : null,
+        best_exact_streak: played ? (exact.streaks?.bestExact ?? 0) : null,
+        best_player: players?.best?.puntos ?? null,
+        worst_player: players?.worst?.puntos ?? null,
+        robos: style.robos?.count || 0,
+        faroles: style.faroles?.count || 0,
+        luck_per_match: style.luckPerMatch ?? null,
+        minority_hit: style.confidence?.minority?.hitPct ?? null,
+        minority_matches: style.confidence?.minority?.matches || 0,
+        times_top_jornada: a.timesTopJornada?.[username] || 0,
+        best_rank: positions.length ? Math.min(...positions) : null,
+        worst_rank: positions.length ? Math.max(...positions) : null,
+        played_matches: played,
+        analyzed_matches: style.analyzedMatches || 0,
+        league_points: leaguePoints,
+      };
+    };
+
+    const left = buildSide(leftUser);
+    const right = buildSide(rightUser);
+    const jornadaCount = Math.min(left.league_points.length, right.league_points.length);
+    let leftJornadas = 0;
+    let rightJornadas = 0;
+    let biggestWin = null;
+    let biggestLoss = null;
+
+    for (let i = 0; i < jornadaCount; i++) {
+      const delta = (left.league_points[i] || 0) - (right.league_points[i] || 0);
+      if (delta > 0) leftJornadas++;
+      else if (delta < 0) rightJornadas++;
+      if (biggestWin === null || delta > biggestWin) biggestWin = delta;
+      if (biggestLoss === null || delta < biggestLoss) biggestLoss = delta;
+    }
+
+    const leftMatchPoints = a.matchPointsByUser?.[leftUser] || {};
+    const rightMatchPoints = a.matchPointsByUser?.[rightUser] || {};
+    let leftMatches = 0;
+    let rightMatches = 0;
+    let playedLeagueCount = 0;
+
+    for (const match of a.playedMatches || []) {
+      const meta = a.matchesById?.[match.matchId];
+      if (!meta || meta.fase !== 'liga') continue;
+      playedLeagueCount++;
+      const l = leftMatchPoints[match.matchId] || 0;
+      const r = rightMatchPoints[match.matchId] || 0;
+      if (l > r) leftMatches++;
+      else if (r > l) rightMatches++;
+    }
+
+    left.h2h_jornadas_won = leftJornadas;
+    right.h2h_jornadas_won = rightJornadas;
+    left.h2h_partidos_won = leftMatches;
+    right.h2h_partidos_won = rightMatches;
+    left.biggest_win = biggestWin;
+    left.biggest_loss = biggestLoss;
+    right.biggest_win = biggestLoss === null ? null : -biggestLoss;
+    right.biggest_loss = biggestWin === null ? null : -biggestWin;
+
+    return {
+      left,
+      right,
+      jornada_count: jornadaCount,
+      played_league_count: playedLeagueCount,
+    };
+  }
+
   function buildDonutSegments(parts) {
     const C = 2 * Math.PI * DONUT_RADIUS;
     const valid = (parts || []).filter(p => Number(p.value) > 0);
@@ -2708,6 +2815,8 @@
   global.expectedPointsForPrediction = expectedPointsForPrediction;
   global.calcStyleStats = calcStyleStats;
   global.calcLuckLabels = calcLuckLabels;
+  global.calcPlayerExtremes = calcPlayerExtremes;
+  global.buildDuelContext = buildDuelContext;
   global.buildDonutSegments = buildDonutSegments;
   global.calcPredictionBias = calcPredictionBias;
   global.calcBestMatch = calcBestMatch;
@@ -2734,6 +2843,6 @@
   global.renderStatsContent = renderStatsContent;
   global.buildStatsAggregates = buildStatsAggregates;
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { emptySeries, buildTimeline, calcPredictionSeries, calcSquadSeries, calcClassificationSeries, calcEliminatoriasSeries, sumSeries, isLeagueComplete, getSeriesBySource, matchResultOf, toStagePoints, calcEvolutionPositions, calcEvolutionPositionsFromSplits, lastTimelinePoint, trimTimeline, buildEvolutionSeriesMap, buildAxisTicks, formatPointValue, buildPointTooltipText, EVO_METRIC_DEFAULT, EVO_MODE_DEFAULT, positionForMatch, extractPlayedMatches, calcReliabilityRow, buildCompletedLeagueData, calcStreaks, calcBestJornadas, calcUserBestJornada, calcPositionHistory, calcTimesTopJornada, calcMomentum, calcConsistency, calcExactStats, calcSourceRanks, calcMatchExtremes, calcDataCoverage, buildMatchConsensus, expectedPointsForPrediction, calcStyleStats, calcLuckLabels, buildDonutSegments, calcPredictionBias, calcBestMatch, calcBestPlayersByPosition, calcMostProfitablePlayer, sourceSplitFromUserData, tallyChampions, finalPredictionTeamIds, compareQuadroWithCommunity, aggregateSquads, calcPronosticosPartidosStats, getTeamStatsForPreds, calcPredictedStandingsForPreds, calcClasificacionPronosticosStats, calcEliminatoriasPronosticosStats, calcPlantillaPronosticosExtras, renderPronosticosBody, renderPronosticosPartidosCard, renderPronosticosClasificacionCard, renderPronosticosEliminatoriasCard, renderPronosticosPlantillaCard, renderStatsContent, buildStatsAggregates, orderIndividualPlayers, individualOverallRank };
+    module.exports = { emptySeries, buildTimeline, calcPredictionSeries, calcSquadSeries, calcClassificationSeries, calcEliminatoriasSeries, sumSeries, isLeagueComplete, getSeriesBySource, matchResultOf, toStagePoints, calcEvolutionPositions, calcEvolutionPositionsFromSplits, lastTimelinePoint, trimTimeline, buildEvolutionSeriesMap, buildAxisTicks, formatPointValue, buildPointTooltipText, EVO_METRIC_DEFAULT, EVO_MODE_DEFAULT, positionForMatch, extractPlayedMatches, calcReliabilityRow, buildCompletedLeagueData, calcStreaks, calcBestJornadas, calcUserBestJornada, calcPositionHistory, calcTimesTopJornada, calcMomentum, calcConsistency, calcExactStats, calcSourceRanks, calcMatchExtremes, calcDataCoverage, buildMatchConsensus, expectedPointsForPrediction, calcStyleStats, calcLuckLabels, calcPlayerExtremes, buildDuelContext, buildDonutSegments, calcPredictionBias, calcBestMatch, calcBestPlayersByPosition, calcMostProfitablePlayer, sourceSplitFromUserData, tallyChampions, finalPredictionTeamIds, compareQuadroWithCommunity, aggregateSquads, calcPronosticosPartidosStats, getTeamStatsForPreds, calcPredictedStandingsForPreds, calcClasificacionPronosticosStats, calcEliminatoriasPronosticosStats, calcPlantillaPronosticosExtras, renderPronosticosBody, renderPronosticosPartidosCard, renderPronosticosClasificacionCard, renderPronosticosEliminatoriasCard, renderPronosticosPlantillaCard, renderStatsContent, buildStatsAggregates, orderIndividualPlayers, individualOverallRank };
   }
 })(typeof window !== 'undefined' ? window : globalThis);
