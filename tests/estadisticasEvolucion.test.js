@@ -6,6 +6,9 @@ const {
   lastTimelinePoint,
   trimTimeline,
   buildEvolutionSeriesMap,
+  buildAxisTicks,
+  formatPointValue,
+  buildPointTooltipText,
   EVO_METRIC_DEFAULT,
   EVO_MODE_DEFAULT,
 } = require('../js/stats.js');
@@ -80,9 +83,37 @@ function test_defaults_evolucion() {
   assert.strictEqual(EVO_MODE_DEFAULT, 'acumulado');
 }
 
+function test_buildAxisTicks_tres_marcas() {
+  assert.deepStrictEqual(buildAxisTicks('puntos', 47), [
+    { value: 0, label: '0' },
+    { value: 24, label: '24' },
+    { value: 47, label: '47' },
+  ]);
+  assert.deepStrictEqual(buildAxisTicks('posicion', 6), [
+    { value: 1, label: '#1' },
+    { value: 4, label: '#4' },
+    { value: 6, label: '#6' },
+  ]);
+  assert.deepStrictEqual(buildAxisTicks('posicion', 1), [{ value: 1, label: '#1' }]);
+  assert.deepStrictEqual(buildAxisTicks('puntos', 30, -6), [
+    { value: -6, label: '-6' },
+    { value: 12, label: '12' },
+    { value: 30, label: '30' },
+  ]);
+}
+
+function test_formatPointValue_y_tooltip() {
+  assert.strictEqual(formatPointValue('puntos', 24), '24 pts');
+  assert.strictEqual(formatPointValue('posicion', 4), '#4');
+  assert.strictEqual(buildPointTooltipText('ldoc', 'J3', 'puntos', 24), 'ldoc · J3 · 24 pts');
+  assert.strictEqual(buildPointTooltipText('ldoc', 'J3', 'posicion', 4), 'ldoc · J3 · #4');
+}
+
 test_toStagePoints_acumulado_a_etapa();
 test_calcEvolutionPositions_empates_y_varias_etapas();
 test_lastTimelinePoint_y_trim();
 test_buildEvolutionSeriesMap_puntos_y_posicion();
 test_defaults_evolucion();
+test_buildAxisTicks_tres_marcas();
+test_formatPointValue_y_tooltip();
 console.log('OK estadisticasEvolucion');

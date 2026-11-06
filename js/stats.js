@@ -92,6 +92,26 @@
     return out;
   }
 
+  function buildAxisTicks(metric, maxVal, minVal) {
+    const max = Math.max(1, Math.round(maxVal || 1));
+    if (metric === 'posicion') {
+      const mid = Math.round((1 + max) / 2);
+      return [...new Set([1, mid, max])].map(value => ({ value, label: `#${value}` }));
+    }
+    const min = Math.min(0, Math.round(minVal || 0));
+    const top = Math.max(min + 1, max);
+    const mid = Math.round((min + top) / 2);
+    return [...new Set([min, mid, top])].map(value => ({ value, label: String(value) }));
+  }
+
+  function formatPointValue(metric, value) {
+    return metric === 'posicion' ? `#${value}` : `${value} pts`;
+  }
+
+  function buildPointTooltipText(playerName, stageLabel, metric, value) {
+    return `${playerName} · ${stageLabel} · ${formatPointValue(metric, value)}`;
+  }
+
   function calcPredictionSeries(matchDetails) {
     const acc = Array(13).fill(0);
     let hasData = false;
@@ -1358,7 +1378,7 @@
 
   function buildLineChart(players, visibleSet, seriesMap, opts) {
     const options = opts || {};
-    const metric = options.metric || 'puntos';
+    const metric = options.metric || EVO_METRIC_DEFAULT;
     const timeline = options.timeline || buildTimeline();
     const visible = playersWithData(players, visibleSet, seriesMap);
     if (!visible.length) return statsEmpty('Añade jugadores para ver el gráfico');
@@ -1366,35 +1386,48 @@
     const W = 340, H = 184, PAD = 28;
     const lastPoint = Math.max(0, timeline.length - 1);
     const x = (p) => PAD + (p / Math.max(1, lastPoint)) * (W - PAD * 2);
+    let minVal = metric === 'posicion' ? 1 : 0;
     let maxVal = metric === 'posicion' ? 1 : 10;
     for (const p of visible) {
       const series = seriesMap.get(p.name).series;
-      for (let i = 0; i <= lastPoint; i++) maxVal = Math.max(maxVal, series[i] || 0);
+      for (let i = 0; i <= lastPoint; i++) {
+        minVal = Math.min(minVal, series[i] || 0);
+        maxVal = Math.max(maxVal, series[i] || 0);
+      }
     }
     const y = metric === 'posicion'
       ? (v) => PAD + ((v - 1) / Math.max(1, maxVal - 1)) * (H - PAD * 2)
-      : (v) => H - PAD - (v / maxVal) * (H - PAD * 2);
+      : (v) => PAD + ((maxVal - v) / Math.max(1, maxVal - minVal)) * (H - PAD * 2);
 
-    const polylines = visible.map((p, i) => {
+    const polylines = [];
+    const dots = [];
+    const hits = [];
+    visible.forEach((p, i) => {
       const color = LINE_COLORS[i % LINE_COLORS.length];
       const series = seriesMap.get(p.name).series;
       const pts = timeline.map((t, pi) => `${x(pi).toFixed(1)},${y(series[pi] || 0).toFixed(1)}`).join(' ');
       const last = lastPoint;
       const lx = x(last), ly = y(series[last] || 0);
       const isMe = p.name === AppState.currentUser?.name;
-      return `
+      polylines.push(`
         <polyline points="${pts}" fill="none" stroke="${color}" stroke-width="${isMe ? 3.2 : 2.2}" stroke-linecap="round" stroke-linejoin="round" opacity="${isMe ? 1 : 0.92}"/>
-        <circle cx="${lx}" cy="${ly}" r="${isMe ? 5 : 4}" fill="${color}" stroke="#0F172A" stroke-width="1.5" class="stats-lastpoint" data-user="${esc(p.name)}"/>
-        <circle cx="${lx}" cy="${ly}" r="12" fill="transparent" class="stats-lastpoint" data-user="${esc(p.name)}"/>`;
-    }).join('');
-
-    const strongIdx = metric === 'posicion' ? 2 : 0;
-    const grid = [0, 0.5, 1].map(f => {
-      const value = metric === 'posicion' ? 1 + (maxVal - 1) * f : maxVal * f;
-      return y(value);
+        <circle cx="${lx}" cy="${ly}" r="${isMe ? 5 : 4}" fill="${color}" stroke="#0F172A" stroke-width="1.5" class="stats-lastpoint" data-user="${esc(p.name)}" pointer-events="none"/>
+        <circle cx="${lx}" cy="${ly}" r="12" fill="transparent" class="stats-lastpoint" data-user="${esc(p.name)}" pointer-events="none"/>`);
+      timeline.forEach((t, pi) => {
+        const px = x(pi), py = y(series[pi] || 0);
+        const value = series[pi] || 0;
+        dots.push(`<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="2" fill="${color}" opacity="0.9" pointer-events="none"/>`);
+        hits.push(`<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="9" fill="transparent" pointer-events="all" class="stats-point-hit" data-user="${esc(p.name)}" data-stage="${esc(t.label)}" data-value="${value}"/>`);
+      });
     });
-    const gridLines = grid.map((gy, gi) =>
-      `<line x1="${PAD}" y1="${gy}" x2="${W - PAD}" y2="${gy}" stroke="${gi === strongIdx ? '#334155' : '#1E293B'}" stroke-width="1"/>`
+
+    const ticks = buildAxisTicks(metric, maxVal, minVal);
+    const strongValue = metric === 'posicion' ? 1 : 0;
+    const gridLines = ticks.map(tick =>
+      `<line x1="${PAD}" y1="${y(tick.value)}" x2="${W - PAD}" y2="${y(tick.value)}" stroke="${tick.value === strongValue ? '#334155' : '#1E293B'}" stroke-width="1"/>`
+    ).join('');
+    const axisLabels = ticks.map(tick =>
+      `<text x="2" y="${(y(tick.value) + 2.5).toFixed(1)}" font-size="7.5" fill="#64748B" text-anchor="start">${tick.label}</text>`
     ).join('');
 
     const labels = timeline.map((t, i) =>
@@ -1402,11 +1435,17 @@
     ).join('');
 
     return `
-      <svg class="stats-line-chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">
-        ${gridLines}
-        ${polylines}
-        ${labels}
-      </svg>`;
+      <div class="stats-chart-wrap">
+        <svg class="stats-line-chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">
+          ${gridLines}
+          ${polylines.join('')}
+          ${dots.join('')}
+          ${labels}
+          ${axisLabels}
+          ${hits.join('')}
+        </svg>
+        <div class="stats-evo-tooltip" role="status" aria-live="polite"></div>
+      </div>`;
   }
 
   function buildLegend(players, visibleSet, seriesMap, opts) {
@@ -1769,20 +1808,41 @@
       });
     });
 
-    container.querySelectorAll('.stats-lastpoint').forEach(circle => {
-      circle.addEventListener('click', () => {
-        const user = circle.dataset.user;
-        const r = currentSeriesMap?.get(user) || emptySeries();
-        const tl = currentEvolutionTimeline || buildTimeline();
-        const lastIdx = Math.max(0, tl.length - 1);
-        const value = r.series[lastIdx] || 0;
-        const label = tl[lastIdx]?.label || '';
-        const metric = AppState.estadisticasEvoMetric || EVO_METRIC_DEFAULT;
-        showToast(metric === 'posicion'
-          ? `${esc(user)} · #${value} en ${label}`
-          : `${esc(user)} · ${value} pts en ${label}`);
-      });
+    const chartWrap = container.querySelector('.stats-chart-wrap');
+    const evoTooltip = chartWrap?.querySelector('.stats-evo-tooltip');
+    const hideEvotooltip = () => { if (evoTooltip) evoTooltip.classList.remove('show'); };
+    const showEvotooltip = (hit, evt) => {
+      if (!chartWrap || !evoTooltip) return;
+      const metric = AppState.estadisticasEvoMetric || EVO_METRIC_DEFAULT;
+      const value = Number(hit.dataset.value) || 0;
+      evoTooltip.textContent = buildPointTooltipText(hit.dataset.user, hit.dataset.stage, metric, value);
+      evoTooltip.classList.add('show');
+      const rect = chartWrap.getBoundingClientRect();
+      const px = evt ? evt.clientX - rect.left : rect.width / 2;
+      const py = evt ? evt.clientY - rect.top : rect.height / 2;
+      const half = evoTooltip.offsetWidth / 2;
+      const left = Math.min(Math.max(px, half + 4), rect.width - half - 4);
+      evoTooltip.style.left = `${left}px`;
+      if (py < 52) {
+        evoTooltip.style.top = `${py + 14}px`;
+        evoTooltip.classList.add('below');
+      } else {
+        evoTooltip.style.top = `${py - 10}px`;
+        evoTooltip.classList.remove('below');
+      }
+    };
+    container.querySelectorAll('.stats-point-hit').forEach(hit => {
+      hit.addEventListener('pointerenter', (e) => showEvotooltip(hit, e));
+      hit.addEventListener('pointermove', (e) => showEvotooltip(hit, e));
+      hit.addEventListener('pointerleave', (e) => { if (e.pointerType !== 'touch') hideEvotooltip(); });
+      hit.addEventListener('pointerdown', (e) => { e.stopPropagation(); showEvotooltip(hit, e); });
+      hit.addEventListener('click', (e) => { e.stopPropagation(); showEvotooltip(hit, e); });
     });
+    if (chartWrap) {
+      chartWrap.addEventListener('pointerdown', (e) => {
+        if (!e.target.closest('.stats-point-hit')) hideEvotooltip();
+      });
+    }
 
     const evoSearch = container.querySelector('#stats-evo-search');
     if (evoSearch) {
@@ -1875,6 +1935,9 @@
   global.lastTimelinePoint = lastTimelinePoint;
   global.trimTimeline = trimTimeline;
   global.buildEvolutionSeriesMap = buildEvolutionSeriesMap;
+  global.buildAxisTicks = buildAxisTicks;
+  global.formatPointValue = formatPointValue;
+  global.buildPointTooltipText = buildPointTooltipText;
   global.EVO_METRIC_DEFAULT = EVO_METRIC_DEFAULT;
   global.EVO_MODE_DEFAULT = EVO_MODE_DEFAULT;
   global.positionForMatch = positionForMatch;
@@ -1914,6 +1977,6 @@
   global.renderStatsContent = renderStatsContent;
   global.buildStatsAggregates = buildStatsAggregates;
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { emptySeries, buildTimeline, calcPredictionSeries, calcSquadSeries, calcClassificationSeries, calcEliminatoriasSeries, sumSeries, isLeagueComplete, getSeriesBySource, matchResultOf, toStagePoints, calcEvolutionPositions, lastTimelinePoint, trimTimeline, buildEvolutionSeriesMap, EVO_METRIC_DEFAULT, EVO_MODE_DEFAULT, positionForMatch, extractPlayedMatches, calcReliabilityRow, buildCompletedLeagueData, calcStreaks, calcBestJornadas, calcUserBestJornada, calcPositionHistory, calcTimesTopJornada, calcMomentum, calcConsistency, buildDonutSegments, calcPredictionBias, calcBestMatch, calcBestPlayersByPosition, calcMostProfitablePlayer, sourceSplitFromUserData, tallyChampions, finalPredictionTeamIds, compareQuadroWithCommunity, aggregateSquads, calcPronosticosPartidosStats, getTeamStatsForPreds, calcPredictedStandingsForPreds, calcClasificacionPronosticosStats, calcEliminatoriasPronosticosStats, calcPlantillaPronosticosExtras, renderPronosticosBody, renderPronosticosPartidosCard, renderPronosticosClasificacionCard, renderPronosticosEliminatoriasCard, renderPronosticosPlantillaCard, renderStatsContent, buildStatsAggregates, orderIndividualPlayers, individualOverallRank };
+    module.exports = { emptySeries, buildTimeline, calcPredictionSeries, calcSquadSeries, calcClassificationSeries, calcEliminatoriasSeries, sumSeries, isLeagueComplete, getSeriesBySource, matchResultOf, toStagePoints, calcEvolutionPositions, lastTimelinePoint, trimTimeline, buildEvolutionSeriesMap, buildAxisTicks, formatPointValue, buildPointTooltipText, EVO_METRIC_DEFAULT, EVO_MODE_DEFAULT, positionForMatch, extractPlayedMatches, calcReliabilityRow, buildCompletedLeagueData, calcStreaks, calcBestJornadas, calcUserBestJornada, calcPositionHistory, calcTimesTopJornada, calcMomentum, calcConsistency, buildDonutSegments, calcPredictionBias, calcBestMatch, calcBestPlayersByPosition, calcMostProfitablePlayer, sourceSplitFromUserData, tallyChampions, finalPredictionTeamIds, compareQuadroWithCommunity, aggregateSquads, calcPronosticosPartidosStats, getTeamStatsForPreds, calcPredictedStandingsForPreds, calcClasificacionPronosticosStats, calcEliminatoriasPronosticosStats, calcPlantillaPronosticosExtras, renderPronosticosBody, renderPronosticosPartidosCard, renderPronosticosClasificacionCard, renderPronosticosEliminatoriasCard, renderPronosticosPlantillaCard, renderStatsContent, buildStatsAggregates, orderIndividualPlayers, individualOverallRank };
   }
 })(typeof window !== 'undefined' ? window : globalThis);

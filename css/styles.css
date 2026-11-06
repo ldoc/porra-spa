@@ -5530,10 +5530,44 @@ html, body {
 .stats-evo-clear{position:absolute;right:8px;width:28px;height:28px;border-radius:50%;border:1px solid var(--border-color);background:rgba(255,255,255,0.06);color:var(--text-muted);font-size:16px;line-height:1;display:flex;align-items:center;justify-content:center;cursor:pointer}
 .stats-evo-clear:active{transform:scale(0.92)}
 
+.stats-chart-wrap {
+  position: relative;
+}
+
 .stats-line-chart {
   width: 100%;
   height: auto;
   display:block;
+}
+
+.stats-point-hit {
+  cursor: crosshair;
+}
+
+.stats-evo-tooltip {
+  position: absolute;
+  z-index: 5;
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, -100%);
+  background: rgba(15, 23, 42, 0.97);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 5px 8px;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-primary);
+  white-space: nowrap;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+  transition: opacity 0.12s ease;
+}
+
+.stats-evo-tooltip.show {
+  opacity: 1;
+}
+
+.stats-evo-tooltip.below {
+  transform: translate(-50%, 0);
 }
 .stats-donut-hero{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
 .stats-donut-compact{width:110px;flex-shrink:0}
