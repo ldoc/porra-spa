@@ -6036,7 +6036,7 @@ html, body {
    ============================================================ */
 .stats-subtabs {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 4px;
   background: var(--ucl-surface);
   padding: 4px;
@@ -6852,14 +6852,14 @@ html, body {
   50% { transform: translateY(3px); }
 }
 .duel-scroll-hint b { color: var(--text-primary); }
-.legend {
+.duel-legend {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
   justify-content: center;
   margin: 8px 0 2px;
 }
-.legend span {
+.duel-legend span {
   font-size: 9px;
   color: var(--text-muted);
   border: 1px solid rgba(255,255,255,.09);
@@ -6885,7 +6885,6 @@ html, body {
   background: rgba(10,20,47,.5);
 }
 .duel-cat-card.locked .duel-cat-title { color: var(--text-secondary); }
-.duel-cat-card.locked .duel-status::before { content: "🔒 "; }
 .duel-cat-card.revealed { background: rgba(255,255,255,.03); animation: duelCardIgnite .8s ease; }
 .duel-cat-card.revealed::after {
   content: "";
@@ -7024,6 +7023,7 @@ html, body {
 @media (prefers-reduced-motion: reduce) {
   .duel-score-num, .duel-val, .duel-cat-card, .duel-final,
   .duel-scroll-hint .arrow, .duel-cat-card.revealed::after { transition: none !important; animation: none !important; }
+  .duel-plus, .score-plus, .duel-status { animation: none !important; transition: none !important; }
 }
 
 /* ==========================================================================

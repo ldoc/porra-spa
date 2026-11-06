@@ -2628,7 +2628,7 @@
     return `<div id="duel-root" data-winner="${score.winner}" data-tiebreak="${esc(score.tieBreak || '')}" data-left-name="${esc(leftUser)}" data-right-name="${esc(rightUser)}">
       ${header}
       <div class="duel-scroll-hint"><span class="arrow">↓</span><span><b>Desliza para empezar.</b> Las cajas están bloqueadas hasta que hagas scroll; al pasar por cada una se ilumina, marca al ganador y suma su punto arriba.</span></div>
-      <div class="legend"><span>+1 por categoría</span><span>Empate = 0</span><span>Sin datos = no disputada</span></div>
+      <div class="duel-legend"><span>+1 por categoría</span><span>Empate = 0</span><span>Sin datos = no disputada</span></div>
       <div class="duel-cat-list">${cards}</div>
       <div class="duel-final" id="duel-final">
         <div class="duel-final-title">${winnerText}</div>
