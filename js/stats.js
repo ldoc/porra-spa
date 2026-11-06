@@ -1458,6 +1458,8 @@
       timesTopJornada: calcTimesTopJornada(league.pointsByUserByJornada),
       realPointsByUser,
       splitByUser,
+      coverage: calcDataCoverage(AppState.matches, AppState.matchStats, AppState.allPredictions, AppState.currentUser?.name),
+      sourceRanks: calcSourceRanks(splitByUser, statsPlayers().map(p => p.name)),
       bestJornadas: calcBestJornadas(league.pointsByUserByJornada, 5),
       championsTally: tallyChampions(statsFilterMap(AppState.finalPredictionsCache)),
       quadro: compareQuadroWithCommunity(AppState.currentUser?.name, statsFilterMap(AppState.finalPredictionsCache)),
@@ -1485,6 +1487,7 @@
     return `
       <div class="stats-card">
         <div class="stats-subtabs">${subBar}</div>
+        ${renderCoverageNote(aggregates)}
       </div>
       ${body}`;
   }
@@ -1908,6 +1911,76 @@
     return `<div class="stats-kpi"><div class="stats-kv">${sigma}</div><div class="stats-kl">${lbl}</div></div>`;
   }
 
+  function renderCoverageNote(aggregates) {
+    const coverage = aggregates?.coverage;
+    if (!coverage || !coverage.totalLeague) return '';
+    const partial = coverage.partial ? '<span class="stats-pill gold">Datos parciales</span>' : '';
+    return `<div class="stats-data-note">📊 ${coverage.playedLeague}/${coverage.totalLeague} partidos de liga · ${coverage.completedJornadas}/${coverage.totalJornadas} jornadas completas ${partial}</div>`;
+  }
+
+  function renderExactCard(exactStats) {
+    const totals = exactStats?.totals || { played: 0, exact: 0, outcomeHits: 0, exactPct: 0 };
+    if (!totals.played) {
+      return `<div class="stats-card"><div class="stats-card-title">🎯 Exactos por jornada</div>${statsEmpty('Aún no hay partidos con resultado')}</div>`;
+    }
+
+    const rows = (exactStats.byJornada || []).map(row => {
+      const pct = row.played ? Math.round((row.exact / row.played) * 100) : 0;
+      const partial = row.complete ? '' : ' · parcial';
+      return `<div class="stats-exact-row">
+        <span class="stats-exact-lbl">J${row.ronda}</span>
+        <div class="stats-exact-bar"><div style="width:${pct}%"></div></div>
+        <span class="stats-exact-txt">${row.exact}/${row.played} · ${row.outcomeHits}/${row.played} 1X2${partial}</span>
+      </div>`;
+    }).join('');
+
+    return `
+      <div class="stats-card">
+        <div class="stats-card-title">🎯 Exactos por jornada</div>
+        <div class="stats-kpi-grid">
+          <div class="stats-kpi"><div class="stats-kv">${totals.exact}</div><div class="stats-kl">exactos</div></div>
+          <div class="stats-kpi"><div class="stats-kv">${totals.exactPct}%</div><div class="stats-kl">% exactos</div></div>
+          <div class="stats-kpi"><div class="stats-kv">${totals.outcomeHits}</div><div class="stats-kl">aciertos 1X2</div></div>
+        </div>
+        <div class="stats-kpi-grid" style="grid-template-columns:repeat(2,1fr);margin-top:6px">
+          <div class="stats-kpi"><div class="stats-kv">${exactStats.streaks?.currentExact ?? 0}</div><div class="stats-kl">racha actual</div></div>
+          <div class="stats-kpi"><div class="stats-kv">${exactStats.streaks?.bestExact ?? 0}</div><div class="stats-kl">mejor racha</div></div>
+        </div>
+        <div class="stats-rank-sub" style="white-space:normal;margin-top:8px">Solo partidos válidos pronosticados. Los no pronosticados no penalizan.</div>
+        <div class="stats-exact-rows">${rows}</div>
+      </div>`;
+  }
+
+  function renderSourceRanksCard(username, sourceRanks) {
+    const definitions = [
+      ['total', 'Total'],
+      ['prediction', 'Pronóst.'],
+      ['squad', 'Plantilla'],
+      ['classification', 'Clasif.'],
+      ['eliminatorias', 'Elims.'],
+    ];
+    const mine = sourceRanks?.[username] || {};
+    const rows = definitions.map(([key, label]) => {
+      const row = mine[key];
+      if (!row || !row.hasData || !row.rank) {
+        return `<div class="stats-src-row"><span class="stats-src-lbl">${label}</span><div class="stats-src-bar"></div><span class="stats-src-val">—</span></div>`;
+      }
+      const fillPct = Math.max(0, Math.min(100, 100 - row.topPct));
+      return `<div class="stats-src-row">
+        <span class="stats-src-lbl">${label}</span>
+        <div class="stats-src-bar"><div style="width:${fillPct}%"></div></div>
+        <span class="stats-src-val">#${row.rank}/${row.n} · Top ${row.topPct}%</span>
+      </div>`;
+    }).join('');
+
+    return `
+      <div class="stats-card">
+        <div class="stats-card-title">📊 Puesto por fuente</div>
+        <div class="stats-src-rows">${rows}</div>
+        <div class="stats-rank-sub" style="white-space:normal;margin-top:8px">Top X% = mejor posición relativa; los empates comparten puesto.</div>
+      </div>`;
+  }
+
   function renderIndividualBody(aggregates) {
     const players = statsPlayers();
     const splitByUser = aggregates.splitByUser || {};
@@ -1922,6 +1995,9 @@
     const rank = individualOverallRank(aggregates.realPointsByUser, username, splitByUser);
 
     const split = sourceSplitFromUserData(AppState.userPoints[username]?.totalPoints, getCachedUserData(username));
+    const exactStats = calcExactStats(username, AppState.leagueMatches, aggregates.matchStatsById, AppState.allPredictions);
+    const sourceRanks = aggregates.sourceRanks || {};
+    const coverage = calcDataCoverage(AppState.matches, AppState.matchStats, AppState.allPredictions, username);
 
     const row = calcReliabilityRow(username, aggregates.playedMatches, AppState.allPredictions, AppState.userPoints);
     const fallidos = row.played - row.hits;
@@ -2043,11 +2119,14 @@
           <select id="stats-ind-select" class="stats-ind-select-pill" aria-label="Seleccionar usuario">${options}</select>
           <span class="stats-ind-rank">#${rank}</span>
         </div>
+        <div class="stats-rank-sub" style="white-space:normal;text-align:center;margin-top:6px">Tus pronósticos con resultado: ${coverage.userPredictedPlayed}/${coverage.playedLeague}</div>
       </div>
       <div class="stats-card">
         <div class="stats-card-title">🥧 Desglose de puntos</div>
         ${donutChartHtml(split)}
       </div>
+      ${renderExactCard(exactStats)}
+      ${renderSourceRanksCard(username, sourceRanks)}
       ${pronosticosCard}
       ${jornadasCard}
       ${sesgoCard}
