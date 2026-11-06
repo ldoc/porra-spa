@@ -5,7 +5,7 @@ Predecesor: `docs/superpowers/specs/2026-11-06-estilo-suerte-design.md`
 
 ## 1. Objetivo
 
-Añadir a Estadísticas una sub-pestaña **Duelos** para comparar a dos usuarios cara a cara mediante 28 categorías. Cada categoría se desvela al hacer scroll, suma 1 punto al ganador y el marcador se actualiza con animación. Al final, confeti y fuegos artificiales en el lado del ganador.
+Añadir a Estadísticas una sub-pestaña **Duelos** para comparar a dos usuarios cara a cara mediante 32 categorías. Cada categoría se desvela al hacer scroll, suma 1 punto al ganador y el marcador se actualiza con animación. Al final, confeti y fuegos artificiales en el lado del ganador.
 
 Todo se calcula en cliente con los datos ya disponibles. Sin cambios de API ni backend.
 
@@ -15,7 +15,7 @@ Todo se calcula en cliente con los datos ya disponibles. Sin cambios de API ni b
 
 - Nueva sub-pestaña `Duelos`.
 - Dos selectores manuales de usuario (izquierda/derecha).
-- 28 categorías de comparación, cada una en su propia tarjeta con explicación.
+- 32 categorías de comparación, cada una en su propia tarjeta con explicación.
 - Marcador fijo arriba, revelado por scroll y animación final.
 - Tests de cálculo puro y verificación visual móvil.
 
@@ -36,7 +36,7 @@ Todo se calcula en cliente con los datos ya disponibles. Sin cambios de API ni b
 - Si no hay partidos con resultado, se muestra un empty state.
 - Si los pronósticos del rival no están publicados, se muestra `Duelo disponible cuando se publiquen los pronósticos.`
 
-## 4. Las 28 categorías
+## 4. Las 32 categorías
 
 Cada categoría devuelve dos valores y un ganador (`left`, `right`, `tie`, `na`). Dirección `higher` = gana el valor mayor; `lower` = gana el menor. En las categorías “peor”, se usa `higher` sobre el mínimo para que gane el **menos malo**.
 
@@ -58,18 +58,22 @@ Cada categoría devuelve dos valores y un ganador (`left`, `right`, `tie`, `na`)
 | 14 | `best_exact_streak` | Mejor racha de exactos | Marcadores exactos consecutivos; gana la racha más larga. | Mayor | entero | Alguno no tiene partidos jugados |
 | 15 | `best_player` | Mejor jugador | El jugador de tu plantilla con más puntos. | Mayor | entero | Alguno no tiene jugadores con partidos |
 | 16 | `worst_player` | Peor jugador | El jugador con menos puntos; gana el menos malo. | Mayor (min) | entero | Alguno no tiene jugadores con partidos |
-| 17 | `robos` | Robos | Aciertos minoritarios que te dieron ventaja sobre la media. | Mayor | entero | Alguno no tiene partidos analizados |
-| 18 | `faroles` | Faroles | Fallos con la opción más votada; gana quien tenga menos. | Menor | entero | Alguno no tiene partidos analizados |
-| 19 | `luck_per_match` | Suerte/partido | Puntos reales menos puntos esperados por partido. | Mayor | 1 decimal con signo | Alguno no tiene partidos analizados |
-| 20 | `minority_hit` | Acierto en minoría | Acierto 1X2 cuando tu opción tenía menos del 33% de apoyo. | Mayor | porcentaje | Alguno tiene <3 partidos en minoría |
-| 21 | `times_top_jornada` | Veces mejor de la jornada | Jornadas en las que igualaste la máxima puntuación de la porra. | Mayor | entero | No hay jornadas completas |
-| 22 | `avg_points_per_match` | Media de puntos por partido | Puntos de pronósticos divididos entre partidos jugados. | Mayor | 1 decimal | Alguno no tiene partidos jugados |
-| 23 | `h2h_jornadas_won` | Jornadas ganadas | Jornadas completas en las que superaste a tu rival. | Mayor | entero | No hay jornadas completas |
-| 24 | `h2h_partidos_won` | Partidos ganados | Partidos jugados en los que superaste a tu rival. | Mayor | entero | No hay partidos jugados |
-| 25 | `biggest_win` | Mayor victoria | Tu mayor diferencia positiva en una jornada. | Mayor | entero con signo | No hay jornadas completas |
-| 26 | `biggest_loss` | Mayor derrota | Tu mayor diferencia negativa; gana la menos abultada. | Mayor (min) | entero con signo | No hay jornadas completas |
-| 27 | `best_rank` | Mejor puesto histórico | Tu mejor posición en la clasificación; gana el puesto más bajo. | Menor | `Nº` | No hay jornadas completas |
-| 28 | `worst_rank` | Peor puesto histórico | Tu peor posición; gana el puesto más bajo (el menos malo). | Menor | `Nº` | No hay jornadas completas |
+| 17 | `avg_gk` | Media porteros | Puntos medios por portero de tu plantilla. | Mayor | 1 decimal | Alguno no tiene porteros |
+| 18 | `avg_def` | Media defensas | Puntos medios por defensa de tu plantilla. | Mayor | 1 decimal | Alguno no tiene defensas |
+| 19 | `avg_mid` | Media centrocampistas | Puntos medios por centrocampista de tu plantilla. | Mayor | 1 decimal | Alguno no tiene centrocampistas |
+| 20 | `avg_fwd` | Media delanteros | Puntos medios por delantero de tu plantilla. | Mayor | 1 decimal | Alguno no tiene delanteros |
+| 21 | `robos` | Robos | Aciertos minoritarios que te dieron ventaja sobre la media. | Mayor | entero | Alguno no tiene partidos analizados |
+| 22 | `faroles` | Faroles | Fallos con la opción más votada; gana quien tenga menos. | Menor | entero | Alguno no tiene partidos analizados |
+| 23 | `luck_per_match` | Suerte/partido | Puntos reales menos puntos esperados por partido. | Mayor | 1 decimal con signo | Alguno no tiene partidos analizados |
+| 24 | `minority_hit` | Acierto en minoría | Acierto 1X2 cuando tu opción tenía menos del 33% de apoyo. | Mayor | porcentaje | Alguno tiene <3 partidos en minoría |
+| 25 | `times_top_jornada` | Veces mejor de la jornada | Jornadas en las que igualaste la máxima puntuación de la porra. | Mayor | entero | No hay jornadas completas |
+| 26 | `avg_points_per_match` | Media de puntos por partido | Puntos de pronósticos divididos entre partidos jugados. | Mayor | 1 decimal | Alguno no tiene partidos jugados |
+| 27 | `h2h_jornadas_won` | Jornadas ganadas | Jornadas completas en las que superaste a tu rival. | Mayor | entero | No hay jornadas completas |
+| 28 | `h2h_partidos_won` | Partidos ganados | Partidos jugados en los que superaste a tu rival. | Mayor | entero | No hay partidos jugados |
+| 29 | `biggest_win` | Mayor victoria | Tu mayor diferencia positiva en una jornada. | Mayor | entero con signo | No hay jornadas completas |
+| 30 | `biggest_loss` | Mayor derrota | Tu mayor diferencia negativa; gana la menos abultada. | Mayor (min) | entero con signo | No hay jornadas completas |
+| 31 | `best_rank` | Mejor puesto histórico | Tu mejor posición en la clasificación; gana el puesto más bajo. | Menor | `Nº` | No hay jornadas completas |
+| 32 | `worst_rank` | Peor puesto histórico | Tu peor posición; gana el puesto más bajo (el menos malo). | Menor | `Nº` | No hay jornadas completas |
 
 ### 4.1 Detalles de cálculo
 
@@ -97,7 +101,7 @@ Cada categoría devuelve dos valores y un ganador (`left`, `right`, `tie`, `na`)
 - Gana quien tenga más puntos de categoría.
 - Si empatan a categorías: desempata **puntos totales** → **puntos plantilla** → **puntos pronósticos**.
 - Si sigue empatado: duelo empatado.
-- La cabecera muestra `A x – y B` y `N de 28 categorías disputadas`.
+- La cabecera muestra `A x – y B` y `N de 32 categorías disputadas`.
 
 ## 5. UX
 
@@ -134,7 +138,7 @@ Cada categoría devuelve dos valores y un ganador (`left`, `right`, `tie`, `na`)
 - El número del ganador hace un “bump”.
 - Sale un `+1` flotante en el lado del ganador.
 - La barra de progreso avanza.
-- El contador `N de 28 categorías` se actualiza.
+- El contador `N de 32 categorías` se actualiza.
 
 ### 5.5 Final
 
@@ -159,7 +163,7 @@ Todo en `js/stats.js` y `css/styles.css`, patrón IIFE + funciones puras exporta
 // Reúne métricas de los dos usuarios a partir de los agregados.
 buildDuelContext(leftUser, rightUser, aggregates)
 
-// Devuelve 28 objetos:
+// Devuelve 32 objetos:
 // { key, title, desc, leftValue, rightValue, leftNum, rightNum, winner, direction, format }
 calcDuelCategories(context)
 
@@ -175,6 +179,7 @@ calcDuelScore(categories, context)
 
 ```javascript
 classificationProvisionalByUser: { [username]: number },
+positionAveragesByUser: { [username]: { G, D, M, F } },
 reliabilityByUser: { [username]: reliabilityRow },
 exactStatsByUser: { [username]: exactStats },
 matchExtremesByUser: { [username]: { best, worst } },
@@ -185,7 +190,7 @@ Se reutilizan `splitByUser`, `leaguePoints`, `positionHistory`, `timesTopJornada
 
 ### 6.3 Render e interacción
 
-- `renderDuelosBody(aggregates)` genera la cabecera fija, las 28 tarjetas y el banner final.
+- `renderDuelosBody(aggregates)` genera la cabecera fija, las 32 tarjetas y el banner final.
 - `bindDuelEvents(aggregates)`:
   - escucha cambios de los dos selectores y reinicia el duelo;
   - intercambia usuarios;
@@ -200,7 +205,7 @@ Se reutilizan `splitByUser`, `leaguePoints`, `positionHistory`, `timesTopJornada
 ### 6.4 CSS y cache-busting
 
 - Nuevas clases: `.duel-fixed-header`, `.duel-users`, `.duel-score-*`, `.duel-progress*`, `.duel-cat-card`, `.duel-status`, `.duel-final`, `.scroll-fab`, `.score-plus`.
-- `index.html`: `js/stats.js?v=27` y `css/styles.css?v=139`.
+- `index.html`: `js/stats.js?v=28` y `css/styles.css?v=139`.
 
 ## 7. Tests
 
@@ -237,7 +242,7 @@ Regresión: `estadisticasEstilo`, `estadisticasJugadorV2`, `estadisticas`, `esta
 ## 9. Criterios de aceptación
 
 - La sub-pestaña Duelos existe y permite elegir dos usuarios distintos.
-- Las 28 categorías aparecen en tarjetas individuales con explicación.
+- Las 32 categorías aparecen en tarjetas individuales con explicación.
 - La cabecera con el marcador queda fija y visible durante el scroll.
 - Las tarjetas se desvelan al hacer scroll y marcan al ganador.
 - El marcador suma con animación y el desempate funciona en el orden acordado.
@@ -246,7 +251,7 @@ Regresión: `estadisticasEstilo`, `estadisticasJugadorV2`, `estadisticas`, `esta
 
 ## 10. Riesgos y decisiones
 
-- **Muchas categorías:** 28 tarjetas pueden alargar el scroll; el revelado progresivo y la cabecera fija mantienen el contexto.
+- **Muchas categorías:** 32 tarjetas pueden alargar el scroll; el revelado progresivo y la cabecera fija mantienen el contexto.
 - **Categorías sin datos:** se marcan como `na` y no reparten punto para no penalizar injustamente.
 - **Animaciones:** canvas y CSS vanilla; se desactivan con `prefers-reduced-motion`.
 - **Crecimiento de `stats.js`:** se añade un bloque delimitado y funciones puras exportadas; la modularización queda fuera de alcance.

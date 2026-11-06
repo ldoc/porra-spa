@@ -1,5 +1,5 @@
 const assert = require('assert');
-const { calcPlayerExtremes, buildDuelContext, calcDuelCategories, calcDuelScore, calcMatchExtremesCombined } = require('../js/stats.js');
+const { calcPlayerExtremes, calcPositionAverages, buildDuelContext, calcDuelCategories, calcDuelScore, calcMatchExtremesCombined } = require('../js/stats.js');
 
 function test_calcPlayerExtremes_ignora_jugadores_sin_partidos() {
   const r = calcPlayerExtremes([
@@ -48,6 +48,10 @@ function duelFixture() {
       ana: { best: { puntos: 10 }, worst: { puntos: -2 } },
       bob: { best: { puntos: 12 }, worst: { puntos: -5 } },
     },
+    positionAveragesByUser: {
+      ana: { G: 7, D: 0.7, M: 2.5, F: 5 },
+      bob: { G: 3, D: 1, M: 2, F: 4 },
+    },
     styleByUser: {
       ana: { analyzedMatches: 3, robos: { count: 1 }, faroles: { count: 0 }, luckPerMatch: 0.4, confidence: { minority: { hitPct: 50, matches: 4 } } },
       bob: { analyzedMatches: 3, robos: { count: 0 }, faroles: { count: 2 }, luckPerMatch: -0.3, confidence: { minority: { hitPct: 25, matches: 4 } } },
@@ -76,6 +80,10 @@ function test_buildDuelContext_calcula_categorias_y_h2h() {
   assert.strictEqual(c.right.points_total, 29);
   assert.strictEqual(c.left.points_classification, 2);
   assert.strictEqual(c.right.points_classification, 1);
+  assert.strictEqual(c.left.avg_gk, 7);
+  assert.strictEqual(c.left.avg_def, 0.7);
+  assert.strictEqual(c.left.avg_mid, 2.5);
+  assert.strictEqual(c.left.avg_fwd, 5);
   assert.strictEqual(c.left.best_jornada, 20);
   assert.strictEqual(c.left.worst_jornada, 5);
   assert.strictEqual(c.left.best_rank, 1);
@@ -88,6 +96,17 @@ function test_buildDuelContext_calcula_categorias_y_h2h() {
   assert.strictEqual(c.left.biggest_loss, -10);
   assert.strictEqual(c.right.biggest_win, 10);
   assert.strictEqual(c.right.biggest_loss, -10);
+}
+
+function test_calcPositionAverages_media_por_jugador() {
+  const r = calcPositionAverages([
+    { jugador: { posicion: 'G' }, puntosTotal: 10, partidos: [{}] },
+    { jugador: { posicion: 'G' }, puntosTotal: 4, partidos: [{}] },
+    { jugador: { posicion: 'D' }, puntosTotal: -2, partidos: [{}] },
+    { jugador: { posicion: 'D' }, puntosTotal: 3, partidos: [] },
+    { jugador: { posicion: 'F' }, puntosTotal: 5, partidos: [{}] },
+  ]);
+  assert.deepStrictEqual(r, { G: 7, D: 0.5, M: null, F: 5 });
 }
 
 function test_buildDuelContext_clasificacion_provisional_no_suma_al_total() {
@@ -103,7 +122,7 @@ function test_buildDuelContext_clasificacion_provisional_no_suma_al_total() {
 function test_calcDuelCategories_y_marcador() {
   const c = buildDuelContext('ana', 'bob', duelFixture());
   const cats = calcDuelCategories(c);
-  assert.strictEqual(cats.length, 28);
+  assert.strictEqual(cats.length, 32);
   const byKey = Object.fromEntries(cats.map(cat => [cat.key, cat]));
 
   assert.strictEqual(byKey.points_total.winner, 'right');
@@ -115,13 +134,17 @@ function test_calcDuelCategories_y_marcador() {
   assert.strictEqual(byKey.worst_rank.winner, 'right');
   assert.strictEqual(byKey.best_player.winner, 'right');
   assert.strictEqual(byKey.worst_player.winner, 'left');
+  assert.strictEqual(byKey.avg_gk.winner, 'left');
+  assert.strictEqual(byKey.avg_def.winner, 'right');
+  assert.strictEqual(byKey.avg_mid.winner, 'left');
+  assert.strictEqual(byKey.avg_fwd.winner, 'left');
   assert.strictEqual(byKey.biggest_win.winner, 'tie');
   assert.strictEqual(byKey.biggest_win.leftValue, '+10');
   assert.strictEqual(byKey.biggest_loss.winner, 'tie');
 
   const score = calcDuelScore(cats, c);
-  assert.strictEqual(score.leftWins + score.rightWins + score.na + cats.filter(x => x.winner === 'tie').length, 28);
-  assert.strictEqual(score.disputed, 28);
+  assert.strictEqual(score.leftWins + score.rightWins + score.na + cats.filter(x => x.winner === 'tie').length, 32);
+  assert.strictEqual(score.disputed, 32);
 }
 
 function test_calcDuelScore_desempate() {
@@ -171,6 +194,7 @@ function test_calcDuelCategories_na_y_peor_menos_malo() {
 }
 
 test_calcPlayerExtremes_ignora_jugadores_sin_partidos();
+test_calcPositionAverages_media_por_jugador();
 test_buildDuelContext_calcula_categorias_y_h2h();
 test_buildDuelContext_clasificacion_provisional_no_suma_al_total();
 test_calcDuelCategories_y_marcador();
