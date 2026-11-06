@@ -49,8 +49,8 @@ Cada categoría devuelve dos valores y un ganador (`left`, `right`, `tie`, `na`)
 | 5 | `points_total` | Puntos totales | Suma de las cuatro fuentes de puntos. | Mayor | entero | — |
 | 6 | `hits_1x2` | Aciertos 1X2 | Partidos en los que acertaste el resultado. | Mayor | entero | — |
 | 7 | `exact_scores` | Marcadores exactos | Partidos en los que acertaste el marcador completo. | Mayor | entero | — |
-| 8 | `best_match` | Mejor partido | Tu mayor puntuación en un solo partido. | Mayor | entero | Falta el mejor partido de alguno |
-| 9 | `worst_match` | Peor partido | Tu puntuación más baja; gana el que tenga la menos mala. | Mayor (min) | entero | Falta el peor partido de alguno |
+| 8 | `best_match` | Mejor partido | Tu mayor puntuación en un solo partido, sumando pronóstico y jugadores. | Mayor | entero | Falta el mejor partido de alguno |
+| 9 | `worst_match` | Peor partido | Tu puntuación más baja sumando pronóstico y jugadores; gana la menos mala. | Mayor (min) | entero | Falta el peor partido de alguno |
 | 10 | `best_jornada` | Mejor jornada | Tu mayor puntuación en una jornada completa. | Mayor | entero | No hay jornadas completas |
 | 11 | `worst_jornada` | Peor jornada | Tu jornada más baja; gana la menos mala. | Mayor (min) | entero | No hay jornadas completas |
 | 12 | `consistency` | Regularidad | Desviación de tus puntos por jornada; gana el más regular. | Menor σ | 1 decimal | Alguno tiene <2 jornadas |
@@ -75,7 +75,7 @@ Cada categoría devuelve dos valores y un ganador (`left`, `right`, `tie`, `na`)
 
 - **Puntos por fuente:** `split.prediction`, `split.squad`, `split.classification`, `split.eliminatorias`; total = suma.
 - **Aciertos/exactos/media:** `calcReliabilityRow` (`hits`, `exactScores`, `ptsPerMatch`).
-- **Mejor/peor partido:** `calcMatchExtremes` sobre los partidos del usuario.
+- **Mejor/peor partido:** `calcMatchExtremesCombined` suma los puntos de pronóstico y los puntos de los jugadores de la plantilla en cada partido de liga.
 - **Mejor/peor jornada:** máximo/mínimo de `leaguePoints[username]` (jornadas completas).
 - **Regularidad:** `calcConsistency(leaguePoints)`.
 - **Momentum:** `calcMomentum(leaguePoints)`.
@@ -198,7 +198,7 @@ Se reutilizan `splitByUser`, `leaguePoints`, `positionHistory`, `timesTopJornada
 ### 6.4 CSS y cache-busting
 
 - Nuevas clases: `.duel-fixed-header`, `.duel-users`, `.duel-score-*`, `.duel-progress*`, `.duel-cat-card`, `.duel-status`, `.duel-final`, `.scroll-fab`, `.score-plus`.
-- `index.html`: `js/stats.js?v=25` y `css/styles.css?v=139`.
+- `index.html`: `js/stats.js?v=26` y `css/styles.css?v=139`.
 
 ## 7. Tests
 

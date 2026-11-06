@@ -1,5 +1,5 @@
 const assert = require('assert');
-const { calcPlayerExtremes, buildDuelContext, calcDuelCategories, calcDuelScore } = require('../js/stats.js');
+const { calcPlayerExtremes, buildDuelContext, calcDuelCategories, calcDuelScore, calcMatchExtremesCombined } = require('../js/stats.js');
 
 function test_calcPlayerExtremes_ignora_jugadores_sin_partidos() {
   const r = calcPlayerExtremes([
@@ -164,3 +164,45 @@ test_calcDuelCategories_y_marcador();
 test_calcDuelScore_desempate();
 test_calcDuelCategories_na_y_peor_menos_malo();
 console.log('OK estadisticasDuelos T2');
+
+function test_calcMatchExtremesCombined_suma_pronostico_y_jugadores() {
+  const matchesById = {
+    1: { id: 1, fase: 'liga', fechaTs: 100, homeTeam: 'A', awayTeam: 'B' },
+    2: { id: 2, fase: 'liga', fechaTs: 200, homeTeam: 'C', awayTeam: 'D' },
+    3: { id: 3, fase: '16', fechaTs: 300, homeTeam: 'E', awayTeam: 'F' },
+  };
+  const playedMatches = [
+    { matchId: 1, home: 2, away: 1, result: 'H' },
+    { matchId: 2, home: 0, away: 0, result: 'D' },
+    { matchId: 3, home: 1, away: 0, result: 'H' },
+  ];
+  const userPoints = {
+    ana: { matchDetails: [
+      { match: matchesById[1], points: 8 },
+      { match: matchesById[2], points: 15 },
+      { match: matchesById[3], points: 0 },
+    ] },
+  };
+  const squadPoints = {
+    playerDetails: [
+      { jugador: { nombre: 'P1' }, partidos: [
+        { eventId: 1, puntos: 5 },
+        { eventId: 2, puntos: 1 },
+        { eventId: 3, puntos: 90 },
+      ] },
+    ],
+  };
+  const r = calcMatchExtremesCombined('ana', playedMatches, userPoints, squadPoints, matchesById);
+  assert.strictEqual(r.best.matchId, 2);
+  assert.strictEqual(r.best.points, 16);
+  assert.strictEqual(r.worst.matchId, 1);
+  assert.strictEqual(r.worst.points, 13);
+  assert.deepStrictEqual(
+    calcMatchExtremesCombined('ana', [], userPoints, squadPoints, matchesById),
+    { best: null, worst: null }
+  );
+}
+
+test_calcMatchExtremesCombined_suma_pronostico_y_jugadores();
+console.log('OK estadisticasDuelos T3');
+
