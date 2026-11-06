@@ -131,6 +131,42 @@ function test_calcMatchExtremes_sin_partidos() {
   assert.deepStrictEqual(calcMatchExtremes('ana', [], {}, {}, {}), { best: null, worst: null });
 }
 
+function test_calcMatchExtremes_excluye_fase_no_liga() {
+  const playedMatches = [
+    { matchId: 1, home: 2, away: 1, result: 'H' },
+    { matchId: 2, home: 0, away: 0, result: 'D' },
+    { matchId: 4, home: 3, away: 0, result: 'H' },
+  ];
+  const allPredictions = {
+    ana: { 1: { home: 2, away: 1 }, 2: { home: 0, away: 0 }, 4: { home: 3, away: 0 } },
+    bob: { 1: { home: 1, away: 0 }, 2: { home: 1, away: 1 }, 4: { home: 1, away: 2 } },
+  };
+  const userPoints = {
+    ana: { matchDetails: [
+      { match: { id: 1 }, points: 8 },
+      { match: { id: 2 }, points: 0 },
+      { match: { id: 4 }, points: 12 },
+    ] },
+    bob: { matchDetails: [
+      { match: { id: 1 }, points: 0 },
+      { match: { id: 2 }, points: 8 },
+      { match: { id: 4 }, points: 0 },
+    ] },
+  };
+  const matchesById = {
+    1: { id: 1, fase: 'liga', fechaTs: 100, homeTeam: 'A', awayTeam: 'B' },
+    2: { id: 2, fase: 'liga', fechaTs: 200, homeTeam: 'C', awayTeam: 'D' },
+    4: { id: 4, fase: '16', fechaTs: 50, homeTeam: 'G', awayTeam: 'H' },
+  };
+  const r = calcMatchExtremes('ana', playedMatches, allPredictions, userPoints, matchesById);
+  assert.strictEqual(r.best.matchId, 1);
+  assert.strictEqual(r.best.points, 8);
+  assert.strictEqual(r.best.sample, 2);
+  assert.strictEqual(r.worst.matchId, 2);
+  assert.strictEqual(r.worst.points, 0);
+  assert.strictEqual(r.worst.sample, 2);
+}
+
 function test_calcDataCoverage_parcial() {
   const matchStats = [
     { eventId: 1, stats: matchStatsById[1].stats },
@@ -180,6 +216,7 @@ function test_calcDataCoverage_completa() {
 
 test_calcMatchExtremes_media_y_empate_antiguo();
 test_calcMatchExtremes_sin_partidos();
+test_calcMatchExtremes_excluye_fase_no_liga();
 test_calcDataCoverage_parcial();
 test_calcDataCoverage_completa();
 console.log('OK estadisticasJugadorV2 T3');

@@ -570,6 +570,9 @@
       const pr = myPreds[pm.matchId];
       if (!pr || !Number.isFinite(pr.home) || !Number.isFinite(pr.away)) continue;
 
+      const match = matchesById?.[pm.matchId] || null;
+      if (match && match.fase && match.fase !== 'liga') continue;
+
       const points = pointsByUser.get(username)?.get(pm.matchId) || 0;
       let sum = 0;
       let sample = 0;
@@ -580,7 +583,6 @@
         sample++;
       }
       const avg = sample ? Math.round((sum / sample) * 10) / 10 : 0;
-      const match = matchesById?.[pm.matchId] || null;
       candidates.push({
         matchId: pm.matchId,
         match,
