@@ -37,8 +37,8 @@
     const src = series || [];
     const out = Array(13).fill(0);
     let prev = 0;
-    for (let p = 0; p < 13; p++) {
-      const cur = p < src.length ? Math.max(prev, src[p] || 0) : prev;
+    for (let p = 0; p < src.length && p < 13; p++) {
+      const cur = src[p] || 0;
       out[p] = cur - prev;
       prev = cur;
     }

@@ -8,23 +8,22 @@ const {
   buildEvolutionSeriesMap,
 } = require('../js/stats.js');
 
-function series13(values) {
-  const out = Array(13).fill(0);
-  for (let i = 0; i < values.length && i < 13; i++) out[i] = values[i];
-  return out;
+function series(values) {
+  return values.slice();
 }
 
 function test_toStagePoints_acumulado_a_etapa() {
-  const delta = toStagePoints(series13([8, 10, 10, 14]));
+  const delta = toStagePoints(series([8, 10, 10, 14]));
   assert.deepStrictEqual(delta.slice(0, 5), [8, 2, 0, 4, 0]);
   assert.deepStrictEqual(delta.slice(5), Array(8).fill(0));
+  assert.deepStrictEqual(toStagePoints([10, 8, 8]).slice(0, 4), [10, -2, 0, 0]);
 }
 
 function test_calcEvolutionPositions_empates_y_varias_etapas() {
   const map = new Map([
-    ['a', { series: series13([10, 20]), hasData: true }],
-    ['b', { series: series13([15, 15]), hasData: true }],
-    ['c', { series: series13([15, 0]), hasData: false }],
+    ['a', { series: series([10, 20]), hasData: true }],
+    ['b', { series: series([15, 15]), hasData: true }],
+    ['c', { series: series([15, 0]), hasData: false }],
   ]);
   const pos = calcEvolutionPositions(map);
   assert.deepStrictEqual(pos.get('a').series.slice(0, 2), [3, 1]);
@@ -55,11 +54,11 @@ function test_lastTimelinePoint_y_trim() {
 
 function test_buildEvolutionSeriesMap_puntos_y_posicion() {
   const source = new Map([
-    ['a', { series: series13([8, 10, 10]), hasData: true }],
+    ['a', { series: series([8, 10, 10]), hasData: true }],
   ]);
   const total = new Map([
-    ['a', { series: series13([8, 10, 10]), hasData: true }],
-    ['b', { series: series13([5, 12, 12]), hasData: true }],
+    ['a', { series: series([8, 10, 10]), hasData: true }],
+    ['b', { series: series([5, 12, 12]), hasData: true }],
   ]);
   assert.deepStrictEqual(
     buildEvolutionSeriesMap('puntos', 'acumulado', source, null).get('a').series.slice(0, 3),
