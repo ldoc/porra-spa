@@ -74,6 +74,8 @@ function test_buildDuelContext_calcula_categorias_y_h2h() {
   assert.strictEqual(c.played_league_count, 3);
   assert.strictEqual(c.left.points_total, 28);
   assert.strictEqual(c.right.points_total, 29);
+  assert.strictEqual(c.left.points_classification, 2);
+  assert.strictEqual(c.right.points_classification, 1);
   assert.strictEqual(c.left.best_jornada, 20);
   assert.strictEqual(c.left.worst_jornada, 5);
   assert.strictEqual(c.left.best_rank, 1);
@@ -86,6 +88,16 @@ function test_buildDuelContext_calcula_categorias_y_h2h() {
   assert.strictEqual(c.left.biggest_loss, -10);
   assert.strictEqual(c.right.biggest_win, 10);
   assert.strictEqual(c.right.biggest_loss, -10);
+}
+
+function test_buildDuelContext_clasificacion_provisional_no_suma_al_total() {
+  const f = duelFixture();
+  f.classificationProvisionalByUser = { ana: 30, bob: 10 };
+  const c = buildDuelContext('ana', 'bob', f);
+  assert.strictEqual(c.left.points_classification, 30);
+  assert.strictEqual(c.right.points_classification, 10);
+  assert.strictEqual(c.left.points_total, 28);
+  assert.strictEqual(c.right.points_total, 29);
 }
 
 function test_calcDuelCategories_y_marcador() {
@@ -160,6 +172,7 @@ function test_calcDuelCategories_na_y_peor_menos_malo() {
 
 test_calcPlayerExtremes_ignora_jugadores_sin_partidos();
 test_buildDuelContext_calcula_categorias_y_h2h();
+test_buildDuelContext_clasificacion_provisional_no_suma_al_total();
 test_calcDuelCategories_y_marcador();
 test_calcDuelScore_desempate();
 test_calcDuelCategories_na_y_peor_menos_malo();

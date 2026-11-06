@@ -44,7 +44,7 @@ Cada categoría devuelve dos valores y un ganador (`left`, `right`, `tie`, `na`)
 |---|---|---|---|---|---|---|
 | 1 | `points_prediction` | Puntos pronósticos | Puntos conseguidos con los marcadores de los partidos. | Mayor | entero | — |
 | 2 | `points_squad` | Puntos plantilla | Puntos de tu plantilla ideal. | Mayor | entero | — |
-| 3 | `points_classification` | Puntos clasificación | Puntos por acertar la clasificación final. | Mayor | entero | — |
+| 3 | `points_classification` | Puntos clasificación | Puntos por acertar la clasificación final; durante la liga se muestra el cálculo provisional. | Mayor | entero | — |
 | 4 | `points_eliminatorias` | Puntos eliminatorias | Puntos del cuadro de eliminatorias. | Mayor | entero | — |
 | 5 | `points_total` | Puntos totales | Suma de las cuatro fuentes de puntos. | Mayor | entero | — |
 | 6 | `hits_1x2` | Aciertos 1X2 | Partidos en los que acertaste el resultado. | Mayor | entero | — |
@@ -74,6 +74,7 @@ Cada categoría devuelve dos valores y un ganador (`left`, `right`, `tie`, `na`)
 ### 4.1 Detalles de cálculo
 
 - **Puntos por fuente:** `split.prediction`, `split.squad`, `split.classification`, `split.eliminatorias`; total = suma.
+- **Puntos clasificación:** usa `classificationProvisionalByUser`. Si la fase aún no cuenta clasificación, se calcula con la clasificación real actual y **no se suma a Puntos totales** hasta que la fase oficial lo active.
 - **Aciertos/exactos/media:** `calcReliabilityRow` (`hits`, `exactScores`, `ptsPerMatch`).
 - **Mejor/peor partido:** `calcMatchExtremesCombined` suma los puntos de pronóstico y los puntos de los jugadores de la plantilla en cada partido de liga.
 - **Mejor/peor jornada:** máximo/mínimo de `leaguePoints[username]` (jornadas completas).
@@ -173,6 +174,7 @@ calcDuelScore(categories, context)
 `buildStatsAggregates()` añade, solo si hay datos suficientes:
 
 ```javascript
+classificationProvisionalByUser: { [username]: number },
 reliabilityByUser: { [username]: reliabilityRow },
 exactStatsByUser: { [username]: exactStats },
 matchExtremesByUser: { [username]: { best, worst } },
@@ -198,7 +200,7 @@ Se reutilizan `splitByUser`, `leaguePoints`, `positionHistory`, `timesTopJornada
 ### 6.4 CSS y cache-busting
 
 - Nuevas clases: `.duel-fixed-header`, `.duel-users`, `.duel-score-*`, `.duel-progress*`, `.duel-cat-card`, `.duel-status`, `.duel-final`, `.scroll-fab`, `.score-plus`.
-- `index.html`: `js/stats.js?v=26` y `css/styles.css?v=139`.
+- `index.html`: `js/stats.js?v=27` y `css/styles.css?v=139`.
 
 ## 7. Tests
 

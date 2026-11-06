@@ -951,7 +951,7 @@
       return {
         points_prediction: split.prediction || 0,
         points_squad: split.squad || 0,
-        points_classification: split.classification || 0,
+        points_classification: a.classificationProvisionalByUser?.[username] ?? split.classification ?? 0,
         points_eliminatorias: split.eliminatorias || 0,
         points_total: (split.prediction || 0) + (split.squad || 0) + (split.classification || 0) + (split.eliminatorias || 0),
         hits_1x2: reliability.hits || 0,
@@ -1032,7 +1032,7 @@
   const DUEL_CATEGORIES = [
     { key: 'points_prediction', title: 'Puntos pronósticos', desc: 'Puntos conseguidos con los marcadores de los partidos.', direction: 'higher', format: 'int' },
     { key: 'points_squad', title: 'Puntos plantilla', desc: 'Puntos de tu plantilla ideal.', direction: 'higher', format: 'int' },
-    { key: 'points_classification', title: 'Puntos clasificación', desc: 'Puntos por acertar la clasificación final.', direction: 'higher', format: 'int' },
+    { key: 'points_classification', title: 'Puntos clasificación', desc: 'Puntos por acertar la clasificación final (provisional durante la liga).', direction: 'higher', format: 'int' },
     { key: 'points_eliminatorias', title: 'Puntos eliminatorias', desc: 'Puntos del cuadro de eliminatorias.', direction: 'higher', format: 'int' },
     { key: 'points_total', title: 'Puntos totales', desc: 'Suma de las cuatro fuentes de puntos.', direction: 'higher', format: 'int' },
     { key: 'hits_1x2', title: 'Aciertos 1X2', desc: 'Partidos en los que acertaste el resultado.', direction: 'higher', format: 'int' },
@@ -1952,6 +1952,12 @@
       splitByUser[p.name] = s;
       realPointsByUser[p.name] = s.prediction + s.squad + s.classification + s.eliminatorias;
     }
+    const classificationProvisionalByUser = {};
+    for (const name of playerNames) {
+      classificationProvisionalByUser[name] = isClassificationCounting()
+        ? (splitByUser[name]?.classification || 0)
+        : calculateClassificationPoints(name).totalPoints;
+    }
     return {
       reachedPhases: computeReachedPhases(AppState.matches, AppState.matchStats),
       matchesById,
@@ -1964,6 +1970,7 @@
       timesTopJornada: calcTimesTopJornada(league.pointsByUserByJornada),
       realPointsByUser,
       splitByUser,
+      classificationProvisionalByUser,
       coverage: calcDataCoverage(AppState.matches, AppState.matchStats, AppState.allPredictions, AppState.currentUser?.name),
       sourceRanks: calcSourceRanks(splitByUser, playerNames),
       styleByUser,
