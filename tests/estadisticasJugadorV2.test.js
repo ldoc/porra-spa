@@ -1,5 +1,5 @@
 const assert = require('assert');
-const { calcExactStats } = require('../js/stats.js');
+const { calcExactStats, calcSourceRanks } = require('../js/stats.js');
 
 const leagueMatches = [
   { id: 1, fase: 'liga', ronda: 1, fechaTs: 100, homeTeamId: 10, awayTeamId: 20 },
@@ -51,3 +51,38 @@ function test_calcExactStats_racha_actual_y_no_pronosticados() {
 test_calcExactStats_por_jornada_y_totales();
 test_calcExactStats_racha_actual_y_no_pronosticados();
 console.log('OK estadisticasJugadorV2 T1');
+
+function test_calcSourceRanks_empates_y_top_pct() {
+  const splitByUser = {
+    ana: { prediction: 10, squad: 5, classification: 0, eliminatorias: 0 },
+    bob: { prediction: 10, squad: 7, classification: 0, eliminatorias: 0 },
+    carol: { prediction: 3, squad: 7, classification: 0, eliminatorias: 0 },
+  };
+  const r = calcSourceRanks(splitByUser, ['ana', 'bob', 'carol']);
+  assert.strictEqual(r.ana.prediction.rank, 1);
+  assert.strictEqual(r.bob.prediction.rank, 1);
+  assert.strictEqual(r.carol.prediction.rank, 3);
+  assert.strictEqual(r.carol.prediction.topPct, 100);
+  assert.strictEqual(r.bob.squad.rank, 1);
+  assert.strictEqual(r.carol.squad.rank, 1);
+  assert.strictEqual(r.ana.squad.rank, 3);
+  assert.strictEqual(r.bob.total.rank, 1);
+  assert.strictEqual(r.ana.total.rank, 2);
+  assert.strictEqual(r.carol.total.rank, 3);
+  assert.strictEqual(r.ana.classification.hasData, false);
+  assert.strictEqual(r.ana.classification.rank, null);
+}
+
+function test_calcSourceRanks_total_desempate_oficial() {
+  const splitByUser = {
+    ana: { prediction: 10, squad: 0, classification: 0, eliminatorias: 0 },
+    bob: { prediction: 8, squad: 0, classification: 0, eliminatorias: 2 },
+  };
+  const r = calcSourceRanks(splitByUser, ['ana', 'bob']);
+  assert.strictEqual(r.bob.total.rank, 1);
+  assert.strictEqual(r.ana.total.rank, 2);
+}
+
+test_calcSourceRanks_empates_y_top_pct();
+test_calcSourceRanks_total_desempate_oficial();
+console.log('OK estadisticasJugadorV2 T2');

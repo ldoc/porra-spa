@@ -492,6 +492,67 @@
     };
   }
 
+  function calcSourceRanks(splitByUser, playerNames) {
+    const names = (playerNames || []).slice();
+    const n = names.length;
+    const sources = [
+      {
+        key: 'total',
+        get: (name) => {
+          const s = splitByUser?.[name] || {};
+          return (s.prediction || 0) + (s.squad || 0) + (s.classification || 0) + (s.eliminatorias || 0);
+        },
+      },
+      { key: 'prediction', get: (name) => splitByUser?.[name]?.prediction || 0 },
+      { key: 'squad', get: (name) => splitByUser?.[name]?.squad || 0 },
+      { key: 'classification', get: (name) => splitByUser?.[name]?.classification || 0 },
+      { key: 'eliminatorias', get: (name) => splitByUser?.[name]?.eliminatorias || 0 },
+    ];
+
+    const out = {};
+    for (const name of names) out[name] = {};
+
+    for (const source of sources) {
+      const values = names.map(name => source.get(name));
+      const hasData = values.some(value => value !== 0);
+      if (!hasData) {
+        for (const name of names) {
+          out[name][source.key] = {
+            value: source.get(name),
+            rank: null,
+            n,
+            topPct: null,
+            hasData: false,
+          };
+        }
+        continue;
+      }
+
+      for (const name of names) {
+        const mine = source.get(name);
+        let rank = 1;
+        for (const other of names) {
+          if (other === name) continue;
+          const otherValue = source.get(other);
+          if (source.key === 'total') {
+            if (compareIndividualRows(toClasificacionRow(splitByUser?.[other]), toClasificacionRow(splitByUser?.[name])) < 0) rank++;
+          } else if (otherValue > mine) {
+            rank++;
+          }
+        }
+        out[name][source.key] = {
+          value: mine,
+          rank,
+          n,
+          topPct: n ? Math.max(1, Math.round((rank / n) * 100)) : null,
+          hasData: true,
+        };
+      }
+    }
+
+    return out;
+  }
+
   function buildDonutSegments(parts) {
     const C = 2 * Math.PI * DONUT_RADIUS;
     const valid = (parts || []).filter(p => Number(p.value) > 0);
@@ -2088,6 +2149,7 @@
   global.calcMomentum = calcMomentum;
   global.calcConsistency = calcConsistency;
   global.calcExactStats = calcExactStats;
+  global.calcSourceRanks = calcSourceRanks;
   global.buildDonutSegments = buildDonutSegments;
   global.calcPredictionBias = calcPredictionBias;
   global.calcBestMatch = calcBestMatch;
@@ -2114,6 +2176,6 @@
   global.renderStatsContent = renderStatsContent;
   global.buildStatsAggregates = buildStatsAggregates;
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { emptySeries, buildTimeline, calcPredictionSeries, calcSquadSeries, calcClassificationSeries, calcEliminatoriasSeries, sumSeries, isLeagueComplete, getSeriesBySource, matchResultOf, toStagePoints, calcEvolutionPositions, calcEvolutionPositionsFromSplits, lastTimelinePoint, trimTimeline, buildEvolutionSeriesMap, buildAxisTicks, formatPointValue, buildPointTooltipText, EVO_METRIC_DEFAULT, EVO_MODE_DEFAULT, positionForMatch, extractPlayedMatches, calcReliabilityRow, buildCompletedLeagueData, calcStreaks, calcBestJornadas, calcUserBestJornada, calcPositionHistory, calcTimesTopJornada, calcMomentum, calcConsistency, calcExactStats, buildDonutSegments, calcPredictionBias, calcBestMatch, calcBestPlayersByPosition, calcMostProfitablePlayer, sourceSplitFromUserData, tallyChampions, finalPredictionTeamIds, compareQuadroWithCommunity, aggregateSquads, calcPronosticosPartidosStats, getTeamStatsForPreds, calcPredictedStandingsForPreds, calcClasificacionPronosticosStats, calcEliminatoriasPronosticosStats, calcPlantillaPronosticosExtras, renderPronosticosBody, renderPronosticosPartidosCard, renderPronosticosClasificacionCard, renderPronosticosEliminatoriasCard, renderPronosticosPlantillaCard, renderStatsContent, buildStatsAggregates, orderIndividualPlayers, individualOverallRank };
+    module.exports = { emptySeries, buildTimeline, calcPredictionSeries, calcSquadSeries, calcClassificationSeries, calcEliminatoriasSeries, sumSeries, isLeagueComplete, getSeriesBySource, matchResultOf, toStagePoints, calcEvolutionPositions, calcEvolutionPositionsFromSplits, lastTimelinePoint, trimTimeline, buildEvolutionSeriesMap, buildAxisTicks, formatPointValue, buildPointTooltipText, EVO_METRIC_DEFAULT, EVO_MODE_DEFAULT, positionForMatch, extractPlayedMatches, calcReliabilityRow, buildCompletedLeagueData, calcStreaks, calcBestJornadas, calcUserBestJornada, calcPositionHistory, calcTimesTopJornada, calcMomentum, calcConsistency, calcExactStats, calcSourceRanks, buildDonutSegments, calcPredictionBias, calcBestMatch, calcBestPlayersByPosition, calcMostProfitablePlayer, sourceSplitFromUserData, tallyChampions, finalPredictionTeamIds, compareQuadroWithCommunity, aggregateSquads, calcPronosticosPartidosStats, getTeamStatsForPreds, calcPredictedStandingsForPreds, calcClasificacionPronosticosStats, calcEliminatoriasPronosticosStats, calcPlantillaPronosticosExtras, renderPronosticosBody, renderPronosticosPartidosCard, renderPronosticosClasificacionCard, renderPronosticosEliminatoriasCard, renderPronosticosPlantillaCard, renderStatsContent, buildStatsAggregates, orderIndividualPlayers, individualOverallRank };
   }
 })(typeof window !== 'undefined' ? window : globalThis);
