@@ -748,6 +748,7 @@
       luckDelta: 0,
       luckPerMatch: null,
       luckLabel: null,
+      luckZ: null,
       robos: { count: 0, items: [] },
       faroles: { count: 0, items: [] },
       confidence: {
@@ -826,11 +827,6 @@
 
     if (out.analyzedMatches) {
       out.luckPerMatch = Math.round((out.luckDelta / out.analyzedMatches) * 10) / 10;
-      out.luckLabel = out.luckPerMatch >= 1
-        ? 'afortunado'
-        : out.luckPerMatch <= -1
-          ? 'desafortunado'
-          : 'neutro';
     }
 
     for (const key of ['majority', 'tight', 'minority']) {
@@ -840,6 +836,39 @@
     }
 
     return out;
+  }
+
+  function calcLuckLabels(styleByUser) {
+    const styles = Object.values(styleByUser || {})
+      .filter(style => style && style.analyzedMatches > 0 && Number.isFinite(style.luckPerMatch));
+    if (!styles.length) {
+      for (const style of Object.values(styleByUser || {})) {
+        if (style) {
+          style.luckLabel = null;
+          style.luckZ = null;
+        }
+      }
+      return styleByUser;
+    }
+
+    const values = styles.map(style => style.luckPerMatch);
+    const mean = values.reduce((a, b) => a + b, 0) / values.length;
+    const variance = values.reduce((a, b) => a + (b - mean) ** 2, 0) / values.length;
+    const sd = Math.sqrt(variance);
+
+    for (const style of Object.values(styleByUser || {})) {
+      if (!style) continue;
+      if (!style.analyzedMatches || !Number.isFinite(style.luckPerMatch) || !sd) {
+        style.luckLabel = null;
+        style.luckZ = null;
+        continue;
+      }
+      const z = (style.luckPerMatch - mean) / sd;
+      style.luckZ = Math.round(z * 10) / 10;
+      style.luckLabel = z >= 1 ? 'afortunado' : z <= -1 ? 'desafortunado' : 'neutro';
+    }
+
+    return styleByUser;
   }
 
   function buildDonutSegments(parts) {
@@ -1609,6 +1638,12 @@
     const matchStatsById = {};
     for (const ms of AppState.matchStats || []) matchStatsById[ms.eventId] = ms;
     const playedMatches = extractPlayedMatches(AppState.matches, matchStatsById);
+    const playerNames = statsPlayers().map(p => p.name);
+    const styleByUser = {};
+    for (const name of playerNames) {
+      styleByUser[name] = calcStyleStats(name, playedMatches, AppState.allPredictions, AppState.userPoints, matchesById, playerNames);
+    }
+    calcLuckLabels(styleByUser);
     const detailsByUser = {};
     for (const p of statsPlayers()) {
       detailsByUser[p.name] = AppState.userPoints[p.name]?.matchDetails || [];
@@ -1639,7 +1674,8 @@
       realPointsByUser,
       splitByUser,
       coverage: calcDataCoverage(AppState.matches, AppState.matchStats, AppState.allPredictions, AppState.currentUser?.name),
-      sourceRanks: calcSourceRanks(splitByUser, statsPlayers().map(p => p.name)),
+      sourceRanks: calcSourceRanks(splitByUser, playerNames),
+      styleByUser,
       bestJornadas: calcBestJornadas(league.pointsByUserByJornada, 5),
       championsTally: tallyChampions(statsFilterMap(AppState.finalPredictionsCache)),
       quadro: compareQuadroWithCommunity(AppState.currentUser?.name, statsFilterMap(AppState.finalPredictionsCache)),
@@ -2178,6 +2214,8 @@
     const expectedPct = Math.round((style.expectedPoints / max) * 100);
     const sign = style.luckDelta > 0 ? '+' : '';
     const perSign = style.luckPerMatch > 0 ? '+' : '';
+    const zSign = style.luckZ > 0 ? '+' : '';
+    const zText = style.luckZ === null ? '' : ` (z ${zSign}${style.luckZ})`;
     return `
       <div class="stats-card">
         <div class="stats-card-title">🍀 Suerte vs habilidad</div>
@@ -2192,8 +2230,9 @@
           <div class="stats-luck-row"><span class="stats-luck-lbl">Real</span><div class="stats-luck-bar"><div style="width:${actualPct}%"></div></div><span class="stats-luck-val">${style.actualPoints}</span></div>
           <div class="stats-luck-row"><span class="stats-luck-lbl">Esperado</span><div class="stats-luck-bar expected"><div style="width:${expectedPct}%"></div></div><span class="stats-luck-val">${style.expectedPoints}</span></div>
         </div>
-        <div class="stats-rank-sub" style="white-space:normal;margin-top:8px">${luckLabelHtml(style.luckLabel)} Suerte/partido: ${style.luckPerMatch === null ? '—' : perSign + style.luckPerMatch} · ${style.excludedLowSample} partidos excluidos por muestra &lt;5.</div>
+        <div class="stats-rank-sub" style="white-space:normal;margin-top:8px">${luckLabelHtml(style.luckLabel)} Suerte/partido: ${style.luckPerMatch === null ? '—' : perSign + style.luckPerMatch}${zText} · ${style.excludedLowSample} partidos excluidos por muestra &lt;5.</div>
         <div class="stats-rank-sub" style="white-space:normal;margin-top:6px">Suerte neta = puntos reales − esperados. El esperado combina resultado (8), goles de cada equipo (3+3) y marcador exacto (1). Solo partidos con al menos 5 pronósticos de otros usuarios.</div>
+        <div class="stats-rank-sub" style="white-space:normal;margin-top:6px">La etiqueta es relativa a la porra: afortunado = tu suerte/partido está al menos 1 desviación típica por encima de la media del grupo; desafortunado = al menos 1 por debajo.</div>
       </div>`;
   }
 
@@ -2424,7 +2463,7 @@
       </div>`;
     }
 
-    const styleStats = calcStyleStats(
+    const styleStats = aggregates.styleByUser?.[username] || calcStyleStats(
       username,
       aggregates.playedMatches,
       AppState.allPredictions,
@@ -2668,6 +2707,7 @@
   global.buildMatchConsensus = buildMatchConsensus;
   global.expectedPointsForPrediction = expectedPointsForPrediction;
   global.calcStyleStats = calcStyleStats;
+  global.calcLuckLabels = calcLuckLabels;
   global.buildDonutSegments = buildDonutSegments;
   global.calcPredictionBias = calcPredictionBias;
   global.calcBestMatch = calcBestMatch;
@@ -2694,6 +2734,6 @@
   global.renderStatsContent = renderStatsContent;
   global.buildStatsAggregates = buildStatsAggregates;
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { emptySeries, buildTimeline, calcPredictionSeries, calcSquadSeries, calcClassificationSeries, calcEliminatoriasSeries, sumSeries, isLeagueComplete, getSeriesBySource, matchResultOf, toStagePoints, calcEvolutionPositions, calcEvolutionPositionsFromSplits, lastTimelinePoint, trimTimeline, buildEvolutionSeriesMap, buildAxisTicks, formatPointValue, buildPointTooltipText, EVO_METRIC_DEFAULT, EVO_MODE_DEFAULT, positionForMatch, extractPlayedMatches, calcReliabilityRow, buildCompletedLeagueData, calcStreaks, calcBestJornadas, calcUserBestJornada, calcPositionHistory, calcTimesTopJornada, calcMomentum, calcConsistency, calcExactStats, calcSourceRanks, calcMatchExtremes, calcDataCoverage, buildMatchConsensus, expectedPointsForPrediction, calcStyleStats, buildDonutSegments, calcPredictionBias, calcBestMatch, calcBestPlayersByPosition, calcMostProfitablePlayer, sourceSplitFromUserData, tallyChampions, finalPredictionTeamIds, compareQuadroWithCommunity, aggregateSquads, calcPronosticosPartidosStats, getTeamStatsForPreds, calcPredictedStandingsForPreds, calcClasificacionPronosticosStats, calcEliminatoriasPronosticosStats, calcPlantillaPronosticosExtras, renderPronosticosBody, renderPronosticosPartidosCard, renderPronosticosClasificacionCard, renderPronosticosEliminatoriasCard, renderPronosticosPlantillaCard, renderStatsContent, buildStatsAggregates, orderIndividualPlayers, individualOverallRank };
+    module.exports = { emptySeries, buildTimeline, calcPredictionSeries, calcSquadSeries, calcClassificationSeries, calcEliminatoriasSeries, sumSeries, isLeagueComplete, getSeriesBySource, matchResultOf, toStagePoints, calcEvolutionPositions, calcEvolutionPositionsFromSplits, lastTimelinePoint, trimTimeline, buildEvolutionSeriesMap, buildAxisTicks, formatPointValue, buildPointTooltipText, EVO_METRIC_DEFAULT, EVO_MODE_DEFAULT, positionForMatch, extractPlayedMatches, calcReliabilityRow, buildCompletedLeagueData, calcStreaks, calcBestJornadas, calcUserBestJornada, calcPositionHistory, calcTimesTopJornada, calcMomentum, calcConsistency, calcExactStats, calcSourceRanks, calcMatchExtremes, calcDataCoverage, buildMatchConsensus, expectedPointsForPrediction, calcStyleStats, calcLuckLabels, buildDonutSegments, calcPredictionBias, calcBestMatch, calcBestPlayersByPosition, calcMostProfitablePlayer, sourceSplitFromUserData, tallyChampions, finalPredictionTeamIds, compareQuadroWithCommunity, aggregateSquads, calcPronosticosPartidosStats, getTeamStatsForPreds, calcPredictedStandingsForPreds, calcClasificacionPronosticosStats, calcEliminatoriasPronosticosStats, calcPlantillaPronosticosExtras, renderPronosticosBody, renderPronosticosPartidosCard, renderPronosticosClasificacionCard, renderPronosticosEliminatoriasCard, renderPronosticosPlantillaCard, renderStatsContent, buildStatsAggregates, orderIndividualPlayers, individualOverallRank };
   }
 })(typeof window !== 'undefined' ? window : globalThis);

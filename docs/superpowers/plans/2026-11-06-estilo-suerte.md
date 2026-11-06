@@ -8,6 +8,8 @@
 
 **Tech Stack:** JavaScript Vanilla ES6+ (IIFE), Node `assert`, CSS vanilla con variables existentes.
 
+> **Actualización 2026-11-06:** la etiqueta final de suerte es relativa a la porra (`z ≥ +1σ` afortunado, `z ≤ −1σ` desafortunado), calculada por `calcLuckLabels`. El cache-busting final es `js/stats.js?v=23`. El resto del plan se mantiene como registro histórico.
+
 ## Global Constraints
 
 - Solo liga (`match.fase === 'liga'`) y partidos con resultado.

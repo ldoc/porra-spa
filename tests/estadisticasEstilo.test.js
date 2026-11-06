@@ -1,5 +1,5 @@
 const assert = require('assert');
-const { buildMatchConsensus, expectedPointsForPrediction, calcStyleStats } = require('../js/stats.js');
+const { buildMatchConsensus, expectedPointsForPrediction, calcStyleStats, calcLuckLabels } = require('../js/stats.js');
 
 function test_expectedPointsForPrediction_desglose_completo() {
   const consensus = {
@@ -91,7 +91,8 @@ function test_calcStyleStats_suerte_robos_faroles_y_confianza() {
   assert.strictEqual(r.expectedPoints, 13.8);
   assert.strictEqual(r.luckDelta, 19.2);
   assert.strictEqual(r.luckPerMatch, 6.4);
-  assert.strictEqual(r.luckLabel, 'afortunado');
+  assert.strictEqual(r.luckLabel, null);
+  assert.strictEqual(r.luckZ, null);
   assert.strictEqual(r.robos.count, 1);
   assert.strictEqual(r.robos.items[0].matchId, 10);
   assert.strictEqual(r.robos.items[0].supportPct, 0);
@@ -114,9 +115,36 @@ function test_calcStyleStats_sin_partidos_analizables() {
   assert.deepStrictEqual(r.confidence.majority, { matches: 0, hits: 0, hitPct: 0, exacts: 0, exactPct: 0 });
 }
 
+function test_calcLuckLabels_relativa_al_grupo() {
+  const styles = {
+    a: { analyzedMatches: 10, luckPerMatch: 2 },
+    b: { analyzedMatches: 10, luckPerMatch: 1 },
+    c: { analyzedMatches: 10, luckPerMatch: 0 },
+    d: { analyzedMatches: 10, luckPerMatch: -1 },
+    e: { analyzedMatches: 10, luckPerMatch: -2 },
+  };
+  calcLuckLabels(styles);
+  assert.strictEqual(styles.a.luckLabel, 'afortunado');
+  assert.strictEqual(styles.a.luckZ, 1.4);
+  assert.strictEqual(styles.b.luckLabel, 'neutro');
+  assert.strictEqual(styles.c.luckLabel, 'neutro');
+  assert.strictEqual(styles.d.luckLabel, 'neutro');
+  assert.strictEqual(styles.e.luckLabel, 'desafortunado');
+  assert.strictEqual(styles.e.luckZ, -1.4);
+}
+
+function test_calcLuckLabels_sin_datos() {
+  const styles = { a: { analyzedMatches: 0, luckPerMatch: null } };
+  calcLuckLabels(styles);
+  assert.strictEqual(styles.a.luckLabel, null);
+  assert.strictEqual(styles.a.luckZ, null);
+}
+
 test_expectedPointsForPrediction_desglose_completo();
 test_buildMatchConsensus_excluye_usuario_y_desempata();
 console.log('OK estadisticasEstilo T1');
 test_calcStyleStats_suerte_robos_faroles_y_confianza();
 test_calcStyleStats_sin_partidos_analizables();
+test_calcLuckLabels_relativa_al_grupo();
+test_calcLuckLabels_sin_datos();
 console.log('OK estadisticasEstilo T2');

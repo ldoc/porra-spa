@@ -72,11 +72,12 @@ esperado = 8·P(resultado)
 - `puntos esperados` = suma de los esperados de esos partidos.
 - `suerte neta = reales − esperados`.
 - `suerte/partido = suerte neta / partidos analizados`.
-- Etiqueta:
-  - `suerte/partido ≥ +1` → `afortunado`.
-  - `suerte/partido ≤ −1` → `desafortunado`.
-  - resto → `neutro`.
-  - Sin partidos analizados → `null`.
+- La etiqueta es **relativa a la porra**, porque el modelo de esperados tiene un sesgo optimista:
+  - `media` = media de `suerte/partido` de los jugadores con partidos analizados.
+  - `desviación típica` = desviación poblacional de esos valores.
+  - `z = (suerte/partido − media) / desviación típica`.
+  - `afortunado` si `z ≥ +1`; `desafortunado` si `z ≤ −1`; `neutro` en el resto.
+  - Sin partidos analizados o sin desviación → `null`.
 
 ### 3.5 Robos y faroles
 
@@ -125,6 +126,8 @@ Contenido:
 - Dos barras comparativas real vs esperado, escaladas al máximo de ambas.
 - Pill: `afortunado` / `neutro` / `desafortunado`.
 - Nota: `Suerte neta = puntos reales − esperados. El esperado combina resultado (8), goles de cada equipo (3+3) y marcador exacto (1). Solo partidos con al menos 5 pronósticos de otros usuarios.`
+- Nota: `La etiqueta es relativa a la porra: afortunado = tu suerte/partido está al menos 1 desviación típica por encima de la media del grupo; desafortunado = al menos 1 por debajo.`
+- La línea de `Suerte/partido` muestra también el valor `z` redondeado a 1 decimal.
 - Empty: `Aún no hay partidos con muestra suficiente: necesitamos al menos 5 pronósticos de otros usuarios por partido.`
 
 ### 4.2 🎭 Robos y faroles
@@ -183,12 +186,16 @@ expectedPointsForPrediction(prediction, consensus)
 
 // {
 //   analyzedMatches, excludedLowSample,
-//   actualPoints, expectedPoints, luckDelta, luckPerMatch, luckLabel,
+//   actualPoints, expectedPoints, luckDelta, luckPerMatch,
 //   robos: { count, items: [...] },
 //   faroles: { count, items: [...] },
 //   confidence: { majority, tight, minority }
 // }
 calcStyleStats(username, playedMatches, allPredictions, userPoints, matchesById, playerNames)
+
+// Asigna luckLabel y luckZ a cada estilo según la media y σ del grupo.
+// Mutá y devuelve el mismo objeto { [username]: style }.
+calcLuckLabels(styleByUser)
 ```
 
 Cada item de robos/faroles:
@@ -205,15 +212,15 @@ Cada grupo de confianza:
 
 ### 5.2 Integración
 
-- `renderIndividualBody` calcula `styleStats` solo para el usuario seleccionado, usando `statsPlayers().map(p => p.name)` y `AppState.allPredictions`.
+- `buildStatsAggregates` calcula `styleByUser` para todos los jugadores de `statsPlayers()` y aplica `calcLuckLabels` una vez por render.
+- `renderIndividualBody` lee `aggregates.styleByUser[username]` (con fallback a `calcStyleStats` si faltara).
 - Nuevos renderers: `renderLuckCard`, `renderRobosFarolesCard`, `renderConfidenceCard`.
 - Se insertan en el `return` de `renderIndividualBody` después de `sesgoCard` y antes de `plantillaCard`.
-- No se añaden agregados globales: el cálculo es por usuario y barato (una pasada sobre partidos jugados).
 
 ### 5.3 CSS y cache-busting
 
 - Nuevas clases: `.stats-luck-*`, `.stats-style-*`, `.stats-conf-*`.
-- `index.html`: `js/stats.js?v=22` y `css/styles.css?v=137`.
+- `index.html`: `js/stats.js?v=23` y `css/styles.css?v=137`.
 
 ## 6. Tests
 
@@ -230,6 +237,7 @@ Casos mínimos:
 7. Solo liga: partidos de eliminatorias ignorados.
 8. Sin partidos analizables: contadores a 0, `luckLabel = null`, confianza a cero.
 9. Invitados excluidos por la lista de nombres recibida.
+10. `calcLuckLabels` etiqueta por `z` relativo (`±1σ`) y devuelve `null` sin datos.
 
 Regresión: `estadisticasJugadorV2`, `estadisticas`, `estadisticas-subtabs`, `estadisticasEvolucion`, `estadisticasIndividualDesempate`.
 
@@ -246,6 +254,7 @@ Regresión: `estadisticasJugadorV2`, `estadisticas`, `estadisticas-subtabs`, `es
 - Los puntos esperados cuadran con la fórmula 8+3+3+1 y excluyen al propio usuario.
 - Robos y faroles respetan las definiciones y la muestra mínima de 5.
 - La confianza agrupa correctamente por apoyo y muestra `—` cuando no hay datos.
+- La etiqueta de suerte es relativa a la porra (`±1σ`) y no un umbral absoluto.
 - Cero cambios de API y cero regresiones.
 
 ## 9. Riesgos y decisiones
@@ -254,3 +263,4 @@ Regresión: `estadisticasJugadorV2`, `estadisticas`, `estadisticas-subtabs`, `es
 - **Exacto disperso:** el componente exacto solo aporta 1 punto; su impacto en el esperado es limitado.
 - **Crecimiento de `stats.js`:** se añade un bloque delimitado y funciones puras exportadas; la modularización queda fuera de alcance.
 - **Confianza:** se mide el apoyo de la porra al pick, no la seguridad subjetiva del usuario; el microcopy lo aclara.
+- **Etiqueta relativa:** el modelo de esperados tiene sesgo optimista, por eso la etiqueta se centra en la media del grupo y usa `±1σ` en lugar de un umbral absoluto.
