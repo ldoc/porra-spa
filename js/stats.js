@@ -664,6 +664,69 @@
     };
   }
 
+  function buildMatchConsensus(allPredictions, playerNames, excludeUsername) {
+    const names = (playerNames || []).filter(name => name !== excludeUsername);
+    const byMatch = new Map();
+
+    for (const name of names) {
+      const preds = allPredictions?.[name] || {};
+      for (const [matchId, pred] of Object.entries(preds)) {
+        if (!pred || !Number.isFinite(pred.home) || !Number.isFinite(pred.away)) continue;
+        const key = String(matchId);
+        if (!byMatch.has(key)) {
+          byMatch.set(key, {
+            total: 0,
+            counts: { H: 0, D: 0, A: 0 },
+            pct: { H: 0, D: 0, A: 0 },
+            scoreCounts: new Map(),
+            homeGoalCounts: new Map(),
+            awayGoalCounts: new Map(),
+            plurality: null,
+          });
+        }
+        const entry = byMatch.get(key);
+        const result = matchResultOf(pred.home, pred.away);
+        const scoreKey = `${pred.home}-${pred.away}`;
+        entry.total++;
+        entry.counts[result]++;
+        entry.scoreCounts.set(scoreKey, (entry.scoreCounts.get(scoreKey) || 0) + 1);
+        entry.homeGoalCounts.set(pred.home, (entry.homeGoalCounts.get(pred.home) || 0) + 1);
+        entry.awayGoalCounts.set(pred.away, (entry.awayGoalCounts.get(pred.away) || 0) + 1);
+      }
+    }
+
+    for (const entry of byMatch.values()) {
+      if (!entry.total) continue;
+      entry.pct = {
+        H: Math.round((entry.counts.H / entry.total) * 100),
+        D: Math.round((entry.counts.D / entry.total) * 100),
+        A: Math.round((entry.counts.A / entry.total) * 100),
+      };
+      entry.plurality = ['H', 'D', 'A'].reduce((best, key) => {
+        if (best === null) return key;
+        return entry.counts[key] > entry.counts[best] ? key : best;
+      }, null);
+    }
+
+    return byMatch;
+  }
+
+  function expectedPointsForPrediction(prediction, consensus) {
+    if (!prediction || !Number.isFinite(prediction.home) || !Number.isFinite(prediction.away)) return 0;
+    if (!consensus || !consensus.total) return 0;
+
+    const total = consensus.total;
+    const result = matchResultOf(prediction.home, prediction.away);
+    const scoreKey = `${prediction.home}-${prediction.away}`;
+    const expected =
+      8 * ((consensus.counts?.[result] || 0) / total) +
+      3 * ((consensus.homeGoalCounts?.get(prediction.home) || 0) / total) +
+      3 * ((consensus.awayGoalCounts?.get(prediction.away) || 0) / total) +
+      1 * ((consensus.scoreCounts?.get(scoreKey) || 0) / total);
+
+    return Math.round(expected * 100) / 100;
+  }
+
   function buildDonutSegments(parts) {
     const C = 2 * Math.PI * DONUT_RADIUS;
     const valid = (parts || []).filter(p => Number(p.value) > 0);
@@ -2363,6 +2426,8 @@
   global.calcSourceRanks = calcSourceRanks;
   global.calcMatchExtremes = calcMatchExtremes;
   global.calcDataCoverage = calcDataCoverage;
+  global.buildMatchConsensus = buildMatchConsensus;
+  global.expectedPointsForPrediction = expectedPointsForPrediction;
   global.buildDonutSegments = buildDonutSegments;
   global.calcPredictionBias = calcPredictionBias;
   global.calcBestMatch = calcBestMatch;
@@ -2389,6 +2454,6 @@
   global.renderStatsContent = renderStatsContent;
   global.buildStatsAggregates = buildStatsAggregates;
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { emptySeries, buildTimeline, calcPredictionSeries, calcSquadSeries, calcClassificationSeries, calcEliminatoriasSeries, sumSeries, isLeagueComplete, getSeriesBySource, matchResultOf, toStagePoints, calcEvolutionPositions, calcEvolutionPositionsFromSplits, lastTimelinePoint, trimTimeline, buildEvolutionSeriesMap, buildAxisTicks, formatPointValue, buildPointTooltipText, EVO_METRIC_DEFAULT, EVO_MODE_DEFAULT, positionForMatch, extractPlayedMatches, calcReliabilityRow, buildCompletedLeagueData, calcStreaks, calcBestJornadas, calcUserBestJornada, calcPositionHistory, calcTimesTopJornada, calcMomentum, calcConsistency, calcExactStats, calcSourceRanks, calcMatchExtremes, calcDataCoverage, buildDonutSegments, calcPredictionBias, calcBestMatch, calcBestPlayersByPosition, calcMostProfitablePlayer, sourceSplitFromUserData, tallyChampions, finalPredictionTeamIds, compareQuadroWithCommunity, aggregateSquads, calcPronosticosPartidosStats, getTeamStatsForPreds, calcPredictedStandingsForPreds, calcClasificacionPronosticosStats, calcEliminatoriasPronosticosStats, calcPlantillaPronosticosExtras, renderPronosticosBody, renderPronosticosPartidosCard, renderPronosticosClasificacionCard, renderPronosticosEliminatoriasCard, renderPronosticosPlantillaCard, renderStatsContent, buildStatsAggregates, orderIndividualPlayers, individualOverallRank };
+    module.exports = { emptySeries, buildTimeline, calcPredictionSeries, calcSquadSeries, calcClassificationSeries, calcEliminatoriasSeries, sumSeries, isLeagueComplete, getSeriesBySource, matchResultOf, toStagePoints, calcEvolutionPositions, calcEvolutionPositionsFromSplits, lastTimelinePoint, trimTimeline, buildEvolutionSeriesMap, buildAxisTicks, formatPointValue, buildPointTooltipText, EVO_METRIC_DEFAULT, EVO_MODE_DEFAULT, positionForMatch, extractPlayedMatches, calcReliabilityRow, buildCompletedLeagueData, calcStreaks, calcBestJornadas, calcUserBestJornada, calcPositionHistory, calcTimesTopJornada, calcMomentum, calcConsistency, calcExactStats, calcSourceRanks, calcMatchExtremes, calcDataCoverage, buildMatchConsensus, expectedPointsForPrediction, buildDonutSegments, calcPredictionBias, calcBestMatch, calcBestPlayersByPosition, calcMostProfitablePlayer, sourceSplitFromUserData, tallyChampions, finalPredictionTeamIds, compareQuadroWithCommunity, aggregateSquads, calcPronosticosPartidosStats, getTeamStatsForPreds, calcPredictedStandingsForPreds, calcClasificacionPronosticosStats, calcEliminatoriasPronosticosStats, calcPlantillaPronosticosExtras, renderPronosticosBody, renderPronosticosPartidosCard, renderPronosticosClasificacionCard, renderPronosticosEliminatoriasCard, renderPronosticosPlantillaCard, renderStatsContent, buildStatsAggregates, orderIndividualPlayers, individualOverallRank };
   }
 })(typeof window !== 'undefined' ? window : globalThis);
