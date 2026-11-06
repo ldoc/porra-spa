@@ -1858,6 +1858,7 @@
     const matchStatsById = {};
     for (const ms of AppState.matchStats || []) matchStatsById[ms.eventId] = ms;
     const playedMatches = extractPlayedMatches(AppState.matches, matchStatsById);
+    const leaguePlayedMatches = playedMatches.filter(pm => matchesById?.[pm.matchId]?.fase === 'liga');
     const playerNames = statsPlayers().map(p => p.name);
     const styleByUser = {};
     for (const name of playerNames) {
@@ -1872,7 +1873,7 @@
     const filteredPredictions = statsFilterMap(AppState.allPredictions);
 
     for (const name of playerNames) {
-      reliabilityByUser[name] = calcReliabilityRow(name, playedMatches, AppState.allPredictions, AppState.userPoints);
+      reliabilityByUser[name] = calcReliabilityRow(name, leaguePlayedMatches, AppState.allPredictions, AppState.userPoints);
       exactStatsByUser[name] = calcExactStats(name, AppState.leagueMatches, matchStatsById, AppState.allPredictions);
       matchExtremesByUser[name] = calcMatchExtremes(name, playedMatches, filteredPredictions, AppState.userPoints, matchesById);
       const details = getCachedUserData(name).squadPoints?.playerDetails || [];
@@ -2598,7 +2599,8 @@
     if (!AppState.allPredictions?.[leftUser] || !AppState.allPredictions?.[rightUser]) {
       return wrap('<div class="duel-msg">Este duelo estará disponible cuando se publiquen los pronósticos.</div>');
     }
-    if (!aggregates.playedMatches?.length) return wrap('<div class="duel-msg">Aún no hay partidos con resultado.</div>');
+    const leaguePlayedMatches = (aggregates.playedMatches || []).filter(pm => aggregates.matchesById?.[pm.matchId]?.fase === 'liga');
+    if (!leaguePlayedMatches.length) return wrap('<div class="duel-msg">Aún no hay partidos con resultado.</div>');
 
     const context = buildDuelContext(leftUser, rightUser, aggregates);
     const categories = calcDuelCategories(context);
@@ -2630,7 +2632,7 @@
       <div class="duel-scroll-hint"><span class="arrow">↓</span><span><b>Desliza para empezar.</b> Las cajas están bloqueadas hasta que hagas scroll; al pasar por cada una se ilumina, marca al ganador y suma su punto arriba.</span></div>
       <div class="duel-legend"><span>+1 por categoría</span><span>Empate = 0</span><span>Sin datos = no disputada</span></div>
       <div class="duel-cat-list">${cards}</div>
-      <div class="duel-final" id="duel-final">
+      <div class="duel-final" id="duel-final" aria-hidden="true">
         <div class="duel-final-title">${winnerText}</div>
         <div class="duel-final-score">${score.leftWins} – ${score.rightWins} · ${score.disputed} categorías disputadas${tieText}</div>
         <button id="duel-reset" type="button">Repetir duelo</button>
@@ -2827,6 +2829,8 @@
   let duelScrollRoot = null;
   let duelScrollHandler = null;
   let duelObserver = null;
+  let duelCelebrationRaf = 0;
+  let duelCelebrationToken = 0;
 
   function bindDuelEvents() {
     if (duelScrollHandler && duelScrollRoot) {
@@ -2837,6 +2841,11 @@
       duelObserver.disconnect();
       duelObserver = null;
     }
+    if (duelCelebrationRaf) {
+      cancelAnimationFrame(duelCelebrationRaf);
+      duelCelebrationRaf = 0;
+    }
+    duelCelebrationToken++;
 
     const root = document.getElementById('duel-root');
     if (!root) return;
@@ -2882,6 +2891,7 @@
     const scores = { left: 0, right: 0 };
     let revealedCount = 0;
     let started = false;
+    let suppressStart = false;
 
     const getScrollTop = () => scrollRoot === window ? window.scrollY : scrollRoot.scrollTop;
 
@@ -2954,11 +2964,13 @@
 
     const finish = () => {
       finalBox.classList.add('show');
+      finalBox.setAttribute('aria-hidden', 'false');
       const winner = root.dataset.winner;
       if (winner !== 'draw' && !reduceMotion) launchCelebration(winner === 'left' ? 0.28 : 0.72);
     };
 
     const startOnScroll = () => {
+      if (suppressStart) return;
       if (started) return;
       if (getScrollTop() > 6) {
         started = true;
@@ -2982,6 +2994,7 @@
     };
 
     const reset = () => {
+      suppressStart = true;
       for (const card of cards) {
         card.dataset.revealed = '0';
         card.classList.add('locked');
@@ -3000,12 +3013,28 @@
       scores.right = 0;
       revealedCount = 0;
       started = false;
+      if (duelCelebrationRaf) {
+        cancelAnimationFrame(duelCelebrationRaf);
+        duelCelebrationRaf = 0;
+      }
+      duelCelebrationToken++;
       finalBox.classList.remove('show');
+      finalBox.setAttribute('aria-hidden', 'true');
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       updateScore();
       if (duelObserver) duelObserver.disconnect();
-      if (scrollRoot === window) window.scrollTo({ top: 0, behavior: 'auto' });
-      else scrollRoot.scrollTo({ top: 0, behavior: 'auto' });
+      if (scrollRoot === window) {
+        const previousBehavior = document.documentElement.style.scrollBehavior;
+        document.documentElement.style.scrollBehavior = 'auto';
+        window.scrollTo(0, 0);
+        document.documentElement.style.scrollBehavior = previousBehavior;
+      } else {
+        const previousBehavior = scrollRoot.style.scrollBehavior;
+        scrollRoot.style.scrollBehavior = 'auto';
+        scrollRoot.scrollTop = 0;
+        scrollRoot.style.scrollBehavior = previousBehavior;
+      }
+      setTimeout(() => { suppressStart = false; }, 120);
     };
 
     const launchCelebration = (sideRatio) => {
@@ -3057,7 +3086,12 @@
         }
       }
       const start = performance.now();
+      const token = ++duelCelebrationToken;
       const frame = (now) => {
+        if (token !== duelCelebrationToken) {
+          ctx.clearRect(0, 0, W, H);
+          return;
+        }
         ctx.clearRect(0, 0, W, H);
         for (const p of particles) {
           p.vy += p.g;
@@ -3081,10 +3115,14 @@
         }
         ctx.globalAlpha = 1;
         ctx.shadowBlur = 0;
-        if (particles.some(p => p.life > 0) && now - start < 5200) requestAnimationFrame(frame);
-        else ctx.clearRect(0, 0, W, H);
+        if (particles.some(p => p.life > 0) && now - start < 5200) {
+          duelCelebrationRaf = requestAnimationFrame(frame);
+        } else {
+          ctx.clearRect(0, 0, W, H);
+          duelCelebrationRaf = 0;
+        }
       };
-      requestAnimationFrame(frame);
+      duelCelebrationRaf = requestAnimationFrame(frame);
     };
 
     const resetButton = document.getElementById('duel-reset');
