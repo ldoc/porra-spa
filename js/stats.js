@@ -1721,6 +1721,7 @@
     { key: 'individual', label: 'Individual' },
     { key: 'rachas', label: 'Rachas' },
     { key: 'plantillas', label: 'Plantillas' },
+    { key: 'duelos', label: 'Duelos' },
   ];
   const EVO_METRIC_DEFAULT = 'posicion';
   const EVO_MODE_DEFAULT = 'acumulado';
@@ -1863,6 +1864,25 @@
       styleByUser[name] = calcStyleStats(name, playedMatches, AppState.allPredictions, AppState.userPoints, matchesById, playerNames);
     }
     calcLuckLabels(styleByUser);
+    const reliabilityByUser = {};
+    const exactStatsByUser = {};
+    const matchExtremesByUser = {};
+    const playerExtremesByUser = {};
+    const matchPointsByUser = {};
+    const filteredPredictions = statsFilterMap(AppState.allPredictions);
+
+    for (const name of playerNames) {
+      reliabilityByUser[name] = calcReliabilityRow(name, playedMatches, AppState.allPredictions, AppState.userPoints);
+      exactStatsByUser[name] = calcExactStats(name, AppState.leagueMatches, matchStatsById, AppState.allPredictions);
+      matchExtremesByUser[name] = calcMatchExtremes(name, playedMatches, filteredPredictions, AppState.userPoints, matchesById);
+      const details = getCachedUserData(name).squadPoints?.playerDetails || [];
+      playerExtremesByUser[name] = calcPlayerExtremes(details);
+      const points = {};
+      for (const detail of AppState.userPoints[name]?.matchDetails || []) {
+        if (detail?.match?.id != null) points[detail.match.id] = detail.points || 0;
+      }
+      matchPointsByUser[name] = points;
+    }
     const detailsByUser = {};
     for (const p of statsPlayers()) {
       detailsByUser[p.name] = AppState.userPoints[p.name]?.matchDetails || [];
@@ -1895,6 +1915,11 @@
       coverage: calcDataCoverage(AppState.matches, AppState.matchStats, AppState.allPredictions, AppState.currentUser?.name),
       sourceRanks: calcSourceRanks(splitByUser, playerNames),
       styleByUser,
+      reliabilityByUser,
+      exactStatsByUser,
+      matchExtremesByUser,
+      playerExtremesByUser,
+      matchPointsByUser,
       bestJornadas: calcBestJornadas(league.pointsByUserByJornada, 5),
       championsTally: tallyChampions(statsFilterMap(AppState.finalPredictionsCache)),
       quadro: compareQuadroWithCommunity(AppState.currentUser?.name, statsFilterMap(AppState.finalPredictionsCache)),
@@ -1916,6 +1941,7 @@
     if (sub === 'pronosticos') body = renderPronosticosBody(aggregates);
     else if (sub === 'evolucion') body = renderEvolucionBody(aggregates);
     else if (sub === 'individual') body = renderIndividualBody(aggregates);
+    else if (sub === 'duelos') body = renderDuelosBody(aggregates);
     else if (sub === 'rachas') body = renderRachasBody(aggregates);
     else body = renderPlantillasBody(aggregates);
 
@@ -2531,6 +2557,88 @@
       </div>`;
   }
 
+  function renderDuelosBody(aggregates) {
+    const players = statsPlayers();
+    const leftUser = AppState.duelosLeftUser;
+    const rightUser = AppState.duelosRightUser;
+    const options = (selected) => players.map(p =>
+      `<option value="${esc(p.name)}" ${p.name === selected ? 'selected' : ''}>${esc(p.avatar || '⚽')} ${esc(p.name)}${p.isGuest ? ' · invitado' : ''}</option>`
+    ).join('');
+
+    const header = `
+      <div class="duel-sticky-header">
+        <div class="duel-users">
+          <div class="duel-user duel-left">
+            <div class="duel-avatar">${esc(getPlayerMeta(leftUser).avatar || '◇')}</div>
+            <select id="duel-left-select" class="duel-select" aria-label="Primer usuario">
+              <option value="">Elige usuario</option>${options(leftUser)}
+            </select>
+          </div>
+          <button class="duel-vs" id="duel-swap" type="button" aria-label="Intercambiar usuarios">VS</button>
+          <div class="duel-user duel-right">
+            <div class="duel-avatar">${esc(getPlayerMeta(rightUser).avatar || '◇')}</div>
+            <select id="duel-right-select" class="duel-select" aria-label="Segundo usuario">
+              <option value="">Elige usuario</option>${options(rightUser)}
+            </select>
+          </div>
+        </div>
+        <div class="duel-score">
+          <div class="duel-score-num duel-left" id="duel-score-left">0</div>
+          <div class="duel-score-mid">DUELO<br><span id="duel-score-meta">0 de 28</span></div>
+          <div class="duel-score-num duel-right" id="duel-score-right">0</div>
+        </div>
+        <div class="duel-progress"><div id="duel-progress-bar"></div></div>
+        <div class="duel-progress-meta"><span id="duel-progress-text">0 categorías desveladas</span><span class="scroll-cue">Desliza ↓</span></div>
+      </div>`;
+
+    const wrap = (body) => `<div id="duel-root">${header}${body}</div>`;
+
+    if (!leftUser || !rightUser) return wrap('<div class="duel-msg">Elige dos usuarios para empezar el duelo.</div>');
+    if (leftUser === rightUser) return wrap('<div class="duel-msg">Elige dos usuarios distintos.</div>');
+    if (!AppState.allPredictions?.[leftUser] || !AppState.allPredictions?.[rightUser]) {
+      return wrap('<div class="duel-msg">Este duelo estará disponible cuando se publiquen los pronósticos.</div>');
+    }
+    if (!aggregates.playedMatches?.length) return wrap('<div class="duel-msg">Aún no hay partidos con resultado.</div>');
+
+    const context = buildDuelContext(leftUser, rightUser, aggregates);
+    const categories = calcDuelCategories(context);
+    const score = calcDuelScore(categories, context);
+
+    const cards = categories.map((cat, index) => `
+      <div class="duel-cat-card locked" data-index="${index}" data-winner="${cat.winner}" data-left="${esc(cat.leftValue)}" data-right="${esc(cat.rightValue)}">
+        <div class="duel-cat-head">
+          <div>
+            <div class="duel-cat-title">${esc(cat.title)}</div>
+            <div class="duel-cat-desc">${esc(cat.desc)}</div>
+          </div>
+          <span class="duel-status">🔒 Por desvelar</span>
+        </div>
+        <div class="duel-cat-values">
+          <div class="duel-side"><span class="duel-side-name">${esc(leftUser)}</span><span class="duel-val left">?</span></div>
+          <span class="duel-cat-vs">vs</span>
+          <div class="duel-side right"><span class="duel-side-name">${esc(rightUser)}</span><span class="duel-val right">?</span></div>
+        </div>
+      </div>`).join('');
+
+    const winnerText = score.winner === 'draw'
+      ? '🤝 Empate'
+      : `🏆 Gana ${esc(score.winner === 'left' ? leftUser : rightUser)}`;
+    const tieText = score.tieBreak ? ` · desempate por ${esc(score.tieBreak)}` : '';
+
+    return `<div id="duel-root" data-winner="${score.winner}" data-tiebreak="${esc(score.tieBreak || '')}" data-left-name="${esc(leftUser)}" data-right-name="${esc(rightUser)}">
+      ${header}
+      <div class="duel-scroll-hint"><span class="arrow">↓</span><span><b>Desliza para empezar.</b> Las cajas están bloqueadas hasta que hagas scroll; al pasar por cada una se ilumina, marca al ganador y suma su punto arriba.</span></div>
+      <div class="legend"><span>+1 por categoría</span><span>Empate = 0</span><span>Sin datos = no disputada</span></div>
+      <div class="duel-cat-list">${cards}</div>
+      <div class="duel-final" id="duel-final">
+        <div class="duel-final-title">${winnerText}</div>
+        <div class="duel-final-score">${score.leftWins} – ${score.rightWins} · ${score.disputed} categorías disputadas${tieText}</div>
+        <button id="duel-reset" type="button">Repetir duelo</button>
+      </div>
+      <canvas id="duel-confetti" aria-hidden="true"></canvas>
+    </div>`;
+  }
+
   function renderIndividualBody(aggregates) {
     const players = statsPlayers();
     const splitByUser = aggregates.splitByUser || {};
@@ -2716,6 +2824,278 @@
       ${plantillaCard}`;
   }
 
+  let duelScrollRoot = null;
+  let duelScrollHandler = null;
+  let duelObserver = null;
+
+  function bindDuelEvents() {
+    if (duelScrollHandler && duelScrollRoot) {
+      duelScrollRoot.removeEventListener('scroll', duelScrollHandler);
+      duelScrollHandler = null;
+    }
+    if (duelObserver) {
+      duelObserver.disconnect();
+      duelObserver = null;
+    }
+
+    const root = document.getElementById('duel-root');
+    if (!root) return;
+
+    const container = document.getElementById('estadisticas-container');
+    const rerender = () => {
+      if (!container) return;
+      container.innerHTML = renderStatsContent();
+      bindStatsEvents();
+    };
+
+    const leftSelect = document.getElementById('duel-left-select');
+    const rightSelect = document.getElementById('duel-right-select');
+    if (leftSelect) leftSelect.addEventListener('change', () => {
+      AppState.duelosLeftUser = leftSelect.value || null;
+      rerender();
+    });
+    if (rightSelect) rightSelect.addEventListener('change', () => {
+      AppState.duelosRightUser = rightSelect.value || null;
+      rerender();
+    });
+    const swap = document.getElementById('duel-swap');
+    if (swap) swap.addEventListener('click', () => {
+      const left = AppState.duelosLeftUser;
+      AppState.duelosLeftUser = AppState.duelosRightUser;
+      AppState.duelosRightUser = left;
+      rerender();
+    });
+
+    const cards = [...root.querySelectorAll('.duel-cat-card')];
+    if (!cards.length) return;
+
+    const scrollRoot = document.querySelector('.app-content') || window;
+    const scoreLeft = document.getElementById('duel-score-left');
+    const scoreRight = document.getElementById('duel-score-right');
+    const scoreMeta = document.getElementById('duel-score-meta');
+    const progressBar = document.getElementById('duel-progress-bar');
+    const progressText = document.getElementById('duel-progress-text');
+    const finalBox = document.getElementById('duel-final');
+    const canvas = document.getElementById('duel-confetti');
+    const ctx = canvas.getContext('2d');
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const scores = { left: 0, right: 0 };
+    let revealedCount = 0;
+    let started = false;
+
+    const getScrollTop = () => scrollRoot === window ? window.scrollY : scrollRoot.scrollTop;
+
+    const pop = (el) => {
+      el.classList.remove('pop');
+      void el.offsetWidth;
+      el.classList.add('pop');
+      setTimeout(() => el.classList.remove('pop'), 520);
+    };
+
+    const scorePlus = (winner) => {
+      const box = root.querySelector('.duel-score');
+      if (!box) return;
+      const plus = document.createElement('span');
+      plus.className = `score-plus ${winner}`;
+      plus.textContent = '+1';
+      box.appendChild(plus);
+      setTimeout(() => plus.remove(), 900);
+    };
+
+    const updateScore = () => {
+      scoreLeft.textContent = scores.left;
+      scoreRight.textContent = scores.right;
+      scoreMeta.textContent = `${revealedCount} de ${cards.length}`;
+      progressBar.style.width = `${Math.round((revealedCount / cards.length) * 100)}%`;
+      progressText.textContent = `${revealedCount} categorías desveladas`;
+    };
+
+    const reveal = (card, silent) => {
+      if (card.dataset.revealed === '1') return;
+      card.dataset.revealed = '1';
+      card.classList.remove('locked');
+      card.classList.add('revealed');
+
+      const left = card.querySelector('.duel-val.left');
+      const right = card.querySelector('.duel-val.right');
+      const status = card.querySelector('.duel-status');
+      left.textContent = card.dataset.left;
+      right.textContent = card.dataset.right;
+
+      const winner = card.dataset.winner;
+      card.classList.add(`winner-${winner}`);
+
+      if (winner === 'left' || winner === 'right') {
+        scores[winner]++;
+        card.querySelector(`.duel-val.${winner}`).classList.add('win');
+        status.textContent = `Gana ${winner === 'left' ? root.dataset.leftName : root.dataset.rightName} · +1`;
+        status.classList.add(winner);
+        if (!silent) {
+          const plus = document.createElement('span');
+          plus.className = 'duel-plus';
+          plus.textContent = '+1';
+          card.appendChild(plus);
+          setTimeout(() => plus.remove(), 950);
+          scorePlus(winner);
+          pop(winner === 'left' ? scoreLeft : scoreRight);
+        }
+      } else if (winner === 'tie') {
+        status.textContent = 'Empate · 0';
+        status.classList.add('tie');
+      } else {
+        status.textContent = 'No disputada';
+        status.classList.add('na');
+      }
+
+      revealedCount++;
+      updateScore();
+      if (revealedCount === cards.length) finish();
+    };
+
+    const finish = () => {
+      finalBox.classList.add('show');
+      const winner = root.dataset.winner;
+      if (winner !== 'draw' && !reduceMotion) launchCelebration(winner === 'left' ? 0.28 : 0.72);
+    };
+
+    const startOnScroll = () => {
+      if (started) return;
+      if (getScrollTop() > 6) {
+        started = true;
+        observe();
+      }
+    };
+
+    const observe = () => {
+      if (duelObserver) duelObserver.disconnect();
+      duelObserver = new IntersectionObserver((entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            reveal(entry.target, false);
+            duelObserver.unobserve(entry.target);
+          }
+        }
+      }, { root: scrollRoot === window ? null : scrollRoot, threshold: 0.55 });
+      for (const card of cards) {
+        if (card.dataset.revealed !== '1') duelObserver.observe(card);
+      }
+    };
+
+    const reset = () => {
+      for (const card of cards) {
+        card.dataset.revealed = '0';
+        card.classList.add('locked');
+        card.classList.remove('revealed', 'winner-left', 'winner-right', 'winner-tie', 'winner-na');
+        card.querySelectorAll('.duel-val').forEach(el => {
+          el.textContent = '?';
+          el.classList.remove('win');
+        });
+        card.querySelectorAll('.duel-status').forEach(el => {
+          el.textContent = '🔒 Por desvelar';
+          el.className = 'duel-status';
+        });
+        card.querySelectorAll('.duel-plus').forEach(el => el.remove());
+      }
+      scores.left = 0;
+      scores.right = 0;
+      revealedCount = 0;
+      started = false;
+      finalBox.classList.remove('show');
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      updateScore();
+      if (duelObserver) duelObserver.disconnect();
+      if (scrollRoot === window) window.scrollTo({ top: 0, behavior: 'auto' });
+      else scrollRoot.scrollTo({ top: 0, behavior: 'auto' });
+    };
+
+    const launchCelebration = (sideRatio) => {
+      const rect = canvas.getBoundingClientRect();
+      const dpr = Math.min(2, window.devicePixelRatio || 1);
+      canvas.width = Math.round(rect.width * dpr);
+      canvas.height = Math.round(rect.height * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      const W = rect.width;
+      const H = rect.height;
+      const colors = ['#10B981', '#06B6D4', '#F59E0B', '#8B5CF6', '#EC4899', '#F97316', '#F8FAFC'];
+      const sideX = W * sideRatio;
+      const particles = [];
+      for (let i = 0; i < 150; i++) {
+        particles.push({
+          type: 'confetti',
+          x: sideX + (Math.random() - 0.5) * W * 0.42,
+          y: H * 0.78 + Math.random() * -30,
+          vx: (Math.random() - 0.5) * 7,
+          vy: -Math.random() * 10 - 3,
+          g: 0.17,
+          size: 3 + Math.random() * 5,
+          color: colors[Math.floor(Math.random() * colors.length)],
+          life: 1,
+          decay: 0.006 + Math.random() * 0.004,
+        });
+      }
+      const bursts = [
+        { x: sideX - W * 0.12, y: H * 0.24, color: '#10B981' },
+        { x: sideX + W * 0.08, y: H * 0.17, color: '#F59E0B' },
+        { x: sideX, y: H * 0.31, color: '#8B5CF6' },
+      ];
+      for (const burst of bursts) {
+        for (let i = 0; i < 42; i++) {
+          const angle = (Math.PI * 2 * i) / 42;
+          const speed = 1.4 + Math.random() * 2.6;
+          particles.push({
+            type: 'spark',
+            x: burst.x,
+            y: burst.y,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed,
+            g: 0.035,
+            size: 1.2 + Math.random() * 1.8,
+            color: burst.color,
+            life: 1,
+            decay: 0.012,
+          });
+        }
+      }
+      const start = performance.now();
+      const frame = (now) => {
+        ctx.clearRect(0, 0, W, H);
+        for (const p of particles) {
+          p.vy += p.g;
+          p.x += p.vx;
+          p.y += p.vy;
+          p.vx *= 0.992;
+          p.life -= p.decay;
+          if (p.life <= 0) continue;
+          ctx.globalAlpha = Math.max(0, p.life);
+          ctx.fillStyle = p.color;
+          if (p.type === 'spark') {
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = p.color;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+            ctx.fill();
+          } else {
+            ctx.shadowBlur = 0;
+            ctx.fillRect(p.x, p.y, p.size, p.size * 0.6);
+          }
+        }
+        ctx.globalAlpha = 1;
+        ctx.shadowBlur = 0;
+        if (particles.some(p => p.life > 0) && now - start < 5200) requestAnimationFrame(frame);
+        else ctx.clearRect(0, 0, W, H);
+      };
+      requestAnimationFrame(frame);
+    };
+
+    const resetButton = document.getElementById('duel-reset');
+    if (resetButton) resetButton.addEventListener('click', reset);
+
+    duelScrollRoot = scrollRoot;
+    duelScrollHandler = startOnScroll;
+    duelScrollRoot.addEventListener('scroll', duelScrollHandler, { passive: true });
+    updateScore();
+  }
+
   function bindStatsEvents() {
     const container = document.getElementById('estadisticas-container');
     if (!container) return;
@@ -2884,6 +3264,8 @@
         if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); togglePronosticoCard(head); }
       });
     });
+
+    bindDuelEvents();
   }
 
   global.renderEstadisticasTab = renderEstadisticasTab;

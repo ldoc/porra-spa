@@ -54,6 +54,8 @@ const AppState = {
   liveV2: null, // estado del tab Live v2 (event-sourcing): { events, serverTime, prevRanks, polling, _lastRows }
   estadisticasSubTab: 'pronosticos', // Sub-tab activa en estadísticas
   estadisticasIndividualUser: null, // usuario mostrado en sub-tab Individual (null -> currentUser)
+  duelosLeftUser: null,
+  duelosRightUser: null,
   finalPredictions: null, // { champion, runnerUp, semiFinalists, quarterFinalists, roundOf16, roundOf32 }
   hasUnsavedFinalChanges: false, // flag de cambios sin guardar en fase final
   selectedFinalTeam: null, // teamId seleccionado para colocar en zona
