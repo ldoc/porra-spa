@@ -6543,6 +6543,151 @@ html, body {
 .stats-pronosticos-extra{display:none;flex-direction:column;gap:10px;padding-top:10px;border-top:1px solid var(--border-color);margin-top:10px}
 .stats-pronosticos-card.open .stats-pronosticos-extra{display:flex}
 
+.stats-luck-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.stats-luck-row {
+  display: grid;
+  grid-template-columns: 58px 1fr auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.stats-luck-lbl {
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.stats-luck-bar {
+  height: 8px;
+  border-radius: var(--radius-full);
+  background: rgba(255, 255, 255, 0.06);
+  overflow: hidden;
+}
+
+.stats-luck-bar > div {
+  height: 100%;
+  border-radius: var(--radius-full);
+  background: var(--accent-primary);
+}
+
+.stats-luck-bar.expected > div {
+  background: var(--accent-purple);
+}
+
+.stats-luck-val {
+  font-size: 10px;
+  color: var(--text-secondary);
+  text-align: right;
+}
+
+.stats-pill.up {
+  background: rgba(16, 185, 129, 0.15);
+  color: var(--accent-primary);
+}
+
+.stats-pill.dn {
+  background: rgba(239, 68, 68, 0.12);
+  color: var(--accent-danger, #EF4444);
+}
+
+.stats-style-section-title {
+  margin-top: 10px;
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.stats-style-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.stats-style-row {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.stats-style-pts {
+  min-width: 44px;
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--accent-cyan);
+}
+
+.stats-style-info {
+  min-width: 0;
+}
+
+.stats-style-name {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.stats-style-sub {
+  margin-top: 2px;
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.stats-conf-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.stats-conf-row {
+  display: grid;
+  grid-template-columns: 58px 1fr auto;
+  gap: 6px 8px;
+  align-items: center;
+}
+
+.stats-conf-lbl {
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.stats-conf-bar {
+  height: 8px;
+  border-radius: var(--radius-full);
+  background: rgba(255, 255, 255, 0.06);
+  overflow: hidden;
+}
+
+.stats-conf-bar > div {
+  height: 100%;
+  border-radius: var(--radius-full);
+  background: var(--accent-gold);
+}
+
+.stats-conf-val {
+  font-size: 10px;
+  color: var(--text-secondary);
+  text-align: right;
+  white-space: nowrap;
+}
+
+.stats-conf-sub {
+  grid-column: 2 / -1;
+  font-size: 9px;
+  color: var(--text-muted);
+}
+
 /* ==========================================================================
    ADMIN PROGRESS
    ========================================================================== */

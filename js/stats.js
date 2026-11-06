@@ -2161,6 +2161,118 @@
       </div>`;
   }
 
+  function luckLabelHtml(label) {
+    if (!label) return '<span class="stats-pill">sin datos</span>';
+    const cls = label === 'afortunado' ? 'up' : label === 'desafortunado' ? 'dn' : '';
+    return `<span class="stats-pill ${cls}">${label}</span>`;
+  }
+
+  function renderLuckCard(style) {
+    const intro = '<div class="stats-rank-sub" style="white-space:normal">Compara tus puntos reales con los que cabría esperar según lo que votó la porra en cada partido. Por encima de lo esperado tuviste buena suerte; por debajo, fuiste desafortunado.</div>';
+    if (!style || !style.analyzedMatches) {
+      return `<div class="stats-card"><div class="stats-card-title">🍀 Suerte vs habilidad</div>${intro}${statsEmpty('Aún no hay partidos con muestra suficiente: necesitamos al menos 5 pronósticos de otros usuarios por partido.')}</div>`;
+    }
+
+    const max = Math.max(style.actualPoints, style.expectedPoints, 1);
+    const actualPct = Math.round((style.actualPoints / max) * 100);
+    const expectedPct = Math.round((style.expectedPoints / max) * 100);
+    const sign = style.luckDelta > 0 ? '+' : '';
+    const perSign = style.luckPerMatch > 0 ? '+' : '';
+    return `
+      <div class="stats-card">
+        <div class="stats-card-title">🍀 Suerte vs habilidad</div>
+        ${intro}
+        <div class="stats-kpi-grid" style="grid-template-columns:repeat(2,1fr);margin-top:8px">
+          <div class="stats-kpi"><div class="stats-kv">${style.actualPoints}</div><div class="stats-kl">puntos reales</div></div>
+          <div class="stats-kpi"><div class="stats-kv">${style.expectedPoints}</div><div class="stats-kl">puntos esperados</div></div>
+          <div class="stats-kpi"><div class="stats-kv">${sign}${style.luckDelta}</div><div class="stats-kl">suerte neta</div></div>
+          <div class="stats-kpi"><div class="stats-kv">${style.analyzedMatches}</div><div class="stats-kl">partidos analizados</div></div>
+        </div>
+        <div class="stats-luck-bars">
+          <div class="stats-luck-row"><span class="stats-luck-lbl">Real</span><div class="stats-luck-bar"><div style="width:${actualPct}%"></div></div><span class="stats-luck-val">${style.actualPoints}</span></div>
+          <div class="stats-luck-row"><span class="stats-luck-lbl">Esperado</span><div class="stats-luck-bar expected"><div style="width:${expectedPct}%"></div></div><span class="stats-luck-val">${style.expectedPoints}</span></div>
+        </div>
+        <div class="stats-rank-sub" style="white-space:normal;margin-top:8px">${luckLabelHtml(style.luckLabel)} Suerte/partido: ${style.luckPerMatch === null ? '—' : perSign + style.luckPerMatch} · ${style.excludedLowSample} partidos excluidos por muestra &lt;5.</div>
+        <div class="stats-rank-sub" style="white-space:normal;margin-top:6px">Suerte neta = puntos reales − esperados. El esperado combina resultado (8), goles de cada equipo (3+3) y marcador exacto (1). Solo partidos con al menos 5 pronósticos de otros usuarios.</div>
+      </div>`;
+  }
+
+  function styleItemHtml(item, kind) {
+    const m = item.match || {};
+    const name = `${esc(m.homeTeam || '')} – ${esc(m.awayTeam || '')}`;
+    const jornada = m.ronda ? ` · J${m.ronda}` : '';
+    const detail = kind === 'robo'
+      ? `${item.supportPct}% te siguió · ${item.delta > 0 ? '+' : ''}${item.delta} vs media`
+      : `${item.supportPct}% de la porra falló contigo`;
+    return `<div class="stats-style-row">
+      <span class="stats-style-pts">${item.points} pts</span>
+      <div class="stats-style-info">
+        <div class="stats-style-name">${name}${jornada}</div>
+        <div class="stats-style-sub">${item.pred.home} - ${item.pred.away} · ${detail}</div>
+      </div>
+    </div>`;
+  }
+
+  function renderRobosFarolesCard(style) {
+    const robos = style?.robos || { count: 0, items: [] };
+    const faroles = style?.faroles || { count: 0, items: [] };
+    const robosHtml = robos.items.length
+      ? robos.items.slice(0, 3).map(item => styleItemHtml(item, 'robo')).join('')
+      : statsEmpty('Aún no hay robos: necesitas acertar en minoría y superar la media del partido.');
+    const farolesHtml = faroles.items.length
+      ? faroles.items.slice(0, 3).map(item => styleItemHtml(item, 'farol')).join('')
+      : statsEmpty('Aún no hay faroles: necesitas fallar con la opción más votada.');
+    return `
+      <div class="stats-card">
+        <div class="stats-card-title">🎭 Robos y faroles</div>
+        <div class="stats-rank-sub" style="white-space:normal">Un robo es acertar el resultado con una opción que casi nadie eligió. Un farol es seguir a la mayoría y fallar.</div>
+        <div class="stats-kpi-grid" style="grid-template-columns:repeat(2,1fr);margin-top:8px">
+          <div class="stats-kpi"><div class="stats-kv">${robos.count}</div><div class="stats-kl">robos</div></div>
+          <div class="stats-kpi"><div class="stats-kv">${faroles.count}</div><div class="stats-kl">faroles</div></div>
+        </div>
+        <div class="stats-style-section-title">Robos</div>
+        <div class="stats-rank-sub" style="white-space:normal">Aciertos minoritarios que te dieron ventaja sobre la media del partido.</div>
+        <div class="stats-style-list">${robosHtml}</div>
+        <div class="stats-style-section-title">Faroles</div>
+        <div class="stats-rank-sub" style="white-space:normal">Fallos con la opción más votada: la porra se equivocó contigo.</div>
+        <div class="stats-style-list">${farolesHtml}</div>
+        <div class="stats-rank-sub" style="white-space:normal;margin-top:8px">Solo se analizan partidos con al menos 5 pronósticos de otros usuarios.</div>
+      </div>`;
+  }
+
+  function renderConfidenceCard(style) {
+    const conf = style?.confidence;
+    const defs = [
+      ['majority', 'Mayoría', '≥50% eligió tu opción'],
+      ['tight', 'Ajustada', '33–50% eligió tu opción'],
+      ['minority', 'Minoría', '<33% eligió tu opción'],
+    ];
+    const totalMatches = defs.reduce((sum, [key]) => sum + (conf?.[key]?.matches || 0), 0);
+    const intro = '<div class="stats-rank-sub" style="white-space:normal">Agrupa tus partidos según cuánto apoyó la porra tu elección 1X2. Sirve para ver si aciertas más cuando vas con la mayoría o cuando te arriesgas.</div>';
+    if (!totalMatches) {
+      return `<div class="stats-card"><div class="stats-card-title">🎚️ Acierto por confianza</div>${intro}${statsEmpty('Aún no hay partidos con muestra suficiente para medir la confianza.')}</div>`;
+    }
+
+    const rows = defs.map(([key, label, sub]) => {
+      const c = conf[key] || { matches: 0, hits: 0, hitPct: 0, exacts: 0, exactPct: 0 };
+      const fill = c.matches ? c.hitPct : 0;
+      return `<div class="stats-conf-row">
+        <span class="stats-conf-lbl">${label}</span>
+        <div class="stats-conf-bar"><div style="width:${fill}%"></div></div>
+        <span class="stats-conf-val">${c.matches ? `${c.hits}/${c.matches} · ${c.hitPct}%` : '—'}</span>
+        <span class="stats-conf-sub">${sub}${c.matches ? ` · ${c.exacts} exactos · ${c.exactPct}%` : ''}</span>
+      </div>`;
+    }).join('');
+
+    return `
+      <div class="stats-card">
+        <div class="stats-card-title">🎚️ Acierto por confianza</div>
+        ${intro}
+        <div class="stats-conf-rows">${rows}</div>
+        <div class="stats-rank-sub" style="white-space:normal;margin-top:8px">La confianza mide el apoyo de la porra a tu pronóstico, no tu seguridad personal.</div>
+      </div>`;
+  }
+
   function renderIndividualBody(aggregates) {
     const players = statsPlayers();
     const splitByUser = aggregates.splitByUser || {};
@@ -2312,6 +2424,15 @@
       </div>`;
     }
 
+    const styleStats = calcStyleStats(
+      username,
+      aggregates.playedMatches,
+      AppState.allPredictions,
+      AppState.userPoints,
+      aggregates.matchesById,
+      statsPlayers().map(p => p.name)
+    );
+
     const indAvatar = esc(getPlayerMeta(username).avatar || '⚽');
     return `
       <div class="stats-card">
@@ -2331,6 +2452,9 @@
       ${pronosticosCard}
       ${jornadasCard}
       ${sesgoCard}
+      ${renderLuckCard(styleStats)}
+      ${renderRobosFarolesCard(styleStats)}
+      ${renderConfidenceCard(styleStats)}
       ${plantillaCard}`;
   }
 
