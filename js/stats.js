@@ -727,6 +727,121 @@
     return Math.round(expected * 100) / 100;
   }
 
+  function calcStyleStats(username, playedMatches, allPredictions, userPoints, matchesById, playerNames) {
+    const consensusByMatch = buildMatchConsensus(allPredictions, playerNames, username);
+    const myPreds = allPredictions?.[username] || {};
+    const pointsByUser = new Map();
+
+    for (const name of playerNames || []) {
+      const byMatch = new Map();
+      for (const detail of userPoints?.[name]?.matchDetails || []) {
+        if (detail?.match?.id != null) byMatch.set(String(detail.match.id), detail.points || 0);
+      }
+      pointsByUser.set(name, byMatch);
+    }
+
+    const out = {
+      analyzedMatches: 0,
+      excludedLowSample: 0,
+      actualPoints: 0,
+      expectedPoints: 0,
+      luckDelta: 0,
+      luckPerMatch: null,
+      luckLabel: null,
+      robos: { count: 0, items: [] },
+      faroles: { count: 0, items: [] },
+      confidence: {
+        majority: { matches: 0, hits: 0, hitPct: 0, exacts: 0, exactPct: 0 },
+        tight: { matches: 0, hits: 0, hitPct: 0, exacts: 0, exactPct: 0 },
+        minority: { matches: 0, hits: 0, hitPct: 0, exacts: 0, exactPct: 0 },
+      },
+    };
+
+    for (const pm of playedMatches || []) {
+      const match = matchesById?.[pm.matchId] || null;
+      if (!match || match.fase !== 'liga') continue;
+      const pred = myPreds[pm.matchId];
+      if (!pred || !Number.isFinite(pred.home) || !Number.isFinite(pred.away)) continue;
+
+      const consensus = consensusByMatch.get(String(pm.matchId));
+      if (!consensus || consensus.total < 5) {
+        out.excludedLowSample++;
+        continue;
+      }
+
+      const userResult = matchResultOf(pred.home, pred.away);
+      const isHit = userResult === pm.result;
+      const isExact = pred.home === pm.home && pred.away === pm.away;
+      const points = pointsByUser.get(username)?.get(String(pm.matchId)) || 0;
+      const expected = expectedPointsForPrediction(pred, consensus);
+
+      let avgSum = 0;
+      let avgN = 0;
+      for (const name of playerNames || []) {
+        if (name === username) continue;
+        const otherPred = allPredictions?.[name]?.[pm.matchId];
+        if (!otherPred || !Number.isFinite(otherPred.home) || !Number.isFinite(otherPred.away)) continue;
+        const byMatch = pointsByUser.get(name);
+        if (!byMatch || !byMatch.has(String(pm.matchId))) continue;
+        avgSum += byMatch.get(String(pm.matchId)) || 0;
+        avgN++;
+      }
+      const avgPoints = avgN ? Math.round((avgSum / avgN) * 10) / 10 : 0;
+      const supportPct = Math.round((consensus.counts[userResult] / consensus.total) * 100);
+
+      out.analyzedMatches++;
+      out.actualPoints += points;
+      out.expectedPoints += expected;
+
+      const bucket = supportPct >= 50 ? 'majority' : supportPct >= 33 ? 'tight' : 'minority';
+      const conf = out.confidence[bucket];
+      conf.matches++;
+      if (isHit) conf.hits++;
+      if (isExact) conf.exacts++;
+
+      const item = {
+        matchId: pm.matchId,
+        match,
+        pred: { home: pred.home, away: pred.away },
+        result: pm.result,
+        points,
+        avgPoints,
+        delta: Math.round((points - avgPoints) * 10) / 10,
+        supportPct,
+        exact: isExact,
+      };
+
+      if (isHit && supportPct < 50 && points > avgPoints) out.robos.items.push(item);
+      if (!isHit && userResult === consensus.plurality) out.faroles.items.push(item);
+    }
+
+    out.robos.count = out.robos.items.length;
+    out.faroles.count = out.faroles.items.length;
+    out.robos.items.sort((a, b) => b.delta - a.delta || a.supportPct - b.supportPct);
+    out.faroles.items.sort((a, b) => b.supportPct - a.supportPct || a.points - b.points);
+
+    out.actualPoints = Math.round(out.actualPoints * 10) / 10;
+    out.expectedPoints = Math.round(out.expectedPoints * 10) / 10;
+    out.luckDelta = Math.round((out.actualPoints - out.expectedPoints) * 10) / 10;
+
+    if (out.analyzedMatches) {
+      out.luckPerMatch = Math.round((out.luckDelta / out.analyzedMatches) * 10) / 10;
+      out.luckLabel = out.luckPerMatch >= 1
+        ? 'afortunado'
+        : out.luckPerMatch <= -1
+          ? 'desafortunado'
+          : 'neutro';
+    }
+
+    for (const key of ['majority', 'tight', 'minority']) {
+      const conf = out.confidence[key];
+      conf.hitPct = conf.matches ? Math.round((conf.hits / conf.matches) * 100) : 0;
+      conf.exactPct = conf.matches ? Math.round((conf.exacts / conf.matches) * 100) : 0;
+    }
+
+    return out;
+  }
+
   function buildDonutSegments(parts) {
     const C = 2 * Math.PI * DONUT_RADIUS;
     const valid = (parts || []).filter(p => Number(p.value) > 0);
@@ -2428,6 +2543,7 @@
   global.calcDataCoverage = calcDataCoverage;
   global.buildMatchConsensus = buildMatchConsensus;
   global.expectedPointsForPrediction = expectedPointsForPrediction;
+  global.calcStyleStats = calcStyleStats;
   global.buildDonutSegments = buildDonutSegments;
   global.calcPredictionBias = calcPredictionBias;
   global.calcBestMatch = calcBestMatch;
@@ -2454,6 +2570,6 @@
   global.renderStatsContent = renderStatsContent;
   global.buildStatsAggregates = buildStatsAggregates;
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { emptySeries, buildTimeline, calcPredictionSeries, calcSquadSeries, calcClassificationSeries, calcEliminatoriasSeries, sumSeries, isLeagueComplete, getSeriesBySource, matchResultOf, toStagePoints, calcEvolutionPositions, calcEvolutionPositionsFromSplits, lastTimelinePoint, trimTimeline, buildEvolutionSeriesMap, buildAxisTicks, formatPointValue, buildPointTooltipText, EVO_METRIC_DEFAULT, EVO_MODE_DEFAULT, positionForMatch, extractPlayedMatches, calcReliabilityRow, buildCompletedLeagueData, calcStreaks, calcBestJornadas, calcUserBestJornada, calcPositionHistory, calcTimesTopJornada, calcMomentum, calcConsistency, calcExactStats, calcSourceRanks, calcMatchExtremes, calcDataCoverage, buildMatchConsensus, expectedPointsForPrediction, buildDonutSegments, calcPredictionBias, calcBestMatch, calcBestPlayersByPosition, calcMostProfitablePlayer, sourceSplitFromUserData, tallyChampions, finalPredictionTeamIds, compareQuadroWithCommunity, aggregateSquads, calcPronosticosPartidosStats, getTeamStatsForPreds, calcPredictedStandingsForPreds, calcClasificacionPronosticosStats, calcEliminatoriasPronosticosStats, calcPlantillaPronosticosExtras, renderPronosticosBody, renderPronosticosPartidosCard, renderPronosticosClasificacionCard, renderPronosticosEliminatoriasCard, renderPronosticosPlantillaCard, renderStatsContent, buildStatsAggregates, orderIndividualPlayers, individualOverallRank };
+    module.exports = { emptySeries, buildTimeline, calcPredictionSeries, calcSquadSeries, calcClassificationSeries, calcEliminatoriasSeries, sumSeries, isLeagueComplete, getSeriesBySource, matchResultOf, toStagePoints, calcEvolutionPositions, calcEvolutionPositionsFromSplits, lastTimelinePoint, trimTimeline, buildEvolutionSeriesMap, buildAxisTicks, formatPointValue, buildPointTooltipText, EVO_METRIC_DEFAULT, EVO_MODE_DEFAULT, positionForMatch, extractPlayedMatches, calcReliabilityRow, buildCompletedLeagueData, calcStreaks, calcBestJornadas, calcUserBestJornada, calcPositionHistory, calcTimesTopJornada, calcMomentum, calcConsistency, calcExactStats, calcSourceRanks, calcMatchExtremes, calcDataCoverage, buildMatchConsensus, expectedPointsForPrediction, calcStyleStats, buildDonutSegments, calcPredictionBias, calcBestMatch, calcBestPlayersByPosition, calcMostProfitablePlayer, sourceSplitFromUserData, tallyChampions, finalPredictionTeamIds, compareQuadroWithCommunity, aggregateSquads, calcPronosticosPartidosStats, getTeamStatsForPreds, calcPredictedStandingsForPreds, calcClasificacionPronosticosStats, calcEliminatoriasPronosticosStats, calcPlantillaPronosticosExtras, renderPronosticosBody, renderPronosticosPartidosCard, renderPronosticosClasificacionCard, renderPronosticosEliminatoriasCard, renderPronosticosPlantillaCard, renderStatsContent, buildStatsAggregates, orderIndividualPlayers, individualOverallRank };
   }
 })(typeof window !== 'undefined' ? window : globalThis);
