@@ -2002,12 +2002,31 @@
     const row = calcReliabilityRow(username, aggregates.playedMatches, AppState.allPredictions, AppState.userPoints);
     const fallidos = row.played - row.hits;
     const conversion = row.hits ? Math.round((row.exactScores / row.hits) * 100) : null;
-    const bestMatch = calcBestMatch(AppState.userPoints[username]?.matchDetails);
-    let bestMatchLbl = '—';
-    if (bestMatch) {
-      const m = aggregates.matchesById?.[bestMatch.matchId];
-      bestMatchLbl = `${bestMatch.points} pts${m ? ` (${esc(m.homeTeam || '')} – ${esc(m.awayTeam || '')})` : ''}`;
-    }
+    const extremes = calcMatchExtremes(
+      username,
+      aggregates.playedMatches,
+      statsFilterMap(AppState.allPredictions),
+      AppState.userPoints,
+      aggregates.matchesById
+    );
+    const extremeRow = (label, item) => {
+      if (!item) {
+        return `<div class="stats-extreme"><div class="stats-extreme-top"><span class="stats-extreme-lbl">${label}</span><span class="stats-extreme-pts">—</span></div></div>`;
+      }
+      const cls = item.delta > 0 ? 'up' : item.delta < 0 ? 'dn' : '';
+      const sign = item.delta > 0 ? '+' : '';
+      const name = item.match
+        ? `${esc(item.match.homeTeam || '')} – ${esc(item.match.awayTeam || '')}`
+        : 'Partido';
+      return `<div class="stats-extreme">
+        <div class="stats-extreme-top">
+          <span class="stats-extreme-lbl">${label}</span>
+          <span class="stats-extreme-pts">${item.points} pts</span>
+          <span class="stats-extreme-delta ${cls}">${sign}${item.delta} vs media</span>
+        </div>
+        <div class="stats-extreme-sub">${name} · media ${item.avg} (n=${item.sample})</div>
+      </div>`;
+    };
     const pronosticosCard = `
       <div class="stats-card">
         <div class="stats-card-title">⚽ Pronósticos (${row.played} partidos jugados)</div>
@@ -2017,7 +2036,9 @@
           <div class="stats-kpi"><div class="stats-kv">${row.exactScores}</div><div class="stats-kl">exactos</div></div>
           <div class="stats-kpi"><div class="stats-kv">${fallidos}</div><div class="stats-kl">fallidos</div></div>
         </div>
-        <div class="stats-rank-sub">% conversión de exactos: ${conversion === null ? '—' : conversion + '%'} · Mejor partido: ${bestMatchLbl}</div>` : statsEmpty('Sin partidos pronosticados con resultado')}
+        <div class="stats-rank-sub">% conversión de exactos: ${conversion === null ? '—' : conversion + '%'}</div>
+        ${extremeRow('Mejor', extremes.best)}
+        ${extremeRow('Peor', extremes.worst)}` : statsEmpty('Sin partidos pronosticados con resultado')}
       </div>`;
 
     const rondas = aggregates.completedRondas || [];
@@ -2119,7 +2140,7 @@
           <select id="stats-ind-select" class="stats-ind-select-pill" aria-label="Seleccionar usuario">${options}</select>
           <span class="stats-ind-rank">#${rank}</span>
         </div>
-        <div class="stats-rank-sub" style="white-space:normal;text-align:center;margin-top:6px">Tus pronósticos con resultado: ${coverage.userPredictedPlayed}/${coverage.playedLeague}</div>
+        <div class="stats-rank-sub" style="white-space:normal;text-align:center;margin-top:6px">Pronósticos con resultado: ${coverage.userPredictedPlayed}/${coverage.playedLeague}</div>
       </div>
       <div class="stats-card">
         <div class="stats-card-title">🥧 Desglose de puntos</div>
