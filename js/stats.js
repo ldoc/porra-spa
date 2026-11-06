@@ -2244,7 +2244,7 @@
     const conf = style?.confidence;
     const defs = [
       ['majority', 'Mayoría', '≥50% eligió tu opción'],
-      ['tight', 'Ajustada', '33–50% eligió tu opción'],
+      ['tight', 'Ajustada', '33–49% eligió tu opción'],
       ['minority', 'Minoría', '<33% eligió tu opción'],
     ];
     const totalMatches = defs.reduce((sum, [key]) => sum + (conf?.[key]?.matches || 0), 0);
