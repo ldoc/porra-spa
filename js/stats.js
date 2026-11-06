@@ -1061,7 +1061,7 @@
     if (!winner) {
       const order = [
         ['points_total', 'total'],
-        ['points_squad', 'squad'],
+        ['points_squad', 'plantilla'],
         ['points_prediction', 'pronósticos'],
       ];
       for (const [key, label] of order) {

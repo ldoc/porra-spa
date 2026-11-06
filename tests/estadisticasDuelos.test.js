@@ -133,7 +133,7 @@ function test_calcDuelScore_desempate() {
     right: { points_total: 100, points_squad: 20, points_prediction: 40 },
   });
   assert.strictEqual(squadTie.winner, 'right');
-  assert.strictEqual(squadTie.tieBreak, 'squad');
+  assert.strictEqual(squadTie.tieBreak, 'plantilla');
 
   const draw = calcDuelScore(cats, {
     left: { points_total: 100, points_squad: 10, points_prediction: 50 },
