@@ -553,6 +553,115 @@
     return out;
   }
 
+  function calcMatchExtremes(username, playedMatches, allPredictions, userPoints, matchesById) {
+    const pointsByUser = new Map();
+    for (const name of Object.keys(allPredictions || {})) {
+      const byMatch = new Map();
+      for (const detail of userPoints?.[name]?.matchDetails || []) {
+        if (detail?.match?.id != null) byMatch.set(detail.match.id, detail.points || 0);
+      }
+      pointsByUser.set(name, byMatch);
+    }
+
+    const myPreds = allPredictions?.[username] || {};
+    const candidates = [];
+
+    for (const pm of playedMatches || []) {
+      const pr = myPreds[pm.matchId];
+      if (!pr || !Number.isFinite(pr.home) || !Number.isFinite(pr.away)) continue;
+
+      const points = pointsByUser.get(username)?.get(pm.matchId) || 0;
+      let sum = 0;
+      let sample = 0;
+      for (const [name, byMatch] of pointsByUser) {
+        const otherPred = allPredictions?.[name]?.[pm.matchId];
+        if (!otherPred || !Number.isFinite(otherPred.home) || !Number.isFinite(otherPred.away)) continue;
+        sum += byMatch.get(pm.matchId) || 0;
+        sample++;
+      }
+      const avg = sample ? Math.round((sum / sample) * 10) / 10 : 0;
+      const match = matchesById?.[pm.matchId] || null;
+      candidates.push({
+        matchId: pm.matchId,
+        match,
+        points,
+        avg,
+        sample,
+        delta: Math.round((points - avg) * 10) / 10,
+        fechaTs: Number(match?.fechaTs) || 0,
+      });
+    }
+
+    if (!candidates.length) return { best: null, worst: null };
+
+    const older = (a, b) =>
+      a.fechaTs - b.fechaTs
+      || (Number(a.matchId) || 0) - (Number(b.matchId) || 0);
+
+    const best = candidates.reduce((acc, item) => {
+      if (!acc) return item;
+      if (item.points > acc.points) return item;
+      if (item.points === acc.points && older(item, acc) < 0) return item;
+      return acc;
+    }, null);
+
+    const worst = candidates.reduce((acc, item) => {
+      if (!acc) return item;
+      if (item.points < acc.points) return item;
+      if (item.points === acc.points && older(item, acc) < 0) return item;
+      return acc;
+    }, null);
+
+    return { best, worst };
+  }
+
+  function calcDataCoverage(matches, matchStats, allPredictions, username) {
+    const matchStatsById = {};
+    for (const ms of matchStats || []) matchStatsById[ms.eventId] = ms;
+
+    const league = (matches || []).filter(m => m && m.fase === 'liga');
+    const totalByRonda = new Map();
+    const doneByRonda = new Map();
+    let playedLeague = 0;
+
+    for (const m of league) {
+      const ronda = Number(m.ronda);
+      if (!Number.isFinite(ronda)) continue;
+      totalByRonda.set(ronda, (totalByRonda.get(ronda) || 0) + 1);
+      const home = matchStatsById[m.id]?.stats?.[m.homeTeamId]?.goles;
+      const away = matchStatsById[m.id]?.stats?.[m.awayTeamId]?.goles;
+      if (Number.isFinite(home) && Number.isFinite(away)) {
+        playedLeague++;
+        doneByRonda.set(ronda, (doneByRonda.get(ronda) || 0) + 1);
+      }
+    }
+
+    const totalJornadas = totalByRonda.size;
+    let completedJornadas = 0;
+    for (const [ronda, total] of totalByRonda) {
+      if (total > 0 && doneByRonda.get(ronda) === total) completedJornadas++;
+    }
+
+    const preds = allPredictions?.[username] || {};
+    let userPredictedPlayed = 0;
+    for (const m of league) {
+      const home = matchStatsById[m.id]?.stats?.[m.homeTeamId]?.goles;
+      const away = matchStatsById[m.id]?.stats?.[m.awayTeamId]?.goles;
+      if (!Number.isFinite(home) || !Number.isFinite(away)) continue;
+      const pr = preds[m.id];
+      if (pr && Number.isFinite(pr.home) && Number.isFinite(pr.away)) userPredictedPlayed++;
+    }
+
+    return {
+      totalLeague: league.length,
+      playedLeague,
+      completedJornadas,
+      totalJornadas,
+      userPredictedPlayed,
+      partial: playedLeague < league.length || completedJornadas < totalJornadas,
+    };
+  }
+
   function buildDonutSegments(parts) {
     const C = 2 * Math.PI * DONUT_RADIUS;
     const valid = (parts || []).filter(p => Number(p.value) > 0);
@@ -2150,6 +2259,8 @@
   global.calcConsistency = calcConsistency;
   global.calcExactStats = calcExactStats;
   global.calcSourceRanks = calcSourceRanks;
+  global.calcMatchExtremes = calcMatchExtremes;
+  global.calcDataCoverage = calcDataCoverage;
   global.buildDonutSegments = buildDonutSegments;
   global.calcPredictionBias = calcPredictionBias;
   global.calcBestMatch = calcBestMatch;
@@ -2176,6 +2287,6 @@
   global.renderStatsContent = renderStatsContent;
   global.buildStatsAggregates = buildStatsAggregates;
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { emptySeries, buildTimeline, calcPredictionSeries, calcSquadSeries, calcClassificationSeries, calcEliminatoriasSeries, sumSeries, isLeagueComplete, getSeriesBySource, matchResultOf, toStagePoints, calcEvolutionPositions, calcEvolutionPositionsFromSplits, lastTimelinePoint, trimTimeline, buildEvolutionSeriesMap, buildAxisTicks, formatPointValue, buildPointTooltipText, EVO_METRIC_DEFAULT, EVO_MODE_DEFAULT, positionForMatch, extractPlayedMatches, calcReliabilityRow, buildCompletedLeagueData, calcStreaks, calcBestJornadas, calcUserBestJornada, calcPositionHistory, calcTimesTopJornada, calcMomentum, calcConsistency, calcExactStats, calcSourceRanks, buildDonutSegments, calcPredictionBias, calcBestMatch, calcBestPlayersByPosition, calcMostProfitablePlayer, sourceSplitFromUserData, tallyChampions, finalPredictionTeamIds, compareQuadroWithCommunity, aggregateSquads, calcPronosticosPartidosStats, getTeamStatsForPreds, calcPredictedStandingsForPreds, calcClasificacionPronosticosStats, calcEliminatoriasPronosticosStats, calcPlantillaPronosticosExtras, renderPronosticosBody, renderPronosticosPartidosCard, renderPronosticosClasificacionCard, renderPronosticosEliminatoriasCard, renderPronosticosPlantillaCard, renderStatsContent, buildStatsAggregates, orderIndividualPlayers, individualOverallRank };
+    module.exports = { emptySeries, buildTimeline, calcPredictionSeries, calcSquadSeries, calcClassificationSeries, calcEliminatoriasSeries, sumSeries, isLeagueComplete, getSeriesBySource, matchResultOf, toStagePoints, calcEvolutionPositions, calcEvolutionPositionsFromSplits, lastTimelinePoint, trimTimeline, buildEvolutionSeriesMap, buildAxisTicks, formatPointValue, buildPointTooltipText, EVO_METRIC_DEFAULT, EVO_MODE_DEFAULT, positionForMatch, extractPlayedMatches, calcReliabilityRow, buildCompletedLeagueData, calcStreaks, calcBestJornadas, calcUserBestJornada, calcPositionHistory, calcTimesTopJornada, calcMomentum, calcConsistency, calcExactStats, calcSourceRanks, calcMatchExtremes, calcDataCoverage, buildDonutSegments, calcPredictionBias, calcBestMatch, calcBestPlayersByPosition, calcMostProfitablePlayer, sourceSplitFromUserData, tallyChampions, finalPredictionTeamIds, compareQuadroWithCommunity, aggregateSquads, calcPronosticosPartidosStats, getTeamStatsForPreds, calcPredictedStandingsForPreds, calcClasificacionPronosticosStats, calcEliminatoriasPronosticosStats, calcPlantillaPronosticosExtras, renderPronosticosBody, renderPronosticosPartidosCard, renderPronosticosClasificacionCard, renderPronosticosEliminatoriasCard, renderPronosticosPlantillaCard, renderStatsContent, buildStatsAggregates, orderIndividualPlayers, individualOverallRank };
   }
 })(typeof window !== 'undefined' ? window : globalThis);
