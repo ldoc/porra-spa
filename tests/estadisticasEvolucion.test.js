@@ -6,6 +6,7 @@ const {
   lastTimelinePoint,
   trimTimeline,
   buildEvolutionSeriesMap,
+  calcEvolutionPositionsFromSplits,
   buildAxisTicks,
   formatPointValue,
   buildPointTooltipText,
@@ -83,6 +84,48 @@ function test_defaults_evolucion() {
   assert.strictEqual(EVO_MODE_DEFAULT, 'acumulado');
 }
 
+function test_calcEvolutionPositionsFromSplits_desempate_plantilla() {
+  const splits = {
+    prediction: new Map([
+      ['a', { series: [100, 100], hasData: true }],
+      ['b', { series: [80, 80], hasData: true }],
+      ['c', { series: [0, 0], hasData: true }],
+    ]),
+    squad: new Map([
+      ['a', { series: [50, 50], hasData: true }],
+      ['b', { series: [70, 70], hasData: true }],
+      ['c', { series: [200, 200], hasData: true }],
+    ]),
+    classification: new Map(),
+    eliminatorias: new Map(),
+  };
+  const map = calcEvolutionPositionsFromSplits(splits);
+  assert.deepStrictEqual(map.get('a').series.slice(0, 2), [3, 3]);
+  assert.deepStrictEqual(map.get('b').series.slice(0, 2), [2, 2]);
+  assert.deepStrictEqual(map.get('c').series.slice(0, 2), [1, 1]);
+}
+
+function test_calcEvolutionPositionsFromSplits_empate_total_comparte_puesto() {
+  const splits = {
+    prediction: new Map([
+      ['a', { series: [100], hasData: true }],
+      ['b', { series: [100], hasData: true }],
+      ['c', { series: [0], hasData: true }],
+    ]),
+    squad: new Map([
+      ['a', { series: [50], hasData: true }],
+      ['b', { series: [50], hasData: true }],
+      ['c', { series: [200], hasData: true }],
+    ]),
+    classification: new Map(),
+    eliminatorias: new Map(),
+  };
+  const map = calcEvolutionPositionsFromSplits(splits);
+  assert.deepStrictEqual(map.get('a').series[0], 2);
+  assert.deepStrictEqual(map.get('b').series[0], 2);
+  assert.deepStrictEqual(map.get('c').series[0], 1);
+}
+
 function test_buildAxisTicks_tres_marcas() {
   assert.deepStrictEqual(buildAxisTicks('puntos', 47), [
     { value: 0, label: '0' },
@@ -113,6 +156,8 @@ test_toStagePoints_acumulado_a_etapa();
 test_calcEvolutionPositions_empates_y_varias_etapas();
 test_lastTimelinePoint_y_trim();
 test_buildEvolutionSeriesMap_puntos_y_posicion();
+test_calcEvolutionPositionsFromSplits_desempate_plantilla();
+test_calcEvolutionPositionsFromSplits_empate_total_comparte_puesto();
 test_defaults_evolucion();
 test_buildAxisTicks_tres_marcas();
 test_formatPointValue_y_tooltip();
