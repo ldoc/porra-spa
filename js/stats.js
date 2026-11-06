@@ -951,6 +951,36 @@
     return out;
   }
 
+  function calcSquadPlayerTotals(squad, matchStats) {
+    const squadById = new Map();
+    for (const player of squad || []) {
+      if (player?.id != null) squadById.set(String(player.id), player);
+    }
+    let goals = 0;
+    let assists = 0;
+    let cleanSheets = 0;
+
+    for (const ms of matchStats || []) {
+      for (const player of ms.stats?.jugadores || []) {
+        const squadPlayer = squadById.get(String(player.id));
+        if (!squadPlayer) continue;
+        goals += player.goles || 0;
+        assists += player.asistencias || 0;
+        if (squadPlayer.posicion === 'G' && player.minutos > 70 && player.golesRecibidos === 0) {
+          cleanSheets++;
+        }
+      }
+    }
+
+    return {
+      goals,
+      assists,
+      cleanSheets,
+      hasSquad: squadById.size > 0,
+      hasGoalkeeper: [...squadById.values()].some(player => player.posicion === 'G'),
+    };
+  }
+
   function buildDuelContext(leftUser, rightUser, aggregates) {
     const a = aggregates || {};
 
@@ -986,6 +1016,11 @@
         avg_def: a.positionAveragesByUser?.[username]?.D ?? null,
         avg_mid: a.positionAveragesByUser?.[username]?.M ?? null,
         avg_fwd: a.positionAveragesByUser?.[username]?.F ?? null,
+        squad_goals: a.squadTotalsByUser?.[username]?.goals ?? null,
+        squad_assists: a.squadTotalsByUser?.[username]?.assists ?? null,
+        squad_clean_sheets: a.squadTotalsByUser?.[username]?.cleanSheets ?? null,
+        squad_has_squad: a.squadTotalsByUser?.[username]?.hasSquad ?? false,
+        squad_has_goalkeeper: a.squadTotalsByUser?.[username]?.hasGoalkeeper ?? false,
         robos: style.robos?.count || 0,
         faroles: style.faroles?.count || 0,
         luck_per_match: style.luckPerMatch ?? null,
@@ -1070,6 +1105,9 @@
     { key: 'avg_def', title: 'Media defensas', desc: 'Puntos medios por defensa de tu plantilla.', direction: 'higher', format: 'decimal1', na: c => c.left.avg_def == null || c.right.avg_def == null },
     { key: 'avg_mid', title: 'Media centrocampistas', desc: 'Puntos medios por centrocampista de tu plantilla.', direction: 'higher', format: 'decimal1', na: c => c.left.avg_mid == null || c.right.avg_mid == null },
     { key: 'avg_fwd', title: 'Media delanteros', desc: 'Puntos medios por delantero de tu plantilla.', direction: 'higher', format: 'decimal1', na: c => c.left.avg_fwd == null || c.right.avg_fwd == null },
+    { key: 'squad_goals', title: 'Goles de tu plantilla', desc: 'Goles marcados por tus jugadores.', direction: 'higher', format: 'int', na: c => !c.left.squad_has_squad || !c.right.squad_has_squad },
+    { key: 'squad_assists', title: 'Asistencias de tu plantilla', desc: 'Asistencias de tus jugadores.', direction: 'higher', format: 'int', na: c => !c.left.squad_has_squad || !c.right.squad_has_squad },
+    { key: 'squad_clean_sheets', title: 'Porterías a cero', desc: 'Partidos en los que tus porteros acabaron con la portería a cero.', direction: 'higher', format: 'int', na: c => !c.left.squad_has_goalkeeper || !c.right.squad_has_goalkeeper },
     { key: 'robos', title: 'Robos', desc: 'Aciertos minoritarios que te dieron ventaja sobre la media.', direction: 'higher', format: 'int', na: c => c.left.analyzed_matches === 0 || c.right.analyzed_matches === 0 },
     { key: 'faroles', title: 'Faroles', desc: 'Fallos con la opción más votada; gana quien tenga menos.', direction: 'lower', format: 'int', na: c => c.left.analyzed_matches === 0 || c.right.analyzed_matches === 0 },
     { key: 'luck_per_match', title: 'Suerte/partido', desc: 'Puntos reales menos puntos esperados por partido.', direction: 'higher', format: 'signedDecimal1', na: c => c.left.analyzed_matches === 0 || c.right.analyzed_matches === 0 },
@@ -1945,6 +1983,7 @@
     const matchExtremesByUser = {};
     const playerExtremesByUser = {};
     const positionAveragesByUser = {};
+    const squadTotalsByUser = {};
     const matchPointsByUser = {};
 
     for (const name of playerNames) {
@@ -1955,6 +1994,7 @@
       matchExtremesByUser[name] = calcMatchExtremesCombined(name, leaguePlayedMatches, AppState.userPoints, userData.squadPoints, matchesById);
       playerExtremesByUser[name] = calcPlayerExtremes(details);
       positionAveragesByUser[name] = calcPositionAverages(details);
+      squadTotalsByUser[name] = calcSquadPlayerTotals(AppState.squadsCache?.[name] || [], AppState.matchStats);
       const points = {};
       for (const detail of AppState.userPoints[name]?.matchDetails || []) {
         if (detail?.match?.id != null) points[detail.match.id] = detail.points || 0;
@@ -2005,6 +2045,7 @@
       matchExtremesByUser,
       playerExtremesByUser,
       positionAveragesByUser,
+      squadTotalsByUser,
       matchPointsByUser,
       bestJornadas: calcBestJornadas(league.pointsByUserByJornada, 5),
       championsTally: tallyChampions(statsFilterMap(AppState.finalPredictionsCache)),
@@ -3435,6 +3476,7 @@
   global.calcLuckLabels = calcLuckLabels;
   global.calcPlayerExtremes = calcPlayerExtremes;
   global.calcPositionAverages = calcPositionAverages;
+  global.calcSquadPlayerTotals = calcSquadPlayerTotals;
   global.buildDuelContext = buildDuelContext;
   global.calcDuelCategories = calcDuelCategories;
   global.calcDuelScore = calcDuelScore;
@@ -3464,6 +3506,6 @@
   global.renderStatsContent = renderStatsContent;
   global.buildStatsAggregates = buildStatsAggregates;
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { emptySeries, buildTimeline, calcPredictionSeries, calcSquadSeries, calcClassificationSeries, calcEliminatoriasSeries, sumSeries, isLeagueComplete, getSeriesBySource, matchResultOf, toStagePoints, calcEvolutionPositions, calcEvolutionPositionsFromSplits, lastTimelinePoint, trimTimeline, buildEvolutionSeriesMap, buildAxisTicks, formatPointValue, buildPointTooltipText, EVO_METRIC_DEFAULT, EVO_MODE_DEFAULT, positionForMatch, extractPlayedMatches, calcReliabilityRow, buildCompletedLeagueData, calcStreaks, calcBestJornadas, calcUserBestJornada, calcPositionHistory, calcTimesTopJornada, calcMomentum, calcConsistency, calcExactStats, calcSourceRanks, calcMatchExtremes, calcMatchExtremesCombined, calcDataCoverage, buildMatchConsensus, expectedPointsForPrediction, calcStyleStats, calcLuckLabels, calcPlayerExtremes, calcPositionAverages, buildDuelContext, calcDuelCategories, calcDuelScore, buildDonutSegments, calcPredictionBias, calcBestMatch, calcBestPlayersByPosition, calcMostProfitablePlayer, sourceSplitFromUserData, tallyChampions, finalPredictionTeamIds, compareQuadroWithCommunity, aggregateSquads, calcPronosticosPartidosStats, getTeamStatsForPreds, calcPredictedStandingsForPreds, calcClasificacionPronosticosStats, calcEliminatoriasPronosticosStats, calcPlantillaPronosticosExtras, renderPronosticosBody, renderPronosticosPartidosCard, renderPronosticosClasificacionCard, renderPronosticosEliminatoriasCard, renderPronosticosPlantillaCard, renderStatsContent, buildStatsAggregates, orderIndividualPlayers, individualOverallRank };
+    module.exports = { emptySeries, buildTimeline, calcPredictionSeries, calcSquadSeries, calcClassificationSeries, calcEliminatoriasSeries, sumSeries, isLeagueComplete, getSeriesBySource, matchResultOf, toStagePoints, calcEvolutionPositions, calcEvolutionPositionsFromSplits, lastTimelinePoint, trimTimeline, buildEvolutionSeriesMap, buildAxisTicks, formatPointValue, buildPointTooltipText, EVO_METRIC_DEFAULT, EVO_MODE_DEFAULT, positionForMatch, extractPlayedMatches, calcReliabilityRow, buildCompletedLeagueData, calcStreaks, calcBestJornadas, calcUserBestJornada, calcPositionHistory, calcTimesTopJornada, calcMomentum, calcConsistency, calcExactStats, calcSourceRanks, calcMatchExtremes, calcMatchExtremesCombined, calcDataCoverage, buildMatchConsensus, expectedPointsForPrediction, calcStyleStats, calcLuckLabels, calcPlayerExtremes, calcPositionAverages, calcSquadPlayerTotals, buildDuelContext, calcDuelCategories, calcDuelScore, buildDonutSegments, calcPredictionBias, calcBestMatch, calcBestPlayersByPosition, calcMostProfitablePlayer, sourceSplitFromUserData, tallyChampions, finalPredictionTeamIds, compareQuadroWithCommunity, aggregateSquads, calcPronosticosPartidosStats, getTeamStatsForPreds, calcPredictedStandingsForPreds, calcClasificacionPronosticosStats, calcEliminatoriasPronosticosStats, calcPlantillaPronosticosExtras, renderPronosticosBody, renderPronosticosPartidosCard, renderPronosticosClasificacionCard, renderPronosticosEliminatoriasCard, renderPronosticosPlantillaCard, renderStatsContent, buildStatsAggregates, orderIndividualPlayers, individualOverallRank };
   }
 })(typeof window !== 'undefined' ? window : globalThis);

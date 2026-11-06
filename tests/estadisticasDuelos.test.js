@@ -1,5 +1,5 @@
 const assert = require('assert');
-const { calcPlayerExtremes, calcPositionAverages, buildDuelContext, calcDuelCategories, calcDuelScore, calcMatchExtremesCombined } = require('../js/stats.js');
+const { calcPlayerExtremes, calcPositionAverages, calcSquadPlayerTotals, buildDuelContext, calcDuelCategories, calcDuelScore, calcMatchExtremesCombined } = require('../js/stats.js');
 
 function test_calcPlayerExtremes_ignora_jugadores_sin_partidos() {
   const r = calcPlayerExtremes([
@@ -52,6 +52,10 @@ function duelFixture() {
       ana: { G: 7, D: 0.7, M: 2.5, F: 5 },
       bob: { G: 3, D: 1, M: 2, F: 4 },
     },
+    squadTotalsByUser: {
+      ana: { goals: 10, assists: 7, cleanSheets: 3, hasSquad: true, hasGoalkeeper: true },
+      bob: { goals: 8, assists: 5, cleanSheets: 2, hasSquad: true, hasGoalkeeper: true },
+    },
     styleByUser: {
       ana: { analyzedMatches: 3, robos: { count: 1 }, faroles: { count: 0 }, luckPerMatch: 0.4, confidence: { minority: { hitPct: 50, matches: 4 } } },
       bob: { analyzedMatches: 3, robos: { count: 0 }, faroles: { count: 2 }, luckPerMatch: -0.3, confidence: { minority: { hitPct: 25, matches: 4 } } },
@@ -84,6 +88,9 @@ function test_buildDuelContext_calcula_categorias_y_h2h() {
   assert.strictEqual(c.left.avg_def, 0.7);
   assert.strictEqual(c.left.avg_mid, 2.5);
   assert.strictEqual(c.left.avg_fwd, 5);
+  assert.strictEqual(c.left.squad_goals, 10);
+  assert.strictEqual(c.left.squad_assists, 7);
+  assert.strictEqual(c.left.squad_clean_sheets, 3);
   assert.strictEqual(c.left.best_jornada, 20);
   assert.strictEqual(c.left.worst_jornada, 5);
   assert.strictEqual(c.left.best_rank, 1);
@@ -96,6 +103,36 @@ function test_buildDuelContext_calcula_categorias_y_h2h() {
   assert.strictEqual(c.left.biggest_loss, -10);
   assert.strictEqual(c.right.biggest_win, 10);
   assert.strictEqual(c.right.biggest_loss, -10);
+}
+
+function test_calcSquadPlayerTotals_goles_asistencias_y_porterias() {
+  const squad = [
+    { id: '1', posicion: 'G' },
+    { id: '2', posicion: 'F' },
+    { id: '3', posicion: 'M' },
+  ];
+  const matchStats = [
+    { stats: { jugadores: [
+      { id: '1', minutos: 90, goles: 0, asistencias: 0, golesRecibidos: 0 },
+      { id: '2', minutos: 90, goles: 2, asistencias: 1 },
+    ] } },
+    { stats: { jugadores: [
+      { id: '1', minutos: 90, goles: 0, asistencias: 0, golesRecibidos: 1 },
+      { id: '3', minutos: 90, goles: 1, asistencias: 2 },
+    ] } },
+    { stats: { jugadores: [
+      { id: '1', minutos: 30, goles: 0, asistencias: 0, golesRecibidos: 0 },
+      { id: '99', minutos: 90, goles: 5, asistencias: 5 },
+    ] } },
+  ];
+  assert.deepStrictEqual(
+    calcSquadPlayerTotals(squad, matchStats),
+    { goals: 3, assists: 3, cleanSheets: 1, hasSquad: true, hasGoalkeeper: true }
+  );
+  assert.deepStrictEqual(
+    calcSquadPlayerTotals([], []),
+    { goals: 0, assists: 0, cleanSheets: 0, hasSquad: false, hasGoalkeeper: false }
+  );
 }
 
 function test_calcPositionAverages_media_por_jugador() {
@@ -122,7 +159,7 @@ function test_buildDuelContext_clasificacion_provisional_no_suma_al_total() {
 function test_calcDuelCategories_y_marcador() {
   const c = buildDuelContext('ana', 'bob', duelFixture());
   const cats = calcDuelCategories(c);
-  assert.strictEqual(cats.length, 32);
+  assert.strictEqual(cats.length, 35);
   const byKey = Object.fromEntries(cats.map(cat => [cat.key, cat]));
 
   assert.strictEqual(byKey.points_total.winner, 'right');
@@ -138,13 +175,16 @@ function test_calcDuelCategories_y_marcador() {
   assert.strictEqual(byKey.avg_def.winner, 'right');
   assert.strictEqual(byKey.avg_mid.winner, 'left');
   assert.strictEqual(byKey.avg_fwd.winner, 'left');
+  assert.strictEqual(byKey.squad_goals.winner, 'left');
+  assert.strictEqual(byKey.squad_assists.winner, 'left');
+  assert.strictEqual(byKey.squad_clean_sheets.winner, 'left');
   assert.strictEqual(byKey.biggest_win.winner, 'tie');
   assert.strictEqual(byKey.biggest_win.leftValue, '+10');
   assert.strictEqual(byKey.biggest_loss.winner, 'tie');
 
   const score = calcDuelScore(cats, c);
-  assert.strictEqual(score.leftWins + score.rightWins + score.na + cats.filter(x => x.winner === 'tie').length, 32);
-  assert.strictEqual(score.disputed, 32);
+  assert.strictEqual(score.leftWins + score.rightWins + score.na + cats.filter(x => x.winner === 'tie').length, 35);
+  assert.strictEqual(score.disputed, 35);
 }
 
 function test_calcDuelScore_desempate() {
@@ -195,6 +235,7 @@ function test_calcDuelCategories_na_y_peor_menos_malo() {
 
 test_calcPlayerExtremes_ignora_jugadores_sin_partidos();
 test_calcPositionAverages_media_por_jugador();
+test_calcSquadPlayerTotals_goles_asistencias_y_porterias();
 test_buildDuelContext_calcula_categorias_y_h2h();
 test_buildDuelContext_clasificacion_provisional_no_suma_al_total();
 test_calcDuelCategories_y_marcador();
