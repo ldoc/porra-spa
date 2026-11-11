@@ -70,7 +70,7 @@ const AppState = {
 };
 
 const SQUAD_SIZE = 25;
-const SPLASH_MIN_MS = 2500;
+const SPLASH_MIN_MS = 700;
 let splashTimestamp = Date.now();
 
 function authHeaders() {
