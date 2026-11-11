@@ -1,0 +1,13 @@
+# No se suben al deployment estático
+node_modules/
+tests/
+docs/
+.superpowers/
+.agents/
+api/
+extract/
+AGENTS.md
+DESIGN.md
+README.md
+pantallas-usuarios-fases.md
+server.mjs
