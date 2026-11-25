@@ -2097,6 +2097,7 @@ async function renderResultadosTab() {
   if (isLiveTab) liveV2Ui.bindLiveV2Fullscreen(container);
   if (isLiveTab) liveV2Ui.bindLiveV2Chips(container);
   if (isLiveTab) liveV2Ui.bindLiveV2Rows(container);
+  if (isLiveTab) liveV2Ui.bindLiveV2Views(container);
 
   if (currentTab === 'live' && prevLiveScrollTop !== null) {
     const sc = container.querySelector('.resultados-scroll');

@@ -1913,6 +1913,65 @@ function liveV2ViewSegHtml(folded) {
     + `</div>`;
 }
 
+/** Parchea seg (on/disabled) y titulo de seccion tras un poll o cambio de vista. */
+function updateLiveV2ViewChrome(root, folded) {
+  const view = liveV2ViewMode();
+  const titleEl = root.querySelector('#livev2-section-title');
+  if (titleEl) titleEl.textContent = liveV2SectionTitle(view);
+  const hasEvents = (liveV2State().events || []).length > 0;
+  const inPlay = liveV2HasInPlay(folded);
+  const hasRound = !!liveV2CurrentRoundKey(AppState.matches, AppState.matchStats, (folded && folded.states) || {});
+  root.querySelectorAll('[data-livev2-view]').forEach(btn => {
+    const v = btn.getAttribute('data-livev2-view');
+    btn.classList.toggle('on', v === view);
+    if (v === 'jornada') btn.disabled = !hasRound;
+    if (v === 'enjuego') btn.disabled = !hasEvents && !inPlay;
+  });
+}
+
+/** Cambia de vista: recalcula filas con el ultimo folded, sin fetch. */
+function liveV2SetView(view, folded) {
+  if (LIVEV2_VIEWS.indexOf(view) < 0) return;
+  const st = liveV2State();
+  if (st.viewMode === view) return;
+  st.viewMode = view;
+  st.prevRanks = null; // baseline neutro: primera comparacion util llega con el proximo poll
+  const snap = folded || liveV2Folded();
+  const rows = liveV2Rows(snap);
+  const now = Date.now();
+  for (const r of rows) {
+    r.pointsDiff = 0;
+    r.rankMove = liveV2RankMoveView(r.name, st._rankMoves, now);
+  }
+  st._lastRows = liveV2Snapshot(rows);
+  if (typeof document === 'undefined') return;
+  const root = document.querySelector('.resultados-scroll .livev2') || document.querySelector('.livev2');
+  if (!root) return;
+  const container = document.getElementById('livev2-rows');
+  if (container) container.innerHTML = rows.map(liveV2RowHtml).join('');
+  const breakdownEl = root.querySelector('#livev2-breakdown');
+  if (breakdownEl) {
+    // El seg vive DENTRO de #livev2-breakdown: se desmonta antes de reemplazar el
+    // innerHTML y se re-engancha despues, para no perder el nodo (listeners + dataset.bound).
+    const segEl = breakdownEl.querySelector('.livev2-viewseg');
+    breakdownEl.innerHTML = liveV2HeaderBreakdownHtml(liveV2HeaderBreakdown(snap, view));
+    if (segEl) breakdownEl.appendChild(segEl);
+  }
+  updateLiveV2ViewChrome(root, snap);
+}
+
+function bindLiveV2Views(root) {
+  const scope = root || document;
+  const seg = scope.querySelector('.livev2-viewseg');
+  if (!seg || seg.dataset.bound === '1') return;
+  seg.dataset.bound = '1';
+  seg.addEventListener('click', (e) => {
+    const btn = e.target.closest ? e.target.closest('[data-livev2-view]') : null;
+    if (!btn || btn.disabled) return;
+    liveV2SetView(btn.getAttribute('data-livev2-view'));
+  });
+}
+
 /** HTML de layout A (sin el header de subtabs, que lo pone renderResultadosTab) */
 function renderLiveV2Html(rows, folded) {
   const chips = liveV2ChipsHtml(folded);
@@ -2356,7 +2415,12 @@ function updateLiveV2Dom(rows, folded) {
   for (const [name, el] of existing) { if (!present.has(name)) el.remove(); }
 
   const breakdownEl = root.querySelector('#livev2-breakdown');
-  if (breakdownEl) breakdownEl.innerHTML = liveV2HeaderBreakdownHtml(liveV2HeaderBreakdown(folded));
+  if (breakdownEl) {
+    const segEl = breakdownEl.querySelector('.livev2-viewseg');
+    breakdownEl.innerHTML = liveV2HeaderBreakdownHtml(liveV2HeaderBreakdown(folded));
+    if (segEl) breakdownEl.appendChild(segEl);
+  }
+  updateLiveV2ViewChrome(root, folded);
 
   // Celdas: parche por clave (solo se crean/eliminan nodos al cambiar el conjunto)
   updateLiveV2Chips(root, folded);
@@ -2589,6 +2653,9 @@ async function renderLiveV2Tab() {
     liveV2ViewMode,
     liveV2SectionTitle,
     liveV2ViewSegHtml,
+    liveV2SetView,
+    bindLiveV2Views,
+    updateLiveV2ViewChrome,
     renderLiveV2Html,
     updateLiveV2Dom,
     renderLiveV2Tab,

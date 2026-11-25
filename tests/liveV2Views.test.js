@@ -264,3 +264,38 @@ test('renderLiveV2Html incluye seg dentro del breakdown y titulo por vista', () 
   html = ui.renderLiveV2Html(rows, folded);
   assert.match(html, /id="livev2-section-title">Jornada en vivo</);
 });
+
+test('liveV2SetView cambia la vista y recalcula filas sin fetch', () => {
+  const { ui, AppState, folded } = viewsFixture();
+  AppState.liveV2._lastRows = [];
+  ui.liveV2SetView('jornada', folded);
+  assert.equal(AppState.liveV2.viewMode, 'jornada');
+  const snap = AppState.liveV2._lastRows;
+  assert.ok(Array.isArray(snap) && snap.length === 2);
+  const me = snap.find(r => r.name === 'me');
+  assert.equal(me.livePoints, 6, 'metrica jornada del task 3');
+  assert.equal(me.rank, 1);
+  // baseline reseteado: sin DOM, liveV2SetView solo actualiza estado
+  ui.liveV2SetView('enjuego', folded);
+  assert.equal(AppState.liveV2.viewMode, 'enjuego');
+  const me2 = AppState.liveV2._lastRows.find(r => r.name === 'me');
+  assert.equal(me2.livePoints, 2);
+});
+
+test('liveV2SetView ignora vistas invalidas y no hace nada si es la activa', () => {
+  const { ui, AppState, folded } = viewsFixture();
+  ui.liveV2SetView('bogus', folded);
+  assert.equal(AppState.liveV2.viewMode, 'total');
+  const before = AppState.liveV2._lastRows;
+  ui.liveV2SetView('total', folded);
+  assert.equal(AppState.liveV2.viewMode, 'total');
+  assert.equal(AppState.liveV2._lastRows, before, 'misma vista: no recalcula');
+});
+
+test('updateLiveV2ViewSeg chrome: el seg y el titulo siguen a la vista activa', () => {
+  const { ui, AppState, folded } = viewsFixture();
+  // smoke string: el seg html refleja la vista activa tras cambiarla
+  AppState.liveV2.viewMode = 'jornada';
+  const html = ui.liveV2ViewSegHtml(folded);
+  assert.match(html, /data-livev2-view="jornada"[^>]*class="livev2-viewseg-btn on"|class="livev2-viewseg-btn on"[^>]*data-livev2-view="jornada"/);
+});
