@@ -7936,6 +7936,52 @@ body.live-fs .resultados-scroll {
   }
 }
 
+/* Selector de vistas del Live v2 (Total / Jornada / En juego) */
+.livev2-viewseg {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  background: var(--ucl-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-full);
+  padding: 2px;
+}
+
+.livev2-viewseg-btn {
+  min-width: 34px;
+  min-height: 44px;
+  padding: 0 7px;
+  border: 0;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 1.05rem;
+  line-height: 1;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  font-family: inherit;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.15s, background 0.2s, color 0.2s;
+}
+
+.livev2-viewseg-btn:active { transform: scale(0.92); }
+
+.livev2-viewseg-btn.on {
+  background: linear-gradient(135deg, var(--accent-primary), #059669);
+  box-shadow: 0 2px 10px rgba(16, 185, 129, 0.35);
+}
+
+.livev2-viewseg-btn:disabled { opacity: 0.35; cursor: default; }
+
+.livev2-viewseg-btn:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 1px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .livev2-viewseg-btn:active { transform: none; }
+}
+
 /* Fila de controles de Clasificación (toggle clasif temporal + combo de orden) */
 .clasif-clas-toggle {
   min-height: 44px;

@@ -1882,6 +1882,37 @@ function liveV2HeaderBreakdownHtml(b) {
     + `<span class="livev2-breakdown-item squad">👥 Plantilla <b>${b.squadPts}</b></span>`;
 }
 
+/** Definiciones de las vistas del Live (icono, tooltip y título de sección). */
+const LIVEV2_VIEW_DEFS = [
+  { key: 'total', icon: '🏆', title: 'Clasificación total', section: 'Clasificación en vivo' },
+  { key: 'jornada', icon: '📅', title: 'Solo puntos de la jornada', section: 'Jornada en vivo' },
+  { key: 'enjuego', icon: '⚡', title: 'Solo partidos en juego', section: 'Partidos en vivo' },
+];
+
+/** Título de sección de la vista indicada (o la activa si no se pasa argumento). */
+function liveV2SectionTitle(view) {
+  const v = view || (AppState.liveV2 ? liveV2ViewMode() : 'total');
+  const def = LIVEV2_VIEW_DEFS.find(d => d.key === v);
+  return def ? def.section : 'Clasificación en vivo';
+}
+
+/** Segmented control de vistas; deshabilita jornada/enjuego según los datos. */
+function liveV2ViewSegHtml(folded) {
+  const view = liveV2ViewMode();
+  const st = AppState.liveV2 || {};
+  const hasEvents = (st.events || []).length > 0;
+  const inPlay = liveV2HasInPlay(folded);
+  const hasRound = !!liveV2CurrentRoundKey(AppState.matches, AppState.matchStats, (folded && folded.states) || {});
+  const btn = (def, disabled) =>
+    `<button type="button" class="livev2-viewseg-btn${def.key === view ? ' on' : ''}" data-livev2-view="${def.key}"`
+    + ` title="${def.title}" aria-label="${def.title}"${disabled ? ' disabled' : ''}>${def.icon}</button>`;
+  return `<div class="livev2-viewseg" role="tablist" aria-label="Vista de la clasificación">`
+    + btn(LIVEV2_VIEW_DEFS[0], false)
+    + btn(LIVEV2_VIEW_DEFS[1], !hasRound)
+    + btn(LIVEV2_VIEW_DEFS[2], !hasEvents && !inPlay)
+    + `</div>`;
+}
+
 /** HTML de layout A (sin el header de subtabs, que lo pone renderResultadosTab) */
 function renderLiveV2Html(rows, folded) {
   const chips = liveV2ChipsHtml(folded);
@@ -1898,14 +1929,14 @@ function renderLiveV2Html(rows, folded) {
     + liveV2SoundToggleHtml()
     + `</div>`
     + `</div>`
-    + `<div class="livev2-breakdown" id="livev2-breakdown">${liveV2HeaderBreakdownHtml(breakdown)}</div>`
+    + `<div class="livev2-breakdown" id="livev2-breakdown">${liveV2HeaderBreakdownHtml(breakdown)}${liveV2ViewSegHtml(folded)}</div>`
     + `<div class="livev2-grid" id="livev2-chips-host">`
     + (chips || `<div class="livev2-empty">Sin partidos en directo ahora mismo</div>`)
     + `</div>`
     + `<div id="livev2-sr-events" class="livev2-sr-only" aria-live="polite" aria-atomic="false"></div>`
     + `</div>`
     + `<div class="livev2-body">`
-    + `<div class="livev2-section-title">Clasificación en vivo</div>`
+    + `<div class="livev2-section-title" id="livev2-section-title">${liveV2Esc(liveV2SectionTitle())}</div>`
     + `<div class="livev2-rows" id="livev2-rows" aria-live="polite">${rows.map(liveV2RowHtml).join('')}</div>`
     + `</div>`
     + `</div>`;
@@ -2556,6 +2587,8 @@ async function renderLiveV2Tab() {
     liveV2CurrentRoundKey,
     liveV2JornadaOfficial,
     liveV2ViewMode,
+    liveV2SectionTitle,
+    liveV2ViewSegHtml,
     renderLiveV2Html,
     updateLiveV2Dom,
     renderLiveV2Tab,

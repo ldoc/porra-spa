@@ -131,6 +131,7 @@ function viewsFixture() {
   ui.init({
     AppState,
     liveV2Api: require('../js/liveV2.js'),
+    liveV2Abbr: s => String(s).slice(0, 3),
     visiblePlayers: () => [
       { name: 'me', avatar: '😎' },
       { name: 'ana', avatar: '🦊' },
@@ -215,4 +216,51 @@ test('liveV2HeaderBreakdown por vista: total, jornada y en juego', () => {
   // en juego: solo 103 (LIVE); 102 es FT sin consolidar y queda fuera
   const be = ui.liveV2HeaderBreakdown(folded, 'enjuego');
   assert.deepEqual(be, { total: 2, predictionPts: 2, squadPts: 0 });
+});
+
+test('liveV2SectionTitle mapea cada vista', () => {
+  const { ui, AppState } = viewsFixture();
+  assert.equal(ui.liveV2SectionTitle('total'), 'Clasificación en vivo');
+  assert.equal(ui.liveV2SectionTitle('jornada'), 'Jornada en vivo');
+  assert.equal(ui.liveV2SectionTitle('enjuego'), 'Partidos en vivo');
+  assert.equal(ui.liveV2SectionTitle(), 'Clasificación en vivo');
+  AppState.liveV2.viewMode = 'jornada';
+  assert.equal(ui.liveV2SectionTitle(), 'Jornada en vivo');
+});
+
+test('liveV2ViewSegHtml marca la vista activa y deshabilita segun datos', () => {
+  const { ui, AppState, folded } = viewsFixture();
+  // hay un partido LIVE y hay matchStats -> nada deshabilitado
+  let html = ui.liveV2ViewSegHtml(folded);
+  assert.match(html, /data-livev2-view="total"/);
+  assert.match(html, /data-livev2-view="jornada"/);
+  assert.match(html, /data-livev2-view="enjuego"/);
+  assert.match(html, /class="livev2-viewseg-btn on"/);
+  assert.doesNotMatch(html, /disabled/);
+
+  // sin eventos ni partidos en juego: 'enjuego' deshabilitado
+  AppState.liveV2.events = [];
+  html = ui.liveV2ViewSegHtml({ states: {}, statsById: {} });
+  assert.match(html, /data-livev2-view="enjuego"[^>]*disabled/);
+
+  // sin ronda determinable: 'jornada' deshabilitado
+  AppState.matches = [];
+  AppState.matchStats = [];
+  html = ui.liveV2ViewSegHtml({ states: {}, statsById: {} });
+  assert.match(html, /data-livev2-view="jornada"[^>]*disabled/);
+});
+
+test('renderLiveV2Html incluye seg dentro del breakdown y titulo por vista', () => {
+  const { ui, AppState, folded } = viewsFixture();
+  const rows = ui.liveV2Rows(folded);
+  AppState.liveV2.viewMode = 'total';
+  let html = ui.renderLiveV2Html(rows, folded);
+  assert.match(html, /<div class="livev2-breakdown" id="livev2-breakdown">/);
+  assert.match(html, /livev2-viewseg/);
+  assert.match(html, /id="livev2-section-title">Clasificación en vivo</);
+
+  AppState.liveV2.viewMode = 'jornada';
+  rows.splice(0, rows.length, ...ui.liveV2Rows(folded));
+  html = ui.renderLiveV2Html(rows, folded);
+  assert.match(html, /id="livev2-section-title">Jornada en vivo</);
 });
