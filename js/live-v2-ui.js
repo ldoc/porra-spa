@@ -925,6 +925,46 @@ function liveV2CurrentRoundKey(matches, matchStats, foldedStates) {
   return null;
 }
 
+/** Puntos consolidados (pron. + plantilla) de una ronda, por usuario, con cache. */
+function liveV2JornadaOfficial(roundKey, users) {
+  const ls = liveState();
+  const key = roundKey ? `${roundKey.fase}|${roundKey.ronda}` : null;
+  const canCache = key != null && Array.isArray(AppState.matchStats)
+    && AppState._allPredictionsTime != null;
+  if (canCache && ls.jornadaRows && ls.jornadaRoundKey === key
+    && ls.jornadaStatsRef === AppState.matchStats
+    && ls.jornadaPredTime === AppState._allPredictionsTime
+    && ls.jornadaSquadsRef === AppState.squadsCache) return ls.jornadaRows;
+  const out = {};
+  if (canCache) {
+    const roundMatchIds = new Set(
+      (AppState.matches || [])
+        .filter(m => liveV2SameRoundKey(liveV2MatchRoundKey(m), roundKey))
+        .map(m => String(m.id))
+    );
+    const subset = (AppState.matchStats || [])
+      .filter(ms => roundMatchIds.has(String(ms.eventId)));
+    for (const name of users) {
+      let pred = 0, squad = 0;
+      for (const ms of subset) {
+        const lm = { eventId: ms.eventId, stats: ms.stats, status: 'FT' };
+        const r = liveUserMatchPoints(name, lm, liveMatchMeta(lm));
+        pred += r.matchPts;
+        squad += r.squadPts;
+      }
+      out[name] = { pred, squad, total: pred + squad };
+    }
+  } else {
+    for (const name of users) out[name] = { pred: 0, squad: 0, total: 0 };
+  }
+  ls.jornadaRows = out;
+  ls.jornadaRoundKey = key;
+  ls.jornadaStatsRef = AppState.matchStats;
+  ls.jornadaPredTime = AppState._allPredictionsTime;
+  ls.jornadaSquadsRef = AppState.squadsCache;
+  return out;
+}
+
 /** Filas = puntos oficiales + delta de los partidos en juego, ordenadas con rankRows */
 function liveV2Rows(folded) {
   const st = liveV2State();
@@ -2466,6 +2506,7 @@ async function renderLiveV2Tab() {
   const api = {
     init,
     liveV2CurrentRoundKey,
+    liveV2JornadaOfficial,
     renderLiveV2Html,
     updateLiveV2Dom,
     renderLiveV2Tab,
