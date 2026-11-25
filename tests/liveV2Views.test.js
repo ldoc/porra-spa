@@ -200,3 +200,19 @@ test('liveV2Rows vista enjuego: solo partidos LIVE/HT', () => {
   assert.equal(me.livePoints, 2);
   assert.equal(me.deltaInPlay, 2);
 });
+
+test('liveV2HeaderBreakdown por vista: total, jornada y en juego', () => {
+  const { ui, AppState, folded } = viewsFixture();
+  AppState.liveV2.viewMode = 'total';
+  // total (default): delta de partidos no consolidados (102 FT + 103 LIVE)
+  const bt = ui.liveV2HeaderBreakdown(folded);
+  assert.deepEqual(bt, { total: 2, predictionPts: 2, squadPts: 0 });
+
+  // jornada: consolidados de la ronda 3 (101 -> 4) + delta de la ronda (102 + 103)
+  const bj = ui.liveV2HeaderBreakdown(folded, 'jornada');
+  assert.deepEqual(bj, { total: 6, predictionPts: 6, squadPts: 0 });
+
+  // en juego: solo 103 (LIVE); 102 es FT sin consolidar y queda fuera
+  const be = ui.liveV2HeaderBreakdown(folded, 'enjuego');
+  assert.deepEqual(be, { total: 2, predictionPts: 2, squadPts: 0 });
+});

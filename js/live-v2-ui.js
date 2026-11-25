@@ -1834,15 +1834,37 @@ async function retryLiveV2() {
   }
 }
 
-function liveV2HeaderBreakdown(folded) {
+/** Desglose de MIS puntos en la vista activa (o la indicada). */
+function liveV2HeaderBreakdown(folded, view) {
   const out = { total: 0, predictionPts: 0, squadPts: 0 };
   const me = AppState.currentUser && AppState.currentUser.name;
   if (!me) return out;
+  const v = view || (AppState.liveV2 ? liveV2ViewMode() : 'total');
   const finalized = liveV2FinalizedIds();
+  if (v === 'jornada') {
+    const roundKey = liveV2CurrentRoundKey(AppState.matches, AppState.matchStats, (folded && folded.states) || {});
+    const jo = liveV2JornadaOfficial(roundKey, [me])[me] || { pred: 0, squad: 0 };
+    out.predictionPts += jo.pred;
+    out.squadPts += jo.squad;
+    for (const [id, state] of Object.entries((folded && folded.states) || {})) {
+      if (finalized.has(String(id))) continue;
+      const status = (state && state.status) || 'NS';
+      if (status === 'NS') continue;
+      const match = (AppState.matches || []).find(m => String(m.id) === String(id));
+      if (!match || !liveV2SameRoundKey(liveV2MatchRoundKey(match), roundKey)) continue;
+      const lm = { eventId: match.id, stats: (folded.statsById || {})[id], status };
+      const r = liveUserMatchPoints(me, lm, liveMatchMeta(lm));
+      out.predictionPts += r.matchPts;
+      out.squadPts += r.squadPts;
+    }
+    out.total = out.predictionPts + out.squadPts;
+    return out;
+  }
   for (const [id, state] of Object.entries((folded && folded.states) || {})) {
     if (finalized.has(String(id))) continue;
     const status = (state && state.status) || 'NS';
     if (status === 'NS') continue;
+    if (v === 'enjuego' && status !== 'LIVE' && status !== 'HT') continue;
     const match = (AppState.matches || []).find(m => String(m.id) === String(id));
     if (!match) continue;
     const lm = { eventId: match.id, stats: (folded.statsById || {})[id], status };
