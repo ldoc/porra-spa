@@ -198,7 +198,7 @@ AppState.liveV2.viewMode   // 'total' (default) | 'jornada' | 'enjuego'
 
 - `js/live-v2-ui.js?v=32` → `v=33`
 - `css/styles.css?v=140` → `v=141`
-- `js/main.js` → solo si se toca (no está previsto).
+- `js/main.js?v=184` → `v=185` (tocado en las tareas de métricas y binding: comentario de `AppState.liveV2` y `bindLiveV2Views`).
 
 ## 11. Fuera de alcance
 
