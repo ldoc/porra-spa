@@ -878,6 +878,53 @@ function liveV2FinalizedIds() {
   return set;
 }
 
+/** Clave de ronda de un partido del calendario (liga o eliminatorias). */
+function liveV2MatchRoundKey(match) {
+  if (!match) return null;
+  return { fase: match.fase || 'liga', ronda: match.ronda != null ? match.ronda : 0 };
+}
+
+function liveV2SameRoundKey(a, b) {
+  return !!a && !!b && String(a.fase) === String(b.fase) && String(a.ronda) === String(b.ronda);
+}
+
+/** Ronda en curso: mayoria de partidos no-NS; fallback ultimo matchStats; fallback hoy. */
+function liveV2CurrentRoundKey(matches, matchStats, foldedStates) {
+  const ms = Array.isArray(matches) ? matches : [];
+  const byId = new Map(ms.map(m => [String(m.id), m]));
+  const counts = new Map();
+  for (const [id, state] of Object.entries(foldedStates || {})) {
+    if (!state || state.status === 'NS') continue;
+    const m = byId.get(String(id));
+    if (!m) continue;
+    const key = `${m.fase || 'liga'}|${m.ronda}`;
+    counts.set(key, (counts.get(key) || 0) + 1);
+  }
+  if (counts.size) {
+    let best = null, bestN = -1;
+    for (const [key, n] of counts) { if (n > bestN) { bestN = n; best = key; } }
+    const [fase, ronda] = best.split('|');
+    return { fase, ronda: ronda === 'null' ? 0 : (Number.isFinite(Number(ronda)) ? Number(ronda) : ronda) };
+  }
+  const stats = Array.isArray(matchStats) ? matchStats : [];
+  let last = null, lastTs = -Infinity;
+  for (const s of stats) {
+    const m = byId.get(String(s.eventId));
+    if (!m || !isFinite(m.fechaTs)) continue;
+    if (m.fechaTs > lastTs) { lastTs = m.fechaTs; last = m; }
+  }
+  if (last) return liveV2MatchRoundKey(last);
+  const dayStart = new Date();
+  dayStart.setHours(0, 0, 0, 0);
+  const dayEnd = dayStart.getTime() + 86400000;
+  for (const m of ms) {
+    if (!isFinite(m.fechaTs)) continue;
+    const at = m.fechaTs * 1000;
+    if (at >= dayStart.getTime() && at < dayEnd) return liveV2MatchRoundKey(m);
+  }
+  return null;
+}
+
 /** Filas = puntos oficiales + delta de los partidos en juego, ordenadas con rankRows */
 function liveV2Rows(folded) {
   const st = liveV2State();
@@ -2418,6 +2465,7 @@ async function renderLiveV2Tab() {
 
   const api = {
     init,
+    liveV2CurrentRoundKey,
     renderLiveV2Html,
     updateLiveV2Dom,
     renderLiveV2Tab,
