@@ -53,9 +53,9 @@ function test_css_compacto() {
 }
 
 function test_cache_busting() {
-  assert.ok(indexSrc.includes('styles.css?v=135'), 'css v135');
-  assert.ok(indexSrc.includes('clasificacion.js?v=3'), 'clasificacion v3');
-  assert.ok(indexSrc.includes('main.js?v=181'), 'main v181');
+  assert.ok(indexSrc.includes('styles.css?v=141'), 'css v141');
+  assert.ok(indexSrc.includes('clasificacion.js?v=4'), 'clasificacion v4');
+  assert.ok(indexSrc.includes('main.js?v=185'), 'main v185');
 }
 
 const tests = [
