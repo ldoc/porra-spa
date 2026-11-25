@@ -122,7 +122,7 @@ function viewsFixture() {
       { eventId: 104, stats: { 7: { goles: 1 }, 8: { goles: 1 } } },
     ],
     allPredictions: {
-      me: { 101: { home: 2, away: 0 }, 102: { home: 0, away: 0 }, 103: { home: 1, away: 0 }, 104: { home: 1, away: 1 } },
+      me: { 101: { home: 2, away: 0 }, 102: { home: 2, away: 0 }, 103: { home: 1, away: 0 }, 104: { home: 1, away: 1 } },
       ana: { 101: { home: 1, away: 1 }, 102: { home: 0, away: 0 }, 103: { home: 0, away: 0 }, 104: { home: 0, away: 0 } },
     },
     squadsCache: {},
@@ -169,10 +169,10 @@ test('liveV2Rows vista total: consolidados + delta (comportamiento actual)', () 
   AppState.liveV2.viewMode = 'total';
   const rows = ui.liveV2Rows(folded);
   const me = rows.find(r => r.name === 'me');
-  // oficial 100 + delta (102: pred.home 0 -> 0; 103: pred.home 1 -> 2) = 102
-  assert.equal(me.livePoints, 102);
+  // oficial 100 + delta (102: 4 + 103: 2) = 106
+  assert.equal(me.livePoints, 106);
   assert.equal(me.officialPoints, 100);
-  assert.equal(me.pointsDelta, 2);
+  assert.equal(me.pointsDelta, 6);
   assert.equal(rows[0].name, 'me');
 });
 
@@ -182,10 +182,10 @@ test('liveV2Rows vista jornada: consolidados de la ronda + delta de la ronda', (
   const rows = ui.liveV2Rows(folded);
   const me = rows.find(r => r.name === 'me');
   // jornadaOfficial: 101 (ronda 3) pred.home 2 -> 4; 104 (ronda 2) excluido
-  // deltaRonda: 102 (FT sin consolidar, ronda 3) 0 + 103 (LIVE, ronda 3) 2
+  // deltaRonda: 102 (FT sin consolidar, ronda 3) 4 + 103 (LIVE, ronda 3) 2
   assert.equal(me.jornadaOfficial, 4);
-  assert.equal(me.deltaRonda, 2);
-  assert.equal(me.livePoints, 6);
+  assert.equal(me.deltaRonda, 6);
+  assert.equal(me.livePoints, 10);
   const ana = rows.find(r => r.name === 'ana');
   // ana: 101 pred.home 1 -> 2; 102 0; 103 0 => jornada 2
   assert.equal(ana.livePoints, 2);
@@ -205,13 +205,13 @@ test('liveV2Rows vista enjuego: solo partidos LIVE/HT', () => {
 test('liveV2HeaderBreakdown por vista: total, jornada y en juego', () => {
   const { ui, AppState, folded } = viewsFixture();
   AppState.liveV2.viewMode = 'total';
-  // total (default): delta de partidos no consolidados (102 FT + 103 LIVE)
+  // total (default): delta de partidos no consolidados (102 FT: 4 + 103 LIVE: 2)
   const bt = ui.liveV2HeaderBreakdown(folded);
-  assert.deepEqual(bt, { total: 2, predictionPts: 2, squadPts: 0 });
+  assert.deepEqual(bt, { total: 6, predictionPts: 6, squadPts: 0 });
 
-  // jornada: consolidados de la ronda 3 (101 -> 4) + delta de la ronda (102 + 103)
+  // jornada: consolidados de la ronda 3 (101 -> 4) + delta de la ronda (102: 4 + 103: 2)
   const bj = ui.liveV2HeaderBreakdown(folded, 'jornada');
-  assert.deepEqual(bj, { total: 6, predictionPts: 6, squadPts: 0 });
+  assert.deepEqual(bj, { total: 10, predictionPts: 10, squadPts: 0 });
 
   // en juego: solo 103 (LIVE); 102 es FT sin consolidar y queda fuera
   const be = ui.liveV2HeaderBreakdown(folded, 'enjuego');
@@ -273,7 +273,7 @@ test('liveV2SetView cambia la vista y recalcula filas sin fetch', () => {
   const snap = AppState.liveV2._lastRows;
   assert.ok(Array.isArray(snap) && snap.length === 2);
   const me = snap.find(r => r.name === 'me');
-  assert.equal(me.livePoints, 6, 'metrica jornada del task 3');
+  assert.equal(me.livePoints, 10, 'metrica jornada del task 3');
   assert.equal(me.rank, 1);
   // baseline reseteado: sin DOM, liveV2SetView solo actualiza estado
   ui.liveV2SetView('enjuego', folded);

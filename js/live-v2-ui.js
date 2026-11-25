@@ -1906,7 +1906,7 @@ function liveV2ViewSegHtml(folded) {
   const btn = (def, disabled) =>
     `<button type="button" class="livev2-viewseg-btn${def.key === view ? ' on' : ''}" data-livev2-view="${def.key}"`
     + ` title="${def.title}" aria-label="${def.title}"${disabled ? ' disabled' : ''}>${def.icon}</button>`;
-  return `<div class="livev2-viewseg" role="tablist" aria-label="Vista de la clasificación">`
+  return `<div class="livev2-viewseg" role="group" aria-label="Vista de la clasificación">`
     + btn(LIVEV2_VIEW_DEFS[0], false)
     + btn(LIVEV2_VIEW_DEFS[1], !hasRound)
     + btn(LIVEV2_VIEW_DEFS[2], !hasEvents && !inPlay)
@@ -1938,10 +1938,11 @@ function liveV2SetView(view, folded) {
   st.prevRanks = null; // baseline neutro: primera comparacion util llega con el proximo poll
   const snap = folded || liveV2Folded();
   const rows = liveV2Rows(snap);
-  const now = Date.now();
   for (const r of rows) {
     r.pointsDiff = 0;
-    r.rankMove = liveV2RankMoveView(r.name, st._rankMoves, now);
+    // Baseline neutro al cambiar de vista: los movimientos del poll de la vista
+    // anterior no se reponen; la primera comparacion util llega con el proximo poll.
+    r.rankMove = { text: '=', cls: 'eq', label: 'Sin cambios' };
   }
   st._lastRows = liveV2Snapshot(rows);
   if (typeof document === 'undefined') return;
@@ -1960,6 +1961,7 @@ function liveV2SetView(view, folded) {
   updateLiveV2ViewChrome(root, snap);
 }
 
+/** Selector de vistas: bind delegado del seg (una sola vez por nodo). */
 function bindLiveV2Views(root) {
   const scope = root || document;
   const seg = scope.querySelector('.livev2-viewseg');
