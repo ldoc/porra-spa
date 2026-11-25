@@ -328,7 +328,7 @@ git commit -m "feat(live): puntos consolidados por ronda con cache (vista Jornad
 - Consumes: Task 1 (`liveV2CurrentRoundKey`) y Task 2 (`liveV2JornadaOfficial`).
 - Produces:
   - `liveV2ViewMode()` → `'total' | 'jornada' | 'enjuego'` (lectura sin crear estado).
-  - `liveV2Rows(folded)` → filas con `{ name, avatar, isMe, officialPoints, delta, deltaInPlay, deltaRonda, jornadaOfficial, livePoints, rank, delta }`, donde `livePoints` es la métrica de la vista activa y el orden (`rankRows`) sigue esa métrica.
+  - `liveV2Rows(folded)` → filas con `{ name, avatar, isMe, officialPoints, pointsDelta, deltaInPlay, deltaRonda, jornadaOfficial, livePoints, rank, delta }`, donde `livePoints` es la métrica de la vista activa y el orden (`rankRows`) sigue esa métrica. Nota: el delta de puntos va en `pointsDelta` (nombre preexistente) porque `rankRows` (`js/liveV2.js:293`) sobrescribe `delta` con el movimiento de puesto.
 
 - [ ] **Step 1: Write the failing test** — añadir a `tests/liveV2Views.test.js`:
 
@@ -400,7 +400,7 @@ test('liveV2Rows vista total: consolidados + delta (comportamiento actual)', () 
   // oficial 100 + delta (102: pred.home 0 -> 0; 103: pred.home 1 -> 2) = 102
   assert.equal(me.livePoints, 102);
   assert.equal(me.officialPoints, 100);
-  assert.equal(me.delta, 2);
+  assert.equal(me.pointsDelta, 2);
   assert.equal(rows[0].name, 'me');
 });
 
@@ -488,7 +488,7 @@ function liveV2Rows(folded) {
     const jo = (jornada && jornada[pl.name]) || { total: 0 };
     const row = {
       name: pl.name, avatar: pl.avatar, isMe: pl.name === me,
-      officialPoints, delta, deltaInPlay, deltaRonda,
+      officialPoints, pointsDelta: delta, deltaInPlay, deltaRonda,
       jornadaOfficial: jo.total,
     };
     row.livePoints = view === 'total' ? officialPoints + delta

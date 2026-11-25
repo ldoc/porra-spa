@@ -111,7 +111,7 @@ Cada fila pasa a llevar:
 {
   name, avatar, isMe,
   officialPoints,     // como hoy (liveOfficialRows)
-  delta,              // como hoy: partidos no-finalizados con estado ≠ NS (incluye FT sin consolidar)
+  pointsDelta,        // como hoy: partidos no-finalizados con estado ≠ NS (incluye FT sin consolidar); va en pointsDelta porque rankRows sobrescribe delta con el movimiento de puesto
   deltaInPlay,        // solo partidos con estado LIVE o HT
   jornadaOfficial,    // pronóstico+plantilla consolidados de la ronda en curso (cacheado)
   // métrica activa (según st.viewMode) → livePoints, usada por rankRows
