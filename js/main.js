@@ -51,7 +51,7 @@ const AppState = {
   resultadosTab: 'jornadas', // Tab seleccionado en resultados: 'jornadas', 'live', 'clasificacion' o 'eliminatorias'
   liveRefreshSecs: 60, // segundos entre polls del tab Live (config.json + /api/config)
   live: null, // caché del tab Live v2 para liveOfficialRows(): { officialRows, officialStatsRef }
-  liveV2: null, // estado del tab Live v2 (event-sourcing): { events, serverTime, prevRanks, polling, _lastRows }
+  liveV2: null, // estado del tab Live v2 (event-sourcing): { events, serverTime, prevRanks, polling, _lastRows, viewMode }
   estadisticasSubTab: 'pronosticos', // Sub-tab activa en estadísticas
   estadisticasIndividualUser: null, // usuario mostrado en sub-tab Individual (null -> currentUser)
   duelosLeftUser: null,

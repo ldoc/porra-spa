@@ -103,3 +103,100 @@ test('liveV2JornadaOfficial cachea y se invalida al cambiar matchStats', () => {
   assert.notEqual(first, third, 'se recalcula al cambiar la ref de matchStats');
   assert.equal(third.me.total, 4, 'pred.home sigue siendo 2 -> 4 puntos');
 });
+
+function viewsFixture() {
+  const ui = freshUi();
+  const AppState = {
+    currentUser: { name: 'me' },
+    live: {},
+    liveV2: null,
+    matches: [
+      { id: 101, fase: 'liga', ronda: 3, fechaTs: 100, homeTeamId: 1, awayTeamId: 2 },
+      { id: 102, fase: 'liga', ronda: 3, fechaTs: 100, homeTeamId: 3, awayTeamId: 4 },
+      { id: 103, fase: 'liga', ronda: 3, fechaTs: 200, homeTeamId: 5, awayTeamId: 6 },
+      { id: 104, fase: 'liga', ronda: 2, fechaTs: 50, homeTeamId: 7, awayTeamId: 8 },
+    ],
+    // 101 consolidado (ronda 3); 104 consolidado (ronda 2) -> cuenta en total, NO en jornada
+    matchStats: [
+      { eventId: 101, stats: { 1: { goles: 2 }, 2: { goles: 0 } } },
+      { eventId: 104, stats: { 7: { goles: 1 }, 8: { goles: 1 } } },
+    ],
+    allPredictions: {
+      me: { 101: { home: 2, away: 0 }, 102: { home: 0, away: 0 }, 103: { home: 1, away: 0 }, 104: { home: 1, away: 1 } },
+      ana: { 101: { home: 1, away: 1 }, 102: { home: 0, away: 0 }, 103: { home: 0, away: 0 }, 104: { home: 0, away: 0 } },
+    },
+    squadsCache: {},
+    _allPredictionsTime: 1,
+  };
+  ui.init({
+    AppState,
+    liveV2Api: require('../js/liveV2.js'),
+    visiblePlayers: () => [
+      { name: 'me', avatar: '😎' },
+      { name: 'ana', avatar: '🦊' },
+    ],
+    getUserTotalRealPoints: (name) => (name === 'me' ? 100 : 50),
+    calculateMatchPoints: (pred) => ({ points: pred && pred.home != null ? pred.home * 2 : 0, breakdown: [] }),
+    calculatePlayerMatchPoints: () => ({ total: 0, desglose: [] }),
+  });
+  AppState.liveV2 = ui.liveV2State(); // estado real: los tests mutan viewMode sobre él
+  // Estados live: 102 FT sin consolidar (ronda 3) y 103 LIVE (ronda 3)
+  const folded = {
+    states: {
+      102: { status: 'FT', score: { home: 0, away: 0 } },
+      103: { status: 'LIVE', score: { home: 1, away: 0 } },
+    },
+    statsById: {
+      102: { 3: { goles: 0 }, 4: { goles: 0 } },
+      103: { 5: { goles: 1 }, 6: { goles: 0 } },
+    },
+  };
+  return { ui, AppState, folded };
+}
+
+test('liveV2ViewMode devuelve total por defecto y valida el valor', () => {
+  const { ui, AppState } = viewsFixture();
+  assert.equal(ui.liveV2ViewMode(), 'total');
+  AppState.liveV2.viewMode = 'jornada';
+  assert.equal(ui.liveV2ViewMode(), 'jornada');
+  AppState.liveV2.viewMode = 'bogus';
+  assert.equal(ui.liveV2ViewMode(), 'total');
+});
+
+test('liveV2Rows vista total: consolidados + delta (comportamiento actual)', () => {
+  const { ui, AppState, folded } = viewsFixture();
+  AppState.liveV2.viewMode = 'total';
+  const rows = ui.liveV2Rows(folded);
+  const me = rows.find(r => r.name === 'me');
+  // oficial 100 + delta (102: pred.home 0 -> 0; 103: pred.home 1 -> 2) = 102
+  assert.equal(me.livePoints, 102);
+  assert.equal(me.officialPoints, 100);
+  assert.equal(me.pointsDelta, 2);
+  assert.equal(rows[0].name, 'me');
+});
+
+test('liveV2Rows vista jornada: consolidados de la ronda + delta de la ronda', () => {
+  const { ui, AppState, folded } = viewsFixture();
+  AppState.liveV2.viewMode = 'jornada';
+  const rows = ui.liveV2Rows(folded);
+  const me = rows.find(r => r.name === 'me');
+  // jornadaOfficial: 101 (ronda 3) pred.home 2 -> 4; 104 (ronda 2) excluido
+  // deltaRonda: 102 (FT sin consolidar, ronda 3) 0 + 103 (LIVE, ronda 3) 2
+  assert.equal(me.jornadaOfficial, 4);
+  assert.equal(me.deltaRonda, 2);
+  assert.equal(me.livePoints, 6);
+  const ana = rows.find(r => r.name === 'ana');
+  // ana: 101 pred.home 1 -> 2; 102 0; 103 0 => jornada 2
+  assert.equal(ana.livePoints, 2);
+  assert.equal(rows[0].name, 'me');
+});
+
+test('liveV2Rows vista enjuego: solo partidos LIVE/HT', () => {
+  const { ui, AppState, folded } = viewsFixture();
+  AppState.liveV2.viewMode = 'enjuego';
+  const rows = ui.liveV2Rows(folded);
+  const me = rows.find(r => r.name === 'me');
+  // solo 103 (LIVE): 2 puntos; 102 es FT sin consolidar y NO cuenta
+  assert.equal(me.livePoints, 2);
+  assert.equal(me.deltaInPlay, 2);
+});

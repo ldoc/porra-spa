@@ -550,7 +550,7 @@ function saveLiveV2Cache(st) {
 function liveV2State() {
   if (!AppState.liveV2) {
     AppState.liveV2 = {
-      events: [], serverTime: null, prevRanks: null, polling: false, _lastRows: [], _seenEventIds: null,
+      viewMode: 'total', events: [], serverTime: null, prevRanks: null, polling: false, _lastRows: [], _seenEventIds: null,
       _fullAt: 0, _needFull: false, lastFetchAt: null, error: null,
       _chipChanged: {}, // eventId -> ts del último cambio de marcador (para pulso + orden)
       _chipScores: {},  // eventId -> "home-away" del poll anterior (detección de cambios)
@@ -965,17 +965,31 @@ function liveV2JornadaOfficial(roundKey, users) {
   return out;
 }
 
-/** Filas = puntos oficiales + delta de los partidos en juego, ordenadas con rankRows */
+const LIVEV2_VIEWS = ['total', 'jornada', 'enjuego'];
+
+function liveV2ViewMode() {
+  const v = AppState.liveV2 && AppState.liveV2.viewMode;
+  return LIVEV2_VIEWS.indexOf(v) >= 0 ? v : 'total';
+}
+
+/** Filas con metrica de la vista activa: total / jornada / en juego. */
 function liveV2Rows(folded) {
   const st = liveV2State();
+  const view = liveV2ViewMode();
   const official = liveOfficialRows();
   const officialByName = {};
   for (const r of official) officialByName[r.name] = r.officialPoints;
   const finalized = liveV2FinalizedIds();
   const players = visiblePlayers();
   const me = AppState.currentUser && AppState.currentUser.name;
+  const roundKey = view === 'jornada'
+    ? liveV2CurrentRoundKey(AppState.matches, AppState.matchStats, (folded && folded.states) || {})
+    : null;
+  const jornada = view === 'jornada'
+    ? liveV2JornadaOfficial(roundKey, players.map(p => p.name))
+    : null;
   const rows = players.map(pl => {
-    let delta = 0;
+    let delta = 0, deltaInPlay = 0, deltaRonda = 0;
     for (const id of Object.keys(folded.statsById || {})) {
       if (finalized.has(String(id))) continue; // ya cuenta en los puntos oficiales
       const match = (AppState.matches || []).find(m => String(m.id) === String(id));
@@ -983,10 +997,22 @@ function liveV2Rows(folded) {
       const status = state?.status || 'NS';
       if (status === 'NS') continue;
       const lm = { eventId: match ? match.id : id, stats: folded.statsById[id], status };
-      delta += liveUserMatchPoints(pl.name, lm, liveMatchMeta(lm)).total;
+      const r = liveUserMatchPoints(pl.name, lm, liveMatchMeta(lm));
+      delta += r.total;
+      if (status === 'LIVE' || status === 'HT') deltaInPlay += r.total;
+      if (roundKey && match && liveV2SameRoundKey(liveV2MatchRoundKey(match), roundKey)) deltaRonda += r.total;
     }
     const officialPoints = officialByName[pl.name] || 0;
-    return { name: pl.name, avatar: pl.avatar, livePoints: officialPoints + delta, officialPoints, pointsDelta: delta, isMe: pl.name === me };
+    const jo = (jornada && jornada[pl.name]) || { total: 0 };
+    const row = {
+      name: pl.name, avatar: pl.avatar, isMe: pl.name === me,
+      officialPoints, pointsDelta: delta, deltaInPlay, deltaRonda,
+      jornadaOfficial: jo.total,
+    };
+    row.livePoints = view === 'total' ? officialPoints + delta
+      : view === 'jornada' ? jo.total + deltaRonda
+      : deltaInPlay;
+    return row;
   });
   return liveV2Api.rankRows(rows, st.prevRanks);
 }
@@ -2507,6 +2533,7 @@ async function renderLiveV2Tab() {
     init,
     liveV2CurrentRoundKey,
     liveV2JornadaOfficial,
+    liveV2ViewMode,
     renderLiveV2Html,
     updateLiveV2Dom,
     renderLiveV2Tab,
