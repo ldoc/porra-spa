@@ -69,11 +69,12 @@ La barra `⚡ N · 🎯 Pron. X · 👥 Plantilla Y` refleja **mis puntos en la 
 
 ### 3.4 Flechas ▲▼ y diff de puntos
 
-- Se calculan dentro de la vista activa: `prevRanksByView` guarda un snapshot
-  `{ name → { rank, livePoints } }` **por vista**, actualizado en cada poll.
-- Al cambiar de pill NO hay animación FLIP ni saltos falsos: se pinta directamente el
-  snapshot de la vista destino (sus flechas ya existen de polls anteriores, o `=`/vacío
-  si es la primera vez que se visita).
+- Se calculan dentro de la vista activa: el baseline (`st._lastRows`, que alimenta
+  `prevRanks`, el diff `+Npts` y las flechas ▲▼) es siempre el de la vista activa.
+- Al cambiar de pill NO hay animación FLIP ni saltos falsos: el baseline de la vista
+  destino se **resetea en el instante del cambio** (flechas `=`, diff vacío); la
+  primera comparación útil llega con el siguiente poll. Cada vista arranca sus
+  comparaciones desde cero, sin contaminación entre vistas.
 - El diff `+Npts` de cada fila se refiere al último poll dentro de la misma vista.
 
 ### 3.5 Estados deshabilitados
@@ -87,7 +88,7 @@ La barra `⚡ N · 🎯 Pron. X · 👥 Plantilla Y` refleja **mis puntos en la 
 
 ## 4. Detección de la ronda en curso (vista Jornada)
 
-Orden de resolución (función pura `liveV2CurrentRound()`):
+Orden de resolución (función pura `liveV2CurrentRoundKey()`):
 
 1. **Partidos con eventos**: partidos con estado ≠ NS en `folded.states` → su `ronda`
    (y `fase`) desde `AppState.matches`. Si hay mezcla (no debería), gana la ronda con más
@@ -148,13 +149,13 @@ en Total/Jornada vía `delta`.
 
 ```javascript
 AppState.liveV2.viewMode   // 'total' (default) | 'jornada' | 'enjuego'
-AppState.liveV2.prevRanksByView  // { total: {...}, jornada: {...}, enjuego: {...} }
 ```
 
 - `viewMode` vive en memoria (sobrevive polls y navegación entre tabs, NO persiste en
-  localStorage ni en la caché del Live).
-- El snapshot por vista se limpia en los mismos puntos donde hoy se resetea
-  `st.prevRanks` (full-fetch autoritativo, logout).
+  localStorage ni en la caché del Live; `AppState.liveV2 = null` en el logout lo resetea).
+- El baseline de comparación (`st._lastRows`) es el de la vista activa y se resetea al
+  cambiar de pill y en los mismos puntos donde hoy se resetea `st.prevRanks`
+  (entrada autoritativa al tab, logout).
 
 ## 7. Render e interacción
 
