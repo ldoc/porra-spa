@@ -980,6 +980,8 @@ git commit -m "feat(live): cambio de vista en caliente (bind + poll + titulo)"
 - `js/main.js?v=184` → `js/main.js?v=185`
 - `css/styles.css?v=140` → `css/styles.css?v=141`
 
+Además, `tests/clasifClasToggle.test.js` tiene un `test_cache_busting` con expectativa stale (espera `css?v=135`; el valor actual en `index.html` ya era v140 y pasa a v141 con este bump). Actualizar la expectativa del test a `v=141` para que la suite completa quede en verde (fallo preexistente en main detectado en Task 1).
+
 - [ ] **Step 2: Run full test suite**
 
 Run: `node --test tests/*.test.js`
