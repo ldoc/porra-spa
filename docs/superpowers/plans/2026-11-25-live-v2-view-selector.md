@@ -906,7 +906,13 @@ function liveV2SetView(view, folded) {
   const container = document.getElementById('livev2-rows');
   if (container) container.innerHTML = rows.map(liveV2RowHtml).join('');
   const breakdownEl = root.querySelector('#livev2-breakdown');
-  if (breakdownEl) breakdownEl.innerHTML = liveV2HeaderBreakdownHtml(liveV2HeaderBreakdown(snap, view));
+  if (breakdownEl) {
+    // El seg vive DENTRO de #livev2-breakdown: se desmonta antes de reemplazar el
+    // innerHTML y se re-engancha despues, para no perder el nodo (listeners + dataset.bound).
+    const segEl = breakdownEl.querySelector('.livev2-viewseg');
+    breakdownEl.innerHTML = liveV2HeaderBreakdownHtml(liveV2HeaderBreakdown(snap, view));
+    if (segEl) breakdownEl.appendChild(segEl);
+  }
   updateLiveV2ViewChrome(root, snap);
 }
 
@@ -923,9 +929,15 @@ function bindLiveV2Views(root) {
 }
 ```
 
-3b. `updateLiveV2Dom` — tras la línea del breakdown (~2193) añadir:
+3b. `updateLiveV2Dom` — la línea existente del breakdown (~2193) hace `breakdownEl.innerHTML = liveV2HeaderBreakdownHtml(liveV2HeaderBreakdown(folded))`, lo que DESTRUYE el seg que vive dentro. Sustituir el bloque por:
 
 ```javascript
+  const breakdownEl = root.querySelector('#livev2-breakdown');
+  if (breakdownEl) {
+    const segEl = breakdownEl.querySelector('.livev2-viewseg');
+    breakdownEl.innerHTML = liveV2HeaderBreakdownHtml(liveV2HeaderBreakdown(folded));
+    if (segEl) breakdownEl.appendChild(segEl);
+  }
   updateLiveV2ViewChrome(root, folded);
 ```
 
@@ -977,7 +989,7 @@ Expected: PASS completo, sin skips inesperados.
 
 Run: `node server.mjs` (o el comando habitual de dev) y en el navegador:
 1. Entrar en Resultados → Live. Comprobar: pills 🏆/📅/⚡ en la barra ⚡, título "CLASIFICACIÓN EN VIVO", sin scroll horizontal a 390px.
-2. Cambiar a 📅 y ⚡: la tabla se re-ordena, el título cambia ("JORNADA EN VIVO"/"PARTIDOS EN VIVO"), el desglose ⚡ cambia, no hay fetch adicional (network quieta), no hay saltos ▲▼ falsos.
+2. Cambiar a 📅 y ⚡: la tabla se re-ordena, el título cambia ("JORNADA EN VIVO"/"PARTIDOS EN VIVO"), el desglose ⚡ cambia, no hay fetch adicional (network quieta), no hay saltos ▲▼ falsos. **Importante: dejar correr al menos un poll (30s) y verificar que las pills siguen presentes y clicables** (el poll reemplaza el innerHTML del breakdown).
 3. Con `?liveSim=1` en localhost: los polls animan (FLIP + motivo) en las tres vistas.
 4. Sin partidos en juego: ⚡ deshabilitada; con liga en curso y matchStats: 📅 muestra lo de la última ronda.
 5. Console limpia de errores.
