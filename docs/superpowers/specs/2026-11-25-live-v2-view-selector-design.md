@@ -188,7 +188,7 @@ AppState.liveV2.viewMode   // 'total' (default) | 'jornada' | 'enjuego'
   - Selección de métrica por vista (total/jornada/enjuego) con fixtures de
     matchStats/estados/squads.
   - `liveV2CurrentRound()`: ronda desde estados, fallbacks.
-  - `prevRanksByView`: flechas por vista sin contaminación cruzada al cambiar de pill.
+  - Baseline neutro al cambiar de pill (flechas `=` y diff vacío en el instante del cambio; sin contaminación cruzada entre vistas).
   - Título y desglose de cabecera por vista.
 - Verificación completa: `node --test tests/*.test.js`.
 
