@@ -13,15 +13,15 @@ provisional de los partidos en juego. El usuario quiere poder ver, además:
 
 - **Jornada**: solo los puntos generados por los partidos de la **ronda en curso**
   (los ya finalizados y subidos a matchStats **más** los que están ahora en juego).
-- **En juego**: solo los puntos de los partidos de la **ventana actual** (p. ej. los de
-  las 21:00; antes habría contado los de las 18:45).
+- **En juego**: solo los puntos de la **sesión en directo sin consolidar** (los de las
+  18:45 y las 21:00 mientras no se suban a matchStats, aunque ya hayan terminado).
 
 Decisiones validadas con el usuario durante el brainstorming:
 
 | Decisión | Elección |
 |---|---|
 | "Jornada" | Toda la ronda en curso (consolidados + en juego), no solo el día natural |
-| "En juego" | Solo partidos LIVE/HT de la ventana actual |
+| "En juego" | Sesión en directo sin consolidar (LIVE/HT y FT pendiente de subir) |
 | Orden de la tabla | Re-rank por vista (quién está ganando la jornada / la ventana) |
 | Ubicación del selector | Variante A: pills icon-only dentro de la barra de desglose ⚡ Pron./Plantilla |
 | Vista por defecto | 🏆 Total |
@@ -33,7 +33,7 @@ Decisiones validadas con el usuario durante el brainstorming:
 |---|---|---|---|
 | **Total** | 🏆 | Pronóstico + plantilla + clasificación + eliminatorias consolidados + delta en juego | Todos (es la clasificación actual) |
 | **Jornada** | 📅 | Pronóstico + plantilla de la ronda en curso | Partidos de la ronda con matchStats consolidado **+** partidos de la ronda en juego (provisional) |
-| **En juego** | ⚡ | Pronóstico + plantilla | Solo partidos con estado LIVE o HT en el momento del render |
+| **En juego** | ⚡ | Pronóstico + plantilla | Sesión en directo sin consolidar: LIVE, HT y FT pendiente de subir a matchStats |
 
 Clasificación y eliminatorias **no** cuentan en Jornada/En juego: no son puntos atribuibles
 a una ronda ni a un partido en juego.
@@ -65,7 +65,7 @@ La barra `⚡ N · 🎯 Pron. X · 👥 Plantilla Y` refleja **mis puntos en la 
 
 - Total: delta en juego (como hoy).
 - Jornada: mi pronóstico + plantilla de la ronda (consolidado + en juego).
-- En juego: mi pronóstico + plantilla de los partidos LIVE/HT.
+- En juego: mi pronóstico + plantilla de la sesión en directo sin consolidar.
 
 ### 3.4 Flechas ▲▼ y diff de puntos
 
@@ -112,7 +112,7 @@ Cada fila pasa a llevar:
   name, avatar, isMe,
   officialPoints,     // como hoy (liveOfficialRows)
   pointsDelta,        // como hoy: partidos no-finalizados con estado ≠ NS (incluye FT sin consolidar); va en pointsDelta porque rankRows sobrescribe delta con el movimiento de puesto
-  deltaInPlay,        // solo partidos con estado LIVE o HT
+  deltaRonda,         // delta limitado a partidos de la ronda en curso (solo vista jornada)
   jornadaOfficial,    // pronóstico+plantilla consolidados de la ronda en curso (cacheado)
   // métrica activa (según st.viewMode) → livePoints, usada por rankRows
 }
@@ -121,7 +121,7 @@ Cada fila pasa a llevar:
 - **Total**: `livePoints = officialPoints + delta` (comportamiento actual).
 - **Jornada**: `livePoints = jornadaOfficial + deltaRonda` (delta limitado a partidos
   de la ronda en curso).
-- **En juego**: `livePoints = deltaInPlay`.
+- **En juego**: `livePoints = pointsDelta` (sesión en directo sin consolidar; ver §5.3).
 
 `rankRows` sigue ordenando por `livePoints` (la métrica activa ya está volcada ahí),
 con desempate alfabético como hoy.
@@ -139,11 +139,16 @@ con desempate alfabético como hoy.
   clasificación/eliminatorias que aquí no aplican); se calcula directamente sobre el
   subset, sin efectos secundarios.
 
-### 5.3 Vista "En juego" (ventana)
+### 5.3 Vista "En juego" (sesión en directo sin consolidar)
 
-`deltaInPlay` agrega `liveUserMatchPoints` solo de partidos con `status === 'LIVE' || 'HT'`.
-Un partido que pasa a FT (aún sin consolidar) sale de esta vista pero sigue contando
-en Total/Jornada vía `delta`.
+`livePoints = delta`: agrega `liveUserMatchPoints` de todos los partidos con eventos
+aún no consolidados, **incluidos los FT pendientes de subir a matchStats**. Un partido
+que termina NO pierde sus puntos de golpe: salen de esta vista al consolidarse (subida
+a matchStats), que es cuando pasan a contar como oficiales en Total/Jornada.
+
+> Corrección tras uso real (2026-11-25): la primera versión filtraba a LIVE/HT y los
+> puntos de un partido desaparecían al pitar el final; se ajustó para mantenerlos
+> hasta la consolidación.
 
 ## 6. Estado
 

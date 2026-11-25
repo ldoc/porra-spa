@@ -192,14 +192,14 @@ test('liveV2Rows vista jornada: consolidados de la ronda + delta de la ronda', (
   assert.equal(rows[0].name, 'me');
 });
 
-test('liveV2Rows vista enjuego: solo partidos LIVE/HT', () => {
+test('liveV2Rows vista enjuego: FT sin consolidar mantiene sus puntos', () => {
   const { ui, AppState, folded } = viewsFixture();
   AppState.liveV2.viewMode = 'enjuego';
   const rows = ui.liveV2Rows(folded);
   const me = rows.find(r => r.name === 'me');
-  // solo 103 (LIVE): 2 puntos; 102 es FT sin consolidar y NO cuenta
-  assert.equal(me.livePoints, 2);
-  assert.equal(me.deltaInPlay, 2);
+  // 103 (LIVE): 2 + 102 (FT sin consolidar): 4 -> los puntos NO desaparecen al terminar
+  // el partido; solo salen de la vista cuando se sube a matchStats (consolidado)
+  assert.equal(me.livePoints, 6);
 });
 
 test('liveV2HeaderBreakdown por vista: total, jornada y en juego', () => {
@@ -213,9 +213,10 @@ test('liveV2HeaderBreakdown por vista: total, jornada y en juego', () => {
   const bj = ui.liveV2HeaderBreakdown(folded, 'jornada');
   assert.deepEqual(bj, { total: 10, predictionPts: 10, squadPts: 0 });
 
-  // en juego: solo 103 (LIVE); 102 es FT sin consolidar y queda fuera
+  // en juego: sesion en directo sin consolidar (102 FT: 4 + 103 LIVE: 2);
+  // al consolidarse 102 (matchStats) saldria de esta vista y pasaria a oficial/jornada
   const be = ui.liveV2HeaderBreakdown(folded, 'enjuego');
-  assert.deepEqual(be, { total: 2, predictionPts: 2, squadPts: 0 });
+  assert.deepEqual(be, { total: 6, predictionPts: 6, squadPts: 0 });
 });
 
 test('liveV2SectionTitle mapea cada vista', () => {
@@ -279,7 +280,7 @@ test('liveV2SetView cambia la vista y recalcula filas sin fetch', () => {
   ui.liveV2SetView('enjuego', folded);
   assert.equal(AppState.liveV2.viewMode, 'enjuego');
   const me2 = AppState.liveV2._lastRows.find(r => r.name === 'me');
-  assert.equal(me2.livePoints, 2);
+  assert.equal(me2.livePoints, 6);
 });
 
 test('liveV2SetView ignora vistas invalidas y no hace nada si es la activa', () => {

@@ -988,8 +988,8 @@ function liveV2Rows(folded) {
   const jornada = view === 'jornada'
     ? liveV2JornadaOfficial(roundKey, players.map(p => p.name))
     : null;
-  const rows = players.map(pl => {
-    let delta = 0, deltaInPlay = 0, deltaRonda = 0;
+   const rows = players.map(pl => {
+    let delta = 0, deltaRonda = 0;
     for (const id of Object.keys(folded.statsById || {})) {
       if (finalized.has(String(id))) continue; // ya cuenta en los puntos oficiales
       const match = (AppState.matches || []).find(m => String(m.id) === String(id));
@@ -999,19 +999,20 @@ function liveV2Rows(folded) {
       const lm = { eventId: match ? match.id : id, stats: folded.statsById[id], status };
       const r = liveUserMatchPoints(pl.name, lm, liveMatchMeta(lm));
       delta += r.total;
-      if (status === 'LIVE' || status === 'HT') deltaInPlay += r.total;
       if (roundKey && match && liveV2SameRoundKey(liveV2MatchRoundKey(match), roundKey)) deltaRonda += r.total;
     }
     const officialPoints = officialByName[pl.name] || 0;
     const jo = (jornada && jornada[pl.name]) || { total: 0 };
     const row = {
       name: pl.name, avatar: pl.avatar, isMe: pl.name === me,
-      officialPoints, pointsDelta: delta, deltaInPlay, deltaRonda,
+      officialPoints, pointsDelta: delta, deltaRonda,
       jornadaOfficial: jo.total,
     };
+    // en juego = sesion en directo sin consolidar (LIVE/HT y FT pendiente de subir):
+    // los puntos de un partido terminado no desaparecen hasta que se consolida
     row.livePoints = view === 'total' ? officialPoints + delta
       : view === 'jornada' ? jo.total + deltaRonda
-      : deltaInPlay;
+      : delta;
     return row;
   });
   return liveV2Api.rankRows(rows, st.prevRanks);
@@ -1864,7 +1865,6 @@ function liveV2HeaderBreakdown(folded, view) {
     if (finalized.has(String(id))) continue;
     const status = (state && state.status) || 'NS';
     if (status === 'NS') continue;
-    if (v === 'enjuego' && status !== 'LIVE' && status !== 'HT') continue;
     const match = (AppState.matches || []).find(m => String(m.id) === String(id));
     if (!match) continue;
     const lm = { eventId: match.id, stats: (folded.statsById || {})[id], status };
